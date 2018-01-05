@@ -127,7 +127,9 @@ Néhány az érdekesebb MMIO címek közül:
 0x3F980000 - USB vezérlő (Universal Serial Bus controller)
 ```
 A többi információ megtalálható a Raspberry Pi firmware wiki-ben és a documentation repóban a github-on.
+
 https://github.com/raspberrypi
 
 Sok szerencsét és élvezetes hekkelést a Raspberry-dhez! :-)
+
 bzt

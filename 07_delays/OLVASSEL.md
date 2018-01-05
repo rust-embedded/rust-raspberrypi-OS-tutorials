@@ -3,7 +3,7 @@ Oktatóanyag 07 - Késleltetések
 
 Roppant fontos, hogy a megfelelő időtartamot késleltessünk, amikor alacsony szintű hardverrel bánunk.
 Ebben az okatatóanyagban három megközelítést nézünk meg. Az egyik CPU órajel függő (akkor hasznos, ha
-a várakozási idő óraciklusban van megadva), a másik kettő mikroszekundum (másodperc milliomod része) alapú.
+a várakozási idő órajelciklusban van megadva), a másik kettő mikroszekundum (másodperc milliomod része) alapú.
 
 Delays.h, delays.c
 ------------------

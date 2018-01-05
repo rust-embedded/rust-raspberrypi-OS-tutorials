@@ -10,7 +10,7 @@ connected to a data GPIO pin for example).
 Power.h, power.c
 ----------------
 
-The power management controller is one of the periphels that are not emulated properly by qemu.
+The power management controller is one of the peripherals that are not emulated properly by qemu.
 Works on real hardware though.
 
 `power_off()` shutdowns the board to a almost zero power consumption state.

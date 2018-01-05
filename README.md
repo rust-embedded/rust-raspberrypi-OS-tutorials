@@ -121,7 +121,9 @@ Some of the more interesting MMIO addresses are:
 0x3F980000 - Universal Serial Bus controller
 ```
 For more information, see Raspberry Pi firmware wiki and documentation on github.
+
 https://github.com/raspberrypi
 
 Good luck and enjoy hacking with your Raspberry! :-)
+
 bzt
