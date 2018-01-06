@@ -80,7 +80,7 @@ The board is shipped with a [BCM2837 SoC](https://github.com/raspberrypi/documen
 That includes a
 
  - VideoCore GPU
- - ARM-Cortex-A7 CPU (ARMv8)
+ - ARM-Cortex-A53 CPU (ARMv8)
  - Some MMIO mapped pheripherals.
 
 Interestingly the CPU is not the main processor on the board. When it's powered up, first GPU runs. When it's

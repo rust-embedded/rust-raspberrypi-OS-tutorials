@@ -85,7 +85,7 @@ Az alaplapon egy [BCM2837 SoC](https://github.com/raspberrypi/documentation/tree
 található. Ebbe beszereltek
 
  - VideoCore grafikus processzort (GPU)
- - ARM-Cortex-A7 általános processzort (CPU, ARMv8)
+ - ARM-Cortex-A53 általános processzort (CPU, ARMv8)
  - És néhány MMIO-val leképzett perifériát.
 
 Érdekesség, hogy a nem a CPU a fő processzor. Amikor bekapcsoljuk, először a GPU kezd futni. Amikor végzett az
