@@ -45,11 +45,15 @@ int oct2bin(char *s, int n)
  */
 void initrd_list(char *buf)
 {
-    uart_puts("Offset   Size     Access rights\t\tFilename\n");
+    char *types[]={"regular", "link  ", "symlnk", "chrdev", "blkdev", "dircty", "fifo  ", "???   "};
+
+    uart_puts("Type   Offset   Size     Access rights\tFilename\n");
     // iterate on archive's contents
     while(!__builtin_memcmp(buf+257,"ustar",5)){
         int fs=oct2bin(buf+0x7c,11);
         // print out meta information
+        uart_puts(types[buf[0x9c]-'0']);
+        uart_send(' ');
         uart_hex((unsigned int)((unsigned long)buf)+512);
         uart_send(' ');
         uart_hex(fs);           // file size in hex
@@ -61,6 +65,10 @@ void initrd_list(char *buf)
         uart_puts(buf+0x129);   // group
         uart_send('\t');
         uart_puts(buf);         // filename
+        if(buf[0x9c]=='2') {
+            uart_puts(" -> ");  // symlink target
+            uart_puts(buf+0x9d);
+        }
         uart_puts("\n");
         // jump to the next file
         buf+=(((fs+511)/512)+1)*512;
