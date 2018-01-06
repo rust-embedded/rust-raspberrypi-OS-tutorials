@@ -20,7 +20,7 @@ a függvény.
 ### Megkéred a GPU-t hogy töltse be neked
 Aztán használhatod a `config.txt`-t hogy utasítsd a start.elf-et az initrd betöltésére. Ez azért jó, mert ehhez
 nem kell SD kártya olvasó és FAT értelmező, így a kerneled jóval kissebb lesz. Ami a
-[config.txt](https://www.raspberry.org/documentation/configuration/config-txt/boot.md) parancsait illeti,
+[config.txt](https://www.raspberrypi.org/documentation/configuration/config-txt/boot.md) parancsait illeti,
 két lehetőséged is van:
 
 `initramfs (fájlnév) followkernel` - ez betölti a (fájlnév) nevű fájlt mindjárt a kerneled után. Az initrd-d kezdőcíme

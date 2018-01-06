@@ -20,7 +20,7 @@ will be returned by the function.
 ### Ask the GPU to do so
 You can use `config.txt` to tell start.elf to load the initrd for you. With this you won't need
 any SD card reader or FAT parser at all, resulting in a much smaller kernel. As for the
-[config.txt](https://www.raspberry.org/documentation/configuration/config-txt/boot.md),
+[config.txt](https://www.raspberrypi.org/documentation/configuration/config-txt/boot.md),
 you have two options:
 
 `initramfs (filename) followkernel` - this will load (filename) after your kernel. You can access it at the label
