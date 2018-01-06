@@ -23,38 +23,25 @@
  *
  */
 
-#include "uart.h"
-#include "mbox.h"
+/* a properly aligned buffer */
+extern volatile unsigned int mbox[36];
 
-void main()
-{
-    // set up serial console
-    uart_init();
-    
-    // get the board's unique serial number with a mailbox call
-    mbox[0] = 8*4;                  // length of the message
-    mbox[1] = MBOX_REQUEST;         // this is a request message
-    
-    mbox[2] = MBOX_TAG_GETSERIAL;   // get serial number command
-    mbox[3] = 0;                    // no input arguments
-    mbox[4] = 0;
-    mbox[5] = 0;                    // clear output buffer
-    mbox[6] = 0;
+#define MBOX_REQUEST    0
 
-    mbox[7] = MBOX_TAG_LAST;
+/* channels */
+#define MBOX_CH_POWER   0
+#define MBOX_CH_FB      1
+#define MBOX_CH_VUART   2
+#define MBOX_CH_VCHIQ   3
+#define MBOX_CH_LEDS    4
+#define MBOX_CH_BTNS    5
+#define MBOX_CH_TOUCH   6
+#define MBOX_CH_COUNT   7
+#define MBOX_CH_PROP    8
 
-    // send the message to the GPU and receive answer
-    if (mbox_call(MBOX_CH_PROP)) {
-        uart_puts("My serial number is: ");
-        uart_hex(mbox[6]);
-        uart_hex(mbox[5]);
-        uart_puts("\n");
-    } else {
-        uart_puts("Unable to query serial!\n");
-    }
+/* tags */
+#define MBOX_TAG_SETPOWER       0x28001
+#define MBOX_TAG_SETCLKRATE     0x38002
+#define MBOX_TAG_LAST           0
 
-    // echo everything back
-    while(1) {
-        uart_send(uart_getc());
-    }
-}
+int mbox_call(unsigned char ch);

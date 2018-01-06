@@ -24,7 +24,15 @@ Makefile
 --------
 
 Egy új object-et adtam hozzá, ami a psf-ből generálódik. Jó példa arra, hogyan kell bináris fájlt behúzni és
-hivatkozni C forrásból.
+hivatkozni C forrásból. A következő parancsot használtam a cimke nevének kiderítésére:
+
+```sh
+$ aarch64-elf-readelf -s font.o
+        ... kimenet törölve az átláthatóság miatt ...
+     2: 0000000000000820     0 NOTYPE  GLOBAL DEFAULT    1 _binary_font_psf_end
+     3: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT    1 _binary_font_psf_start
+     4: 0000000000000820     0 NOTYPE  GLOBAL DEFAULT  ABS _binary_font_psf_size
+```
 
 Main
 ----

@@ -23,38 +23,33 @@
  *
  */
 
-#include "uart.h"
-#include "mbox.h"
+.section ".text.boot"
 
-void main()
-{
-    // set up serial console
-    uart_init();
-    
-    // get the board's unique serial number with a mailbox call
-    mbox[0] = 8*4;                  // length of the message
-    mbox[1] = MBOX_REQUEST;         // this is a request message
-    
-    mbox[2] = MBOX_TAG_GETSERIAL;   // get serial number command
-    mbox[3] = 0;                    // no input arguments
-    mbox[4] = 0;
-    mbox[5] = 0;                    // clear output buffer
-    mbox[6] = 0;
+.global _start
 
-    mbox[7] = MBOX_TAG_LAST;
+_start:
+    // read cpu id, stop slave cores
+    mrs     x1, mpidr_el1
+    and     x1, x1, #3
+    cbz     x1, 2f
+    // cpu id > 0, stop
+1:  wfe
+    b       1b
+2:  // cpu id == 0
 
-    // send the message to the GPU and receive answer
-    if (mbox_call(MBOX_CH_PROP)) {
-        uart_puts("My serial number is: ");
-        uart_hex(mbox[6]);
-        uart_hex(mbox[5]);
-        uart_puts("\n");
-    } else {
-        uart_puts("Unable to query serial!\n");
-    }
+    // set stack before our code
+    ldr     x1, =_start
+    mov     sp, x1
 
-    // echo everything back
-    while(1) {
-        uart_send(uart_getc());
-    }
-}
+    // clear bss
+    ldr     x1, =__bss_start
+    ldr     w2, =__bss_size
+3:  cbz     w2, 4f
+    str     xzr, [x1], #8
+    sub     w2, w2, #1
+    cbnz    w2, 3b
+
+    // jump to C code, should not return
+4:  bl      main
+    // for failsafe, halt this core too
+    b       1b

@@ -24,37 +24,45 @@
  */
 
 #include "uart.h"
-#include "mbox.h"
 
-void main()
+/**
+ * Helper function to convert ASCII octal number into binary
+ * s string
+ * n number of digits
+ */
+int oct2bin(char *s, int n)
 {
-    // set up serial console
-    uart_init();
-    
-    // get the board's unique serial number with a mailbox call
-    mbox[0] = 8*4;                  // length of the message
-    mbox[1] = MBOX_REQUEST;         // this is a request message
-    
-    mbox[2] = MBOX_TAG_GETSERIAL;   // get serial number command
-    mbox[3] = 0;                    // no input arguments
-    mbox[4] = 0;
-    mbox[5] = 0;                    // clear output buffer
-    mbox[6] = 0;
-
-    mbox[7] = MBOX_TAG_LAST;
-
-    // send the message to the GPU and receive answer
-    if (mbox_call(MBOX_CH_PROP)) {
-        uart_puts("My serial number is: ");
-        uart_hex(mbox[6]);
-        uart_hex(mbox[5]);
-        uart_puts("\n");
-    } else {
-        uart_puts("Unable to query serial!\n");
+    int r=0;
+    while(n-->0) {
+        r<<=3;
+        r+=*s++-'0';
     }
+    return r;
+}
 
-    // echo everything back
-    while(1) {
-        uart_send(uart_getc());
+/**
+ * List the contents of a tar archive
+ */
+void initrd_list(char *buf)
+{
+    uart_puts("Offset   Size     Access rights\t\tFilename\n");
+    // iterate on archive's contents
+    while(!__builtin_memcmp(buf+257,"ustar",5)){
+        int fs=oct2bin(buf+0x7c,11);
+        // print out meta information
+        uart_hex((unsigned int)((unsigned long)buf)+512);
+        uart_send(' ');
+        uart_hex(fs);           // file size in hex
+        uart_send(' ');
+        uart_puts(buf+0x64);    // access bits in octal
+        uart_send(' ');
+        uart_puts(buf+0x109);   // owner
+        uart_send('.');
+        uart_puts(buf+0x129);   // group
+        uart_send('\t');
+        uart_puts(buf);         // filename
+        uart_puts("\n");
+        // jump to the next file
+        buf+=(((fs+511)/512)+1)*512;
     }
 }

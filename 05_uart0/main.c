@@ -31,7 +31,7 @@ void main()
     // set up serial console
     uart_init();
     
-    // get the command line with a mailbox call
+    // get the board's unique serial number with a mailbox call
     mbox[0] = 8*4;                  // length of the message
     mbox[1] = MBOX_REQUEST;         // this is a request message
     
