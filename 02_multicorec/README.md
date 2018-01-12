@@ -1,7 +1,7 @@
 Tutorial 02 - Multicore C
 =========================
 
-Now let's try something more complex, shall we? By complex I mean stop the CPU cures just like in the first tutorial,
+Now let's try something more complex, shall we? By complex I mean stop the CPU cores just like in the first tutorial,
 but this time stop one of them from C!
 
 Start

@@ -101,7 +101,7 @@ Similarily, all peripherals communicates in memory with the CPU. Each has it's d
 0x3F000000, but it's not in real RAM (called Memory Mapped IO). Now there's no mailbox for peripherals, instead each
 device has it's own protocol. What's common for these devices that their memory must be read and written in 32 bit
 units at 4 bytes aligned addresses (so called words), and each has control/status and data words. Unfortunately
-Broadcom (the manucafturer of the SoC chip) is legendary bad at documenting their products. The best we've got is the
+Broadcom (the manufacturer of the SoC chip) is legendary bad at documenting their products. The best we've got is the
 BCM2835 documentation, which is close enough.
 
 There's also a Memory Management Unit in the CPU which allows creating virtual address spaces. This can be programmed
