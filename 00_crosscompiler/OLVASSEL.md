@@ -80,8 +80,8 @@ configure --prefix=/usr/local/cross-compiler --target=aarch64-elf --enable-langu
 --disable-linker-build-id --enable-lto --enable-install-libiberty --with-linker-hash-style=gnu --with-gnu-ld\
 --enable-gnu-indirect-function --disable-multilib --disable-werror --enable-checking=release --enable-default-pie \
 --enable-default-ssp --enable-gnu-unique-object
-make -j4
-make install
+make -j4 all-gcc
+make install-gcc
 ```
 
 Itt ugyanúgy megadjuk a könyvtárat és a célarchitektúrát, mint az előbb. Megadjuk azt is, hogy csak C fordítót kérünk,
@@ -108,5 +108,5 @@ Amik ezek közül számunkra érdekesek:
  - aarch64-elf-objdump - futtathatók disassemblálásához (debuggolásnál)
  - aarch64-elf-readelf - hasznos eszköz a futtathatókban lévő szekciók és szegmensek listázáshoz (debuggolásnál)
 
-Ha mind az öt fenti futtahatót látod, és hibaüzenet nélkül le is futnak, gratulálok!
+Ha mind a hat fenti futtahatót látod, és hibaüzenet nélkül le is futnak, gratulálok!
 Minden eszköz a rendelkezésedre áll, ami ehhez az oktatóanyaghoz kelleni fog.

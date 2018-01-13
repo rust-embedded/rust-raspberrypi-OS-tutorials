@@ -80,8 +80,8 @@ configure --prefix=/usr/local/cross-compiler --target=aarch64-elf --enable-langu
 --disable-linker-build-id --enable-lto --enable-install-libiberty --with-linker-hash-style=gnu --with-gnu-ld\
 --enable-gnu-indirect-function --disable-multilib --disable-werror --enable-checking=release --enable-default-pie \
 --enable-default-ssp --enable-gnu-unique-object
-make -j4
-make install
+make -j4 all-gcc
+make install-gcc
 ```
 
 Here we specify the same directory and architecture as before. We also tell to compile only the C compiler, as gcc
@@ -108,5 +108,5 @@ The executables we are interested in:
  - aarch64-elf-objdump - utility to disassemble executables (for debugging)
  - aarch64-elf-readelf - an useful utility to dump sections and segments in executables (for debugging)
 
-If you have all of the above five executables and you can also run them without error messages, congrats!
+If you have all of the above six executables and you can also run them without error messages, congrats!
 You have all the tools needed for this tutorial series.
