@@ -1,5 +1,5 @@
-Tutorial 0E - Kezdeti memória lemez
-===================================
+Oktatóanyag 0E - Kezdeti memória lemez
+======================================
 
 Sok OS használ kezdeti memória lemezt (initrd) hogy fájlokat töltsön be induláskor. Szükségét éreztem egy
 ilyen oktatóanyagnak, mivel a legtöbb hobby OS fejlesztőnek fingja sincs, hogy kell ezt rendesen csinálni.

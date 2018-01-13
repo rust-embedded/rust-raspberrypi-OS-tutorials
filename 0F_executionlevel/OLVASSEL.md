@@ -1,5 +1,5 @@
-Tutorial 0F - Futási szintek
-============================
+Oktatóanyag 0F - Futási szintek
+===============================
 
 Mielőtt rátérhetnénk a virtuális memóriára, beszélnünk kell a futási szintekről. Minden szintnek saját
 lapfordító tára van, emiatt életbevágó, hogy tudjuk, melyik szinten futunk éppen. Ezért ebben az oktatóanyagban

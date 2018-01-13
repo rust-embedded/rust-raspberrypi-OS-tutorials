@@ -1,5 +1,5 @@
-Tutorial 10 - Virtuális Memória
-===============================
+Oktatóanyag 10 - Virtuális Memória
+==================================
 
 Elérkeztünk a legegyszerűbb és egyben legbonyolultabb oktatóanyagunkhoz. Egyszerű, mert nem csinálunk mást, mint
 feltöltünk egy tömböt, aztán beállítunk pár regisztert. A nehézség abban rejlik, hogy mi kerüljön a tömbbe.
