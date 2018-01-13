@@ -34,9 +34,8 @@ Aztán megállítjuk a CPU-t, mert egyelőre nincs hova visszatérni a kivételk
 Start
 -----
 
-Mielőtt rendszerfelügyeleti módra váltanánk, beállítjuk a *vbar_el2*-t. Fontos, hogy az EL1 szinten fellépő
-kivételeket EL2 szinten futó kód kezeli le. Minden kezelőt megfelelően kell pozicionálni a memóriában. Qemu
-nem érzékeny annyira erre, de az igazi vas igen.
+Mielőtt rendszerfelügyeleti módra váltanánk, beállítjuk a *vbar_el1*-t. Minden kezelőt megfelelően kell pozicionálni
+a memóriában. Qemu nem érzékeny annyira erre, de az igazi vas igen.
 
 `_vectors` kivételkezelők vektor táblája, kis assembly programokkal, mind az `exc_handler()` nevű C függvényt hívja.
 

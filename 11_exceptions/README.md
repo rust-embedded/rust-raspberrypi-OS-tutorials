@@ -34,8 +34,8 @@ Exception Syndrome Register can be found in ARM DDI0487B_b chapter D10.2.28.
 Start
 -----
 
-Before we switch to supervisor mode, we set up *vbar_el2*. Note that exceptions triggered at EL1 will be handled
-by code at EL2. All handlers must be properly aligned. Qemu is not so picky, but real hardware is.
+Before we switch to supervisor mode, we set up *vbar_el1*. All handlers must be properly aligned.
+Qemu is not so picky, but real hardware is.
 
 `_vectors` the exception handler's vector table with small assembly stubs, each calling `exc_handler()` in C.
 
