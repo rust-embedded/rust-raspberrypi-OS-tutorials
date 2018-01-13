@@ -4,8 +4,8 @@ AArch64 Kereszt-Fordító
 Mielőtt nekiugranál az oktatóanyagoknak, szükséged lesz néhány szerszámra. Nevezetesen egy fordítóra, ami
 képes AArch64-re fordítani, és a hozzá kapcsolódó programokra.
 
-Build renszer
--------------
+Build rendszer
+--------------
 
 A fordítás levezénylésére a GNU make-t fogjuk használni. Ezt nem kell kereszt-fordítani, mivel csak az asztali gépen
 fogjuk futtatni, nem a céleszközön. Azért választottam ezt az oktatóanyagokhoz, mert a GNU make-re a fordító
