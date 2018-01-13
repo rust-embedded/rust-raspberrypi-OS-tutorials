@@ -74,7 +74,7 @@ void uart_init()
 void uart_send(unsigned int c) {
     /* wait until we can send */
     do{asm volatile("nop");}while(!(*AUX_MU_LSR&0x20));
-    /* write the carachter to the buffer */
+    /* write the character to the buffer */
     *AUX_MU_IO=c;
 }
 

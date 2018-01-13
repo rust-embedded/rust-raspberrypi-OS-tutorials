@@ -61,7 +61,7 @@ void uart_init()
     /* map UART0 to GPIO pins */
     r=*GPFSEL1;
     r&=~((7<<12)|(7<<15)); // gpio14, gpio15
-    r|=(2<<12)|(2<<15);    // alt5
+    r|=(4<<12)|(4<<15);    // alt0
     *GPFSEL1 = r;
     *GPPUD = 0;            // enable pins 14 and 15
     wait_cycles(150);
