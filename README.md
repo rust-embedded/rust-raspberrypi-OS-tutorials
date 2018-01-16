@@ -14,7 +14,7 @@ or how to implement multi-tasking. If you plan to write your own OS for the Rasp
 research before you continue. This tutorial is strickly about interfacing with the hardware, and not about OS theory.
 
 I assume you have a fair GNU/Linux knowledge on how to compile programs and create disk and file system images. I
-won't cover those in detail, although I'll talk about how to set up a cross-compiler for this architecture.
+won't cover those in detail, although I'll give you a few hints about how to set up a cross-compiler for this architecture.
 
 Why Raspberry Pi 3?
 -------------------

@@ -68,7 +68,7 @@ typedef struct {
 
 /**
  * Get the starting LBA address of the first partition
- * so that we know where or FAT file system starts, and
+ * so that we know where our FAT file system starts, and
  * read that volume's BIOS Parameter Block
  */
 int fat_getpartition()

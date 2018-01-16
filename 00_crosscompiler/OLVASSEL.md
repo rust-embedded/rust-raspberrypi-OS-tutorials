@@ -4,6 +4,12 @@ AArch64 Kereszt-Fordító
 Mielőtt nekiugranál az oktatóanyagoknak, szükséged lesz néhány szerszámra. Nevezetesen egy fordítóra, ami
 képes AArch64-re fordítani, és a hozzá kapcsolódó programokra.
 
+**FONTOS MEGJEGYZÉS**: ez az leírás nem a kereszt-fordítókról szól úgy általánosságban, hanem arról, hogy
+hogyan fordítsunk konkrétan *aarch64-elf* target-re. Ha problémád adódik, keress rá a google-ön arra, "hogyan
+fordítsunk gcc kereszt-fordítót" vagy kérdezz az operációs rendszered szerinti támogatói fórumokon. Nem tudok és
+nem is fogok segíteni a környezeted kialakításában, azt neked kell megoldanod. Mint a bevezetőben már írtam,
+feltételezem, hogy tudod, hogyan kell programokat fordítani (beleértve a kereszt-fordító fordítását).
+
 Build rendszer
 --------------
 
@@ -105,8 +111,8 @@ Amik ezek közül számunkra érdekesek:
  - aarch64-elf-gcc - a C fordító
  - aarch64-elf-ld - a linker
  - aarch64-elf-objcopy - az ELF futtathatók IMG-re való konvertálásához kell
- - aarch64-elf-objdump - futtathatók disassemblálásához (debuggolásnál)
- - aarch64-elf-readelf - hasznos eszköz a futtathatókban lévő szekciók és szegmensek listázáshoz (debuggolásnál)
+ - aarch64-elf-objdump - futtathatók disassemblálására (debuggoláshoz)
+ - aarch64-elf-readelf - hasznos eszköz a futtathatókban lévő szekciók és szegmensek listázásra (debuggoláshoz)
 
 Ha mind a hat fenti futtahatót látod, és hibaüzenet nélkül le is futnak, gratulálok!
-Minden eszköz a rendelkezésedre áll, ami ehhez az oktatóanyaghoz kelleni fog.
+Minden eszköz a rendelkezésedre áll, elkezdheted az oktatóanyagot!

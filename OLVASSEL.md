@@ -16,8 +16,8 @@ oktatóanyag kifejezetten arról szól, hogy kommunikáljunk az adott hardverrel
 hátteréről.
 
 Feltételezem, hogy elegendő GNU/Linux ismerettel rendelkezel, tudod, hogy kell programokat fordítani és lemez
-valamint fájlrendszer képfájlokat létrehozni. Nem fogok kitérni ezekre, bár szó lesz arról, hogyan állítsuk be
-a kereszt-fordítót kifejezetten ehhez az architektúrához.
+valamint fájlrendszer képfájlokat létrehozni. Nem fogok kitérni ezekre, bár pár apró tanácsot adok arról, hogy
+hogyan állítsuk be a kereszt-fordítót kifejezetten ehhez az architektúrához.
 
 Miért Raspberry Pi 3?
 ---------------------

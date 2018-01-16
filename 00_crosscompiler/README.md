@@ -4,6 +4,12 @@ AArch64 Cross Compiler
 Before we could start our tutorials, you'll need some tools. Namely a compiler that compiles for the AArch64
 architecture and it's companion utilities.
 
+**IMPORTANT NOTE**: this description is not about how to compile a cross-compiler in general. It's about how to
+compile one specifically for the *aarch64-elf* target. If you have problems, google "how to build a gcc cross-compiler"
+or ask on an appropriate support forum for your operating system. I can't and won't help you with your environment,
+you have to solve that on your own. As I've said in the introduction I assume you know how to compile programs
+(including the compilation of the cross-compiler).
+
 Build system
 ------------
 
@@ -109,4 +115,4 @@ The executables we are interested in:
  - aarch64-elf-readelf - an useful utility to dump sections and segments in executables (for debugging)
 
 If you have all of the above six executables and you can also run them without error messages, congrats!
-You have all the tools needed for this tutorial series.
+You have all the tools needed, you can start to work with my tutorials!
