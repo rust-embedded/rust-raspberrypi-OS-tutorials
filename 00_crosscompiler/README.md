@@ -58,7 +58,7 @@ Compiling the sources
 ---------------------
 
 Okay, now we have to build two packages. One is called *binutils*, which includes linker, assembler and other
-usefull commands.
+useful commands.
 
 ```sh
 cd binutils-*

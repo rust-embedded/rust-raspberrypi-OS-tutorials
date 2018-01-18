@@ -1,7 +1,7 @@
 Oktatóanyag 09 - Framebuffer
 ============================
 
-Rendben, végre valami parasztvakítás :-) Eddig a képernyő sötét volt. Most be fogjuk állítani a felbontását
+Rendben, végre valami parasztvakítás :-) Eddig a képernyőn csak a szivárvány doboz volt. Most be fogjuk állítani a felbontását
 egy csomó parancsot tartalmazó üzenettel és egyetlen egy mbox_call hívással, majd kirakunk egy képet. Teleraktam
 kommenttel az lfb.c forrást (igaz, angol nyelvűek), hogy segítsenek eligazodni a parancsokban. De végeredményben
 nem tesz mást, mint feltölt egy int tömböt és meghívja az mbox_call-t, igazán egyszerű. Ha gondolod, megpróbálhatsz

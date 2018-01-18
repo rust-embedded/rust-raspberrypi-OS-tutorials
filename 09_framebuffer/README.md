@@ -1,7 +1,7 @@
 Tutorial 09 - Framebuffer
 =========================
 
-Okay, finaly some eyecandy :-) So far the screen was blank. Now we're about to change the resolution with
+Okay, finaly some eyecandy :-) So far the screen showed the rainbow splash. Now we're about to change the resolution with
 several tags in a single mbox_call, then display a pixmap. I've put a lot of comments for each tag and
 argument to help you, see lfb.c. But at the end of the day it's nothing more than filling up an int array
 and call mbox_call, really simple. If you wish, you can try to remove or add more tags to the message and
