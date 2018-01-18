@@ -9,8 +9,8 @@ hozzáadni vagy elvenni parancsokat, hogy lásd, mi történik. Használhattam v
 is, de az MBOX_CH_PROP sokkal több mindent tesz lehetővé és sokkal rugalmasabb.
 
 Fontos tudnivaló a pitch-ről: talán nem tudod, de a video képernyő rasztersorai nem feltétlenül vannak sorfolytonosan
-tárolva a memóriában. Például lehetséges, hogy 800 pixelnél (800x4=3200 bájt helyett) 4096 bájton tárolódik minden
-sor. Ezért fontos, hogy mindig a dinamikusan lekért pitch értékével számoljuk width*4 helyett a képernyő Y
+tárolva a memóriában. Például lehetséges, hogy 800 pixelnél (800 * 4=3200 bájt helyett) 4096 bájton tárolódik minden
+sor. Ezért fontos, hogy mindig a dinamikusan lekért pitch értékével számoljuk width * 4 helyett a képernyő Y
 koordinátáját.
 
 Arra is érdemes figyelni, hogy a GPU a Raspberry Pi-n nagyon combos. Létrehozhatsz például egy hatalmas virtuális

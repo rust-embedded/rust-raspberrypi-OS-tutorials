@@ -8,8 +8,8 @@ and call mbox_call, really simple. If you wish, you can try to remove or add mor
 see what happens. Could have used MBOX_CH_FB (FrameBuffer channel), but MBOX_CH_PROP gives us more flexibility.
 
 Important note on pitch: maybe you don't know, but video screens does not necessairly map raster lines
-continously in memory. For example it is possible that 800 pixels (800*4=3200 bytes) are stored in 4096
-bytes for every line. Therefore it's important to use the queried pitch value instead of width*4 when
+continously in memory. For example it is possible that 800 pixels (800 * 4=3200 bytes) are stored in 4096
+bytes for every line. Therefore it's important to use the queried pitch value instead of width * 4 when
 calculating the postition for the Y coordinate.
 
 Also note that the GPU on the Raspberry Pi is very powerful. You can create a large virtual screen (let's say
