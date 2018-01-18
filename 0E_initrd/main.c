@@ -26,8 +26,8 @@
 #include "uart.h"
 #include "initrd.h"
 
-// import our bitchunk from tar.o
-extern volatile unsigned char _binary_initrd_tar_start;
+// import our bitchunk from rd.o
+extern volatile unsigned char _binary_ramdisk_start;
 
 void main()
 {
@@ -35,7 +35,7 @@ void main()
     uart_init();
 
     // list contents of an archive
-    initrd_list((char*)&_binary_initrd_tar_start);
+    initrd_list((char*)&_binary_ramdisk_start);
 
     // echo everything back
     while(1) {

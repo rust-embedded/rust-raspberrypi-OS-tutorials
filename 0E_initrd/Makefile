@@ -35,13 +35,18 @@ start.o: start.S
 %.o: %.c
 	aarch64-elf-gcc $(CFLAGS) -c $< -o $@
 
-tar.o:
-	tar -cf initrd.tar *.md *.c *.h
-	aarch64-elf-ld -r -b binary -o tar.o initrd.tar
+tar:
+	tar -cf ramdisk *.md *.c *.h
 
-kernel8.img: start.o tar.o $(OBJS)
-	aarch64-elf-ld -nostdlib -nostartfiles start.o tar.o $(OBJS) -T link.ld -o kernel8.elf
+cpio:
+	ls *.md *.c *.h | cpio -H hpodc -o >ramdisk
+
+rd.o: ramdisk
+	aarch64-elf-ld -r -b binary -o rd.o ramdisk
+
+kernel8.img: start.o rd.o $(OBJS)
+	aarch64-elf-ld -nostdlib -nostartfiles start.o rd.o $(OBJS) -T link.ld -o kernel8.elf
 	aarch64-elf-objcopy -O binary kernel8.elf kernel8.img
 
 clean:
-	rm kernel8.elf *.o *.tar >/dev/null 2>/dev/null || true
+	rm kernel8.elf *.o >/dev/null 2>/dev/null || true
