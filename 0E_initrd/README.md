@@ -4,7 +4,7 @@ Tutorial 0E - Initial RamDisk
 Many OS uses initial ramdisk to load files into memory during boot. I felt the need for such
 a tutorial as most hobby OS developer's never learned how to do this properly.
 
-First of all, we're not going to reinvent the wheel a come up with a new format and an awful
+First of all, we're not going to reinvent the wheel and come up with a new format and an awful
 image creator tool. We're going to use the POSIX standard `tar` utility and the `cpio` utility
 to create our initrd. The former is more straightforward, the latter is used by Linux.
 
