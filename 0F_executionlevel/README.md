@@ -12,7 +12,8 @@ Exception return from AArch64 EL2 to AArch64 EL1 PC 0x8004c
 Current EL is: 00000001
 ```
 
-NOTE: For completeness, I've added code for EL3 too because of Issue #6, although I had no means to test it.
+NOTE: For completeness, I've added code for EL3 too because of [Issue #6](https://github.com/bztsrc/raspi3-tutorial/issues/6),
+although I had no means to test it.
 
 Start
 -----
