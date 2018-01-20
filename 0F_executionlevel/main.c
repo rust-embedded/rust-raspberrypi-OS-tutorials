@@ -36,7 +36,7 @@ void main()
     asm volatile ("mrs %0, CurrentEL" : "=r" (el));
 
     uart_puts("Current EL is: ");
-    uart_hex(el>>2);
+    uart_hex((el>>2)&3);
     uart_puts("\n");
 
     // echo everything back

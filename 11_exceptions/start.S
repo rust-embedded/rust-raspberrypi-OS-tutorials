@@ -42,7 +42,22 @@ _start:
 
     // set up EL1
     mrs     x0, CurrentEL
-    cmp     x0, #4
+    and     x0, x0, #12 // clear reserved bits
+
+    // running at EL3?
+    cmp     x0, #12
+    bne     5f
+    // should never be executed, just for completeness
+    mov     x2, #0x5b1
+    msr     scr_el3, x2
+    mov     x2, #0x3c9
+    msr     spsr_el3, x2
+    adr     x2, 5f
+    msr     elr_el3, x2
+    eret
+
+    // running at EL2?
+5:  cmp     x0, #4
     beq     5f
     msr     sp_el1, x1
     // enable CNTP for EL1
