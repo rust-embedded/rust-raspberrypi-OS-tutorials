@@ -22,7 +22,8 @@ használ), valamint megmondjuk a CPU-nak, hogy AArch64 módban fut az EL1. Vége
 visszatérést hazudunk, hogy ténylegesen szintet váltsunk.
 
 FIGYELEM: a teljesség kedvéért hozzáadtam az EL3-at is az [Issue #6](https://github.com/bztsrc/raspi3-tutorial/issues/6)
-miatt, bár normális körülmények között a Raspberry EL2-n futtatja a kernel8.img-t.
+miatt, bár normális körülmények között a Raspberry EL2-n futtatja a kernel8.img-t. Bizonyos config.txt parancsokkal elérhető,
+hogy EL3-on induljon (köszönet btauro-nak az infóért).
 
 Main
 ----

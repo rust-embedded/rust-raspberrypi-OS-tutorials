@@ -67,6 +67,8 @@ The first argument tells qemu to emulate Raspberry Pi 3 hardware. The second tel
 case the SD card image) to be used. Finally the last argument redirects the emulated UART0 to the standard input/output
 of the terminal running qemu, so that everything sent to the serial line will be displayed, and every key typed in the
 terminal will be received by the vm. Only works with the tutorials 05 and above, as UART1 is *not* redirected by default.
+For that, you would have to add something like `-chardev socket,host=localhost,port=1111,id=aux -serial chardev:aux` (thanks
+godmar for the info).
 
 **!!!WARNING!!!** Qemu emulation is rudimentary, only the most common peripherals are emulated! **!!!WARNING!!!**
 

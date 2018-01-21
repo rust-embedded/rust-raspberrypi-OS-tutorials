@@ -20,7 +20,8 @@ But before we can do that, we have to grant access for the counter registers (us
 the CPU we want AArch64 mode in EL1. Finally, we fake an exception return to change the level for real.
 
 NOTE: For completeness, I've added code for EL3 too because of [Issue #6](https://github.com/bztsrc/raspi3-tutorial/issues/6),
-although normally Raspberry runs kernel8.img in EL2.
+although normally Raspberry runs kernel8.img in EL2. With some config.txt options, you can make it run in EL3 (thanks
+btauro for the info).
 
 Main
 ----
