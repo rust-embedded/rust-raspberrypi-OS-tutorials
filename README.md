@@ -25,6 +25,7 @@ address space is increadibly huge, bigger than the storage capacity which allows
 solutions. Third, uses only MMIO which makes it easy to program.
 
 For 32 bit tutorials, I'd recommend: 
+[Cambridge tutorials](http://www.cl.cam.ac.uk/projects/raspberrypi/tutorials/os/armv6.html) (ASM and 32 bit only),
 [David Welch's tutorials](https://github.com/dwelch67/raspberrypi) (mostly C, with some 64 bit examples),
 [Peter Lemon's tutorials](https://github.com/PeterLemon/RaspberryPi) (ASM only, also for 64 bit) and
 [LdB's tutorials](https://github.com/LdB-ECM/Raspberry-Pi) (C and ASM, also for 64 bit, more complex examples like USB and OpenGL).
