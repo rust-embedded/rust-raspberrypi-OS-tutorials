@@ -28,10 +28,10 @@ hatalmas, nagyobb, mint a tárolókapacitás, ezért lehetővé teszi új, izgal
 Harmadsorban MMIO-t használ, amit könnyű programozni.
 
 32 bites oktatóanyagokhoz a következőket ajánlom:
-[Cambridge-i oktatóanyagok](http://www.cl.cam.ac.uk/projects/raspberrypi/tutorials/os/armv6.html) (ASM és csak 32 bites példák),
+[Cambridge-i oktatóanyagok](http://www.cl.cam.ac.uk/projects/raspberrypi/tutorials/os/) (ASM és csak 32 bites példák),
 [David Welch oktatóanyagai](https://github.com/dwelch67/raspberrypi) (főleg C, néhány 64 bites példával),
 [Peter Lemon oktatóanyagai](https://github.com/PeterLemon/RaspberryPi) (csak ASM, 64 bites példák is) and
-[LdB oktatóanyagai](https://github.com/LdB-ECM/Raspberry-Pi) (C és ASM, 64 bites és összetettebb példák is, mint USB és OpenGL).
+[Leon de Boer oktatóanyagai](https://github.com/LdB-ECM/Raspberry-Pi) (C és ASM, 64 bites és összetettebb példák is, mint USB és OpenGL).
 
 Előkészületek
 -------------
