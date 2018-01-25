@@ -24,8 +24,13 @@ machine. I gave up programming for 32 bit long long time ago. The 64 bit is so m
 address space is increadibly huge, bigger than the storage capacity which allows us to use some interesting new
 solutions. Third, uses only MMIO which makes it easy to program.
 
-Prerequirements
----------------
+For 32 bit tutorials, I'd recommend: 
+[David Welch's tutorials](https://github.com/dwelch67/raspberrypi) (mostly C, with some 64 bit examples),
+[Peter Lemmon's tutorials](https://github.com/PeterLemon/RaspberryPi) (ASM only, also for 64 bit) and
+[LdB's tutorials](https://github.com/LdB-ECM/Raspberry-Pi) (C and ASM, also for 64 bit, more complex examples like USB and OpenGL).
+
+Prerequisites
+-------------
 
 Before you can start, you'll need a cross-compiler (see 00_crosscompiler directory for details)
 and a Micro SD card with [firmware files](https://github.com/raspberrypi/firmware/tree/master/boot) on a FAT filesystem.

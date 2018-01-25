@@ -32,4 +32,6 @@ Linker szkript
 --------------
 
 Nem túl meglepő módon ez is egyszerű. Be kell állítanunk a bázis címet, ahová a kernel8.img töltődik, és mindent
-ide rakunk, mivel csak egy szekciónk van.
+ide rakunk, mivel csak egy szekciónk van. Fontos megjegyezni, hogy AArch64 kód esetén a betöltési cím **0x80000**
+és nem **0x8000**, mint AArch32 esetében.
+

@@ -27,6 +27,11 @@ masina. Már réges rég felhagytam a 32 bites fejlesztéssel, mivel a 64 bit so
 hatalmas, nagyobb, mint a tárolókapacitás, ezért lehetővé teszi új, izgalmas megoldások létrehozását.
 Harmadsorban MMIO-t használ, amit könnyű programozni.
 
+32 bites oktatóanyagokhoz a következőket ajánlom:
+[David Welch oktatóanyagai](https://github.com/dwelch67/raspberrypi) (főleg C, néhány 64 bites példával),
+[Peter Lemmon oktatóanyagai](https://github.com/PeterLemon/RaspberryPi) (csak ASM, 64 bites példák is) and
+[LdB oktatóanyagai](https://github.com/LdB-ECM/Raspberry-Pi) (C és ASM, 64 bites és összetettebb példák is, mint USB és OpenGL).
+
 Előkészületek
 -------------
 
