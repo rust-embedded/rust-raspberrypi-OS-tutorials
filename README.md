@@ -26,7 +26,7 @@ solutions. Third, uses only MMIO which makes it easy to program.
 
 For 32 bit tutorials, I'd recommend: 
 [David Welch's tutorials](https://github.com/dwelch67/raspberrypi) (mostly C, with some 64 bit examples),
-[Peter Lemmon's tutorials](https://github.com/PeterLemon/RaspberryPi) (ASM only, also for 64 bit) and
+[Peter Lemon's tutorials](https://github.com/PeterLemon/RaspberryPi) (ASM only, also for 64 bit) and
 [LdB's tutorials](https://github.com/LdB-ECM/Raspberry-Pi) (C and ASM, also for 64 bit, more complex examples like USB and OpenGL).
 
 Prerequisites
