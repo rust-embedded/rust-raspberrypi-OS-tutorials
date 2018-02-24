@@ -1,7 +1,7 @@
 Bare Metal Programming on Raspberry Pi 3
 ========================================
 
-Hello there! This tutotial series are made for those who would like to compile their own bare metal application
+Hello there! This tutorial series are made for those who would like to compile their own bare metal application
 for the Raspberry Pi.
 
 The target audience is hobby OS developers, who are new to this hardware. I'll give you examples on how to do the
@@ -24,10 +24,14 @@ machine. I gave up programming for 32 bit long long time ago. The 64 bit is so m
 address space is increadibly huge, bigger than the storage capacity which allows us to use some interesting new
 solutions. Third, uses only MMIO which makes it easy to program.
 
-For 32 bit tutorials, I'd recommend: 
+For 32 bit tutorials, I'd recommend:
+
 [Cambridge tutorials](http://www.cl.cam.ac.uk/projects/raspberrypi/tutorials/os/) (ASM and 32 bit only),
+
 [David Welch's tutorials](https://github.com/dwelch67/raspberrypi) (mostly C, with some 64 bit examples),
+
 [Peter Lemon's tutorials](https://github.com/PeterLemon/RaspberryPi) (ASM only, also for 64 bit) and
+
 [Leon de Boer's tutorials](https://github.com/LdB-ECM/Raspberry-Pi) (C and ASM, also for 64 bit, more complex examples like USB and OpenGL).
 
 Prerequisites
