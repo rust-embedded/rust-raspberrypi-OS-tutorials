@@ -25,13 +25,10 @@
 
 #include "uart.h"
 
-// import our start address from linker
-extern char _start;
-
 void main()
 {
     int size=0;
-    char *kernel=(char*)&_start;
+    char *kernel=(char*)0x80000;
 
     // set up serial console
     uart_init();
