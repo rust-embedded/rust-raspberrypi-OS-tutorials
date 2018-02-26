@@ -1,4 +1,4 @@
-Oktatóanyag 15 - Raspbootin64
+Oktatóanyag 14 - Raspbootin64
 =============================
 
 Mivel folyton iragatni az SD kártyát strapás, és nem tesz jót a kártyának, ezért egy olyan kernel8.img-t készítünk,

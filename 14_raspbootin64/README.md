@@ -1,4 +1,4 @@
-Tutorial 15 - Raspbootin64
+Tutorial 14 - Raspbootin64
 ==========================
 
 Because changing SD card is boring and also to avoid potential SD card damage, we create a kernel8.img that will
