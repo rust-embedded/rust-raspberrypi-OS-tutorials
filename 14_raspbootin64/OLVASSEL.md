@@ -14,14 +14,15 @@ Hogy az új kernelt ugyanoda tölthessük be, el kell mozdítanunk a kódunkat a
 az első kód ugyanarra a címre tölti be a második kódot, ezért az utóbbi azt hiszi, a firmware töltötte be.
 Hogy ezt megvalósítsuk, egy alacsonyabb címre linkeljük a kódot, és mivel a GPU ettől függetlenül a 0x80000-ra tölt be,
 nekünk kell a módosított címre másolnunk magunkat. Fontos, hogy ezalatt csak relatív címzést használhatunk. Amikor
-végeztünk, a 0x80000-as címen lévő memóriának használaton kívülinek kell lennie. Ajánlott a kódunkat minimalizálni, mivel
-úgyis figyelmen kívül hagyja az újonnan betöltendő kód. Ezért kivettem az `uart_puts()` eljárást, így a teljes méret
-1024 bájt alá csökkent. Ezt a következő paranccsal ellenőrizheted:
+végeztünk, a 0x80000-as címen lévő memóriának használaton kívülinek kell lennie.  Ezt a következő paranccsal ellenőrizheted:
 
 ```sh
 $ aarch64-elf-readelf -s kernel8.elf | grep __bss_end
     21: 000000000007ffc0     0 NOTYPE  GLOBAL DEFAULT    4 __bss_end
 ```
+
+Ajánlott a kódunkat minimalizálni, mivel úgyis figyelmen kívül hagyja az újonnan betöltendő kód. Ezért kivettem az
+`uart_puts()` eljárást, így a teljes méret 1024 bájt alá csökkent.
 
 Start
 -----

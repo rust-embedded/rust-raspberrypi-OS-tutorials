@@ -14,14 +14,16 @@ In order to load the new kernel to the same address, we have to move ourself out
 loading: one code loads the next code to the same position in memory, therefore the latter thinks it was loaded
 by the firmware. To implement that we use a different linking address this time, and since GPU loads us to 0x80000
 regardless, we have to copy our code to that link address. What's important, that we can only use relative addresses
-while doing so. When we're done, the memory at 0x80000 must be free to use. We also should minimize the size of the
-loader, since it will be regarded by the newly loaded code anyway. By removing `uart_puts()` I've managed to shrink the
-size below 1024 bytes. You can checked that with:
+while doing so. When we're done, the memory at 0x80000 must be free to use. You can checked that with:
 
 ```sh
 $ aarch64-elf-readelf -s kernel8.elf | grep __bss_end
     21: 000000000007ffc0     0 NOTYPE  GLOBAL DEFAULT    4 __bss_end
 ```
+
+We also should minimize the size of the
+loader, since it will be regarded by the newly loaded code anyway. By removing `uart_puts()` I've managed to shrink the
+size below 1024 bytes.
 
 Start
 -----
