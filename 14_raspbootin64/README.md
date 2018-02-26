@@ -6,7 +6,7 @@ load the real kernel8.img over serial.
 
 This tutorial is a rewrite of the well known serial boot loader, [raspbootin](https://github.com/mrvn/raspbootin) in 64 bit.
 I only provide one part of the loader, the kernel receiver, which runs on the RPi. For the other
-part, the sender, which runs on your PC see the original [raspbootcom](https://github.com/mrvn/raspbootin/raspbootcom) utility.
+part, the sender, which runs on your PC see the original [raspbootcom](https://github.com/mrvn/raspbootin/tree/master/raspbootcom) utility.
 If you want to send kernels from a Windows machine, I suggest to take a look at John Cronin's rewrite,
 [raspbootin-server](https://github.com/jncronin/rpi-boot/blob/master/raspbootin-server.c) which can be compiled for the Win32 API.
 
