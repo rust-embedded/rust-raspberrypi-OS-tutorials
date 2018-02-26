@@ -6,7 +6,7 @@ ami a soros vonalról fogja betölteni az igazi kernel8.img-t.
 
 Ez az oktatóanyag a jól ismert [raspbootin](https://github.com/mrvn/raspbootin) átírása 64 bitre.
 A betöltőprogram egyik felét adja csak, a kernel fogadót, ami az RPi-n fut. A másik fél, a PC-n futó küldő,
-megtalálható az eredeti forrásban [raspbootcom](https://github.com/mrvn/raspbootin/tree/master/raspbootcom) néven.
+megtalálható az eredeti forrásban [raspbootcom](https://github.com/mrvn/raspbootin/blob/master/raspbootcom/raspbootcom.cc) néven.
 Ha Windowsos gépekről is szeretnél kernelt küldeni, akkor javaslom inkább a John Cronin féle átiratot, a
 [raspbootin-server](https://github.com/jncronin/rpi-boot/blob/master/raspbootin-server.c)-t, ami natív Win32 API-t használ.
 
