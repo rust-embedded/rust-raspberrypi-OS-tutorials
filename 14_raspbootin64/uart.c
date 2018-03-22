@@ -89,11 +89,8 @@ void uart_send(unsigned int c) {
  * Receive a character
  */
 char uart_getc() {
-    char r;
     /* wait until something is in the buffer */
     do{asm volatile("nop");}while(*UART0_FR&0x10);
     /* read it and return */
-    r=(char)(*UART0_DR);
-    /* convert carrige return to newline */
-    return r=='\r'?'\n':r;
+    return (char)(*UART0_DR);
 }
