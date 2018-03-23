@@ -58,7 +58,7 @@ _start:
     sub     w2, w2, #1
     cbnz    w2, 3b
 
-    // jump to C code, should not return
-4:  bl      main
+    // jump to relocated C code, should not return
+4:  bl      main-1024
     // for failsafe, halt this core too
     b       1b
