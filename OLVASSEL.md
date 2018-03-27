@@ -59,8 +59,8 @@ minicom -b 115200 -D /dev/ttyUSB0
 Emulálás
 --------
 
-Sajnálatos módon a hivatalos qemu nem támogatja a Raspberry Pi 3-at, csak a 2-t. De van egy jó hírem, megírtam
-a támogatást hozzá, és a forrást elérhetővé tettem a [github](https://github.com/bztsrc/qemu-raspi3)-on. Miután
+Sajnálatos módon a hivatalos qemu bináris nem támogatja a Raspberry Pi 3-at egyenlőre. De van egy jó hírem, megírtam
+a támogatást hozzá, így hamarosan érkezik. Addig sajnos fordítani kell a qemu-t a legfrissebb forrásból. Miután
 lefordult, így tudod használni:
 
 ```sh

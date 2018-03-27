@@ -60,8 +60,8 @@ minicom -b 115200 -D /dev/ttyUSB0
 Emulation
 ---------
 
-Unfortunately official qemu does not support Raspberry Pi 3, only Raspberry Pi 2. But good news, I've implemented
-that, and made the source available on [github](https://github.com/bztsrc/qemu-raspi3). Once compiled, you can use it with:
+Unfortunately official qemu binary does not support Raspberry Pi 3 yet. But good news, I've implemented that, so
+it's coming soon. Until then, you have to compile qemu from the latest source. Once compiled, you can use it with:
 
 ```sh
 qemu-system-aarch64 -M raspi3 -kernel kernel8.img -serial stdio
