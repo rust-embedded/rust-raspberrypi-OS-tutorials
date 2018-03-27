@@ -67,6 +67,13 @@ again:
     // read the kernel
     while(size--) *kernel++ = uart_getc();
 
-    // jump to the new kernel
-    asm volatile ("b 0x80000");
+    // restore arguments and jump to the new kernel.
+    asm volatile (
+        "mov x0, x10;"
+        "mov x1, x11;"
+        "mov x2, x12;"
+        "mov x3, x13;"
+        // we must force an absolute address to branch to
+        "mov x30, 0x80000; ret"
+    );
 }
