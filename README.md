@@ -45,10 +45,10 @@ I recommend to get a [Micro SD card USB adapter](http://media.kingston.com/image
 like an USB stick, no special card reader interface required (although many laptops have those these days).
 
 You can create an MBR partitioning scheme on the SD card with an LBA FAT32 (type 0x0C) partition, format it
-and copy bootcode.bin and start.elf onto it. Or alternatively you can download a raspbian image, `dd` it to the SD card,
-mount it and delete the unnecessary .img files. Whichever you prefer. What's important, you'll create `kernel8.img`
-with these tutorials which must be copied to the root directory on the SD card, and no other `.img` files should exists
-there.
+and copy *bootcode.bin*, *start.elf* and *fixup.dat* onto it. Or alternatively you can download a raspbian image,
+`dd` it to the SD card, mount it and delete the unnecessary .img files. Whichever you prefer. What's important, you'll
+create `kernel8.img` with these tutorials which must be copied to the root directory on the SD card, and no other `.img`
+files should exists there.
 
 I'd also recommend to get an [USB serial debug cable](https://www.adafruit.com/product/954). You connect it to the
 GPIO pins 14/15, and run minicom on your desktop computer like

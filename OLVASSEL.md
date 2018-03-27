@@ -44,8 +44,8 @@ Javaslom, hogy szerezz be egy [Micro SD kártya USB adaptert](http://media.kings
 pent, speciális kártya olvasó interfész nélkül (habár sok laptopban gyárilag van ilyen olvasó manapság).
 
 Az MBR partíciós táblát létre kell hozni az SD kártyán LBA FAT32 (0x0C típusú) partícióval, leformázni azt,
-majd rámásolni a bootcode.bin és start.elf állományokat. Alternatívaként letöltheted a raspbian képfájlt, `dd`-vel
-rárakhatod a kártyára, majd mountolás után letörölheted a felesleges .img fájlokat. Amenyik szimpatikusabb. A lényeg
+majd rámásolni a *bootcode.bin*, *start.elf* és *fixup.dat* állományokat. Alternatívaként letöltheted a raspbian képfájlt,
+`dd`-vel rárakhatod a kártyára, majd mountolás után letörölheted a felesleges .img fájlokat. Amenyik szimpatikusabb. A lényeg
 az, hogy ezekben az oktatóanyagokban `kernel8.img` fájlokat gyártunk, amit a partíció gyökér könyvtárába kell másolni,
 és más `.img` kiterjesztésű fájl nem lehet ott.
 
