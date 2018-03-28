@@ -78,7 +78,7 @@ fájl (vagy a második esetben az SD kártya képfájl) nevét. Végezetül az u
 emulált gép UART0-ját átirányítsuk a qemu-t futtató terminál be- és kimenetére, azaz hogy minden, a virtuális gépen
 soros vonalra küldött karater megjelenjen a terminálon, az ott leütött karaktereket pedig kiolvashassuk a vm-en. Ez
 csak az 5-ös oktatóanyagtól működik, mivel az UART1 alapból *nem* irányítódik át. Ehhez plusz paraméterekre van szükség,
-mint például `-chardev socket,host=localhost,port=1111,id=aux -serial chardev:aux` (köszönet godmar-nak az infóért).
+mint például `-chardev socket,host=localhost,port=1111,id=aux -serial chardev:aux` (köszönet [@godmar](https://github.com/godmar)-nak az infóért).
 
 **!!!FIGYELEM!!!** Qemu emulálása felületes, csak a legáltalánosabb perifériákat támogatja! **!!!FIGYELEM!!!**
 

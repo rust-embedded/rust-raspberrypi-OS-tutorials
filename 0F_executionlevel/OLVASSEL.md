@@ -4,7 +4,7 @@ Oktatóanyag 0F - Futási szintek
 Mielőtt rátérhetnénk a virtuális memóriára, beszélnünk kell a futási szintekről. Minden szintnek saját
 lapfordító tára van, emiatt életbevágó, hogy tudjuk, melyik szinten futunk éppen. Ezért ebben az oktatóanyagban
 megbizonyosodunk róla, hogy rendszerfelügyeleti szinten (supervisor) azaz EL1-en vagyunk-e. Qemu alatt a gép
-indulhat egyből EL1-en, az igazi Raspberry Pi vason azonban mindig virtualizációs szinten (hypervisor) azaz EL2-n
+indulhat egyből EL1-en, az igazi Raspberry Pi vason azonban általában virtualizációs szinten (hypervisor) azaz EL2-n
 ébredünk. Qemu alatt a szintváltást a "-d int" kapcsolóval debuggolhatjuk.
 
 ```sh
@@ -23,7 +23,7 @@ visszatérést hazudunk, hogy ténylegesen szintet váltsunk.
 
 FIGYELEM: a teljesség kedvéért hozzáadtam az EL3-at is az [Issue #6](https://github.com/bztsrc/raspi3-tutorial/issues/6)
 miatt, bár normális körülmények között a Raspberry EL2-n futtatja a kernel8.img-t. Bizonyos config.txt parancsokkal elérhető,
-hogy EL3-on induljon (köszönet btauro-nak az infóért).
+hogy EL3-on induljon (köszönet [@btauro](https://github.com/btauro)-nak az infóért).
 
 Main
 ----

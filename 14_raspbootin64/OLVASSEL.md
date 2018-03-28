@@ -9,7 +9,7 @@ A betöltőprogram egyik felét adja csak, a kernel fogadót, ami az RPi-n fut. 
 megtalálható az eredeti forrásban [raspbootcom](https://github.com/mrvn/raspbootin/blob/master/raspbootcom/raspbootcom.cc) néven.
 Ha Windowsos gépekről is szeretnél kernelt küldeni, akkor javaslom inkább a John Cronin féle átiratot, a
 [raspbootin-server](https://github.com/jncronin/rpi-boot/blob/master/raspbootin-server.c)-t, ami natív Win32 API-t használ.
-Ezen kvül, @milanvidakovic volt olyan jó fej, hogy megosztotta az általa írt [Java-s verziót](https://github.com/bztsrc/raspi3-tutorial/files/1850345/Raspbootin64Client.zip).
+Ezen kvül, [@milanvidakovic](https://github.com/milanvidakovic) volt olyan jó fej, hogy megosztotta az általa írt [Java-s kernel küldő](https://github.com/milanvidakovic/Raspbootin64Client)t.
 
 Hogy az új kernelt ugyanoda tölthessük be, el kell mozdítanunk a kódunkat az útból. Ezt chain loading-nak hívják, amikor
 az első kód ugyanarra a címre tölti be a második kódot, ezért az utóbbi azt hiszi, a firmware töltötte be.

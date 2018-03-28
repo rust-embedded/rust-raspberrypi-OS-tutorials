@@ -9,7 +9,7 @@ I only provide one part of the loader, the kernel receiver, which runs on the RP
 part, the sender, which runs on your PC see the original [raspbootcom](https://github.com/mrvn/raspbootin/blob/master/raspbootcom/raspbootcom.cc) utility.
 If you want to send kernels from a Windows machine, I suggest to take a look at John Cronin's rewrite,
 [raspbootin-server](https://github.com/jncronin/rpi-boot/blob/master/raspbootin-server.c) which can be compiled for the Win32 API.
-Even more, @milanvidakovic was kind to share a [Java version](https://github.com/bztsrc/raspi3-tutorial/files/1850345/Raspbootin64Client.zip) with you.
+Even more, [@milanvidakovic](https://github.com/milanvidakovic) was kind to share a [Java version](https://github.com/milanvidakovic/Raspbootin64Client) of the kernel sender with you.
 
 In order to load the new kernel to the same address, we have to move ourself out of the way. It's called chain
 loading: one code loads the next code to the same position in memory, therefore the latter thinks it was loaded
