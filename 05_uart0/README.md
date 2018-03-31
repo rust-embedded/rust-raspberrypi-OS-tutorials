@@ -5,6 +5,7 @@ This tutorial does the same as tutorial 04, but it prints the serial number on U
 easily with qemu, like
 
 ```sh
+$ make # To build the kernel
 $ make qemu
 <Press any key>
 Hello Rustacean!

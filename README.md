@@ -1,7 +1,38 @@
-Bare Metal Programming on Raspberry Pi 3
+Bare Metal Rust Programming on Raspberry Pi 3
 ========================================
 
-Hello there! This tutorial series are made for those who would like to compile their own bare metal application
+## About this repository
+
+Hi all. This repository aims to provide easy reference code for programming bare metal on the Raspberry Pi 3
+in the [Rust] systems programming language.
+The repo is basically a combination of two awesome resources that are available on the web.
+  1. First of all, it is a fork of [Zoltan Baldaszti]'s awesome [tutorial] on bare metal programming on RPi3 in C. Rust code is and will be translated based on his files, and READMEs are adapted were needed. Credits to this guy plz!
+  2. The second props go to [Jorge Aparicio] for ["The Embedonomicon"], from which the glue code is taken.
+
+[Rust]: https://www.rust-lang.org
+[Zoltan Baldaszti]: https://github.com/bztsrc
+[tutorial]: https://github.com/bztsrc/raspi3-tutorial
+[Jorge Aparicio]: https://github.com/japaric
+["The Embedonomicon"]: https://github.com/japaric/embedonomicon
+
+This repo follows two main principles:
+  1. Most importantly: No toolchain hassles. Users eager to try the code should not be bothered with complicated toolchain installation/compilation steps. This is achieved by trying to use the standard Rust toolchain as much as possible, and where not possible, using Docker containers. Please [install Docker for your distro].
+     1. Compiler and linker can be used from Rust nightly.
+     2. QEMU will be used for emulation, but RPi3 support in QEMU is very fresh and has not landed in most of the pre-packaged versions of popular distributions. [This] container will provide it ready to go.
+     3. aarch64 toolchain binaries that are not provided Rust, like `objcopy`, will be provided with a container from the [dockcross] project, which does an awesome job of curating various toolchains in containers.
+   2. Use as little assembler as possible. Do as much as possible in Rust.
+
+Please notice that you won't need to download or prepare the containers upfront. As long as you have docker installed, they will be pulled automatically the first time the Makefile needs them.
+
+[install Docker for your distro]: https://www.docker.com/community-edition#/download
+[This]: https://github.com/andre-richter/docker-raspi3-qemu
+[dockcross]: https://github.com/dockcross/dockcross
+
+For now, only tutorial `05_uart0` is ready. It has been done first in order to provide a classic physical `Hello World` over a real UART. It is planned to add more examples later. Contributions welcome!
+
+## Introduction
+
+This tutorial series are made for those who would like to compile their own bare metal application
 for the Raspberry Pi.
 
 The target audience is hobby OS developers, who are new to this hardware. I'll give you examples on how to do the
@@ -37,46 +68,39 @@ For 32 bit tutorials, I'd recommend:
 Prerequisites
 -------------
 
-Before you can start, you'll need a cross-compiler (see 00_crosscompiler directory for details)
-and a Micro SD card with [firmware files](https://github.com/raspberrypi/firmware/tree/master/boot) on a FAT filesystem.
+Before you can start, you'll need a suitable Rust toolchain.
+```bash
+curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly
+rustup component add rust-src
+cargo install xargo
+```
+
+Additionally, a Micro SD card with [firmware files](https://github.com/raspberrypi/firmware/tree/master/boot) on a FAT filesystem.
 
 I recommend to get a [Micro SD card USB adapter](http://media.kingston.com/images/products/prodReader-FCR-MRG2-img.jpg)
 (many manufacturers ship SD cards with such an adapter), so that you can connect the card to any desktop computer just
 like an USB stick, no special card reader interface required (although many laptops have those these days).
 
 You can create an MBR partitioning scheme on the SD card with an LBA FAT32 (type 0x0C) partition, format it
-and copy *bootcode.bin*, *start.elf* and *fixup.dat* onto it. Or alternatively you can download a raspbian image,
+and copy `bootcode.bin`, `start.elf` and `fixup.dat` onto it. **Delete all other files or booting might not work**. Or alternatively you can download a raspbian image,
 `dd` it to the SD card, mount it and delete the unnecessary .img files. Whichever you prefer. What's important, you'll
 create `kernel8.img` with these tutorials which must be copied to the root directory on the SD card, and no other `.img`
 files should exists there.
 
 I'd also recommend to get an [USB serial debug cable](https://www.adafruit.com/product/954). You connect it to the
-GPIO pins 14/15, and run minicom on your desktop computer like
+GPIO pins 14/15.
 
-```sh
-minicom -b 115200 -D /dev/ttyUSB0
+Then, run `screen` on your desktop computer like
+
+```bash
+sudo screen /dev/ttyUSB0 115200
 ```
+
+Exit screen again by pressing <kbd>ctrl-a</kbd> <kbd>ctrl-d</kbd>
 
 Emulation
 ---------
-
-Unfortunately official qemu binary does not support Raspberry Pi 3 yet. But good news, I've implemented that, so
-it's coming soon. Until then, you have to compile qemu from the latest source. Once compiled, you can use it with:
-
-```sh
-qemu-system-aarch64 -M raspi3 -kernel kernel8.img -serial stdio
-```
-
-Or (with the file system tutorials)
-
-```sh
-qemu-system-aarch64 -M raspi3 -drive file=$(yourimagefile),if=sd,format=raw -serial stdio
-```
-
-The first argument tells qemu to emulate Raspberry Pi 3 hardware. The second tells the kernel filename (or in second
-case the SD card image) to be used. Finally the last argument redirects the emulated UART0 to the standard input/output
-of the terminal running qemu, so that everything sent to the serial line will be displayed, and every key typed in the
-terminal will be received by the vm. Only works with the tutorials 05 and above, as UART1 is *not* redirected by default.
+QEMU currently only emulates UART0, so only the tutorials 05 and above will work, as UART1 is *not* redirected by default.
 For that, you would have to add something like `-chardev socket,host=localhost,port=1111,id=aux -serial chardev:aux` (thanks
 [@godmar](https://github.com/godmar) for the info).
 
