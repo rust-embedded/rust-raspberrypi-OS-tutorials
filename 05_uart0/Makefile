@@ -1,43 +1,58 @@
 #
-# Copyright (C) 2018 bzt (bztsrc@github)
+# MIT License
 #
-# Permission is hereby granted, free of charge, to any person
-# obtaining a copy of this software and associated documentation
-# files (the "Software"), to deal in the Software without
-# restriction, including without limitation the rights to use, copy,
-# modify, merge, publish, distribute, sublicense, and/or sell copies
-# of the Software, and to permit persons to whom the Software is
+# Copyright (c) 2018 Andre Richter <andre.o.richter@gmail.com>
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be
-# included in all copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
 #
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
-# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
-# WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-# DEALINGS IN THE SOFTWARE.
-#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
 #
 
-SRCS = $(wildcard *.c)
-OBJS = $(SRCS:.c=.o)
-CFLAGS = -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles
+TARGET = aarch64-raspi3-none-elf
+
+CROSS_CONTAINER = ./dockcross-linux-aarch64
+CROSS_CONTAINER_OBJCOPY = aarch64-linux-gnu-objcopy
+
+QEMU_CONTAINER = andrerichter/raspi3-qemu
+DOCKER_CMD = docker run -it --rm -v $(shell pwd):/work -w /work
+QEMU_CMD = qemu-system-aarch64 -M raspi3 -kernel kernel8.img
 
 all: clean kernel8.img
 
-start.o: start.S
-	aarch64-elf-gcc $(CFLAGS) -c start.S -o start.o
+target/$(TARGET)/debug/kernel8: src/main.rs
+	RUST_TARGET_PATH=$(shell pwd) xargo build --target=$(TARGET)
+	cp $@ .
 
-%.o: %.c
-	aarch64-elf-gcc $(CFLAGS) -c $< -o $@
+target/$(TARGET)/release/kernel8: src/main.rs
+	RUST_TARGET_PATH=$(shell pwd) xargo build --target=$(TARGET) --release
+	cp $@ .
 
-kernel8.img: start.o $(OBJS)
-	aarch64-elf-ld -nostdlib -nostartfiles start.o $(OBJS) -T link.ld -o kernel8.elf
-	aarch64-elf-objcopy -O binary kernel8.elf kernel8.img
+ifeq ($(DEBUG),1)
+kernel8: target/$(TARGET)/debug/kernel8
+else
+kernel8: target/$(TARGET)/release/kernel8
+endif
+
+kernel8.img: kernel8
+	$(CROSS_CONTAINER) $(CROSS_CONTAINER_OBJCOPY) -O binary -S $< kernel8.img
+
+qemu:
+	$(DOCKER_CMD) $(QEMU_CONTAINER) $(QEMU_CMD) -serial stdio
 
 clean:
-	rm kernel8.elf *.o >/dev/null 2>/dev/null || true
+	cargo clean
+	rm -f kernel8

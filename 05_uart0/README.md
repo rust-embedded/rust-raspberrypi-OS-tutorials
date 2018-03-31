@@ -5,11 +5,13 @@ This tutorial does the same as tutorial 04, but it prints the serial number on U
 easily with qemu, like
 
 ```sh
-$ qemu-system-aarch64 -M raspi3 -kernel kernel8.img -serial stdio
+$ make qemu
+<Press any key>
+Hello Rustacean!
 My serial number is: 0000000000000000
 ```
 
-Uart.h, uart.c
+uart.rs
 --------------
 
 Before we could use a rate divisor value, we must establish a valid clock rate for the PL011. It's done

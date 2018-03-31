@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 bzt (bztsrc@github)
+ * Copyright (c) 2018 Andre Richter <andre.o.richter@gmail.com>
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -23,25 +24,25 @@
  *
  */
 
-/* a properly aligned buffer */
-extern volatile unsigned int mbox[36];
+.section ".text.boot"
 
-#define MBOX_REQUEST    0
+.global _boot_cores
 
-/* channels */
-#define MBOX_CH_POWER   0
-#define MBOX_CH_FB      1
-#define MBOX_CH_VUART   2
-#define MBOX_CH_VCHIQ   3
-#define MBOX_CH_LEDS    4
-#define MBOX_CH_BTNS    5
-#define MBOX_CH_TOUCH   6
-#define MBOX_CH_COUNT   7
-#define MBOX_CH_PROP    8
+_boot_cores:
+    // read cpu id, stop slave cores
+    mrs     x1, mpidr_el1
+    and     x1, x1, #3
+    cbz     x1, 2f
+    // cpu id > 0, stop
+1:  wfe
+    b       1b
+2:  // cpu id == 0
 
-/* tags */
-#define MBOX_TAG_GETSERIAL      0x10004
-#define MBOX_TAG_SETCLKRATE     0x38002
-#define MBOX_TAG_LAST           0
+    // set stack before our code
+    ldr     x1, =_boot_cores
+    mov     sp, x1
 
-int mbox_call(unsigned char ch);
+    // jump to Rust code, should not return
+    bl      reset
+    // for failsafe, halt this core too
+    b       1b
