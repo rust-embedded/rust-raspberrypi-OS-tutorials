@@ -1,4 +1,4 @@
-// "Embedded glue code from "The Embedonomicon" by Jorge Aparicio,
+// Embedded glue code from "The Embedonomicon" by Jorge Aparicio,
 // used under CC BY 4.0
 //
 // Minor changes and additions were made.
