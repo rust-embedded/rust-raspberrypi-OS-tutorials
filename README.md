@@ -90,6 +90,8 @@ files should exists there.
 I'd also recommend to get an [USB serial debug cable](https://www.adafruit.com/product/954). You connect it to the
 GPIO pins 14/15.
 
+![UART wiring diagram](doc/wiring.png)
+
 Then, run `screen` on your desktop computer like
 
 ```bash
