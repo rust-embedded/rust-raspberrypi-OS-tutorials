@@ -61,6 +61,7 @@ impl Uart {
         }
     }
 
+    ///Set baud rate and characteristics (115200 8N1) and map to GPIO
     pub fn init(&self, mbox: &mut mbox::Mbox) -> Result<()> {
         // turn off UART0
         unsafe { (*self.registers).CR.write(0) };
@@ -81,10 +82,14 @@ impl Uart {
 
         // map UART0 to GPIO pins
         unsafe {
-            let mut ret = (*gpio::GPFSEL1).read();
-            ret &= !((7 << 12) | (7 << 15)); // gpio14, gpio15
-            ret |= (4 << 12) | (4 << 15); // alt0
-            (*gpio::GPFSEL1).write(ret);
+            (*gpio::GPFSEL1).modify(|x| {
+                // Modify with a closure
+                let mut ret = x;
+                ret &= !((7 << 12) | (7 << 15)); // gpio14, gpio15
+                ret |= (4 << 12) | (4 << 15); // alt0
+
+                ret
+            });
 
             (*gpio::GPPUD).write(0); // enable pins 14 and 15
             for _ in 0..150 {
@@ -107,27 +112,27 @@ impl Uart {
         Ok(())
     }
 
+    /// Send a character
     pub fn send(&self, c: char) {
-        // wait until we can send
-        loop {
-            unsafe {
+        unsafe {
+            // wait until we can send
+            loop {
                 if !(((*self.registers).FR.read() & 0x20) == 0x20) {
                     break;
                 }
                 asm!("nop" :::: "volatile");
             }
-        }
 
-        // write the character to the buffer
-        unsafe {
+            // write the character to the buffer
             (*self.registers).DR.write(c as u32);
         }
     }
 
+    /// Receive a character
     pub fn getc(&self) -> char {
-        // wait until something is in the buffer
-        loop {
-            unsafe {
+        unsafe {
+            // wait until something is in the buffer
+            loop {
                 if !(((*self.registers).FR.read() & 0x10) == 0x10) {
                     break;
                 }
@@ -146,6 +151,7 @@ impl Uart {
         ret
     }
 
+    /// Display a string
     pub fn puts(&self, string: &str) {
         for c in string.chars() {
             // convert newline to carrige return + newline
@@ -157,6 +163,7 @@ impl Uart {
         }
     }
 
+    /// Display a binary value in hexadecimal
     pub fn hex(&self, d: u32) {
         let mut n;
 

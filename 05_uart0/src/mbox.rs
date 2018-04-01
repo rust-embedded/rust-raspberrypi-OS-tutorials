@@ -93,6 +93,7 @@ impl Mbox {
         }
     }
 
+    /// Make a mailbox call. Returns Err(MboxError) on failure, Ok(()) success
     pub fn call(&mut self, channel: u32) -> Result<()> {
         // wait until we can write to the mailbox
         loop {
