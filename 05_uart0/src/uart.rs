@@ -76,6 +76,11 @@ impl Uart {
         mbox.buffer[6] = 4000000; // 4Mhz
         mbox.buffer[7] = 0; // skip turbo setting
         mbox.buffer[8] = mbox::tag::LAST;
+
+        // Insert a memory barrier that ensures mailbox buffer setup
+        // finishes before VIDEOCORE is notified.
+        mbox::Mbox::synchronize();
+
         if let Err(_) = mbox.call(mbox::channel::PROP) {
             return Err(UartError::MailboxError); // Abort if UART clocks couldn't be set
         };

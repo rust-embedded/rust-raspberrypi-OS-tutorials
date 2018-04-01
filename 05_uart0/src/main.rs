@@ -54,6 +54,10 @@ fn main() {
     mbox.buffer[6] = 0;
     mbox.buffer[7] = mbox::tag::LAST;
 
+    // Insert a memory barrier that ensures mailbox buffer setup
+    // finishes before VIDEOCORE is notified.
+    mbox::Mbox::synchronize();
+
     // send the message to the GPU and receive answer
     let serial_avail = match mbox.call(mbox::channel::PROP) {
         Err(_) => false,
