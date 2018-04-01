@@ -19,7 +19,7 @@ This repo follows two main principles:
   1. Most importantly: No toolchain hassles. Users eager to try the code should not be bothered with complicated toolchain installation/compilation steps. This is achieved by trying to use the standard Rust toolchain as much as possible, and where not possible, using Docker containers. Please [install Docker for your distro].
      1. Compiler and linker can be used from Rust nightly.
      2. QEMU will be used for emulation, but RPi3 support in QEMU is very fresh and has not landed in most of the pre-packaged versions of popular distributions. [This] container will provide it ready to go.
-     3. aarch64 toolchain binaries that are not provided Rust, like `objcopy`, will be provided with a container from the [dockcross] project, which does an awesome job of curating various toolchains in containers.
+     3. aarch64 toolchain binaries that are not provided by Rust, like `objcopy`, will be provided with a container from the [dockcross] project, which does an awesome job of curating various toolchains in containers.
    2. Use as little assembler as possible. Do as much as possible in Rust.
 
 Please notice that you won't need to download or prepare the containers upfront. As long as you have docker installed, they will be pulled automatically the first time the Makefile needs them.
@@ -28,7 +28,7 @@ Please notice that you won't need to download or prepare the containers upfront.
 [This]: https://github.com/andre-richter/docker-raspi3-qemu
 [dockcross]: https://github.com/dockcross/dockcross
 
-For now, only tutorial `05_uart0` is ready. It has been done first in order to provide a classic physical `Hello World` over a real UART. It is planned to add more examples later. Contributions welcome!
+For now, only a few basic tutorials are ready, but more will be ported over time.
 
 ## Introduction
 
