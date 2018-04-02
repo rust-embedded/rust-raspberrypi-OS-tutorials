@@ -93,19 +93,6 @@ impl Mbox {
         }
     }
 
-    /// ARM Data Memory Barrier (DMB). Intended for use after setting
-    /// up the mailbox buffer and before calling Mbox::call().
-    ///
-    /// Prevents that CPU instruction reordering results in notifying
-    /// the VIDEOCORE about a new message before setting up the
-    /// mailbox buffer is finished.
-    #[inline(always)]
-    pub fn synchronize() {
-        unsafe {
-            asm!("DMB SY" :::: "volatile");
-        }
-    }
-
     /// Make a mailbox call. Returns Err(MboxError) on failure, Ok(()) success
     pub fn call(&mut self, channel: u32) -> Result<()> {
         // wait until we can write to the mailbox
