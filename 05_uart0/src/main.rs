@@ -35,6 +35,8 @@ mod mbox;
 mod gpio;
 mod uart;
 
+use core::sync::atomic::{compiler_fence, Ordering};
+
 fn main() {
     let mut mbox = mbox::Mbox::new();
     let uart = uart::Uart::new();
@@ -53,6 +55,11 @@ fn main() {
     mbox.buffer[5] = 0; // clear output buffer
     mbox.buffer[6] = 0;
     mbox.buffer[7] = mbox::tag::LAST;
+
+    // Insert a compiler fence that ensures that all stores to the
+    // mbox buffer are finished before the GPU is signaled (which is
+    // done by a store operation as well).
+    compiler_fence(Ordering::SeqCst);
 
     // send the message to the GPU and receive answer
     let serial_avail = match mbox.call(mbox::channel::PROP) {

@@ -26,6 +26,7 @@ use super::MMIO_BASE;
 use volatile_register::*;
 use mbox;
 use gpio;
+use core::sync::atomic::{compiler_fence, Ordering};
 
 const UART_BASE: u32 = MMIO_BASE + 0x201000;
 
@@ -76,6 +77,11 @@ impl Uart {
         mbox.buffer[6] = 4000000; // 4Mhz
         mbox.buffer[7] = 0; // skip turbo setting
         mbox.buffer[8] = mbox::tag::LAST;
+
+        // Insert a compiler fence that ensures that all stores to the
+        // mbox buffer are finished before the GPU is signaled (which
+        // is done by a store operation as well).
+        compiler_fence(Ordering::SeqCst);
 
         if let Err(_) = mbox.call(mbox::channel::PROP) {
             return Err(UartError::MailboxError); // Abort if UART clocks couldn't be set
