@@ -173,8 +173,11 @@ impl Uart {
         let mut n;
 
         for i in 0..8 {
+            // get highest tetrad
             n = d.wrapping_shr(28 - i * 4) & 0xF;
 
+            // 0-9 => '0'-'9', 10-15 => 'A'-'F'
+            // Add proper offset for ASCII table
             if n > 9 {
                 n += 0x37;
             } else {

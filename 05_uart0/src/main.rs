@@ -72,8 +72,11 @@ fn main() {
         uart.hex(mbox.buffer[6]);
         uart.hex(mbox.buffer[5]);
         uart.puts("\n");
+    } else {
+        uart.puts("Unable to query serial!\n");
     }
 
+    // echo everything back
     loop {
         uart.send(uart.getc());
     }

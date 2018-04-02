@@ -42,6 +42,7 @@ fn main() {
     uart.getc(); // Press a key first before being greeted
     uart.puts("Hello Rustacean!\n");
 
+    // echo everything back
     loop {
         uart.send(uart.getc());
     }
