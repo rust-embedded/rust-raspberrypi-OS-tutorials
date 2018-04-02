@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 bzt (bztsrc@github)
+ * Copyright (c) 2018 Andre Richter <andre.o.richter@gmail.com>
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -25,9 +26,9 @@
 
 .section ".text.boot"
 
-.global _start
+.global _boot_cores
 
-_start:
+_boot_cores:
     // read cpu id, stop slave cores
     mrs     x1, mpidr_el1
     and     x1, x1, #3
@@ -38,18 +39,10 @@ _start:
 2:  // cpu id == 0
 
     // set stack before our code
-    ldr     x1, =_start
+    ldr     x1, =_boot_cores
     mov     sp, x1
 
-    // clear bss
-    ldr     x1, =__bss_start
-    ldr     w2, =__bss_size
-3:  cbz     w2, 4f
-    str     xzr, [x1], #8
-    sub     w2, w2, #1
-    cbnz    w2, 3b
-
-    // jump to C code, should not return
-4:  bl      main
+    // jump to Rust code, should not return
+    bl      reset
     // for failsafe, halt this core too
     b       1b
