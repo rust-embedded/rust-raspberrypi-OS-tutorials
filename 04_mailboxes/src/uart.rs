@@ -26,7 +26,7 @@ use super::MMIO_BASE;
 use volatile_register::*;
 use gpio;
 
-const MINI_UART_BASE: u32 = MMIO_BASE + 0x215000;
+const MINI_UART_BASE: u32 = MMIO_BASE + 0x21_5000;
 
 /// Auxilary mini UART registers
 #[allow(non_snake_case)]

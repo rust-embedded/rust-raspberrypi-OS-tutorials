@@ -59,13 +59,13 @@ pub mod tag {
 
 // Responses
 mod response {
-    pub const SUCCESS: u32 = 0x80000000;
-    pub const ERROR: u32 = 0x80000001; // error parsing request buffer (partial response)
+    pub const SUCCESS: u32 = 0x8000_0000;
+    pub const ERROR: u32 = 0x8000_0001; // error parsing request buffer (partial response)
 }
 
 pub const REQUEST: u32 = 0;
-const FULL: u32 = 0x80000000;
-const EMPTY: u32 = 0x40000000;
+const FULL: u32 = 0x8000_0000;
+const EMPTY: u32 = 0x4000_0000;
 
 // Public interface to the mailbox
 #[repr(C)]
@@ -92,7 +92,7 @@ impl Mbox {
         // wait until we can write to the mailbox
         loop {
             unsafe {
-                if !(((*self.registers).STATUS.read() & FULL) == FULL) {
+                if ((*self.registers).STATUS.read() & FULL) != FULL {
                     break;
                 }
                 asm!("nop" :::: "volatile");
@@ -111,7 +111,7 @@ impl Mbox {
             // is there a response?
             loop {
                 unsafe {
-                    if !(((*self.registers).STATUS.read() & EMPTY) == EMPTY) {
+                    if ((*self.registers).STATUS.read() & EMPTY) != EMPTY {
                         break;
                     }
                     asm!("nop" :::: "volatile");

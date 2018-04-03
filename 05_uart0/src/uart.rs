@@ -28,7 +28,7 @@ use mbox;
 use gpio;
 use core::sync::atomic::{compiler_fence, Ordering};
 
-const UART_BASE: u32 = MMIO_BASE + 0x201000;
+const UART_BASE: u32 = MMIO_BASE + 0x20_1000;
 
 // PL011 UART registers
 #[allow(non_snake_case)]
@@ -74,7 +74,7 @@ impl Uart {
         mbox.buffer[3] = 12;
         mbox.buffer[4] = 8;
         mbox.buffer[5] = mbox::clock::UART; // UART clock
-        mbox.buffer[6] = 4000000; // 4Mhz
+        mbox.buffer[6] = 4_000_000; // 4Mhz
         mbox.buffer[7] = 0; // skip turbo setting
         mbox.buffer[8] = mbox::tag::LAST;
 
@@ -83,7 +83,7 @@ impl Uart {
         // is done by a store operation as well).
         compiler_fence(Ordering::SeqCst);
 
-        if let Err(_) = mbox.call(mbox::channel::PROP) {
+        if mbox.call(mbox::channel::PROP).is_err() {
             return Err(UartError::MailboxError); // Abort if UART clocks couldn't be set
         };
 
@@ -124,7 +124,7 @@ impl Uart {
         unsafe {
             // wait until we can send
             loop {
-                if !(((*self.registers).FR.read() & 0x20) == 0x20) {
+                if ((*self.registers).FR.read() & 0x20) != 0x20 {
                     break;
                 }
                 asm!("nop" :::: "volatile");
@@ -140,7 +140,7 @@ impl Uart {
         unsafe {
             // wait until something is in the buffer
             loop {
-                if !(((*self.registers).FR.read() & 0x10) == 0x10) {
+                if ((*self.registers).FR.read() & 0x10) != 0x10 {
                     break;
                 }
                 asm!("nop" :::: "volatile");
