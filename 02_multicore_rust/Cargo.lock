@@ -1,0 +1,11 @@
+[[package]]
+name = "kernel8"
+version = "0.1.0"
+dependencies = [
+ "raspi3_glue 0.1.0",
+]
+
+[[package]]
+name = "raspi3_glue"
+version = "0.1.0"
+
