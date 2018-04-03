@@ -53,6 +53,9 @@ kernel8.img: kernel8
 qemu:
 	$(DOCKER_CMD) $(QEMU_CONTAINER) $(QEMU_CMD) -serial stdio
 
+clippy:
+	RUSTFLAGS="-C panic=abort" xargo clippy --target=$(TARGET)
+
 clean:
 	cargo clean
 	rm -f kernel8
