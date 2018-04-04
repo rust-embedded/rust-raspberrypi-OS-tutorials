@@ -68,6 +68,6 @@ instructions] to prevent this behavior would be needed.
 [fence]: https://doc.rust-lang.org/std/sync/atomic/fn.fence.html
 [emits corresponding CPU instructions]: https://developer.arm.com/products/architecture/a-profile/docs/100941/latest/barriers
 
-## Main
+## main.rs
 
 We query the board's serial number and then we display it on the serial console.
