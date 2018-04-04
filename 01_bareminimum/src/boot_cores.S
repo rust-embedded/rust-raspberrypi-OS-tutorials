@@ -23,10 +23,10 @@
  *
  */
 
-SECTIONS
-{
-    . = 0x80000;
-    .text : { *(.text.boot) }
+.section ".text.boot"
 
-   /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
-}
+.global _boot_cores
+
+_boot_cores:
+1:  wfe
+    b       1b

@@ -23,10 +23,10 @@
  *
  */
 
-.section ".text.boot"
+SECTIONS
+{
+    . = 0x80000;
+    .text : { KEEP(*(.text.boot)) }
 
-.global _start
-
-_start:
-1:  wfe
-    b       1b
+   /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
+}
