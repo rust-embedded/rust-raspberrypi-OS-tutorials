@@ -32,18 +32,18 @@ const UART_BASE: u32 = MMIO_BASE + 0x20_1000;
 
 // PL011 UART registers
 #[allow(non_snake_case)]
-#[repr(C, packed)]
+#[repr(C)]
 struct Registers {
-    DR: RW<u32>,           // 0x00
-    reserved0: [u8; 0x14], // 0x04
-    FR: RO<u32>,           // 0x18
-    reserved1: u64,        // 0x1C
-    IBRD: WO<u32>,         // 0x24
-    FBRD: WO<u32>,         // 0x28
-    LCRH: WO<u32>,         // 0x2C
-    CR: WO<u32>,           // 0x30
-    reserved3: [u8; 0x10], // 0x34
-    ICR: WO<u32>,          // 0x44
+    DR: RW<u32>,            // 0x00
+    __reserved_0: [u32; 5], // 0x04
+    FR: RO<u32>,            // 0x18
+    __reserved_1: [u32; 2], // 0x1c
+    IBRD: WO<u32>,          // 0x24
+    FBRD: WO<u32>,          // 0x28
+    LCRH: WO<u32>,          // 0x2C
+    CR: WO<u32>,            // 0x30
+    __reserved_2: [u32; 4], // 0x34
+    ICR: WO<u32>,           // 0x44
 }
 
 pub enum UartError {

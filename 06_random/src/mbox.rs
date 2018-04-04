@@ -28,15 +28,15 @@ use volatile_register::{RO, WO};
 pub const VIDEOCORE_MBOX: u32 = MMIO_BASE + 0xB880;
 
 #[allow(non_snake_case)]
-#[repr(C, packed)]
+#[repr(C)]
 pub struct Registers {
-    READ: RO<u32>,       // 0x00
-    reserved: [u8; 0xC], // 0x04
-    POLL: RO<u32>,       // 0x10
-    SENDER: RO<u32>,     // 0x14
-    STATUS: RO<u32>,     // 0x18
-    CONFIG: RO<u32>,     // 0x1C
-    WRITE: WO<u32>,      // 0x20
+    READ: RO<u32>,          // 0x00
+    __reserved_0: [u32; 3], // 0x04
+    POLL: RO<u32>,          // 0x10
+    SENDER: RO<u32>,        // 0x14
+    STATUS: RO<u32>,        // 0x18
+    CONFIG: RO<u32>,        // 0x1C
+    WRITE: WO<u32>,         // 0x20
 }
 
 // Custom errors

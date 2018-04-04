@@ -33,7 +33,7 @@ struct Registers {
     CTRL: RW<u32>,     // 0x00
     STATUS: RW<u32>,   // 0x04
     DATA: RO<u32>,     // 0x08
-    _reserved: u32,    // 0x0c
+    __reserved_0: u32, // 0x0c
     INT_MASK: RW<u32>, // 0x10
 }
 

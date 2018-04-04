@@ -30,22 +30,22 @@ const MINI_UART_BASE: u32 = MMIO_BASE + 0x21_5000;
 
 /// Auxilary mini UART registers
 #[allow(non_snake_case)]
-#[repr(C, packed)]
+#[repr(C)]
 struct Registers {
-    _reserved0: u32,        // 0x00
-    ENABLES: RW<u32>,       // 0x04
-    _reserved1: [u8; 0x38], // 0x08
-    MU_IO: RW<u32>,         // 0x40
-    MU_IER: RW<u32>,        // 0x44
-    MU_IIR: RW<u32>,        // 0x48
-    MU_LCR: RW<u32>,        // 0x4C
-    MU_MCR: RW<u32>,        // 0x50
-    MU_LSR: RW<u32>,        // 0x54
-    MU_MSR: RW<u32>,        // 0x58
-    MU_SCRATCH: RW<u32>,    // 0x5C
-    MU_CNTL: RW<u32>,       // 0x60
-    MU_STAT: RW<u32>,       // 0x64
-    MU_BAUD: RW<u32>,       // 0x68
+    __reserved_0: u32,       // 0x00
+    ENABLES: RW<u32>,        // 0x04
+    __reserved_1: [u32; 14], // 0x08
+    MU_IO: RW<u32>,          // 0x40
+    MU_IER: RW<u32>,         // 0x44
+    MU_IIR: RW<u32>,         // 0x48
+    MU_LCR: RW<u32>,         // 0x4C
+    MU_MCR: RW<u32>,         // 0x50
+    MU_LSR: RW<u32>,         // 0x54
+    MU_MSR: RW<u32>,         // 0x58
+    MU_SCRATCH: RW<u32>,     // 0x5C
+    MU_CNTL: RW<u32>,        // 0x60
+    MU_STAT: RW<u32>,        // 0x64
+    MU_BAUD: RW<u32>,        // 0x68
 }
 
 pub struct MiniUart {
