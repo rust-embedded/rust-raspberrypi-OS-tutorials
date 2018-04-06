@@ -25,7 +25,7 @@
 use super::MMIO_BASE;
 use volatile_register::*;
 
-pub const RNG_BASE: u32 = MMIO_BASE + 0x104_000;
+const RNG_BASE: u32 = MMIO_BASE + 0x104_000;
 
 #[allow(non_snake_case)]
 #[repr(C)]
