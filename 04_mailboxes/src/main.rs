@@ -57,7 +57,7 @@ fn main() {
     // Insert a compiler fence that ensures that all stores to the
     // mbox buffer are finished before the GPU is signaled (which is
     // done by a store operation as well).
-    compiler_fence(Ordering::SeqCst);
+    compiler_fence(Ordering::Release);
 
     // send the message to the GPU and receive answer
     let serial_avail = match mbox.call(mbox::channel::PROP) {

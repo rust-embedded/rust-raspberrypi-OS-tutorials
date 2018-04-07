@@ -51,10 +51,26 @@ and adding the dependency to `Cargo.toml`.
 
 When signaling the GPU about a new mailbox message, we need to take care that
 mailbox buffer setup has really finished. Both setting up mailbox contents and
-signaling the GPU is done with store operations to memory (RAM and MMIO). There
-is an unlikely chance that the compiler reorders instructions, resulting in
-signaling the GPU _before_ all of the contents have been written to the mailbox
-buffer. We prevent this by inserting a [compiler fence].
+signaling the GPU is done with store operations to independent memory locations
+(RAM and MMIO). Since compilers are free to reorder instructions without
+control-flow or data-dependencies for optimization purposes, we need to take
+care that signaling the GPU really takes place _after_ all of the contents have
+been written to the mailbox buffer.
+
+One way to do this would be to define the whole mailbox buffer as `volatile`, as
+well as the location that we write to to signal the GPU. The compiler is not
+allowed to reorder memory operations tagged with the `volatile` keyword with
+each other. But this is not needed here. We don't care if the compiler optimizes
+the buffer setup code as long as signaling the GPU takes place afterwards.
+
+Therefore, we prevent premature signaling by inserting an explicit [compiler
+fence] after the buffer preparation code. Since we signal the CPU by calling
+another function, the fence would only be effective if that function was a)
+inlined and b) the inlined instructions then reordered with buffer setup
+code. Otherwise the compiler has to assume that the called function has
+dependencies on previous memory operations and not reorder here. Although there
+is little chance that the reordering scenario happens, I'll leave the fence
+there nonetheless for academic purposes :-)
 
 Please note that such reordering might also be done by CPUs that feature
 [out-of-order execution].  Lucky us, although the Rasperry Pi 3 features

@@ -81,7 +81,7 @@ impl Uart {
         // Insert a compiler fence that ensures that all stores to the
         // mbox buffer are finished before the GPU is signaled (which
         // is done by a store operation as well).
-        compiler_fence(Ordering::SeqCst);
+        compiler_fence(Ordering::Release);
 
         if mbox.call(mbox::channel::PROP).is_err() {
             return Err(UartError::MailboxError); // Abort if UART clocks couldn't be set
