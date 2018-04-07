@@ -31,7 +31,13 @@ QEMU_CONTAINER = andrerichter/raspi3-qemu
 DOCKER_CMD = docker run -it --rm -v $(shell pwd):/work -w /work
 QEMU_CMD = qemu-system-aarch64 -M raspi3 -kernel kernel8.img
 
-all: clean kernel8.img
+all: clean cross_cont_download kernel8.img
+
+cross_cont_download:
+ifeq (,$(wildcard $(CROSS_CONTAINER)))
+	docker run --rm dockcross/linux-arm64 > $(CROSS_CONTAINER)
+	chmod +x $(CROSS_CONTAINER)
+endif
 
 target/$(TARGET)/debug/kernel8: src/main.rs
 	RUST_TARGET_PATH=$(shell pwd) xargo build --target=$(TARGET)
