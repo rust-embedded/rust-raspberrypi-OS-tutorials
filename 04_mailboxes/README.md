@@ -35,17 +35,15 @@ Where each tag looks like:
  n+3. optional value buffer
 ```
 
-### rlibc
+### Xargo.toml
 
 The mailbox buffer is a fixed array that is zero-initialized. To achieve
 zero-initialization, Rust utilizies and links to the `memset()` function, which
 is normally provided by `libc`.
 
 Since we are writing a `no_std` crate, we need to explicitly provide it. The
-easiest way is pulling in [rlibc] by adding it as an `extern crate` to `main.rs`
-and adding the dependency to `Cargo.toml`.
-
-[rlibc]: https://github.com/alexcrichton/rlibc
+easiest way is pulling in the `mem` feature of the `compiler_builtins` by adding
+it to `Xargo.toml`.
 
 ### Synchronization
 

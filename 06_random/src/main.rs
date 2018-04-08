@@ -26,7 +26,6 @@
 #![feature(asm)]
 
 extern crate raspi3_glue;
-extern crate rlibc; // for memset et al.b
 extern crate volatile_register;
 
 const MMIO_BASE: u32 = 0x3F00_0000;

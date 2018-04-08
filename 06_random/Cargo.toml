@@ -6,4 +6,3 @@ authors = ["Andre Richter <andre.o.richter@gmail.com>"]
 [dependencies]
 raspi3_glue = { path = "raspi3_glue" }
 volatile-register = "0.2.0"
-rlibc = "1.0"
