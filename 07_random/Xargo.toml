@@ -1,6 +1,0 @@
-[dependencies.core]
-stage = 0
-
-[dependencies.compiler_builtins]
-features = ["mem"] # for memset() et al.
-stage = 1

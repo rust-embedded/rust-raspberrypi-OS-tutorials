@@ -1,5 +1,0 @@
-[dependencies.core]
-stage = 0
-
-[dependencies.compiler_builtins]
-stage = 1

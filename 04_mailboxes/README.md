@@ -35,16 +35,6 @@ Where each tag looks like:
  n+3. optional value buffer
 ```
 
-### Xargo.toml
-
-The mailbox buffer is a fixed array that is zero-initialized. To achieve
-zero-initialization, Rust utilizies and links to the `memset()` function, which
-is normally provided by `libc`.
-
-Since we are writing a `no_std` crate, we need to explicitly provide it. The
-easiest way is pulling in the `mem` feature of the `compiler_builtins` by adding
-it to `Xargo.toml`.
-
 ### Synchronization
 
 When signaling the GPU about a new mailbox message, we need to take care that
