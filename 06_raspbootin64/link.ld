@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 bzt (bztsrc@github)
+ * Copyright (c) 2018 Andre Richter <andre.o.richter@gmail.com>
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -23,25 +24,15 @@
  *
  */
 
-/* a properly aligned buffer */
-extern volatile unsigned int mbox[36];
+SECTIONS
+{
+    . = 0x80000 - 2048;
+    _code = .;
+    .text : { KEEP(*(.text.boot)) *(.text .text.* .gnu.linkonce.t*) }
+    .rodata : { *(.rodata .rodata.* .gnu.linkonce.r*) }
+    .data : { *(.data .data.* .gnu.linkonce.d*) }
+    _end = .;
 
-#define MBOX_REQUEST    0
-
-/* channels */
-#define MBOX_CH_POWER   0
-#define MBOX_CH_FB      1
-#define MBOX_CH_VUART   2
-#define MBOX_CH_VCHIQ   3
-#define MBOX_CH_LEDS    4
-#define MBOX_CH_BTNS    5
-#define MBOX_CH_TOUCH   6
-#define MBOX_CH_COUNT   7
-#define MBOX_CH_PROP    8
-
-/* tags */
-#define MBOX_TAG_GETSERIAL      0x10004
-#define MBOX_TAG_SETCLKRATE     0x38002
-#define MBOX_TAG_LAST           0
-
-int mbox_call(unsigned char ch);
+   /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
+}
+__loader_size = (_end - _code)>>3;

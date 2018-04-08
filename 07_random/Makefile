@@ -27,9 +27,11 @@ TARGET = aarch64-raspi3-none-elf
 CROSS_CONTAINER = ./dockcross-linux-aarch64
 CROSS_CONTAINER_OBJCOPY = aarch64-linux-gnu-objcopy
 
-QEMU_CONTAINER = andrerichter/raspi3-qemu
+UTILS_CONTAINER = andrerichter/raspi3-utils
 DOCKER_CMD = docker run -it --rm -v $(shell pwd):/work -w /work
+DOCKER_TTY = --privileged -v /dev:/dev
 QEMU_CMD = qemu-system-aarch64 -M raspi3 -kernel kernel8.img
+RASPBOOT_CMD = raspbootcom /dev/ttyUSB0 kernel8.img
 
 all: clean cross_cont_download kernel8.img
 
@@ -57,7 +59,10 @@ kernel8.img: kernel8
 	$(CROSS_CONTAINER) $(CROSS_CONTAINER_OBJCOPY) -O binary -S $< kernel8.img
 
 qemu:
-	$(DOCKER_CMD) $(QEMU_CONTAINER) $(QEMU_CMD) -serial stdio
+	$(DOCKER_CMD) $(UTILS_CONTAINER) $(QEMU_CMD) -serial stdio
+
+raspboot:
+	$(DOCKER_CMD) $(DOCKER_TTY) $(UTILS_CONTAINER) $(RASPBOOT_CMD)
 
 clippy:
 	RUSTFLAGS="-C panic=abort" xargo clippy --target=$(TARGET)

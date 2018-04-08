@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 bzt (bztsrc@github)
+ * Copyright (c) 2018 Andre Richter <andre.o.richter@gmail.com>
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -23,24 +24,43 @@
  *
  */
 
-SECTIONS
-{
-    . = 0x80000 - 1024;
-    PROVIDE(_code = .);
-    .text : { KEEP(*(.text.boot)) *(.text .text.* .gnu.linkonce.t*) }
-    .rodata : { *(.rodata .rodata.* .gnu.linkonce.r*) }
-    PROVIDE(_data = .);
-    .data : { *(.data .data.* .gnu.linkonce.d*) }
-    .bss (NOLOAD) : {
-        . = ALIGN(16);
-        __bss_start = .;
-        *(.bss .bss.*)
-        *(COMMON)
-        __bss_end = .;
-    }
-    _end = .;
+.section ".text.boot"
 
-   /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
-}
-__bss_size = (__bss_end - __bss_start)>>3;
-__loader_size = (_end - _code)>>3;
+.global _boot_cores
+
+_boot_cores:
+    // Save arguments in registers (we will need them later for the new kernel)
+    // We choose x25-x28 because instructions generated from Rust by rustc do not
+    // touch them. You can check that with
+    // "./dockcross-linux-aarch64 aarch64-linux-gnu-objdump -d kernel8"
+    mov     x25, x0
+    mov     x26, x1
+    mov     x27, x2
+    mov     x28, x3
+
+    // read cpu id, stop slave cores
+    mrs     x1, mpidr_el1
+    and     x1, x1, #3
+    cbz     x1, 2f
+    // cpu id > 0, stop
+1:  wfe
+    b       1b
+2:  // cpu id == 0
+
+    // relocate our code from load address to link address
+    ldr     x1, =0x80000
+    ldr     x2, =_boot_cores
+    ldr     w3, =__loader_size
+3:  ldr     x4, [x1], #8
+    str     x4, [x2], #8
+    sub     w3, w3, #1
+    cbnz    w3, 3b
+
+    // set stack before our code
+    ldr     x1, =_boot_cores
+    mov     sp, x1
+
+    // jump to relocated Rust code, should not return
+    bl      reset-2048
+    // for failsafe, halt this core too
+    b       1b
