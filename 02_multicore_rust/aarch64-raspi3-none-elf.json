@@ -20,5 +20,13 @@
     "target-c-int-width": "32",
     "target-endian": "little",
     "target-pointer-width": "64",
-    "disable-redzone": true
+    "disable-redzone": true,
+    "abi-blacklist": [
+	"stdcall",
+	"fastcall",
+	"vectorcall",
+	"thiscall",
+	"win64",
+	"sysv64"
+    ]
 }
