@@ -60,7 +60,7 @@ qemu:
 	$(DOCKER_CMD) $(UTILS_CONTAINER) $(QEMU_CMD) -serial stdio
 
 clippy:
-	RUSTFLAGS="-C panic=abort" xargo clippy --target=$(TARGET)
+	RUSTFLAGS="-C panic=abort" xargo clippy
 
 clean:
 	cargo clean
