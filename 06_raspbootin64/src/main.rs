@@ -43,8 +43,6 @@ fn main() {
         return; // If UART fails, abort early
     }
 
-    let kernel: *mut u8 = 0x80_000 as *mut u8;
-
     // Say hello
     for c in "RBIN64\r\n".chars() {
         uart.send(c);
@@ -56,28 +54,26 @@ fn main() {
     uart.send(3 as char);
 
     // Read the kernel's size
-    let mut size: u32 = uart.getc() as u32;
-    size |= (uart.getc() as u32) << 8;
-    size |= (uart.getc() as u32) << 16;
-    size |= (uart.getc() as u32) << 24;
+    let mut size: u32 = u32::from(uart.getc());
+    size |= u32::from(uart.getc()) << 8;
+    size |= u32::from(uart.getc()) << 16;
+    size |= u32::from(uart.getc()) << 24;
 
     // For now, blindly trust it's not too big
     uart.send('O');
     uart.send('K');
 
+    let kernel_addr: *mut u8 = 0x80_000 as *mut u8;
     unsafe {
         // Read the kernel byte by byte
         for i in 0..size {
-            *kernel.offset(i as isize) = uart.getc();
+            *kernel_addr.offset(i as isize) = uart.getc();
         }
-
-        // Restore arguments and jump to loaded kernel
-        asm!("mov x0, x25      \n\t\
-              mov x1, x26      \n\t\
-              mov x2, x27      \n\t\
-              mov x3, x28      \n\t\
-              mov x30, 0x80000 \n\t\
-              ret"
-              :::: "volatile");
     }
+
+    // Use black magic to get a function pointer to 0x80_000
+    let kernel: extern "C" fn() = unsafe { core::mem::transmute(kernel_addr as *const ()) };
+
+    // Jump to loaded kernel and never return!
+    kernel();
 }

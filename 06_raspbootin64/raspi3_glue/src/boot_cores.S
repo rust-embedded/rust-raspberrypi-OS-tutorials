@@ -29,15 +29,6 @@
 .global _boot_cores
 
 _boot_cores:
-    // Save arguments in registers (we will need them later for the new kernel)
-    // We choose x25-x28 because instructions generated from Rust by rustc do not
-    // touch them. You can check that with
-    // "./dockcross-linux-aarch64 aarch64-linux-gnu-objdump -d kernel8"
-    mov     x25, x0
-    mov     x26, x1
-    mov     x27, x2
-    mov     x28, x3
-
     // read cpu id, stop slave cores
     mrs     x1, mpidr_el1
     and     x1, x1, #3
