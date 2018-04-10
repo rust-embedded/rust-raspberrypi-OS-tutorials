@@ -7,8 +7,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "panic-abort"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "r0"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
 name = "raspi3_glue"
 version = "0.1.0"
+dependencies = [
+ "panic-abort 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "r0 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "vcell"
@@ -24,5 +38,7 @@ dependencies = [
 ]
 
 [metadata]
+"checksum panic-abort 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "75553c30311427a2d9f24a646fc8cedb00e1da1c6bd1608d71d634184c60392e"
+"checksum r0 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "e2a38df5b15c8d5c7e8654189744d8e396bddc18ad48041a500ce52d6948941f"
 "checksum vcell 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "45c297f0afb6928cd08ab1ff9d95e99392595ea25ae1b5ecf822ff8764e57a0d"
 "checksum volatile-register 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "0d67cb4616d99b940db1d6bd28844ff97108b498a6ca850e5b6191a532063286"

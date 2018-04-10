@@ -27,17 +27,10 @@
 #![no_std]
 #![feature(global_asm)]
 
-use core::ptr;
+extern crate panic_abort;
+extern crate r0;
 
-#[lang = "panic_fmt"]
-unsafe extern "C" fn panic_fmt(
-    _args: core::fmt::Arguments,
-    _file: &'static str,
-    _line: u32,
-    _col: u32,
-) -> ! {
-    loop {}
-}
+use core::ptr;
 
 #[lang = "start"]
 extern "C" fn start<T>(user_main: fn() -> T, _argc: isize, _argv: *const *const u8) -> isize
@@ -63,25 +56,17 @@ pub unsafe extern "C" fn reset() -> ! {
     extern "C" {
         fn main(argc: isize, argv: *const *const u8) -> isize;
 
+        // Boundaries of the .bss section
         static mut __bss_start: u32;
         static mut __bss_end: u32;
     }
 
-    zero_bss(&mut __bss_start, &mut __bss_end);
+    // Zeroes the .bss section
+    r0::zero_bss(&mut __bss_start, &mut __bss_end);
 
     main(0, ptr::null());
 
     loop {}
-}
-
-unsafe fn zero_bss(bss_start: *mut u32, bss_end: *mut u32) {
-    let mut bss = bss_start;
-    while bss < bss_end {
-        // NOTE(ptr::write*) to force aligned stores
-        // NOTE(volatile) to prevent the compiler from optimizing this into `memclr`
-        ptr::write_volatile(bss, 0);
-        bss = bss.offset(1);
-    }
 }
 
 // Disable all cores except core 0, and then jump to reset()
