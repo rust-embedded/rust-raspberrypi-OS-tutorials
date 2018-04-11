@@ -1,4 +1,4 @@
-# Tutorial 07 - Hardware Random Number Generator
+# Tutorial 08 - Hardware Random Number Generator
 
 This going to be an easy tutorial. We query a number from the (undocumented)
 hardware random number generator. You can use this to implement a simple, but

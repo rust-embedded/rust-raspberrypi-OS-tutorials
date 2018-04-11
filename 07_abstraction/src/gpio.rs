@@ -1,7 +1,6 @@
 /*
  * MIT License
  *
- * Copyright (c) 2018 Jorge Aparicio
  * Copyright (c) 2018 Andre Richter <andre.o.richter@gmail.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,51 +22,9 @@
  * SOFTWARE.
  */
 
-#![feature(lang_items)]
-#![no_std]
-#![feature(global_asm)]
+use super::MMIO_BASE;
+use volatile_register::RW;
 
-extern crate panic_abort;
-extern crate r0;
-
-use core::ptr;
-
-#[lang = "start"]
-extern "C" fn start<T>(user_main: fn() -> T, _argc: isize, _argv: *const *const u8) -> isize
-where
-    T: Termination,
-{
-    user_main().report() as isize
-}
-
-#[lang = "termination"]
-trait Termination {
-    fn report(self) -> i32;
-}
-
-impl Termination for () {
-    fn report(self) -> i32 {
-        0
-    }
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn reset() -> ! {
-    extern "C" {
-        fn main(argc: isize, argv: *const *const u8) -> isize;
-
-        // Boundaries of the .bss section
-        static mut __bss_start: u32;
-        static mut __bss_end: u32;
-    }
-
-    // Zeroes the .bss section
-    r0::zero_bss(&mut __bss_start, &mut __bss_end);
-
-    main(0, ptr::null());
-
-    loop {}
-}
-
-// Disable all cores except core 0, and then jump to reset()
-global_asm!(include_str!("boot_cores.S"));
+pub const GPFSEL1: *const RW<u32> = (MMIO_BASE + 0x0020_0004) as *const RW<u32>;
+pub const GPPUD: *const RW<u32> = (MMIO_BASE + 0x0020_0094) as *const RW<u32>;
+pub const GPPUDCLK0: *const RW<u32> = (MMIO_BASE + 0x0020_0098) as *const RW<u32>;

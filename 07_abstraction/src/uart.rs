@@ -23,10 +23,11 @@
  */
 
 use super::MMIO_BASE;
-use volatile_register::*;
-use mbox;
-use gpio;
 use core::sync::atomic::{compiler_fence, Ordering};
+use cortex_a::asm;
+use gpio;
+use mbox;
+use volatile_register::*;
 
 const UART_BASE: u32 = MMIO_BASE + 0x20_1000;
 
@@ -100,12 +101,12 @@ impl Uart {
 
             (*gpio::GPPUD).write(0); // enable pins 14 and 15
             for _ in 0..150 {
-                asm!("nop" :::: "volatile");
+                asm::nop();
             }
 
             (*gpio::GPPUDCLK0).write((1 << 14) | (1 << 15));
             for _ in 0..150 {
-                asm!("nop" :::: "volatile");
+                asm::nop();
             }
             (*gpio::GPPUDCLK0).write(0);
 
@@ -121,30 +122,28 @@ impl Uart {
 
     /// Send a character
     pub fn send(&self, c: char) {
-        unsafe {
-            // wait until we can send
-            loop {
-                if ((*self.registers).FR.read() & 0x20) != 0x20 {
-                    break;
-                }
-                asm!("nop" :::: "volatile");
+        // wait until we can send
+        loop {
+            if (unsafe { (*self.registers).FR.read() } & 0x20) != 0x20 {
+                break;
             }
 
-            // write the character to the buffer
-            (*self.registers).DR.write(c as u32);
+            asm::nop();
         }
+
+        // write the character to the buffer
+        unsafe { (*self.registers).DR.write(c as u32) };
     }
 
     /// Receive a character
     pub fn getc(&self) -> char {
-        unsafe {
-            // wait until something is in the buffer
-            loop {
-                if ((*self.registers).FR.read() & 0x10) != 0x10 {
-                    break;
-                }
-                asm!("nop" :::: "volatile");
+        // wait until something is in the buffer
+        loop {
+            if (unsafe { (*self.registers).FR.read() } & 0x10) != 0x10 {
+                break;
             }
+
+            asm::nop();
         }
 
         // read it and return

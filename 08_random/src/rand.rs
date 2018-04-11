@@ -23,6 +23,7 @@
  */
 
 use super::MMIO_BASE;
+use cortex_a::asm;
 use volatile_register::*;
 
 const RNG_BASE: u32 = MMIO_BASE + 0x104_000;
@@ -66,7 +67,7 @@ impl Rng {
                     break;
                 }
 
-                asm!("nop" :::: "volatile");
+                asm::nop();
             }
         }
     }

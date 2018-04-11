@@ -1,7 +1,13 @@
 [[package]]
+name = "cortex-a"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
 name = "kernel8"
 version = "0.1.0"
 dependencies = [
+ "cortex-a 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "raspi3_glue 0.1.0",
  "volatile-register 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -20,6 +26,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "raspi3_glue"
 version = "0.1.0"
 dependencies = [
+ "cortex-a 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "panic-abort 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "r0 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -38,6 +45,7 @@ dependencies = [
 ]
 
 [metadata]
+"checksum cortex-a 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7a659ffa30a45a5a05970bb3419796563b6517c03bb68950e7ab4c65dad94680"
 "checksum panic-abort 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "75553c30311427a2d9f24a646fc8cedb00e1da1c6bd1608d71d634184c60392e"
 "checksum r0 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "e2a38df5b15c8d5c7e8654189744d8e396bddc18ad48041a500ce52d6948941f"
 "checksum vcell 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "45c297f0afb6928cd08ab1ff9d95e99392595ea25ae1b5ecf822ff8764e57a0d"

@@ -23,17 +23,18 @@
  */
 
 #![no_std]
-#![feature(asm)]
 
+extern crate cortex_a;
 extern crate raspi3_glue;
 extern crate volatile_register;
 
 const MMIO_BASE: u32 = 0x3F00_0000;
 
-mod mbox;
 mod gpio;
+mod mbox;
 mod uart;
-mod rand;
+
+use core::sync::atomic::{compiler_fence, Ordering};
 
 fn main() {
     let mut mbox = mbox::Mbox::new();
@@ -44,21 +45,41 @@ fn main() {
         return; // If UART fails, abort early
     }
 
+    // get the board's unique serial number with a mailbox call
+    mbox.buffer[0] = 8 * 4; // length of the message
+    mbox.buffer[1] = mbox::REQUEST; // this is a request message
+    mbox.buffer[2] = mbox::tag::GETSERIAL; // get serial number command
+    mbox.buffer[3] = 8; // buffer size
+    mbox.buffer[4] = 8;
+    mbox.buffer[5] = 0; // clear output buffer
+    mbox.buffer[6] = 0;
+    mbox.buffer[7] = mbox::tag::LAST;
+
+    // Insert a compiler fence that ensures that all stores to the
+    // mbox buffer are finished before the GPU is signaled (which is
+    // done by a store operation as well).
+    compiler_fence(Ordering::Release);
+
+    // send the message to the GPU and receive answer
+    let serial_avail = match mbox.call(mbox::channel::PROP) {
+        Err(_) => false,
+        Ok(()) => true,
+    };
+
     uart.getc(); // Press a key first before being greeted
     uart.puts("Hello Rustacean!\n");
 
-    // set up random number generator
-    let rng = rand::Rng::new();
-    rng.init();
-
-    uart.puts("Press any key to generate random numbers.\n");
+    if serial_avail {
+        uart.puts("My serial number is: ");
+        uart.hex(mbox.buffer[6]);
+        uart.hex(mbox.buffer[5]);
+        uart.puts("\n");
+    } else {
+        uart.puts("Unable to query serial!\n");
+    }
 
     // echo everything back
     loop {
-        uart.getc();
-
-        uart.puts("0x");
-        uart.hex(rng.rand(0, 4_294_967_295));
-        uart.puts("\n");
+        uart.send(uart.getc());
     }
 }

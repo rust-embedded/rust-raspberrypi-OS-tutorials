@@ -23,6 +23,7 @@
  */
 
 use super::MMIO_BASE;
+use cortex_a::asm;
 use volatile_register::{RO, WO};
 
 const VIDEOCORE_MBOX: u32 = MMIO_BASE + 0xB880;
@@ -53,6 +54,7 @@ pub mod channel {
 
 // Tags
 pub mod tag {
+    pub const GETSERIAL: u32 = 0x10004;
     pub const SETCLKRATE: u32 = 0x38002;
     pub const LAST: u32 = 0;
 }
@@ -96,12 +98,11 @@ impl Mbox {
     pub fn call(&mut self, channel: u32) -> Result<()> {
         // wait until we can write to the mailbox
         loop {
-            unsafe {
-                if ((*self.registers).STATUS.read() & FULL) != FULL {
-                    break;
-                }
-                asm!("nop" :::: "volatile");
+            if (unsafe { (*self.registers).STATUS.read() } & FULL) != FULL {
+                break;
             }
+
+            asm::nop();
         }
 
         // write the address of our message to the mailbox with channel identifier
@@ -115,12 +116,11 @@ impl Mbox {
         loop {
             // is there a response?
             loop {
-                unsafe {
-                    if ((*self.registers).STATUS.read() & EMPTY) != EMPTY {
-                        break;
-                    }
-                    asm!("nop" :::: "volatile");
+                if (unsafe { (*self.registers).STATUS.read() } & EMPTY) != EMPTY {
+                    break;
                 }
+
+                asm::nop();
             }
 
             let resp: u32 = unsafe { (*self.registers).READ.read() };

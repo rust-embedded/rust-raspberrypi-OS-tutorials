@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-use volatile_register::RW;
 use super::MMIO_BASE;
+use volatile_register::RW;
 
 pub const GPFSEL1: *const RW<u32> = (MMIO_BASE + 0x0020_0004) as *const RW<u32>;
 pub const GPPUD: *const RW<u32> = (MMIO_BASE + 0x0020_0094) as *const RW<u32>;

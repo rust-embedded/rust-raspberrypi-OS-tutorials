@@ -18,7 +18,7 @@ runs on your PC, we will rely on the original [raspbootcom][bootcom] utility.
 For convenience, it is already packaged in our `raspi3-utils` docker
 container. So if you are running a Linux host, it will be as easy as calling
 another Makefile target. It will be included starting with the next tutorial,
-`07_random`. You can invoke it with
+`07_abstraction`. You can invoke it with
 
 ```bash
 make raspboot
@@ -30,9 +30,9 @@ command to invoke it:
 ```bash
 docker run -it --rm \
            --privileged -v /dev/:/dev/ \
-		   -v $PWD:/work -w /work \
-		   raspi3-utils \
-		   raspbootcom /dev/ttyUSB0 kernel8.img
+           -v $PWD:/work -w /work \
+           raspi3-utils \
+           raspbootcom /dev/ttyUSB0 kernel8.img
 ```
 
 In any case, if your USB device is enumerated differently, adapt accordingly.
