@@ -23,8 +23,8 @@
  */
 
 use super::MMIO_BASE;
-use volatile_register::*;
 use gpio;
+use volatile_register::*;
 
 const MINI_UART_BASE: u32 = MMIO_BASE + 0x21_5000;
 

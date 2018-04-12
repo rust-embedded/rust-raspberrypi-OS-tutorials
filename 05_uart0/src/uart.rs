@@ -23,10 +23,10 @@
  */
 
 use super::MMIO_BASE;
-use volatile_register::*;
-use mbox;
-use gpio;
 use core::sync::atomic::{compiler_fence, Ordering};
+use gpio;
+use mbox;
+use volatile_register::*;
 
 const UART_BASE: u32 = MMIO_BASE + 0x20_1000;
 

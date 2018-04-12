@@ -30,8 +30,8 @@ extern crate volatile_register;
 
 const MMIO_BASE: u32 = 0x3F00_0000;
 
-mod mbox;
 mod gpio;
+mod mbox;
 mod uart;
 
 use core::sync::atomic::{compiler_fence, Ordering};
