@@ -1,12 +1,12 @@
-Bare Metal Rust Programming on Raspberry Pi 3
-========================================
+# Bare Metal Rust Programming on Raspberry Pi 3
 
 ## About this repository
 
 Hi all. This repository aims to provide easy reference code for programming bare metal on the Raspberry Pi 3
 in the [Rust] systems programming language.
-The repo is basically a combination of two awesome resources that are available on the web.
-  1. First of all, it is a fork of [Zoltan Baldaszti]'s awesome [tutorial] on bare metal programming on RPi3 in C. Rust code is and will be translated based on his files, and READMEs are adapted were needed. Credits to this guy plz!
+It is basically a combination of two awesome resources.
+  1. First of all, it is a fork of [Zoltan Baldaszti]'s awesome [tutorial] on bare metal programming on RPi3 in `C`.
+     1. Rust code will be based on his files, READMEs will be adapted, and I might change things here and there if I think it is beneficial. However, credits to this guy plz!
   2. The second props go to [Jorge Aparicio] for ["The Embedonomicon"], from which the glue code is taken.
 
 [Rust]: https://www.rust-lang.org
@@ -15,12 +15,16 @@ The repo is basically a combination of two awesome resources that are available 
 [Jorge Aparicio]: https://github.com/japaric
 ["The Embedonomicon"]: https://github.com/japaric/embedonomicon
 
-This repo follows two main principles:
-  1. Most importantly: No toolchain hassles. Users eager to try the code should not be bothered with complicated toolchain installation/compilation steps. This is achieved by trying to use the standard Rust toolchain as much as possible, and where not possible, using Docker containers. Please [install Docker for your distro].
-     1. Compiler and linker can be used from Rust nightly.
-     2. QEMU will be used for emulation, but RPi3 support in QEMU is very fresh and has not landed in most of the pre-packaged versions of popular distributions. [This] container will provide it ready to go.
-     3. aarch64 toolchain binaries that are not provided by Rust, like `objcopy`, will be provided with a container from the [dockcross] project, which does an awesome job of curating various toolchains in containers.
-   2. Use as little assembler as possible. Do as much as possible in Rust.
+## Environment
+
+This repo tries to put a focus on user friendliness. Therefore, I made some efforts to eliminate the biggest painpoint in embedded development: _Toolchain hassles_.
+
+Users eager to try the code should not be bothered with complicated toolchain installation/compilation steps. This is achieved by trying to use the standard Rust toolchain as much as possible, and bridge existing gaps with Docker containers. Please [install Docker for your distro].
+
+The setup consists of the following components:
+1. Compiler and linker are used from Rust nightly.
+2. QEMU will be used for emulation, but RPi3 support in QEMU is very fresh and has not landed in most of the pre-packaged versions of popular distributions. [This] container will provide it ready to go.
+3. aarch64 toolchain binaries that are not provided by Rust, like `objcopy`, will be provided with a container from the [dockcross] project, which does an awesome job of curating various toolchains in containers.
 
 Please notice that you won't need to download or prepare the containers upfront. As long as you have docker installed, they will be pulled automatically the first time the Makefile needs them.
 
@@ -57,13 +61,10 @@ solutions. Third, uses only MMIO which makes it easy to program.
 
 For 32 bit tutorials, I'd recommend:
 
-[Cambridge tutorials](http://www.cl.cam.ac.uk/projects/raspberrypi/tutorials/os/) (ASM and 32 bit only),
-
-[David Welch's tutorials](https://github.com/dwelch67/raspberrypi) (mostly C, with some 64 bit examples),
-
-[Peter Lemon's tutorials](https://github.com/PeterLemon/RaspberryPi) (ASM only, also for 64 bit) and
-
-[Leon de Boer's tutorials](https://github.com/LdB-ECM/Raspberry-Pi) (C and ASM, also for 64 bit, more complex examples like USB and OpenGL).
+- [Cambridge tutorials](http://www.cl.cam.ac.uk/projects/raspberrypi/tutorials/os/) (ASM and 32 bit only),
+- [David Welch's tutorials](https://github.com/dwelch67/raspberrypi) (mostly C, with some 64 bit examples),
+- [Peter Lemon's tutorials](https://github.com/PeterLemon/RaspberryPi) (ASM only, also for 64 bit) and
+- [Leon de Boer's tutorials](https://github.com/LdB-ECM/Raspberry-Pi) (C and ASM, also for 64 bit, more complex examples like USB and OpenGL).
 
 Prerequisites
 -------------
@@ -164,4 +165,4 @@ https://github.com/raspberrypi
 
 Good luck and enjoy hacking with your Raspberry! :-)
 
-bzt
+Andre
