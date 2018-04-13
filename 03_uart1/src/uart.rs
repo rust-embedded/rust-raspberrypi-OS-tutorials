@@ -51,6 +51,16 @@ pub struct RegisterBlock {
 
 pub struct MiniUart;
 
+/// Deref to RegisterBlock
+///
+/// Allows writing
+/// ```
+/// self.MU_IER.read()
+/// ```
+/// instead of something along the lines of
+/// ```
+/// unsafe { (*MiniUart::ptr()).MU_IER.read() }
+/// ```
 impl ops::Deref for MiniUart {
     type Target = RegisterBlock;
 
