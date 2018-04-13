@@ -26,9 +26,12 @@ much as possible, we are already setting up a Rust crate. This allows us to use
 
 We define the crate to not use the standard library (`#![no_std]`), indicate
 that it does not have a main function via `#![no_main]`, and also define a stub
-for the `panic_fmt()` handler, which is a requirement for `no_std` crates.
+for the `panic_fmt()` handler, which is a requirement for `no_std` crates. We do
+this by pulling in the [panic-abort][pa] crate.
 
-In th end, we (mis)use `main.rs` as a wrapper to process our assembly file via
+[pa]: https://crates.io/crates/panic-abort
+
+In summary, we (mis)use `main.rs` as a wrapper to process our assembly file via
 `rustc`. The assembly file iself is included with the [global_asm!()][gasm]
 macro.
 

@@ -1,4 +1,14 @@
 [[package]]
 name = "kernel8"
 version = "0.1.0"
+dependencies = [
+ "panic-abort 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
+[[package]]
+name = "panic-abort"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[metadata]
+"checksum panic-abort 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "75553c30311427a2d9f24a646fc8cedb00e1da1c6bd1608d71d634184c60392e"

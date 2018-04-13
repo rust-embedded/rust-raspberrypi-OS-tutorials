@@ -24,17 +24,8 @@
 
 #![no_std]
 #![no_main]
-#![feature(lang_items)]
 #![feature(global_asm)]
 
-#[lang = "panic_fmt"]
-unsafe extern "C" fn panic_fmt(
-    _args: core::fmt::Arguments,
-    _file: &'static str,
-    _line: u32,
-    _col: u32,
-) -> ! {
-    loop {}
-}
+extern crate panic_abort;
 
 global_asm!(include_str!("boot_cores.S"));
