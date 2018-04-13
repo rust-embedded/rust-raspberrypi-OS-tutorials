@@ -23,6 +23,7 @@
  */
 
 use super::MMIO_BASE;
+use core::ops;
 use cortex_a::asm;
 use volatile_register::*;
 
@@ -30,7 +31,7 @@ const RNG_BASE: u32 = MMIO_BASE + 0x104_000;
 
 #[allow(non_snake_case)]
 #[repr(C)]
-struct Registers {
+pub struct RegisterBlock {
     CTRL: RW<u32>,     // 0x00
     STATUS: RW<u32>,   // 0x04
     DATA: RO<u32>,     // 0x08
@@ -39,42 +40,51 @@ struct Registers {
 }
 
 /// Public interface to the RNG
-pub struct Rng {
-    registers: *const Registers,
+pub struct Rng;
+
+impl ops::Deref for Rng {
+    type Target = RegisterBlock;
+
+    fn deref(&self) -> &Self::Target {
+        unsafe { &*Self::ptr() }
+    }
 }
 
 impl Rng {
     pub fn new() -> Rng {
-        Rng {
-            registers: RNG_BASE as *const Registers,
-        }
+        Rng
+    }
+
+    /// Returns a pointer to the register block
+    fn ptr() -> *const RegisterBlock {
+        RNG_BASE as *const _
     }
 
     /// Initialize the RNG
     pub fn init(&self) {
         unsafe {
-            (*self.registers).STATUS.write(0x40_000);
+            self.STATUS.write(0x40_000);
 
             // mask interrupt
-            (*self.registers).INT_MASK.modify(|x| x | 1);
+            self.INT_MASK.modify(|x| x | 1);
 
             // enable
-            (*self.registers).CTRL.modify(|x| x | 1);
+            self.CTRL.modify(|x| x | 1);
+        }
 
-            // wait for gaining some entropy
-            loop {
-                if ((*self.registers).STATUS.read() >> 24) != 0 {
-                    break;
-                }
-
-                asm::nop();
+        // wait for gaining some entropy
+        loop {
+            if (self.STATUS.read() >> 24) != 0 {
+                break;
             }
+
+            asm::nop();
         }
     }
 
     /// Return a random number between [min..max]
     pub fn rand(&self, min: u32, max: u32) -> u32 {
-        let r = unsafe { (*self.registers).DATA.read() };
+        let r = self.DATA.read();
 
         r % (max - min) + min
     }

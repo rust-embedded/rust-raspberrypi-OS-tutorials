@@ -23,6 +23,7 @@
  */
 
 use super::MMIO_BASE;
+use core::ops;
 use gpio;
 use volatile_register::*;
 
@@ -31,7 +32,7 @@ const MINI_UART_BASE: u32 = MMIO_BASE + 0x21_5000;
 /// Auxilary mini UART registers
 #[allow(non_snake_case)]
 #[repr(C)]
-struct Registers {
+pub struct RegisterBlock {
     __reserved_0: u32,       // 0x00
     ENABLES: RW<u32>,        // 0x04
     __reserved_1: [u32; 14], // 0x08
@@ -48,29 +49,38 @@ struct Registers {
     MU_BAUD: RW<u32>,        // 0x68
 }
 
-pub struct MiniUart {
-    registers: *const Registers,
+pub struct MiniUart;
+
+impl ops::Deref for MiniUart {
+    type Target = RegisterBlock;
+
+    fn deref(&self) -> &Self::Target {
+        unsafe { &*Self::ptr() }
+    }
 }
 
 impl MiniUart {
     pub fn new() -> MiniUart {
-        MiniUart {
-            registers: MINI_UART_BASE as *const Registers,
-        }
+        MiniUart
+    }
+
+    /// Returns a pointer to the register block
+    fn ptr() -> *const RegisterBlock {
+        MINI_UART_BASE as *const _
     }
 
     ///Set baud rate and characteristics (115200 8N1) and map to GPIO
     pub fn init(&self) {
         // initialize UART
         unsafe {
-            (*self.registers).ENABLES.modify(|x| x | 1); // enable UART1, AUX mini uart
-            (*self.registers).MU_IER.write(0);
-            (*self.registers).MU_CNTL.write(0);
-            (*self.registers).MU_LCR.write(3); // 8 bits
-            (*self.registers).MU_MCR.write(0);
-            (*self.registers).MU_IER.write(0);
-            (*self.registers).MU_IIR.write(0xC6); // disable interrupts
-            (*self.registers).MU_BAUD.write(270); // 115200 baud
+            self.ENABLES.modify(|x| x | 1); // enable UART1, AUX mini uart
+            self.MU_IER.write(0);
+            self.MU_CNTL.write(0);
+            self.MU_LCR.write(3); // 8 bits
+            self.MU_MCR.write(0);
+            self.MU_IER.write(0);
+            self.MU_IIR.write(0xC6); // disable interrupts
+            self.MU_BAUD.write(270); // 115200 baud
 
             // map UART1 to GPIO pins
             (*gpio::GPFSEL1).modify(|x| {
@@ -92,40 +102,38 @@ impl MiniUart {
                 asm!("nop" :::: "volatile");
             }
             (*gpio::GPPUDCLK0).write(0); // flush GPIO setup
-            (*self.registers).MU_CNTL.write(3); // enable Tx, Rx
+            self.MU_CNTL.write(3); // enable Tx, Rx
         }
     }
 
     /// Send a character
     pub fn send(&self, c: char) {
-        unsafe {
-            // wait until we can send
-            loop {
-                if ((*self.registers).MU_LSR.read() & 0x20) == 0x20 {
-                    break;
-                }
-                asm!("nop" :::: "volatile");
+        // wait until we can send
+        loop {
+            if (self.MU_LSR.read() & 0x20) == 0x20 {
+                break;
             }
 
-            // write the character to the buffer
-            (*self.registers).MU_IO.write(c as u32);
+            unsafe { asm!("nop" :::: "volatile") };
         }
+
+        // write the character to the buffer
+        unsafe { self.MU_IO.write(c as u32) };
     }
 
     /// Receive a character
     pub fn getc(&self) -> char {
-        unsafe {
-            // wait until something is in the buffer
-            loop {
-                if ((*self.registers).MU_LSR.read() & 0x01) == 0x01 {
-                    break;
-                }
-                asm!("nop" :::: "volatile");
+        // wait until something is in the buffer
+        loop {
+            if (self.MU_LSR.read() & 0x01) == 0x01 {
+                break;
             }
+
+            unsafe { asm!("nop" :::: "volatile") };
         }
 
         // read it and return
-        let mut ret = unsafe { (*self.registers).MU_IO.read() as u8 as char };
+        let mut ret = self.MU_IO.read() as u8 as char;
 
         // convert carrige return to newline
         if ret == '\r' {

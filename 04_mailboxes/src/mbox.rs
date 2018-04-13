@@ -23,13 +23,14 @@
  */
 
 use super::MMIO_BASE;
+use core::ops;
 use volatile_register::{RO, WO};
 
 const VIDEOCORE_MBOX: u32 = MMIO_BASE + 0xB880;
 
 #[allow(non_snake_case)]
 #[repr(C)]
-struct Registers {
+pub struct RegisterBlock {
     READ: RO<u32>,          // 0x00
     __reserved_0: [u32; 3], // 0x04
     POLL: RO<u32>,          // 0x10
@@ -76,33 +77,52 @@ pub struct Mbox {
     // data structures in Rust is a bit of a hassle right now, we just
     // close our eyes and roll with it.
     pub buffer: [u32; 36],
-    registers: *const Registers,
+}
+
+/// Deref to RegisterBlock
+///
+/// Allows writing
+/// ```
+/// self.STATUS.read()
+/// ```
+/// instead of something along the lines of
+/// ```
+/// unsafe { (*Mbox::ptr()).STATUS.read() }
+/// ```
+impl ops::Deref for Mbox {
+    type Target = RegisterBlock;
+
+    fn deref(&self) -> &Self::Target {
+        unsafe { &*Self::ptr() }
+    }
 }
 
 impl Mbox {
     pub fn new() -> Mbox {
-        Mbox {
-            buffer: [0; 36],
-            registers: VIDEOCORE_MBOX as *const Registers,
-        }
+        Mbox { buffer: [0; 36] }
+    }
+
+    /// Returns a pointer to the register block
+    fn ptr() -> *const RegisterBlock {
+        VIDEOCORE_MBOX as *const _
     }
 
     /// Make a mailbox call. Returns Err(MboxError) on failure, Ok(()) success
     pub fn call(&self, channel: u32) -> Result<()> {
         // wait until we can write to the mailbox
         loop {
+            if (self.STATUS.read() & FULL) != FULL {
+                break;
+            }
+
             unsafe {
-                if ((*self.registers).STATUS.read() & FULL) != FULL {
-                    break;
-                }
                 asm!("nop" :::: "volatile");
             }
         }
 
         // write the address of our message to the mailbox with channel identifier
         unsafe {
-            (*self.registers)
-                .WRITE
+            self.WRITE
                 .write(((self.buffer.as_ptr() as u32) & !0xF) | (channel & 0xF));
         }
 
@@ -110,15 +130,16 @@ impl Mbox {
         loop {
             // is there a response?
             loop {
+                if (self.STATUS.read() & EMPTY) != EMPTY {
+                    break;
+                }
+
                 unsafe {
-                    if ((*self.registers).STATUS.read() & EMPTY) != EMPTY {
-                        break;
-                    }
                     asm!("nop" :::: "volatile");
                 }
             }
 
-            let resp: u32 = unsafe { (*self.registers).READ.read() };
+            let resp: u32 = self.READ.read();
 
             // is it a response to our message?
             if ((resp & 0xF) == channel) && ((resp & !0xF) == (self.buffer.as_ptr() as u32)) {

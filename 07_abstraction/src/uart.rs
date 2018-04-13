@@ -23,6 +23,7 @@
  */
 
 use super::MMIO_BASE;
+use core::ops;
 use core::sync::atomic::{compiler_fence, Ordering};
 use cortex_a::asm;
 use gpio;
@@ -34,7 +35,7 @@ const UART_BASE: u32 = MMIO_BASE + 0x20_1000;
 // PL011 UART registers
 #[allow(non_snake_case)]
 #[repr(C)]
-struct Registers {
+pub struct RegisterBlock {
     DR: RW<u32>,            // 0x00
     __reserved_0: [u32; 5], // 0x04
     FR: RO<u32>,            // 0x18
@@ -52,21 +53,30 @@ pub enum UartError {
 }
 pub type Result<T> = ::core::result::Result<T, UartError>;
 
-pub struct Uart {
-    registers: *const Registers,
+pub struct Uart;
+
+impl ops::Deref for Uart {
+    type Target = RegisterBlock;
+
+    fn deref(&self) -> &Self::Target {
+        unsafe { &*Self::ptr() }
+    }
 }
 
 impl Uart {
     pub fn new() -> Uart {
-        Uart {
-            registers: UART_BASE as *const Registers,
-        }
+        Uart
+    }
+
+    /// Returns a pointer to the register block
+    fn ptr() -> *const RegisterBlock {
+        UART_BASE as *const _
     }
 
     ///Set baud rate and characteristics (115200 8N1) and map to GPIO
     pub fn init(&self, mbox: &mut mbox::Mbox) -> Result<()> {
         // turn off UART0
-        unsafe { (*self.registers).CR.write(0) };
+        unsafe { self.CR.write(0) };
 
         // set up clock for consistent divisor values
         mbox.buffer[0] = 9 * 4;
@@ -110,11 +120,11 @@ impl Uart {
             }
             (*gpio::GPPUDCLK0).write(0);
 
-            (*self.registers).ICR.write(0x7FF); // clear interrupts
-            (*self.registers).IBRD.write(2); // 115200 baud
-            (*self.registers).FBRD.write(0xB);
-            (*self.registers).LCRH.write(0b11 << 5); // 8n1
-            (*self.registers).CR.write(0x301); // enable Tx, Rx, FIFO
+            self.ICR.write(0x7FF); // clear interrupts
+            self.IBRD.write(2); // 115200 baud
+            self.FBRD.write(0xB);
+            self.LCRH.write(0b11 << 5); // 8n1
+            self.CR.write(0x301); // enable Tx, Rx, FIFO
         }
 
         Ok(())
@@ -124,7 +134,7 @@ impl Uart {
     pub fn send(&self, c: char) {
         // wait until we can send
         loop {
-            if (unsafe { (*self.registers).FR.read() } & 0x20) != 0x20 {
+            if (self.FR.read() & 0x20) != 0x20 {
                 break;
             }
 
@@ -132,14 +142,14 @@ impl Uart {
         }
 
         // write the character to the buffer
-        unsafe { (*self.registers).DR.write(c as u32) };
+        unsafe { self.DR.write(c as u32) };
     }
 
     /// Receive a character
     pub fn getc(&self) -> char {
         // wait until something is in the buffer
         loop {
-            if (unsafe { (*self.registers).FR.read() } & 0x10) != 0x10 {
+            if (self.FR.read() & 0x10) != 0x10 {
                 break;
             }
 
@@ -147,7 +157,7 @@ impl Uart {
         }
 
         // read it and return
-        let mut ret = unsafe { (*self.registers).DR.read() as u8 as char };
+        let mut ret = self.DR.read() as u8 as char;
 
         // convert carrige return to newline
         if ret == '\r' {
