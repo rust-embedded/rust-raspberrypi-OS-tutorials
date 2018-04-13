@@ -88,7 +88,7 @@ impl Mbox {
     }
 
     /// Make a mailbox call. Returns Err(MboxError) on failure, Ok(()) success
-    pub fn call(&mut self, channel: u32) -> Result<()> {
+    pub fn call(&self, channel: u32) -> Result<()> {
         // wait until we can write to the mailbox
         loop {
             unsafe {
@@ -103,7 +103,7 @@ impl Mbox {
         unsafe {
             (*self.registers)
                 .WRITE
-                .write(((self.buffer.as_mut_ptr() as u32) & !0xF) | (channel & 0xF));
+                .write(((self.buffer.as_ptr() as u32) & !0xF) | (channel & 0xF));
         }
 
         // now wait for the response
@@ -121,7 +121,7 @@ impl Mbox {
             let resp: u32 = unsafe { (*self.registers).READ.read() };
 
             // is it a response to our message?
-            if ((resp & 0xF) == channel) && ((resp & !0xF) == (self.buffer.as_mut_ptr() as u32)) {
+            if ((resp & 0xF) == channel) && ((resp & !0xF) == (self.buffer.as_ptr() as u32)) {
                 // is it a valid successful response?
                 return match self.buffer[1] {
                     response::SUCCESS => Ok(()),
