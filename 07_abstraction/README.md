@@ -56,7 +56,7 @@ replaced it with a Rust function. Why? Because we can, for the fun of it.
 #[link_section = ".text.boot"]
 #[no_mangle]
 pub extern "C" fn _boot_cores() -> ! {
-    match register::mpidr_el1::read().core_id() {
+    match register::MPIDR_EL1::read_raw() & 0x3 {
         0 => unsafe {
             register::sp::write(0x80_000);
             reset()
@@ -74,7 +74,7 @@ set up yet. Actually it is this function that will do it for the first
 time. Therefore, it is important to check that code generated from this function
 does not call any subroutines that need a working stack themselves.
 
-The `register` and `asm` wrappers that we use from the `cortex-a` crate are all
+The `read_raw()` and `asm` wrappers that we use from the `cortex-a` crate are all
 inlined, so we fulfill this requirement. The compilation result of this function
 should yield something like the following, where you can see that the stack
 pointer is not used apart from ourselves setting it.

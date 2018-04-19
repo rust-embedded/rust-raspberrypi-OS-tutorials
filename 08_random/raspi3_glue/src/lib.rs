@@ -77,9 +77,9 @@ unsafe fn reset() -> ! {
 #[link_section = ".text.boot"]
 #[no_mangle]
 pub extern "C" fn _boot_cores() -> ! {
-    match register::mpidr_el1::read().core_id() {
+    match register::MPIDR_EL1::read_raw() & 0x3 {
         0 => unsafe {
-            register::sp::write(0x80_000);
+            register::SP::write_raw(0x80_000);
             reset()
         },
         _ => loop {
