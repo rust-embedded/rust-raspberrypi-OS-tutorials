@@ -75,7 +75,7 @@ impl Uart {
     }
 
     ///Set baud rate and characteristics (115200 8N1) and map to GPIO
-    pub fn init(&self, mbox: &mut mbox::Mbox) -> Result<()> {
+    pub fn init(&self, mbox: &mut mbox::Mbox, gpio: &gpio::GPIO) -> Result<()> {
         // turn off UART0
         unsafe { self.CR.write(0) };
 
@@ -101,7 +101,7 @@ impl Uart {
 
         // map UART0 to GPIO pins
         unsafe {
-            (*gpio::GPFSEL1).modify(|x| {
+            gpio.GPFSEL1.modify(|x| {
                 // Modify with a closure
                 let mut ret = x;
                 ret &= !((7 << 12) | (7 << 15)); // gpio14, gpio15
@@ -110,13 +110,13 @@ impl Uart {
                 ret
             });
 
-            (*gpio::GPPUD).write(0); // enable pins 14 and 15
+            gpio.GPPUD.write(0); // enable pins 14 and 15
             delays::wait_cycles(150);
 
-            (*gpio::GPPUDCLK0).write((1 << 14) | (1 << 15));
+            gpio.GPPUDCLK0.write((1 << 14) | (1 << 15));
             delays::wait_cycles(150);
 
-            (*gpio::GPPUDCLK0).write(0);
+            gpio.GPPUDCLK0.write(0);
 
             self.ICR.write(0x7FF); // clear interrupts
             self.IBRD.write(2); // 115200 baud

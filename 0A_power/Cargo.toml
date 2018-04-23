@@ -1,0 +1,9 @@
+[package]
+name = "kernel8"
+version = "0.1.0"
+authors = ["Andre Richter <andre.o.richter@gmail.com>"]
+
+[dependencies]
+raspi3_glue = { path = "raspi3_glue" }
+cortex-a = "0.1.3"
+volatile-register = "0.2.0"

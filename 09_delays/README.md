@@ -16,6 +16,10 @@ other two are µs based.
 `delays::SysTmr::wait_msec_st(&self, n: u64)` is a BCM specific implementation,
 which uses the System Timer peripheral (not available on qemu).
 
+## uart.rs
+
+We can now conveniently use `delays::wait_cycles()` in `Uart::init()`.
+
 ## main.rs
 
 We test our different wait implementations.
