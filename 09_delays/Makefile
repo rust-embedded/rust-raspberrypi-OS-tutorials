@@ -25,7 +25,8 @@
 TARGET = aarch64-raspi3-none-elf
 
 CROSS_CONTAINER = ./dockcross-linux-aarch64
-CROSS_CONTAINER_OBJCOPY = /usr/bin/aarch64-unknown-linux-gnueabi/bin/aarch64-unknown-linux-gnueabi-objcopy
+CROSS_CONTAINER_ROOT = /usr/xcc/aarch64-unknown-linux-gnueabi/bin
+CROSS_CONTAINER_OBJCOPY = $(CROSS_CONTAINER_ROOT)/aarch64-unknown-linux-gnueabi-objcopy
 
 UTILS_CONTAINER = andrerichter/raspi3-utils
 DOCKER_CMD = docker run -it --rm -v $(shell pwd):/work -w /work
