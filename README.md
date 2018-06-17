@@ -1,5 +1,7 @@
 # Bare Metal Rust Programming on Raspberry Pi 3
 
+[![Build Status](https://travis-ci.org/andre-richter/rust-raspi3-tutorial.svg?branch=master)](https://travis-ci.org/andre-richter/rust-raspi3-tutorial)
+
 ## About this repository
 
 Hi all. This repository aims to provide easy reference code for programming bare metal on the Raspberry Pi 3
