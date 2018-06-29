@@ -24,21 +24,14 @@
 
 TARGET = aarch64-raspi3-none-elf
 
-CROSS_CONTAINER = ./dockcross-linux-aarch64
-CROSS_CONTAINER_ROOT = /usr/xcc/aarch64-unknown-linux-gnueabi/bin
-CROSS_CONTAINER_OBJCOPY = $(CROSS_CONTAINER_ROOT)/aarch64-unknown-linux-gnueabi-objcopy
+OBJCOPY = cargo objcopy --
+OBJCOPY_PARAMS = --strip-all -O binary
 
 UTILS_CONTAINER = andrerichter/raspi3-utils
 DOCKER_CMD = docker run -it --rm -v $(shell pwd):/work -w /work
 QEMU_CMD = qemu-system-aarch64 -M raspi3 -kernel kernel8.img
 
-all: clean cross_cont_download kernel8.img
-
-cross_cont_download:
-ifeq (,$(wildcard $(CROSS_CONTAINER)))
-	docker run --rm dockcross/linux-arm64 > $(CROSS_CONTAINER)
-	chmod +x $(CROSS_CONTAINER)
-endif
+all: clean kernel8.img
 
 target/$(TARGET)/debug/kernel8: src/main.rs
 	RUST_TARGET_PATH=$(shell pwd) xargo build --target=$(TARGET)
@@ -55,7 +48,7 @@ kernel8: target/$(TARGET)/release/kernel8
 endif
 
 kernel8.img: kernel8
-	$(CROSS_CONTAINER) $(CROSS_CONTAINER_OBJCOPY) -O binary -S $< kernel8.img
+	$(OBJCOPY) $(OBJCOPY_PARAMS) $< kernel8.img
 
 qemu:
 	$(DOCKER_CMD) $(UTILS_CONTAINER) $(QEMU_CMD) -serial stdio

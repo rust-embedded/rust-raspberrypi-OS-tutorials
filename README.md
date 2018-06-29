@@ -24,15 +24,13 @@ This repo tries to put a focus on user friendliness. Therefore, I made some effo
 Users eager to try the code should not be bothered with complicated toolchain installation/compilation steps. This is achieved by trying to use the standard Rust toolchain as much as possible, and bridge existing gaps with Docker containers. Please [install Docker for your distro].
 
 The setup consists of the following components:
-1. Compiler and linker are used from Rust nightly.
+1. Compiler, linker and binutils are used from Rust nightly.
 2. QEMU will be used for emulation, but RPi3 support in QEMU is very fresh and has not landed in most of the pre-packaged versions of popular distributions. [This] container will provide it ready to go.
-3. aarch64 toolchain binaries that are not provided by Rust, like `objcopy`, will be provided with a container from the [dockcross] project, which does an awesome job of curating various toolchains in containers.
 
 Please notice that you won't need to download or prepare the containers upfront. As long as you have docker installed, they will be pulled automatically the first time the Makefile needs them.
 
 [install Docker for your distro]: https://www.docker.com/community-edition#/download
 [This]: https://github.com/andre-richter/docker-raspi3-qemu
-[dockcross]: https://github.com/dockcross/dockcross
 
 For now, only a few basic tutorials are ready, but more will be ported over time.
 
@@ -53,29 +51,14 @@ research before you continue. This tutorial is strickly about interfacing with t
 I assume you have a fair GNU/Linux knowledge on how to compile programs and create disk and file system images. I
 won't cover those in detail, although I'll give you a few hints about how to set up a cross-compiler for this architecture.
 
-Why Raspberry Pi 3?
--------------------
-
-I've choosen this board for several reasons: first of all, it's cheap and easy to get. Second, it's a 64 bit
-machine. I gave up programming for 32 bit long long time ago. The 64 bit is so much more interesting, as it's
-address space is increadibly huge, bigger than the storage capacity which allows us to use some interesting new
-solutions. Third, uses only MMIO which makes it easy to program.
-
-For 32 bit tutorials, I'd recommend:
-
-- [Cambridge tutorials](http://www.cl.cam.ac.uk/projects/raspberrypi/tutorials/os/) (ASM and 32 bit only),
-- [David Welch's tutorials](https://github.com/dwelch67/raspberrypi) (mostly C, with some 64 bit examples),
-- [Peter Lemon's tutorials](https://github.com/PeterLemon/RaspberryPi) (ASM only, also for 64 bit) and
-- [Leon de Boer's tutorials](https://github.com/LdB-ECM/Raspberry-Pi) (C and ASM, also for 64 bit, more complex examples like USB and OpenGL).
-
 Prerequisites
 -------------
 
 Before you can start, you'll need a suitable Rust toolchain.
 ```bash
 curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly
-rustup component add rust-src
-cargo install xargo
+rustup component add rust-src llvm-tools
+cargo install xargo cargo-binutils
 ```
 
 Additionally, a Micro SD card with [firmware files](https://github.com/raspberrypi/firmware/tree/master/boot) on a FAT filesystem.
@@ -110,6 +93,22 @@ For that, you would have to add something like `-chardev socket,host=localhost,p
 [@godmar](https://github.com/godmar) for the info).
 
 **!!!WARNING!!!** Qemu emulation is rudimentary, only the most common peripherals are emulated! **!!!WARNING!!!**
+
+Why Raspberry Pi 3?
+-------------------
+
+I've choosen this board for several reasons: first of all, it's cheap and easy to get. Second, it's a 64 bit
+machine. I gave up programming for 32 bit long long time ago. The 64 bit is so much more interesting, as it's
+address space is increadibly huge, bigger than the storage capacity which allows us to use some interesting new
+solutions. Third, uses only MMIO which makes it easy to program.
+
+For 32 bit tutorials, I'd recommend:
+
+- [Cambridge tutorials](http://www.cl.cam.ac.uk/projects/raspberrypi/tutorials/os/) (ASM and 32 bit only),
+- [David Welch's tutorials](https://github.com/dwelch67/raspberrypi) (mostly C, with some 64 bit examples),
+- [Peter Lemon's tutorials](https://github.com/PeterLemon/RaspberryPi) (ASM only, also for 64 bit) and
+- [Leon de Boer's tutorials](https://github.com/LdB-ECM/Raspberry-Pi) (C and ASM, also for 64 bit, more complex examples like USB and OpenGL).
+
 
 About the hardware
 ------------------

@@ -80,20 +80,19 @@ should yield something like the following, where you can see that the stack
 pointer is not used apart from ourselves setting it.
 
 ```bash
-./dockcross-linux-aarch64 bash
-[andre:/work] $ aarch64-linux-gnu-objdump -CD kernel8
+[andre:/work] $ cargo objdump --target aarch64-raspi3-none-elf.json -- -disassemble -print-imm-hex kernel8
 
 [...] (Some output omitted)
 
-0000000000080000 <_boot_cores>:
-   80000:       d53800a8        mrs     x8, mpidr_el1
-   80004:       f240051f        tst     x8, #0x3
-   80008:       54000060        b.eq    80014 <_boot_cores+0x14>
-   8000c:       d503205f        wfe
-   80010:       17ffffff        b       8000c <_boot_cores+0xc>
-   80014:       320d03e8        orr     w8, wzr, #0x80000
-   80018:       9100011f        mov     sp, x8
-   8001c:       9400016b        bl      805c8 <raspi3_glue::reset::h2a7ad49cd9d2154d>
+_boot_cores:
+   80000:       a8 00 38 d5     mrs     x8, MPIDR_EL1
+   80004:       1f 05 40 f2     tst     x8, #0x3
+   80008:       60 00 00 54     b.eq    #0xc
+   8000c:       5f 20 03 d5     wfe
+   80010:       ff ff ff 17     b       #-0x4
+   80014:       e8 03 0d 32     orr     w8, wzr, #0x80000
+   80018:       1f 01 00 91     mov     sp, x8
+   8001c:       5d 01 00 94     bl      #0x574
 ```
 
 It is important to always manually check this, and not blindly rely on the

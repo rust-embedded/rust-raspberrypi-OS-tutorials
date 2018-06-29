@@ -56,7 +56,7 @@ that link address. When we're done, the memory at `0x80_000` is free to use. You
 can check that with:
 
 ```sh
-$ ./dockcross-linux-aarch64 aarch64-linux-gnu-nm kernel8 | grep reset
+$ cargo nm -- kernel8 | grep reset
 000000000007ffc0 T reset
 ```
 
