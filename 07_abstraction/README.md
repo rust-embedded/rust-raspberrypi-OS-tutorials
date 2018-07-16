@@ -26,19 +26,17 @@ generally read and written as a whole, there's the common [get()][get] and
 [get]: https://docs.rs/cortex-a/1.0.0/cortex_a/regs/sp/trait.RegisterReadWrite.html#tymethod.get
 [set]: https://docs.rs/cortex-a/1.0.0/cortex_a/regs/sp/trait.RegisterReadWrite.html#tymethod.set
 
-Registers that are divided into multiple fields, like `MPIDR_EL1` ([see the ARM
-Reference Manual][el1]), on the other hand, are backed by a respective
-[type][cntp_type] definition that allow for fine-grained reading and
-modifications.
+Registers that are divided into multiple fields, like `CNTP_CTL_EL0`, on the
+other hand, are backed by a respective [type][cntp_type] definition that allow
+for fine-grained reading and modifications.
 
-[el1]: http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ddi0500g/BABHBJCI.html
-[cntp_bitfields]: https://docs.rs/cortex-a/1.0.0/cortex_a/regs/cntp_ctl_el0/CNTP_CTL_EL0/index.html
+[cntp_type]: https://docs.rs/cortex-a/1.0.0/cortex_a/regs/cntp_ctl_el0/CNTP_CTL_EL0/index.html
 
 The register API is based on the [tock project's][tock] register
 interface. Please see [their homepage][tock_registers] for all the details.
 
 [tock]: https://github.com/tock/tock
-[tock_register]: https://github.com/tock/tock/tree/master/libraries/tock-register-interface
+[tock_registers]: https://github.com/tock/tock/tree/master/libraries/tock-register-interface
 
 To some extent, this namespacing also makes our code more portable. For example,
 if we want to reuse parts of it on another processor architecture, we could pull
