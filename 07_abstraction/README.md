@@ -15,20 +15,30 @@ wrappers around assembly instructions.
 For single assembler instructions, we now have the `cortex-a::asm` namespace,
 e.g. providing `asm::nop()`.
 
-For registers, there is `cortex-a::register`. For registers like the stack
-pointer, which are generally read and written as a whole, there's simple
-[read()][sp_read] and [write()][sp_write] functions which take and return
-primitive integer types.
+For registers, there is `cortex-a::regs`. The interface is the same as we have
+it for MMIO accesses, aka provided by [register-rs][register-rs] and therefore
+based on [tock-regs][tock-regs]. For registers like the stack pointer, which are
+generally read and written as a whole, there's the common [get()][get] and
+[set()][set] functions which take and return primitive integer types.
 
-[sp_read]: https://docs.rs/cortex-a/0.1.2/cortex_a/register/sp/fn.read.html
-[sp_write]: https://docs.rs/cortex-a/0.1.2/cortex_a/register/sp/fn.write.html
+[register-rs]: https://github.com/rust-osdev/register-rs
+[tock-regs]: https://github.com/tock/tock/tree/master/libraries/tock-register-interface
+[get]: https://docs.rs/cortex-a/1.0.0/cortex_a/regs/sp/trait.RegisterReadWrite.html#tymethod.get
+[set]: https://docs.rs/cortex-a/1.0.0/cortex_a/regs/sp/trait.RegisterReadWrite.html#tymethod.set
 
-Registers that are divided into multiple fields, e.g. `MPIDR_EL1` ([see the ARM
-Reference Manual][el1]), on the other hand, are abstracted into their [own
-types][mpidr_type] and offer getter and/or setter methods, respectively.
+Registers that are divided into multiple fields, like `MPIDR_EL1` ([see the ARM
+Reference Manual][el1]), on the other hand, are backed by a respective
+[type][cntp_type] definition that allow for fine-grained reading and
+modifications.
 
 [el1]: http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ddi0500g/BABHBJCI.html
-[mpidr_type]:https://docs.rs/cortex-a/0.1.2/cortex_a/register/mpidr_el1/struct.MPIDR_EL1.html
+[cntp_bitfields]: https://docs.rs/cortex-a/1.0.0/cortex_a/regs/cntp_ctl_el0/CNTP_CTL_EL0/index.html
+
+The register API is based on the [tock project's][tock] register
+interface. Please see [their homepage][tock_registers] for all the details.
+
+[tock]: https://github.com/tock/tock
+[tock_register]: https://github.com/tock/tock/tree/master/libraries/tock-register-interface
 
 To some extent, this namespacing also makes our code more portable. For example,
 if we want to reuse parts of it on another processor architecture, we could pull
@@ -56,11 +66,13 @@ replaced it with a Rust function. Why? Because we can, for the fun of it.
 #[link_section = ".text.boot"]
 #[no_mangle]
 pub extern "C" fn _boot_cores() -> ! {
-    match register::MPIDR_EL1::read_raw() & 0x3 {
-        0 => unsafe {
-            register::sp::write(0x80_000);
-            reset()
-        },
+    use cortex_a::{asm, regs::mpidr_el1::*, regs::sp::*};
+
+    match MPIDR_EL1.get() & 0x3 {
+        0 => {
+            SP.set(0x80_000);
+            unsafe { reset() }
+        }
         _ => loop {
             // if not core0, infinitely wait for events
             asm::wfe();
@@ -74,7 +86,7 @@ set up yet. Actually it is this function that will do it for the first
 time. Therefore, it is important to check that code generated from this function
 does not call any subroutines that need a working stack themselves.
 
-The `read_raw()` and `asm` wrappers that we use from the `cortex-a` crate are all
+The `get()` and `asm` wrappers that we use from the `cortex-a` crate are all
 inlined, so we fulfill this requirement. The compilation result of this function
 should yield something like the following, where you can see that the stack
 pointer is not used apart from ourselves setting it.

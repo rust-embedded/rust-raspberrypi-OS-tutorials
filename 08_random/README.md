@@ -2,10 +2,13 @@
 
 This going to be an easy tutorial. We query a number from the (undocumented)
 hardware random number generator. You can use this to implement a simple, but
-accurate dice throw in any game. It is important as without hardware support
-you can only generate pseudo-random numbers.
+accurate dice throw in any game. It is important as without hardware support you
+can only generate pseudo-random numbers.
 
 ## rand.s
+
+Due to lack of documentation, we [mimic the respective Linux driver]
+(https://github.com/torvalds/linux/blob/master/drivers/char/hw_random/bcm2835-rng.c).
 
 `Rng::init(&self)` initializes the hardware.
 

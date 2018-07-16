@@ -30,9 +30,6 @@ extern crate cortex_a;
 extern crate panic_abort;
 extern crate r0;
 
-use core::ptr;
-use cortex_a::{asm, register};
-
 #[lang = "start"]
 extern "C" fn start<T>(user_main: fn() -> T, _argc: isize, _argv: *const *const u8) -> isize
 where
@@ -53,6 +50,8 @@ impl Termination for () {
 }
 
 unsafe fn reset() -> ! {
+    use core::ptr;
+
     extern "C" {
         fn main(argc: isize, argv: *const *const u8) -> isize;
 
@@ -77,11 +76,13 @@ unsafe fn reset() -> ! {
 #[link_section = ".text.boot"]
 #[no_mangle]
 pub extern "C" fn _boot_cores() -> ! {
-    match register::MPIDR_EL1::read_raw() & 0x3 {
-        0 => unsafe {
-            register::SP::write_raw(0x80_000);
-            reset()
-        },
+    use cortex_a::{asm, regs::mpidr_el1::*, regs::sp::*};
+
+    match MPIDR_EL1.get() & 0x3 {
+        0 => {
+            SP.set(0x80_000);
+            unsafe { reset() }
+        }
         _ => loop {
             // if not core0, infinitely wait for events
             asm::wfe();

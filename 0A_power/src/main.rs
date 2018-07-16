@@ -26,7 +26,9 @@
 
 extern crate cortex_a;
 extern crate raspi3_glue;
-extern crate volatile_register;
+
+#[macro_use]
+extern crate register;
 
 const MMIO_BASE: u32 = 0x3F00_0000;
 
@@ -58,7 +60,7 @@ fn main() {
         match c {
             '1' => {
                 if power.off(&mut mbox, &gpio).is_err() {
-                    uart.puts("Error in Power::off()");
+                    uart.puts("Mailbox error in Power::off()");
                 }
             }
             '2' => power.reset(),

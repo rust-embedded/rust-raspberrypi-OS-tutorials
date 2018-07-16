@@ -24,9 +24,11 @@
 
 use super::MMIO_BASE;
 use core::ops;
-use cortex_a::{asm,
-               register::{CNTFRQ_EL0, CNTP_CTL_EL0, CNTP_TVAL_EL0}};
-use volatile_register::*;
+use cortex_a::{
+    asm,
+    regs::{cntfrq_el0::*, cntp_ctl_el0::*, cntp_tval_el0::*},
+};
+use register::mmio::*;
 
 const DELAY_BASE: u32 = MMIO_BASE + 0x3004;
 
@@ -38,8 +40,8 @@ const DELAY_BASE: u32 = MMIO_BASE + 0x3004;
 #[allow(non_snake_case)]
 #[repr(C)]
 pub struct RegisterBlock {
-    SYSTMR_LO: RO<u32>, // 0x00
-    SYSTMR_HI: RO<u32>, // 0x04
+    SYSTMR_LO: ReadOnly<u32>, // 0x00
+    SYSTMR_HI: ReadOnly<u32>, // 0x04
 }
 
 /// Public interface to the BCM System Timer
@@ -66,16 +68,16 @@ impl SysTmr {
     /// Get System Timer's counter
     pub fn get_system_timer(&self) -> u64 {
         // Since it is MMIO, we must emit two separate 32 bit reads
-        let mut hi = self.SYSTMR_HI.read();
+        let mut hi = self.SYSTMR_HI.get();
 
         // We have to repeat if high word changed during read. It
         // looks a bit odd, but clippy insists that this is idiomatic
         // Rust!
-        let lo = if hi != self.SYSTMR_HI.read() {
-            hi = self.SYSTMR_HI.read();
-            self.SYSTMR_LO.read()
+        let lo = if hi != self.SYSTMR_HI.get() {
+            hi = self.SYSTMR_HI.get();
+            self.SYSTMR_LO.get()
         } else {
-            self.SYSTMR_LO.read()
+            self.SYSTMR_LO.get()
         };
 
         // Compose long int value
@@ -107,35 +109,26 @@ impl SysTmr {
 /// Wait N microsec (ARM CPU only)
 pub fn wait_msec(n: u32) {
     // Get the counter frequency
-    let frq = CNTFRQ_EL0::read_raw();
+    let frq = CNTFRQ_EL0.get();
 
     // Calculate number of ticks
     let tval = (frq as u32 / 1000) * n;
 
-    unsafe {
-        // Set the compare value register
-        CNTP_TVAL_EL0::write_raw(tval);
+    // Set the compare value register
+    CNTP_TVAL_EL0.set(tval);
 
-        // Kick off the counting
-        CNTP_CTL_EL0::modify_flags(|r| {
-            r.set(CNTP_CTL_EL0::ENABLE, true);
-            r.set(CNTP_CTL_EL0::IMASK, true); // Disable timer interrupt
-        });
-    }
+    // Kick off the counting                        // Disable timer interrupt
+    CNTP_CTL_EL0.modify(CNTP_CTL_EL0::ENABLE::SET + CNTP_CTL_EL0::IMASK::SET);
 
     loop {
         // ISTATUS will be one when cval ticks have passed. Continuously check it.
-        if CNTP_CTL_EL0::read_flags().contains(CNTP_CTL_EL0::ISTATUS) {
+        if CNTP_CTL_EL0.is_set(CNTP_CTL_EL0::ISTATUS) {
             break;
         }
     }
 
     // Disable counting again
-    unsafe {
-        CNTP_CTL_EL0::modify_flags(|r| {
-            r.set(CNTP_CTL_EL0::ENABLE, false);
-        });
-    }
+    CNTP_CTL_EL0.modify(CNTP_CTL_EL0::ENABLE::CLEAR);
 }
 
 /*

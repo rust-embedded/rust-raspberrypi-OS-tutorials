@@ -28,20 +28,27 @@ use core::sync::atomic::{compiler_fence, Ordering};
 use delays;
 use gpio;
 use mbox;
-use volatile_register::*;
+use register::mmio::*;
 
 const POWER_BASE: u32 = MMIO_BASE + 0x100_01C;
 
 #[allow(non_snake_case)]
 #[repr(C)]
 pub struct RegisterBlock {
-    PM_RSTC: RW<u32>, // 0x1C
-    PM_RSTS: RW<u32>, // 0x20
-    PM_WDOG: RW<u32>, // 0x24
+    PM_RSTC: ReadWrite<u32>, // 0x1C
+    PM_RSTS: ReadWrite<u32>, // 0x20
+    PM_WDOG: ReadWrite<u32>, // 0x24
 }
 
-const PM_WDOG_MAGIC: u32 = 0x5a_000_000;
-const PM_RSTC_FULLRST: u32 = 0x20;
+const PM_PASSWORD: u32 = 0x5a_000_000;
+const PM_RSTC_WRCFG_CLR: u32 = 0xffff_ffcf;
+const PM_RSTC_WRCFG_FULL_RESET: u32 = 0x0000_0020;
+
+// The Raspberry Pi firmware uses the RSTS register to know which
+// partiton to boot from. The partiton value is spread into bits 0, 2,
+// 4, 6, 8, 10. Partiton 63 is a special partition used by the
+// firmware to indicate halt.
+const PM_RSTS_RASPBERRYPI_HALT: u32 = 0x555;
 
 pub enum PowerError {
     MailboxError,
@@ -93,52 +100,44 @@ impl Power {
         }
 
         // power off gpio pins (but not VCC pins)
-        unsafe {
-            gpio.GPFSEL0.write(0);
-            gpio.GPFSEL1.write(0);
-            gpio.GPFSEL2.write(0);
-            gpio.GPFSEL3.write(0);
-            gpio.GPFSEL4.write(0);
-            gpio.GPFSEL5.write(0);
+        gpio.GPFSEL0.set(0);
+        gpio.GPFSEL1.set(0);
+        gpio.GPFSEL2.set(0);
+        gpio.GPFSEL3.set(0);
+        gpio.GPFSEL4.set(0);
+        gpio.GPFSEL5.set(0);
 
-            gpio.GPPUD.write(0);
-            delays::wait_cycles(150);
+        gpio.GPPUD.set(0);
+        delays::wait_cycles(150);
 
-            gpio.GPPUDCLK0.write(0xffff_ffff);
-            gpio.GPPUDCLK1.write(0xffff_ffff);
-            delays::wait_cycles(150);
+        gpio.GPPUDCLK0.set(0xffff_ffff);
+        gpio.GPPUDCLK1.set(0xffff_ffff);
+        delays::wait_cycles(150);
 
-            // flush GPIO setup
-            gpio.GPPUDCLK0.write(0);
-            gpio.GPPUDCLK1.write(0);
+        // flush GPIO setup
+        gpio.GPPUDCLK0.set(0);
+        gpio.GPPUDCLK1.set(0);
 
-            // power off the SoC (GPU + CPU)
-            self.PM_RSTS.modify(|reg| {
-                let mut r = reg;
+        // We set the watchdog hard reset bit here to distinguish this
+        // reset from the normal (full) reset. bootcode.bin will not
+        // reboot after a hard reset.
+        let mut val = self.PM_RSTS.get();
+        val |= PM_PASSWORD | PM_RSTS_RASPBERRYPI_HALT;
+        self.PM_RSTS.set(val);
 
-                r &= !0xffff_faaa;
-                r |= 0x555; // partition 63 used to indicate halt
-                PM_WDOG_MAGIC | r
-            });
-            self.PM_WDOG.write(PM_WDOG_MAGIC | 10);
-            self.PM_RSTC.write(PM_WDOG_MAGIC | PM_RSTC_FULLRST);
-        }
-
-        Ok(())
+        // Continue with normal reset mechanism
+        self.reset();
     }
 
     /// Reboot
-    pub fn reset(&self) {
-        // trigger a restart by instructing the GPU to boot from partition 0
-        unsafe {
-            self.PM_RSTS.modify(|reg| {
-                let mut r = reg;
+    pub fn reset(&self) -> ! {
+        // use a timeout of 10 ticks (~150us)
+        self.PM_WDOG.set(PM_PASSWORD | 10);
+        let mut val = self.PM_RSTC.get();
+        val &= PM_RSTC_WRCFG_CLR;
+        val |= PM_PASSWORD | PM_RSTC_WRCFG_FULL_RESET;
+        self.PM_RSTC.set(val);
 
-                r &= !0xffff_faaa;
-                PM_WDOG_MAGIC | r
-            });
-            self.PM_WDOG.write(PM_WDOG_MAGIC | 10);
-            self.PM_RSTC.write(PM_WDOG_MAGIC | PM_RSTC_FULLRST);
-        }
+        loop {}
     }
 }

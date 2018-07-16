@@ -25,28 +25,98 @@
 use super::MMIO_BASE;
 use core::ops;
 use gpio;
-use volatile_register::*;
+use register::mmio::*;
+
+/// Auxilary mini UART registers
+//
+// Descriptions taken from
+// https://github.com/raspberrypi/documentation/files/1888662/BCM2837-ARM-Peripherals.-.Revised.-.V2-1.pdf
+register_bitfields! {
+    u32,
+
+    /// Auxiliary enables
+    AUX_ENABLES [
+        /// If set the mini UART is enabled. The UART will immediately
+        /// start receiving data, especially if the UART1_RX line is
+        /// low.
+        /// If clear the mini UART is disabled. That also disables any
+        /// mini UART register access
+        MINI_UART_ENABLE OFFSET(0) NUMBITS(1) []
+    ],
+
+    /// Mini Uart Interrupt Identify
+    AUX_MU_IIR [
+        /// Writing with bit 1 set will clear the receive FIFO
+        /// Writing with bit 2 set will clear the transmit FIFO
+        FIFO_CLEAR OFFSET(1) NUMBITS(2) [
+            Rx = 0b01,
+            Tx = 0b10,
+            All = 0b11
+        ]
+    ],
+
+    /// Mini Uart Line Control
+    AUX_MU_LCR [
+        /// Mode the UART works in
+        DATA_SIZE OFFSET(0) NUMBITS(2) [
+            SevenBit = 0b00,
+            EightBit = 0b11
+        ]
+    ],
+
+    /// Mini Uart Line Status
+    AUX_MU_LSR [
+        /// This bit is set if the transmit FIFO can accept at least
+        /// one byte.
+        TX_EMPTY   OFFSET(5) NUMBITS(1) [],
+
+        /// This bit is set if the receive FIFO holds at least 1
+        /// symbol.
+        DATA_READY OFFSET(0) NUMBITS(1) []
+    ],
+
+    /// Mini Uart Extra Control
+    AUX_MU_CNTL [
+        /// If this bit is set the mini UART transmitter is enabled.
+        /// If this bit is clear the mini UART transmitter is disabled.
+        TX_EN OFFSET(1) NUMBITS(1) [
+            Disabled = 0,
+            Enabled = 1
+        ],
+
+        /// If this bit is set the mini UART receiver is enabled.
+        /// If this bit is clear the mini UART receiver is disabled.
+        RX_EN OFFSET(0) NUMBITS(1) [
+            Disabled = 0,
+            Enabled = 1
+        ]
+    ],
+
+    /// Mini Uart Baudrate
+    AUX_MU_BAUD [
+        /// Mini UART baudrate counter
+        RATE OFFSET(0) NUMBITS(16) []
+    ]
+}
 
 const MINI_UART_BASE: u32 = MMIO_BASE + 0x21_5000;
 
-/// Auxilary mini UART registers
 #[allow(non_snake_case)]
 #[repr(C)]
 pub struct RegisterBlock {
-    __reserved_0: u32,       // 0x00
-    ENABLES: RW<u32>,        // 0x04
-    __reserved_1: [u32; 14], // 0x08
-    MU_IO: RW<u32>,          // 0x40
-    MU_IER: RW<u32>,         // 0x44
-    MU_IIR: RW<u32>,         // 0x48
-    MU_LCR: RW<u32>,         // 0x4C
-    MU_MCR: RW<u32>,         // 0x50
-    MU_LSR: RW<u32>,         // 0x54
-    MU_MSR: RW<u32>,         // 0x58
-    MU_SCRATCH: RW<u32>,     // 0x5C
-    MU_CNTL: RW<u32>,        // 0x60
-    MU_STAT: RW<u32>,        // 0x64
-    MU_BAUD: RW<u32>,        // 0x68
+    __reserved_0: u32,                                  // 0x00
+    AUX_ENABLES: ReadWrite<u32, AUX_ENABLES::Register>, // 0x04
+    __reserved_1: [u32; 14],                            // 0x08
+    AUX_MU_IO: ReadWrite<u32>,                          // 0x40 - Mini Uart I/O Data
+    AUX_MU_IER: WriteOnly<u32>,                         // 0x44 - Mini Uart Interrupt Enable
+    AUX_MU_IIR: WriteOnly<u32, AUX_MU_IIR::Register>,   // 0x48
+    AUX_MU_LCR: WriteOnly<u32, AUX_MU_LCR::Register>,   // 0x4C
+    AUX_MU_MCR: WriteOnly<u32>,                         // 0x50
+    AUX_MU_LSR: ReadOnly<u32, AUX_MU_LSR::Register>,    // 0x54
+    __reserved_2: [u32; 2],                             // 0x58
+    AUX_MU_CNTL: WriteOnly<u32, AUX_MU_CNTL::Register>, // 0x60
+    __reserved_3: u32,                                  // 0x64
+    AUX_MU_BAUD: WriteOnly<u32, AUX_MU_BAUD::Register>, // 0x68
 }
 
 pub struct MiniUart;
@@ -82,45 +152,43 @@ impl MiniUart {
     ///Set baud rate and characteristics (115200 8N1) and map to GPIO
     pub fn init(&self) {
         // initialize UART
+        self.AUX_ENABLES.modify(AUX_ENABLES::MINI_UART_ENABLE::SET);
+        self.AUX_MU_IER.set(0);
+        self.AUX_MU_CNTL.set(0);
+        self.AUX_MU_LCR.write(AUX_MU_LCR::DATA_SIZE::EightBit);
+        self.AUX_MU_MCR.set(0);
+        self.AUX_MU_IER.set(0);
+        self.AUX_MU_IIR.write(AUX_MU_IIR::FIFO_CLEAR::All);
+        self.AUX_MU_BAUD.write(AUX_MU_BAUD::RATE.val(270)); // 115200 baud
+
+        // map UART1 to GPIO pins
         unsafe {
-            self.ENABLES.modify(|x| x | 1); // enable UART1, AUX mini uart
-            self.MU_IER.write(0);
-            self.MU_CNTL.write(0);
-            self.MU_LCR.write(3); // 8 bits
-            self.MU_MCR.write(0);
-            self.MU_IER.write(0);
-            self.MU_IIR.write(0xC6); // disable interrupts
-            self.MU_BAUD.write(270); // 115200 baud
+            (*gpio::GPFSEL1).modify(gpio::GPFSEL1::FSEL14::TXD1 + gpio::GPFSEL1::FSEL15::RXD1);
 
-            // map UART1 to GPIO pins
-            (*gpio::GPFSEL1).modify(|x| {
-                // Modify with a closure
-                let mut ret = x;
-                ret &= !((7 << 12) | (7 << 15)); // gpio14, gpio15
-                ret |= (2 << 12) | (2 << 15); // alt5
-
-                ret
-            });
-
-            (*gpio::GPPUD).write(0); // enable pins 14 and 15
+            (*gpio::GPPUD).set(0); // enable pins 14 and 15
             for _ in 0..150 {
                 asm!("nop" :::: "volatile");
             }
 
-            (*gpio::GPPUDCLK0).write((1 << 14) | (1 << 15));
+            (*gpio::GPPUDCLK0).write(
+                gpio::GPPUDCLK0::PUDCLK14::AssertClock + gpio::GPPUDCLK0::PUDCLK15::AssertClock,
+            );
             for _ in 0..150 {
                 asm!("nop" :::: "volatile");
             }
-            (*gpio::GPPUDCLK0).write(0); // flush GPIO setup
-            self.MU_CNTL.write(3); // enable Tx, Rx
+
+            (*gpio::GPPUDCLK0).set(0);
         }
+
+        self.AUX_MU_CNTL
+            .write(AUX_MU_CNTL::RX_EN::Enabled + AUX_MU_CNTL::TX_EN::Enabled);
     }
 
     /// Send a character
     pub fn send(&self, c: char) {
         // wait until we can send
         loop {
-            if (self.MU_LSR.read() & 0x20) == 0x20 {
+            if self.AUX_MU_LSR.is_set(AUX_MU_LSR::TX_EMPTY) {
                 break;
             }
 
@@ -128,14 +196,14 @@ impl MiniUart {
         }
 
         // write the character to the buffer
-        unsafe { self.MU_IO.write(c as u32) };
+        self.AUX_MU_IO.set(c as u32);
     }
 
     /// Receive a character
     pub fn getc(&self) -> char {
         // wait until something is in the buffer
         loop {
-            if (self.MU_LSR.read() & 0x01) == 0x01 {
+            if self.AUX_MU_LSR.is_set(AUX_MU_LSR::DATA_READY) {
                 break;
             }
 
@@ -143,7 +211,7 @@ impl MiniUart {
         }
 
         // read it and return
-        let mut ret = self.MU_IO.read() as u8 as char;
+        let mut ret = self.AUX_MU_IO.get() as u8 as char;
 
         // convert carrige return to newline
         if ret == '\r' {

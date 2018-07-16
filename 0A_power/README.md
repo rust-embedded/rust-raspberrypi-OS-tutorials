@@ -9,8 +9,14 @@ transistor connected to a data GPIO pin for example).
 
 ## power.rs
 
+Unfortunately, the documentation about the PM interface is very very rare.  We
+will therefore more or less implement a carbon copy of respective functions of
+Linux'
+[bcm2835_wdt.c](https://github.com/torvalds/linux/blob/master/drivers/watchdog/bcm2835_wdt.c)
+driver.
+
 The power management controller is one of the peripherals that are not emulated
-properly by QEMU. Our implementation works on real hardware though.
+properly by QEMU. Our implementation therefore works on real hardware only.
 
 `Power::off(&self, mbox: &mut mbox::Mbox, gpio: &gpio::GPIO)` shuts down the
 board to an almost zero power consumption state.

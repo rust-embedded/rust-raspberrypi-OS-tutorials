@@ -7,15 +7,14 @@ NOTE: qemu does not redirect UART1 to terminal by default, only UART0!
 
 ## gpio.rs
 
-We have a new header file. This defines the base MMIO address, and the GPIO
-controller's addresses. This file going to be very popular, as many device needs
-it.
+We have a new file that defines the GPIO controller addresses. It is going to be
+very popular, as many device will need it in the future.
 
-We are using the [volatile_register] crate to modify MMIO addresses, because it
+We are using the [register][register] crate to modify MMIO addresses, because it
 allows easy wrapping of addresses to volatile types. It will also be used for
 UART registers.
 
-[volatile_register]: https://docs.rs/volatile-register/0.2.0/volatile_register/
+[register]: https://crates.io/crates/register
 
 ## uart.rs
 

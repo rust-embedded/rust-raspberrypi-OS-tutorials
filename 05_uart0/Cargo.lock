@@ -3,7 +3,7 @@ name = "kernel8"
 version = "0.1.0"
 dependencies = [
  "raspi3_glue 0.1.0",
- "volatile-register 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "register 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -25,20 +25,20 @@ dependencies = [
 ]
 
 [[package]]
-name = "vcell"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[[package]]
-name = "volatile-register"
-version = "0.2.0"
+name = "register"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "vcell 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tock-registers 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "tock-registers"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [metadata]
 "checksum panic-abort 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "6bc796c620f27056d4ffe7c558533fd67ae5af0fd8e919fbe38de803368af73e"
 "checksum r0 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "e2a38df5b15c8d5c7e8654189744d8e396bddc18ad48041a500ce52d6948941f"
-"checksum vcell 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "45c297f0afb6928cd08ab1ff9d95e99392595ea25ae1b5ecf822ff8764e57a0d"
-"checksum volatile-register 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "0d67cb4616d99b940db1d6bd28844ff97108b498a6ca850e5b6191a532063286"
+"checksum register 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "0e985243ba7e1c336b62444ef2a10d7bd87cf41a222285ae3de605c859006479"
+"checksum tock-registers 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "2acc33f980e23cee18d234a32d0637fbc1ea55e13ab04012fa857b899fa1b7a9"

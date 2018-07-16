@@ -25,20 +25,27 @@
 use super::MMIO_BASE;
 use core::ops;
 use cortex_a::asm;
-use volatile_register::{RO, WO};
+use register::mmio::{ReadOnly, WriteOnly};
+
+register_bitfields! {
+    u32,
+
+    STATUS [
+        FULL  OFFSET(31) NUMBITS(1) [],
+        EMPTY OFFSET(30) NUMBITS(1) []
+    ]
+}
 
 const VIDEOCORE_MBOX: u32 = MMIO_BASE + 0xB880;
 
 #[allow(non_snake_case)]
 #[repr(C)]
 pub struct RegisterBlock {
-    READ: RO<u32>,          // 0x00
-    __reserved_0: [u32; 3], // 0x04
-    POLL: RO<u32>,          // 0x10
-    SENDER: RO<u32>,        // 0x14
-    STATUS: RO<u32>,        // 0x18
-    CONFIG: RO<u32>,        // 0x1C
-    WRITE: WO<u32>,         // 0x20
+    READ: ReadOnly<u32>,                     // 0x00
+    __reserved_0: [u32; 5],                  // 0x04
+    STATUS: ReadOnly<u32, STATUS::Register>, // 0x18
+    __reserved_1: u32,                       // 0x1C
+    WRITE: WriteOnly<u32>,                   // 0x20
 }
 
 // Custom errors
@@ -72,17 +79,13 @@ mod response {
 }
 
 pub const REQUEST: u32 = 0;
-const FULL: u32 = 0x8000_0000;
-const EMPTY: u32 = 0x4000_0000;
 
 // Public interface to the mailbox
 #[repr(C)]
+#[repr(align(16))]
 pub struct Mbox {
     // The address for buffer needs to be 16-byte aligned so that the
-    // Videcore can handle it properly. We don't take precautions here
-    // to achieve that, but for now it just works. Since alignment of
-    // data structures in Rust is a bit of a hassle right now, we just
-    // close our eyes and roll with it.
+    // Videcore can handle it properly.
     pub buffer: [u32; 36],
 }
 
@@ -118,34 +121,33 @@ impl Mbox {
     pub fn call(&self, channel: u32) -> Result<()> {
         // wait until we can write to the mailbox
         loop {
-            if (self.STATUS.read() & FULL) != FULL {
+            if !self.STATUS.is_set(STATUS::FULL) {
                 break;
             }
 
             asm::nop();
         }
 
+        let buf_ptr = self.buffer.as_ptr() as u32;
+
         // write the address of our message to the mailbox with channel identifier
-        unsafe {
-            self.WRITE
-                .write(((self.buffer.as_ptr() as u32) & !0xF) | (channel & 0xF))
-        };
+        self.WRITE.set((buf_ptr & !0xF) | (channel & 0xF));
 
         // now wait for the response
         loop {
             // is there a response?
             loop {
-                if (self.STATUS.read() & EMPTY) != EMPTY {
+                if !self.STATUS.is_set(STATUS::EMPTY) {
                     break;
                 }
 
                 asm::nop();
             }
 
-            let resp: u32 = self.READ.read();
+            let resp: u32 = self.READ.get();
 
             // is it a response to our message?
-            if ((resp & 0xF) == channel) && ((resp & !0xF) == (self.buffer.as_ptr() as u32)) {
+            if ((resp & 0xF) == channel) && ((resp & !0xF) == buf_ptr) {
                 // is it a valid successful response?
                 return match self.buffer[1] {
                     response::SUCCESS => Ok(()),

@@ -25,18 +25,37 @@
 use super::MMIO_BASE;
 use core::ops;
 use cortex_a::asm;
-use volatile_register::*;
+use register::mmio::*;
+
+register_bitfields! {
+    u32,
+
+    CTRL [
+        ENABLE OFFSET(0) NUMBITS(1) [
+            True = 1,
+            False = 0
+        ]
+    ],
+
+    INT_MASK [
+        INT_OFF OFFSET(0) NUMBITS(1) [
+            True = 1,
+            False = 0
+        ]
+    ]
+}
 
 const RNG_BASE: u32 = MMIO_BASE + 0x104_000;
+const RNG_WARMUP_COUNT: u32 = 0x40_000;
 
 #[allow(non_snake_case)]
 #[repr(C)]
 pub struct RegisterBlock {
-    CTRL: RW<u32>,     // 0x00
-    STATUS: RW<u32>,   // 0x04
-    DATA: RO<u32>,     // 0x08
-    __reserved_0: u32, // 0x0c
-    INT_MASK: RW<u32>, // 0x10
+    CTRL: ReadWrite<u32, CTRL::Register>,         // 0x00
+    STATUS: ReadWrite<u32>,                       // 0x04
+    DATA: ReadOnly<u32>,                          // 0x08
+    __reserved_0: u32,                            // 0x0c
+    INT_MASK: ReadWrite<u32, INT_MASK::Register>, // 0x10
 }
 
 /// Public interface to the RNG
@@ -62,29 +81,26 @@ impl Rng {
 
     /// Initialize the RNG
     pub fn init(&self) {
-        unsafe {
-            self.STATUS.write(0x40_000);
+        // Disable interrupts
+        self.INT_MASK.modify(INT_MASK::INT_OFF::True);
 
-            // mask interrupt
-            self.INT_MASK.modify(|x| x | 1);
+        // Set warm-up count and enable
+        self.STATUS.set(RNG_WARMUP_COUNT);
+        self.CTRL.modify(CTRL::ENABLE::True);
+    }
 
-            // enable
-            self.CTRL.modify(|x| x | 1);
-        }
-
+    /// Return a random number between [min..max]
+    pub fn rand(&self, min: u32, max: u32) -> u32 {
         // wait for gaining some entropy
         loop {
-            if (self.STATUS.read() >> 24) != 0 {
+            if (self.STATUS.get() >> 24) != 0 {
                 break;
             }
 
             asm::nop();
         }
-    }
 
-    /// Return a random number between [min..max]
-    pub fn rand(&self, min: u32, max: u32) -> u32 {
-        let r = self.DATA.read();
+        let r = self.DATA.get();
 
         r % (max - min) + min
     }

@@ -29,8 +29,6 @@
 
 extern crate panic_abort;
 
-use core::ptr;
-
 #[lang = "start"]
 extern "C" fn start<T>(user_main: fn() -> T, _argc: isize, _argv: *const *const u8) -> isize
 where
@@ -52,6 +50,8 @@ impl Termination for () {
 
 #[no_mangle]
 pub unsafe extern "C" fn reset() -> ! {
+    use core::ptr;
+
     extern "C" {
         fn main(argc: isize, argv: *const *const u8) -> isize;
     }
