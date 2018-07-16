@@ -3,6 +3,7 @@
     "data-layout": "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128",
     "executables": true,
     "linker-flavor": "ld.lld",
+    "linker": "rust-lld",
     "linker-is-gnu": true,
     "pre-link-args": {
         "ld.lld": [
