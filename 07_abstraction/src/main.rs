@@ -23,9 +23,12 @@
  */
 
 #![no_std]
+#![no_main]
 
 extern crate cortex_a;
-extern crate raspi3_glue;
+
+#[macro_use]
+extern crate raspi3_boot;
 
 #[macro_use]
 extern crate register;
@@ -38,13 +41,15 @@ mod uart;
 
 use core::sync::atomic::{compiler_fence, Ordering};
 
-fn main() {
+entry!(kernel_entry);
+
+fn kernel_entry() -> ! {
     let mut mbox = mbox::Mbox::new();
     let uart = uart::Uart::new();
 
     // set up serial console
     if uart.init(&mut mbox).is_err() {
-        return; // If UART fails, abort early
+        loop { cortex_a::asm::wfe() }; // If UART fails, abort early
     }
 
     // get the board's unique serial number with a mailbox call

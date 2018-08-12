@@ -23,9 +23,13 @@
  */
 
 #![no_std]
+#![no_main]
 
-extern crate raspi3_glue;
+#[macro_use]
+extern crate raspi3_boot;
 
-fn main() {
+entry!(kernel_entry);
+
+fn kernel_entry() -> ! {
     loop {}
 }

@@ -71,7 +71,7 @@ firmware. Second, we added a loop to relocate our code to the address it should
 have been loaded to. And last, since rustc generates RIP-relative jumps, we must
 adjust the branch instruction to jump to the relocated Rust code.
 
-## Linker and Glue Code
+## Linker and Boot Code
 
 We use a different linking address this time. We calculate our code's size to
 know how many bytes we have to copy.

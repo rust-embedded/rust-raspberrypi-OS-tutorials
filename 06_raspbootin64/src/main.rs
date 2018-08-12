@@ -23,9 +23,11 @@
  */
 
 #![no_std]
+#![no_main]
 #![feature(asm)]
 
-extern crate raspi3_glue;
+#[macro_use]
+extern crate raspi3_boot;
 
 #[macro_use]
 extern crate register;
@@ -36,13 +38,15 @@ mod gpio;
 mod mbox;
 mod uart;
 
-fn main() {
+entry!(kernel_entry);
+
+fn kernel_entry() -> ! {
     let mut mbox = mbox::Mbox::new();
     let uart = uart::Uart::new();
 
     // set up serial console
     if uart.init(&mut mbox).is_err() {
-        return; // If UART fails, abort early
+        unsafe { asm!("wfe" :::: "volatile") }; // If UART fails, abort early
     }
 
     // Say hello
@@ -74,8 +78,8 @@ fn main() {
     }
 
     // Use black magic to get a function pointer to 0x80_000
-    let kernel: extern "C" fn() = unsafe { core::mem::transmute(kernel_addr as *const ()) };
+    let kernel: extern "C" fn() -> ! = unsafe { core::mem::transmute(kernel_addr as *const ()) };
 
     // Jump to loaded kernel and never return!
-    kernel();
+    kernel()
 }

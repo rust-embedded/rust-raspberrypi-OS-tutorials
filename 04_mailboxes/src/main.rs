@@ -23,9 +23,11 @@
  */
 
 #![no_std]
+#![no_main]
 #![feature(asm)]
 
-extern crate raspi3_glue;
+#[macro_use]
+extern crate raspi3_boot;
 
 #[macro_use]
 extern crate register;
@@ -38,7 +40,9 @@ mod uart;
 
 use core::sync::atomic::{compiler_fence, Ordering};
 
-fn main() {
+entry!(kernel_entry);
+
+fn kernel_entry() -> ! {
     let mut mbox = mbox::Mbox::new();
     let uart = uart::MiniUart::new();
 

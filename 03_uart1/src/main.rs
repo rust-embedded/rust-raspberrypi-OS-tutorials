@@ -23,9 +23,11 @@
  */
 
 #![no_std]
+#![no_main]
 #![feature(asm)]
 
-extern crate raspi3_glue;
+#[macro_use]
+extern crate raspi3_boot;
 
 #[macro_use]
 extern crate register;
@@ -35,7 +37,9 @@ const MMIO_BASE: u32 = 0x3F00_0000;
 mod gpio;
 mod uart;
 
-fn main() {
+entry!(kernel_entry);
+
+fn kernel_entry() -> ! {
     let uart = uart::MiniUart::new();
 
     // set up serial console

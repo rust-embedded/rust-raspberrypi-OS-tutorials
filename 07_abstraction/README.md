@@ -5,7 +5,7 @@ important Rust principles are introduced: Abstraction and modularity.
 
 From a functional perspective, this tutorial is the same as `05_uart0`, but with
 the key difference that we threw out all manually crafted assembler. Both the
-main and the glue crate do not use `#![feature(global_asm)]` or
+main and the boot crate do not use `#![feature(global_asm)]` or
 `#![feature(asm)]` anymore. Instead, we pulled in the [cortex-a][crate] crate,
 which now provides `cortex-a` specific features like register access or safe
 wrappers around assembly instructions.
@@ -55,7 +55,7 @@ introduce abstraction on different levels of the system. Check out the [Awesome
 Embedded Rust](https://github.com/rust-embedded/awesome-embedded-rust) list for
 an overview.
 
-## Glue Code
+## Boot Code
 
 Like mentioned above, we threw out the `boot_cores.S` assembler file and
 replaced it with a Rust function. Why? Because we can, for the fun of it.
@@ -63,13 +63,16 @@ replaced it with a Rust function. Why? Because we can, for the fun of it.
 ```rust
 #[link_section = ".text.boot"]
 #[no_mangle]
-pub extern "C" fn _boot_cores() -> ! {
+pub unsafe extern "C" fn _boot_cores() -> ! {
     use cortex_a::{asm, regs::mpidr_el1::*, regs::sp::*};
 
-    match MPIDR_EL1.get() & 0x3 {
+    const CORE_MASK: u64 = 0x3;
+    const STACK_START: u64 = 0x80_0000;
+
+    match MPIDR_EL1.get() & CORE_MASK {
         0 => {
-            SP.set(0x80_000);
-            unsafe { reset() }
+            SP.set(STACK_START);
+            reset()
         }
         _ => loop {
             // if not core0, infinitely wait for events
@@ -95,14 +98,14 @@ pointer is not used apart from ourselves setting it.
 [...] (Some output omitted)
 
 _boot_cores:
-   80000:       a8 00 38 d5     mrs     x8, MPIDR_EL1
-   80004:       1f 05 40 f2     tst     x8, #0x3
-   80008:       60 00 00 54     b.eq    #0xc
-   8000c:       5f 20 03 d5     wfe
-   80010:       ff ff ff 17     b       #-0x4
-   80014:       e8 03 0d 32     orr     w8, wzr, #0x80000
-   80018:       1f 01 00 91     mov     sp, x8
-   8001c:       5d 01 00 94     bl      #0x574
+   80000:	a8 00 38 d5 	mrs	x8, MPIDR_EL1
+   80004:	1f 05 40 f2 	tst	x8, #0x3
+   80008:	60 00 00 54 	b.eq	#0xc <_boot_cores+0x14>
+   8000c:	5f 20 03 d5 	wfe
+   80010:	ff ff ff 17 	b	#-0x4 <_boot_cores+0xc>
+   80014:	e8 03 09 32 	orr	w8, wzr, #0x800000
+   80018:	1f 01 00 91 	mov	sp, x8
+   8001c:	35 02 00 94 	bl	#0x8d4 <raspi3_boot::reset::h90bc56752de44d1b>
 ```
 
 It is important to always manually check this, and not blindly rely on the

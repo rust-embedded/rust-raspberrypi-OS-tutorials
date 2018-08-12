@@ -23,9 +23,12 @@
  */
 
 #![no_std]
+#![no_main]
 
 extern crate cortex_a;
-extern crate raspi3_glue;
+
+#[macro_use]
+extern crate raspi3_boot;
 
 #[macro_use]
 extern crate register;
@@ -38,7 +41,9 @@ mod mbox;
 mod power;
 mod uart;
 
-fn main() {
+entry!(kernel_entry);
+
+fn kernel_entry() -> ! {
     let gpio = gpio::GPIO::new();
     let mut mbox = mbox::Mbox::new();
     let uart = uart::Uart::new();
@@ -46,7 +51,7 @@ fn main() {
 
     // set up serial console
     if uart.init(&mut mbox, &gpio).is_err() {
-        return; // If UART fails, abort early
+        loop { cortex_a::asm::wfe() }; // If UART fails, abort early
     }
 
     uart.getc(); // Press a key first before being greeted

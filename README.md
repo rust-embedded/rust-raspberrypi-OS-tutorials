@@ -9,13 +9,13 @@ in the [Rust] systems programming language.
 It is basically a combination of two awesome resources.
   1. First of all, it is a fork of [Zoltan Baldaszti]'s awesome [tutorial] on bare metal programming on RPi3 in `C`.
      1. Rust code will be based on his files, READMEs will be adapted, and I might change things here and there if I think it is beneficial. However, credits to this guy plz!
-  2. The second props go to [Jorge Aparicio] for ["The Embedonomicon"], from which the glue code is taken.
+  2. The second props go to [Jorge Aparicio] for ["The Embedonomicon"], from which the boot code is taken.
 
 [Rust]: https://www.rust-lang.org
 [Zoltan Baldaszti]: https://github.com/bztsrc
 [tutorial]: https://github.com/bztsrc/raspi3-tutorial
 [Jorge Aparicio]: https://github.com/japaric
-["The Embedonomicon"]: https://github.com/japaric/embedonomicon
+["The Embedonomicon"]: https://rust-embedded.github.io/embedonomicon/
 
 ## Environment
 

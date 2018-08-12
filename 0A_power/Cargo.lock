@@ -1,14 +1,6 @@
 [[package]]
 name = "cortex-a"
 version = "1.0.0"
-source = "git+https://github.com/andre-richter/cortex-a.git?branch=registers#aae179e34af014725706bb1821e9e285674db97b"
-dependencies = [
- "register 0.1.1 (git+https://github.com/andre-richter/register-rs.git)",
-]
-
-[[package]]
-name = "cortex-a"
-version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "register 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -19,7 +11,7 @@ name = "kernel8"
 version = "0.1.0"
 dependencies = [
  "cortex-a 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "raspi3_glue 0.1.0",
+ "raspi3_boot 0.1.0",
  "register 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -34,20 +26,12 @@ version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
-name = "raspi3_glue"
+name = "raspi3_boot"
 version = "0.1.0"
 dependencies = [
- "cortex-a 1.0.0 (git+https://github.com/andre-richter/cortex-a.git?branch=registers)",
+ "cortex-a 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "panic-abort 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "r0 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "register"
-version = "0.1.1"
-source = "git+https://github.com/andre-richter/register-rs.git#e0fdae3f2dc1e9691bbe4d57519e746f0d9aada0"
-dependencies = [
- "tock-registers 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -64,10 +48,8 @@ version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [metadata]
-"checksum cortex-a 1.0.0 (git+https://github.com/andre-richter/cortex-a.git?branch=registers)" = "<none>"
 "checksum cortex-a 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "24174fbfe16d46844856c0f5e16ee15f7adbacfd87cb0148d34463dd34b54eeb"
 "checksum panic-abort 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "6bc796c620f27056d4ffe7c558533fd67ae5af0fd8e919fbe38de803368af73e"
 "checksum r0 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "e2a38df5b15c8d5c7e8654189744d8e396bddc18ad48041a500ce52d6948941f"
-"checksum register 0.1.1 (git+https://github.com/andre-richter/register-rs.git)" = "<none>"
 "checksum register 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "0e985243ba7e1c336b62444ef2a10d7bd87cf41a222285ae3de605c859006479"
 "checksum tock-registers 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "2acc33f980e23cee18d234a32d0637fbc1ea55e13ab04012fa857b899fa1b7a9"

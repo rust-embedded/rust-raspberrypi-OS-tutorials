@@ -3,7 +3,7 @@
 crates = Dir["**/Cargo.toml"].sort!
 
 crates.each do |x|
-  next if x.include?('raspi3_glue')
+  next if x.include?('raspi3_boot')
 
   x = File.dirname(x)
   puts "\n\n" + x.to_s + "\n\n"

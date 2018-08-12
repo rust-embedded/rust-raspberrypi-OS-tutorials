@@ -4,7 +4,7 @@ Now let's try something more complex, shall we? By complex I mean stopping the
 CPU cores just like in the first tutorial, but this time stop one of them from
 **Rust**!
 
-## Glue code
+## Boot code
 
 In order to conveniently incorporate Rust code, we are restructuring our crate a
 bit.
@@ -15,16 +15,16 @@ can compare to the files in this crate and see what we actually kept to get our
 Raspberry Pi 3 tutorial going. Here's a short summary of the new structure of
 the crate:
 
-  - `raspi3_glue/`: The extern crate containing glue code as presented in the
+  - `raspi3_boot/`: The extern crate containing boot code as presented in the
     Embedonomicon.
     - In a small deviation to the Embedonomicon, `lib.rs` also includes
       `boot_cores.S` from the previous tutorial, still with the
       [global_asm!][gasm] macro.
-    - Therefore, `boot_cores.S` has been moved into `raspi3_glue/src/`.
+    - Therefore, `boot_cores.S` has been moved into `raspi3_boot/src/`.
   - `src`: Source code of our actual Rust code, currently only containing
     `main.rs` executing an endless loop.
 
-[nom]: https://japaric.github.io/embedonomicon/
+[nom]: https://rust-embedded.github.io/embedonomicon/
 [gasm]: https://doc.rust-lang.org/unstable-book/language-features/global-asm.html
 
 ### Changes to `boot_cores.S`
@@ -36,7 +36,7 @@ CPU core.
 
  If the result of the read from `mpidr_el1` is zero, which means we are
  executing on core0, we set up the stack for that core, and afterwards call the
- Rust `reset()` function of the glue code in `raspi3_glue/src/lib.rs`. In case
+ Rust `reset()` function of the boot code in `raspi3_boot/src/lib.rs`. In case
  the Rust code returns (which it never should), we also jump to the same
  infinite loop the other CPU cores are running.
 
@@ -58,7 +58,7 @@ allocated in the Rust code.
 
 Therefore, we added the `bss` segment to the linker script and export its
 properties via `__bss_start` and `__bss_size`, which will be picked up and
-zeroed out by the glue code in `raspi3_glue/src/lib.rs`.
+zeroed out by the boot code in `raspi3_boot/src/lib.rs`.
 
 Additionally, there is a [data segment][data] now.
 
