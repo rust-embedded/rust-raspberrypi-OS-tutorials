@@ -69,16 +69,15 @@ impl SysTmr {
     pub fn get_system_timer(&self) -> u64 {
         // Since it is MMIO, we must emit two separate 32 bit reads
         let mut hi = self.SYSTMR_HI.get();
+        let mut lo = self.SYSTMR_LO.get();
 
-        // We have to repeat if high word changed during read. It
-        // looks a bit odd, but clippy insists that this is idiomatic
-        // Rust!
-        let lo = if hi != self.SYSTMR_HI.get() {
+        // We have to repeat if high word changed during read. This
+        // will emit a clippy warning that needs be ignored, or you
+        // lose an MMIO read.
+        if hi != self.SYSTMR_HI.get() {
             hi = self.SYSTMR_HI.get();
-            self.SYSTMR_LO.get()
-        } else {
-            self.SYSTMR_LO.get()
-        };
+            lo = self.SYSTMR_LO.get();
+        }
 
         // Compose long int value
         (u64::from(hi) << 32) | u64::from(lo)
