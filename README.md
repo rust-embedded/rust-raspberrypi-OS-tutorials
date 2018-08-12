@@ -59,7 +59,7 @@ Before you can start, you'll need a suitable Rust toolchain.
 curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly
 rustup component add rust-src llvm-tools-preview
 cargo install xargo cargo-binutils
-cargo install clippy --git https://github.com/rust-lang-nursery/rust-clippy.git
+rustup component add clippy-preview --toolchain=nightly
 ```
 
 Additionally, a Micro SD card with [firmware files](https://github.com/raspberrypi/firmware/tree/master/boot) on a FAT filesystem.
