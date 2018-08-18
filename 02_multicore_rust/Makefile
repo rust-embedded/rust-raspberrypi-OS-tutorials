@@ -54,7 +54,7 @@ qemu:
 	$(DOCKER_CMD) $(UTILS_CONTAINER) $(QEMU_CMD) -d in_asm
 
 clippy:
-	RUSTFLAGS="-C panic=abort" xargo clippy
+	RUSTFLAGS="-C panic=abort" cargo clippy
 
 clean:
 	cargo clean

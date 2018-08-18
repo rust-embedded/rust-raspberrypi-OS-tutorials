@@ -59,7 +59,7 @@ raspboot:
 	$(DOCKER_CMD) $(DOCKER_TTY) $(UTILS_CONTAINER) $(RASPBOOT_CMD)
 
 clippy:
-	RUSTFLAGS="-C panic=abort" xargo clippy
+	RUSTFLAGS="-C panic=abort" cargo clippy
 
 clean:
 	cargo clean
