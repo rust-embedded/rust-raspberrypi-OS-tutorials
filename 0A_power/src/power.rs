@@ -45,8 +45,8 @@ const PM_RSTC_WRCFG_CLR: u32 = 0xffff_ffcf;
 const PM_RSTC_WRCFG_FULL_RESET: u32 = 0x0000_0020;
 
 // The Raspberry Pi firmware uses the RSTS register to know which
-// partiton to boot from. The partiton value is spread into bits 0, 2,
-// 4, 6, 8, 10. Partiton 63 is a special partition used by the
+// partition to boot from. The partition value is spread into bits 0, 2,
+// 4, 6, 8, 10. Partition 63 is a special partition used by the
 // firmware to indicate halt.
 const PM_RSTS_RASPBERRYPI_HALT: u32 = 0x555;
 
