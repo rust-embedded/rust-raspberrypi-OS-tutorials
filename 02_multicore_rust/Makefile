@@ -22,7 +22,7 @@
 # SOFTWARE.
 #
 
-TARGET = aarch64-raspi3-none-elf
+TARGET = aarch64-unknown-none
 
 OBJCOPY = cargo objcopy --
 OBJCOPY_PARAMS = --strip-all -O binary

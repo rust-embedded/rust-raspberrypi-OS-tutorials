@@ -1,0 +1,6 @@
+[target.aarch64-unknown-none]
+rustflags = [
+  "-C", "link-arg=-Tlink.ld",
+  "-C", "target-feature=-fp-armv8",
+  "-C", "target-cpu=cortex-a53",
+]
