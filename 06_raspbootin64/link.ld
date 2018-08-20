@@ -39,7 +39,6 @@ SECTIONS
         *(.rodata .rodata.*)
     }
 
-    PROVIDE(_data = .);
     .data :
     {
         *(.data .data.*)

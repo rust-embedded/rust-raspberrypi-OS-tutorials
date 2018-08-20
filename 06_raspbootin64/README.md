@@ -50,26 +50,67 @@ so kind to share a [Java version][java] of the kernel sender with you.
 In order to load the new kernel to the same address, we have to move ourself out
 of the way. It's called `chain loading`: One code loads the next code to the
 same position in memory, therefore the latter thinks it was loaded by the
-firmware. To implement that, we use a different linking address this time, and
-since the GPU loads us to `0x80_000` regardless, we have to copy our code to
-that link address. When we're done, the memory at `0x80_000` is free to use. You
-can check that with:
+firmware. To implement that, we use a different linking address this time (we
+subtract `2048` from the original address). You can check that with:
 
 ```sh
-$ cargo nm -- kernel8 | grep reset
-000000000007ffc0 T reset
+$ cargo nm -- kernel8 | grep _boot_cores
+000000000007f800 T _boot_cores
 ```
+
+However, since the GPU loads us to `0x80_000` regardless, as a first action in
+our binary, we have to copy our code to that link address. This is added to
+`boot_cores.S`:
+
+```asm
+    // relocate our code from load address to link address
+    ldr     x1, =0x80000
+    ldr     x2, =_boot_cores //<- actual link addr (0x80000 - 2048) from link.ld
+    ldr     w3, =__loader_size
+3:  ldr     x4, [x1], #8
+    str     x4, [x2], #8
+    sub     w3, w3, #1
+    cbnz    w3, 3b
+```
+
+When we're done, the memory at `0x80_000` is free to use.
 
 We also should minimize the size of the loader, since it will be overwritten by
 the newly loaded code anyway. By removing `Uart::puts()` and other functions,
-we've managed to shrink the loader's size to 1024 bytes.
+we've managed to shrink the loader's size by some bytes.
+
+## Position Independent Code (PIC)
+
+For reasons stated above, our code will initially execute from address
+`0x80_000` despite the binary being actually linked to `0x7f_800`. In order to
+ensure that our binary will not reference hardcoded addresses that actually
+contain no or wrong data, we need to make this binary `position
+independent`. This means that all addresses will always be runtime-computable as
+an offset to the current `Program Counter`, and not hardcoded.
+
+To enable PIC for our loader, we add the following line to the compiler flags in
+the`.cargo/config`:
+
+```toml
+[target.aarch64-unknown-none]
+rustflags = [
+  "-C", "link-arg=-Tlink.ld",
+  "-C", "target-feature=-fp-armv8",
+  "-C", "target-cpu=cortex-a53",
+  "-C", "relocation-model=pic", # <-- New
+]
+```
 
 ## boot_cores.S
 
-First, we have to save the arguments in registers passed by the
-firmware. Second, we added a loop to relocate our code to the address it should
-have been loaded to. And last, since rustc generates RIP-relative jumps, we must
-adjust the branch instruction to jump to the relocated Rust code.
+In addition to the relocation copying, we also need to adjust the branch
+instruction that jumps to the reset handler, because we want to jump to _the
+relocated reset handler_, not the original one.
+
+Since rustc generates RIP-relative jumps now due to the `position independence`,
+we can leverage this feature and add the same offset to the reset address that
+we implicitly used for the relocation copying (`2048`). This ensures that we
+jump to the reset handler _in the relocated loader code_.
 
 ## Linker and Boot Code
 
