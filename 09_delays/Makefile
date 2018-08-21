@@ -36,11 +36,11 @@ RASPBOOT_CMD = raspbootcom /dev/ttyUSB0 kernel8.img
 all: clean kernel8.img
 
 target/$(TARGET)/debug/kernel8: src/main.rs
-	RUST_TARGET_PATH=$(shell pwd) xargo build --target=$(TARGET)
+	cargo xbuild --target=$(TARGET)
 	cp $@ .
 
 target/$(TARGET)/release/kernel8: src/main.rs
-	RUST_TARGET_PATH=$(shell pwd) xargo build --target=$(TARGET) --release
+	cargo xbuild --target=$(TARGET) --release
 	cp $@ .
 
 ifeq ($(DEBUG),1)
@@ -59,7 +59,7 @@ raspboot:
 	$(DOCKER_CMD) $(DOCKER_TTY) $(UTILS_CONTAINER) $(RASPBOOT_CMD)
 
 clippy:
-	RUSTFLAGS="-C panic=abort" cargo clippy
+	cargo xclippy --target=$(TARGET)
 
 clean:
 	cargo clean

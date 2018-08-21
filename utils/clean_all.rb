@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+require 'fileutils'
+
 crates = Dir["**/Cargo.toml"].sort!
 
 crates.each do |x|
@@ -14,3 +16,5 @@ crates.each do |x|
     end
   end
 end
+
+FileUtils.rm_rf('xbuild_sysroot')

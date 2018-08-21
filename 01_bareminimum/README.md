@@ -60,11 +60,11 @@ Raspberry Pi 3, so that the compiler can optimize for it.
 
 Since the `aarch64-unknown-none` target is not shipped with an associated
 precompiled standard library, and since we anyways modify the target via the
-`.cargo/config` file, we are using [Xargo][xargo] to compile our own standard
-library. This way, we can ensure that our bare-metal code is optimized
+`.cargo/config` file, we are using [cargo-xbuild][xbuild] to compile our own
+standard library. This way, we can ensure that our bare-metal code is optimized
 throughout.
 
-[xargo]: https://github.com/japaric/xargo
+[xbuild]: https://github.com/rust-osdev/cargo-xbuild
 
 ## Linker script `link.ld`
 

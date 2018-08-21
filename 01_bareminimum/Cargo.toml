@@ -5,3 +5,6 @@ authors = ["Andre Richter <andre.o.richter@gmail.com>"]
 
 [dependencies]
 panic-abort = "0.2.0"
+
+[package.metadata.cargo-xbuild]
+sysroot_path = "../xbuild_sysroot"

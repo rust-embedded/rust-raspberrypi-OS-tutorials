@@ -6,3 +6,6 @@ authors = ["Andre Richter <andre.o.richter@gmail.com>"]
 [dependencies]
 raspi3_boot = { path = "raspi3_boot" }
 register = "0.1.1"
+
+[package.metadata.cargo-xbuild]
+sysroot_path = "../xbuild_sysroot/pic"

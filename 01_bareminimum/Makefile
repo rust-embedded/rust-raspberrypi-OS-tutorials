@@ -34,11 +34,11 @@ QEMU_CMD = qemu-system-aarch64 -M raspi3 -kernel kernel8.img
 all: clean kernel8.img
 
 target/$(TARGET)/debug/kernel8: src/main.rs
-	RUST_TARGET_PATH=$(shell pwd) xargo build --target=$(TARGET)
+	cargo xbuild --target=$(TARGET)
 	cp $@ .
 
 target/$(TARGET)/release/kernel8: src/main.rs
-	RUST_TARGET_PATH=$(shell pwd) xargo build --target=$(TARGET) --release
+	cargo xbuild --target=$(TARGET) --release
 	cp $@ .
 
 ifeq ($(DEBUG),1)
