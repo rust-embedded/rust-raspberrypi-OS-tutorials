@@ -30,7 +30,6 @@
 
 //! Low-level boot of the Raspberry's processor
 
-extern crate cortex_a;
 extern crate panic_abort;
 extern crate r0;
 
