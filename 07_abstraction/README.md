@@ -67,7 +67,7 @@ pub unsafe extern "C" fn _boot_cores() -> ! {
     use cortex_a::{asm, regs::mpidr_el1::*, regs::sp::*};
 
     const CORE_MASK: u64 = 0x3;
-    const STACK_START: u64 = 0x80_0000;
+    const STACK_START: u64 = 0x80_000;
 
     match MPIDR_EL1.get() & CORE_MASK {
         0 => {
