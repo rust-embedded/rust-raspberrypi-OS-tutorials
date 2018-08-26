@@ -49,7 +49,9 @@ fn kernel_entry() -> ! {
 
     // set up serial console
     if uart.init(&mut mbox).is_err() {
-        loop { cortex_a::asm::wfe() }; // If UART fails, abort early
+        loop {
+            cortex_a::asm::wfe()
+        } // If UART fails, abort early
     }
 
     // get the board's unique serial number with a mailbox call

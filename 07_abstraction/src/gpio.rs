@@ -66,7 +66,6 @@ register_bitfields! {
     ]
 }
 
-
 pub const GPFSEL1: *const ReadWrite<u32, GPFSEL1::Register> =
     (MMIO_BASE + 0x0020_0004) as *const ReadWrite<u32, GPFSEL1::Register>;
 

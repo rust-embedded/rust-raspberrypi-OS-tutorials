@@ -188,7 +188,8 @@ impl Uart {
         };
 
         // map UART0 to GPIO pins
-        gpio.GPFSEL1.modify(gpio::GPFSEL1::FSEL14::TXD0 + gpio::GPFSEL1::FSEL15::RXD0);
+        gpio.GPFSEL1
+            .modify(gpio::GPFSEL1::FSEL14::TXD0 + gpio::GPFSEL1::FSEL15::RXD0);
 
         gpio.GPPUD.set(0); // enable pins 14 and 15
         delays::wait_cycles(150);

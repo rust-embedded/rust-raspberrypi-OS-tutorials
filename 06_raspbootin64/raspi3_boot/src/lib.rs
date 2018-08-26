@@ -43,7 +43,7 @@ macro_rules! entry {
 
             f()
         }
-    }
+    };
 }
 
 /// Reset function.

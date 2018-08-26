@@ -48,7 +48,9 @@ fn kernel_entry() -> ! {
 
     // set up serial console
     if uart.init(&mut mbox).is_err() {
-        loop { cortex_a::asm::wfe() }; // If UART fails, abort early
+        loop {
+            cortex_a::asm::wfe()
+        } // If UART fails, abort early
     }
 
     uart.getc(); // Press a key first before being greeted
