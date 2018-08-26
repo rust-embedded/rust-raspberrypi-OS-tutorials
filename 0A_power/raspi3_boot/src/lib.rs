@@ -73,7 +73,7 @@ unsafe fn reset() -> ! {
 #[link_section = ".text.boot"]
 #[no_mangle]
 pub unsafe extern "C" fn _boot_cores() -> ! {
-    use cortex_a::{asm, regs::mpidr_el1::*, regs::sp::*};
+    use cortex_a::{asm, regs::*};
 
     const CORE_MASK: u64 = 0x3;
     const STACK_START: u64 = 0x80_000;

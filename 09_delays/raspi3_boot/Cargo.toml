@@ -4,6 +4,6 @@ version = "0.1.0"
 authors = ["Andre Richter <andre.o.richter@gmail.com>"]
 
 [dependencies]
-cortex-a = "1.1.0"
+cortex-a = "2.0.1"
 panic-abort = "0.2.0"
 r0 = "0.2.2"

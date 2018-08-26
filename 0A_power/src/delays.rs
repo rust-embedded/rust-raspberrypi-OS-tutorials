@@ -24,10 +24,7 @@
 
 use super::MMIO_BASE;
 use core::ops;
-use cortex_a::{
-    asm,
-    regs::{cntfrq_el0::*, cntp_ctl_el0::*, cntp_tval_el0::*},
-};
+use cortex_a::{asm, regs::*};
 use register::mmio::*;
 
 const DELAY_BASE: u32 = MMIO_BASE + 0x3004;
