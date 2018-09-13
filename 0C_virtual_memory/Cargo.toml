@@ -1,0 +1,12 @@
+[package]
+name = "kernel8"
+version = "0.1.0"
+authors = ["Andre Richter <andre.o.richter@gmail.com>"]
+
+[dependencies]
+raspi3_boot = { path = "raspi3_boot" }
+cortex-a = "2.2.0"
+register = "0.2.0"
+
+[package.metadata.cargo-xbuild]
+sysroot_path = "../xbuild_sysroot"
