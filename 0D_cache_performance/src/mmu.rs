@@ -22,26 +22,7 @@
  * SOFTWARE.
  */
 
-use super::uart;
 use cortex_a::{barrier, regs::*};
-
-/// Parse the ID_AA64MMFR0_EL1 register for runtime information about supported
-/// MMU features.
-pub fn print_features(uart: &uart::Uart) {
-    let mmfr = ID_AA64MMFR0_EL1.extract();
-
-    if let Some(ID_AA64MMFR0_EL1::TGran4::Value::Supported) =
-        mmfr.read_as_enum(ID_AA64MMFR0_EL1::TGran4)
-    {
-        uart.puts("MMU: 4 KiB granule supported!\n");
-    }
-
-    if let Some(ID_AA64MMFR0_EL1::PARange::Value::Bits_40) =
-        mmfr.read_as_enum(ID_AA64MMFR0_EL1::PARange)
-    {
-        uart.puts("MMU: Up to 40 Bit physical address range supported!\n");
-    }
-}
 
 register_bitfields! {u64,
     // AArch64 Reference Manual page 2150
@@ -109,39 +90,49 @@ static mut SINGLE_LVL3_TABLE: [u64; NUM_ENTRIES_4KIB] = [0; NUM_ENTRIES_4KIB];
 /// Set up identity mapped page tables for the first 1 gigabyte of address
 /// space.
 pub unsafe fn init() {
-    // First, define the two memory types that we will map. Normal DRAM and
-    // device.
+    // First, define the three memory types that we will map. Cacheable and
+    // non-cacheable normal DRAM, and device.
     MAIR_EL1.write(
-        // Attribute 1
-        MAIR_EL1::Attr1_HIGH::Device
-            + MAIR_EL1::Attr1_LOW_DEVICE::Device_nGnRE
+        // Attribute 2
+        MAIR_EL1::Attr2_HIGH::Memory_OuterNonCacheable
+            + MAIR_EL1::Attr2_LOW_MEMORY::InnerNonCacheable
+
+            // Attribute 1
+            + MAIR_EL1::Attr1_HIGH::Memory_OuterWriteBack_NonTransient_ReadAlloc_WriteAlloc
+            + MAIR_EL1::Attr1_LOW_MEMORY::InnerWriteBack_NonTransient_ReadAlloc_WriteAlloc
+
             // Attribute 0
-            + MAIR_EL1::Attr0_HIGH::Memory_OuterWriteBack_NonTransient_ReadAlloc_WriteAlloc
-            + MAIR_EL1::Attr0_LOW_MEMORY::InnerWriteBack_NonTransient_ReadAlloc_WriteAlloc,
+            + MAIR_EL1::Attr0_HIGH::Device
+            + MAIR_EL1::Attr0_LOW_DEVICE::Device_nGnRE,
     );
 
-    // Two descriptive consts for indexing into the correct MAIR_EL1 attributes.
+    // Descriptive consts for indexing into the correct MAIR_EL1 attributes.
     mod mair {
-        pub const NORMAL: u64 = 0;
-        pub const DEVICE: u64 = 1;
+        pub const DEVICE: u64 = 0;
+        pub const NORMAL: u64 = 1;
+        pub const NORMAL_NON_CACHEABLE: u64 = 2;
     }
 
     // Set up the first LVL2 entry, pointing to a 4KiB table base address.
     let lvl3_base: u64 = SINGLE_LVL3_TABLE.base_addr() >> 12;
     LVL2_TABLE[0] = (STAGE1_DESCRIPTOR::VALID::True
         + STAGE1_DESCRIPTOR::TYPE::Table
-        + STAGE1_DESCRIPTOR::NEXT_LVL_TABLE_ADDR_4KiB.val(lvl3_base)).value;
+        + STAGE1_DESCRIPTOR::NEXT_LVL_TABLE_ADDR_4KiB.val(lvl3_base))
+    .value;
 
-    // For educational purposes and fun, let the start of the second 2 MiB block
-    // point to the 2 MiB aperture which contains the UART's base address.
-    let uart_phys_base: u64 = (uart::UART_PHYS_BASE >> 21).into();
+    // The second 2 MiB block.
     LVL2_TABLE[1] = (STAGE1_DESCRIPTOR::VALID::True
         + STAGE1_DESCRIPTOR::TYPE::Block
-        + STAGE1_DESCRIPTOR::AttrIndx.val(mair::DEVICE)
+        + STAGE1_DESCRIPTOR::AttrIndx.val(mair::NORMAL_NON_CACHEABLE)
         + STAGE1_DESCRIPTOR::AP::RW_EL1
         + STAGE1_DESCRIPTOR::SH::OuterShareable
         + STAGE1_DESCRIPTOR::AF::True
-        + STAGE1_DESCRIPTOR::LVL2_OUTPUT_ADDR_4KiB.val(uart_phys_base)
+        // This translation is accessed for virtual 0x200000. Point to physical
+        // 0x400000, aka the third phyiscal 2 MiB DRAM block (third block == 2,
+        // because we start counting at 0).
+        //
+        // Here, we configure it non-cacheable.
+        + STAGE1_DESCRIPTOR::LVL2_OUTPUT_ADDR_4KiB.val(2)
         + STAGE1_DESCRIPTOR::XN::True)
         .value;
 
@@ -154,7 +145,8 @@ pub unsafe fn init() {
         + STAGE1_DESCRIPTOR::AF::True
         + STAGE1_DESCRIPTOR::XN::True;
 
-    // Notice the skip(2)
+    // Notice the skip(2). Start at the third 2 MiB DRAM block, which will point
+    // virtual 0x400000 to physical 0x400000, configured as cacheable memory.
     for (i, entry) in LVL2_TABLE.iter_mut().enumerate().skip(2) {
         let j: u64 = i as u64;
 
