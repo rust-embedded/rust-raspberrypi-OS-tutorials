@@ -13,7 +13,7 @@ performance.
 ## Benchmark
 
 Let's write a tiny, arbitrary micro-benchmark to showcase the performance of
-operating on the same DRAM with caching enabled and disabled.
+operating with data on the same DRAM with caching enabled and disabled.
 
 ### mmu.rs
 
@@ -31,7 +31,7 @@ block). This time, the block is configured as cacheable.
 We write a little function that iteratively reads memory of five times the size
 of a `cacheline`, in steps of 8 bytes, aka one processor register at a time. We
 read the value, add 1, and write it back. This whole process is repeated
-`100_000` times.
+`20_000` times.
 
 ### main.rs
 
@@ -46,12 +46,12 @@ On my Raspberry, I get the following results:
 
 ```text
 Benchmarking non-cacheable DRAM modifications at virtual 0x00200000, physical 0x00400000:
-664 miliseconds.
+1040 miliseconds.
 
 Benchmarking cacheable DRAM modifications at virtual 0x00400000, physical 0x00400000:
-148 miliseconds.
+53 miliseconds.
 
-With caching, the function is 348% faster!
+With caching, the function is 1862% faster!
 ```
 
 Impressive, isn't it?

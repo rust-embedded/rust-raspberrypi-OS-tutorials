@@ -211,8 +211,8 @@ pub unsafe fn init() {
     // First, force all previous changes to be seen before the MMU is enabled.
     barrier::isb(barrier::SY);
 
-    // Enable the MMU and turn on caching
-    SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable);
+    // Enable the MMU and turn on data and instruction caching.
+    SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
 
     // Force MMU init to complete before next instruction
     barrier::isb(barrier::SY);
