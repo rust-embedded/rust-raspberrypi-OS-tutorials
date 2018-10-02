@@ -45,7 +45,7 @@ SECTIONS
     }
     _end = .;
 
-   /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
+    /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
 }
 
-__loader_size = (_end - _code)>>3;
+__loader_size = (_end - _code) >> 3;

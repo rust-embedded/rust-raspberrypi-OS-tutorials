@@ -43,14 +43,13 @@ SECTIONS
         *(.data .data.*)
     }
 
-
     .bss ALIGN(8):
     {
         __bss_start = .;
         *(.bss .bss.*)
         *(COMMON)
-	__bss_end = .;
+        __bss_end = .;
     }
 
-   /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
+    /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
 }

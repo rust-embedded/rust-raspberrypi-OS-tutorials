@@ -50,8 +50,8 @@ SECTIONS
         __bss_start = .;
         *(.bss .bss.*)
         *(COMMON)
-	__bss_end = .;
+        __bss_end = .;
     }
 
-   /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
+    /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
 }
