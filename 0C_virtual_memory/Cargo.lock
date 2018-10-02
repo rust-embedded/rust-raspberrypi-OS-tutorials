@@ -1,6 +1,6 @@
 [[package]]
 name = "cortex-a"
-version = "2.2.0"
+version = "2.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "register 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -10,14 +10,14 @@ dependencies = [
 name = "kernel8"
 version = "0.1.0"
 dependencies = [
- "cortex-a 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cortex-a 2.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "raspi3_boot 0.1.0",
  "register 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "panic-abort"
-version = "0.2.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -29,8 +29,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "raspi3_boot"
 version = "0.1.0"
 dependencies = [
- "cortex-a 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "panic-abort 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cortex-a 2.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "panic-abort 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "r0 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -48,8 +48,8 @@ version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [metadata]
-"checksum cortex-a 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "6e24491e2ca61ecf806cd212431910cd621277240b22a41a1a551c647cb9ca2c"
-"checksum panic-abort 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "6bc796c620f27056d4ffe7c558533fd67ae5af0fd8e919fbe38de803368af73e"
+"checksum cortex-a 2.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "fe913628f34718bc9e7d0d07e13ca1374638f64f0edc6eb063ec8abe581d395d"
+"checksum panic-abort 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "2c14a66511ed17b6a8b4256b868d7fd207836d891db15eea5195dbcaf87e630f"
 "checksum r0 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "e2a38df5b15c8d5c7e8654189744d8e396bddc18ad48041a500ce52d6948941f"
 "checksum register 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "157a11ac0b1882ff4a527a92f911dd288df17367faaaa0c36f188cd61ec36fc1"
 "checksum tock-registers 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "3a385d94f3f62e60445a0adb9ff8d9621faa272234530d4c0f848ec98f88e316"

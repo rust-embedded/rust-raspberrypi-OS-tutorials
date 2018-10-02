@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Andre Richter <andre.o.richter@gmail.com>"]
 
 [dependencies]
-panic-abort = "0.2.0"
+panic-abort = "0.3.1"
 
 [package.metadata.cargo-xbuild]
 sysroot_path = "../xbuild_sysroot"
