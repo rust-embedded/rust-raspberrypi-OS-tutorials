@@ -56,3 +56,5 @@ qemu:
 clean:
 	cargo clean
 
+objdump:
+	cargo objdump --target $(TARGET) -- -disassemble -print-imm-hex kernel8
