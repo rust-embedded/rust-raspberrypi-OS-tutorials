@@ -55,4 +55,4 @@ qemu:
 
 clean:
 	cargo clean
-	rm -f kernel8
+
