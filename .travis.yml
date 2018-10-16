@@ -2,6 +2,8 @@ language: rust
 
 notifications:
   email:
+    recipients:
+      - andre.o.richter@gmail.com
     on_success: never
     on_failure: change
 
