@@ -2,20 +2,21 @@
 
 [![Build Status](https://travis-ci.org/rust-embedded/rust-raspi3-tutorial.svg?branch=master)](https://travis-ci.org/rust-embedded/rust-raspi3-tutorial)
 
-## About this repository
+## Introduction
 
-Hi all. This repository aims to provide easy reference code for programming bare metal on the Raspberry Pi 3
-in the [Rust] systems programming language.
-It is basically a combination of two awesome resources.
-  1. First of all, it is a fork of [Zoltan Baldaszti]'s awesome [tutorial] on bare metal programming on RPi3 in `C`.
-     1. Rust code will be based on his files, READMEs will be adapted, and I might change things here and there if I think it is beneficial. However, credits to this guy plz!
-  2. The second props go to [Jorge Aparicio] for ["The Embedonomicon"], from which the boot code is taken.
+This repository aims to provide easy reference code for programming bare metal on the Raspberry Pi 3
+in the [Rust] systems programming language. Emphasis is on leveraging Rust's zero-overhead abstractions to compile
+lean code that is readable, concise and safe (at least as safe as it gets on bare-metal hardware). 
 
-[Rust]: https://www.rust-lang.org
-[Zoltan Baldaszti]: https://github.com/bztsrc
-[tutorial]: https://github.com/bztsrc/raspi3-tutorial
-[Jorge Aparicio]: https://github.com/japaric
-["The Embedonomicon"]: https://rust-embedded.github.io/embedonomicon/
+The target audience is hobby OS developers who are new to this hardware. It will give you examples on how to do common
+Operating Systems tasks, like writing to the serial console, reading keystrokes from it or use various peripherals like
+a hardware-backed random number generator.
+
+However, it is *not* a tutorial on how to write a _complete_ OS. I won't cover topics like memory management
+and virtual file systems, or how to implement multi-tasking. Rather, it comprises a set of micro-tutorials that
+introduce different topics one after the other. Maybe in the distant future, we might introduce a meta tutorial
+that combines all the resources to a full-fleged kernel that can multi-task some simple userspace processes, but
+don't take my word for it.
 
 ## Environment
 
@@ -34,25 +35,7 @@ Please notice that you won't need to download or prepare the containers upfront.
 
 For now, only a few basic tutorials are ready, but more will be ported over time.
 
-## Introduction
-
-This tutorial series are made for those who would like to compile their own bare metal application
-for the Raspberry Pi.
-
-The target audience is hobby OS developers, who are new to this hardware. I'll give you examples on how to do the
-basic things, like writing to the serial console, reading keystrokes from it, setting screen resolution and draw to
-the linear frame buffer. I'm also going to show you how to get the hardware's serial number, a hardware-backed random
-number, and how to read files from the boot partition.
-
-This is *not* a tutorial on how to write an OS. I won't cover topics like memory management and virtual file systems,
-or how to implement multi-tasking. If you plan to write your own OS for the Raspberry Pi, I suggest to do some
-research before you continue. This tutorial is strickly about interfacing with the hardware, and not about OS theory.
-
-I assume you have a fair GNU/Linux knowledge on how to compile programs and create disk and file system images. I
-won't cover those in detail, although I'll give you a few hints about how to set up a cross-compiler for this architecture.
-
-Prerequisites
--------------
+## Prerequisites
 
 Before you can start, you'll need a suitable Rust toolchain.
 ```bash
@@ -87,32 +70,28 @@ sudo screen /dev/ttyUSB0 115200
 
 Exit screen again by pressing <kbd>ctrl-a</kbd> <kbd>ctrl-d</kbd>
 
-Emulation
----------
+## Emulation
+
 QEMU currently only emulates UART0, so only the tutorials 05 and above will work, as UART1 is *not* redirected by default.
 For that, you would have to add something like `-chardev socket,host=localhost,port=1111,id=aux -serial chardev:aux` (thanks
 [@godmar](https://github.com/godmar) for the info).
 
 **!!!WARNING!!!** Qemu emulation is rudimentary, only the most common peripherals are emulated! **!!!WARNING!!!**
 
-Why Raspberry Pi 3?
--------------------
+## About this repository
 
-I've choosen this board for several reasons: first of all, it's cheap and easy to get. Second, it's a 64 bit
-machine. I gave up programming for 32 bit long long time ago. The 64 bit is so much more interesting, as it's
-address space is increadibly huge, bigger than the storage capacity which allows us to use some interesting new
-solutions. Third, uses only MMIO which makes it easy to program.
+The tutorial is basically a combination of two awesome resources.
+  1. First of all, it is a fork of [Zoltan Baldaszti]'s awesome [tutorial] on bare metal programming on RPi3 in `C`.
+     1. Rust code will be based on his files, READMEs will be adapted, and I might change things here and there if I think it is beneficial. However, credits to this guy plz!
+  2. The second props go to [Jorge Aparicio] for ["The Embedonomicon"], from which the boot code is taken.
 
-For 32 bit tutorials, I'd recommend:
+[Rust]: https://www.rust-lang.org
+[Zoltan Baldaszti]: https://github.com/bztsrc
+[tutorial]: https://github.com/bztsrc/raspi3-tutorial
+[Jorge Aparicio]: https://github.com/japaric
+["The Embedonomicon"]: https://rust-embedded.github.io/embedonomicon/
 
-- [Cambridge tutorials](http://www.cl.cam.ac.uk/projects/raspberrypi/tutorials/os/) (ASM and 32 bit only),
-- [David Welch's tutorials](https://github.com/dwelch67/raspberrypi) (mostly C, with some 64 bit examples),
-- [Peter Lemon's tutorials](https://github.com/PeterLemon/RaspberryPi) (ASM only, also for 64 bit) and
-- [Leon de Boer's tutorials](https://github.com/LdB-ECM/Raspberry-Pi) (C and ASM, also for 64 bit, more complex examples like USB and OpenGL).
-
-
-About the hardware
-------------------
+## About the hardware
 
 There are lots of pages on the internet describing the Raspberry Pi 3 hardware in detail, so I'll be brief and
 cover only the basics.
@@ -168,3 +147,7 @@ https://github.com/raspberrypi
 Good luck and enjoy hacking with your Raspberry! :-)
 
 Andre
+
+## License
+
+Licensed under the MIT license ([LICENSE-MIT](LICENSE) or http://opensource.org/licenses/MIT).
