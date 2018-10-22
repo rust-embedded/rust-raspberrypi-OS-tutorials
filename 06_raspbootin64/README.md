@@ -107,10 +107,10 @@ In addition to the relocation copying, we also need to adjust the branch
 instruction that jumps to the reset handler, because we want to jump to _the
 relocated reset handler_, not the original one.
 
-Since rustc generates RIP-relative jumps now due to the `position independence`,
-we can leverage this feature and add the same offset to the reset address that
-we implicitly used for the relocation copying (`2048`). This ensures that we
-jump to the reset handler _in the relocated loader code_.
+Since rustc now generates jumps relative to the current instruction due to the
+`position independence`, we can leverage this feature and add the same offset
+to the reset address that we implicitly used for the relocation copying (`2048`).
+This ensures that we jump to the reset handler _in the relocated loader code_.
 
 ## Linker and Boot Code
 
