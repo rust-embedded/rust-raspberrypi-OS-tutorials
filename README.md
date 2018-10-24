@@ -5,7 +5,7 @@
 ## Introduction
 
 This repository aims to provide easy reference code for programming bare metal on the Raspberry Pi 3
-in the [Rust systems programming language](Rust). Emphasis is on leveraging Rust's zero-overhead abstractions to compile
+in the [Rust systems programming language]. Emphasis is on leveraging Rust's zero-overhead abstractions to compile
 lean code that is readable, concise and safe (at least as safe as it gets on bare-metal hardware). 
 
 [Rust systems programming language]: https://www.rust-lang.org
