@@ -5,14 +5,16 @@
 ## Introduction
 
 This repository aims to provide easy reference code for programming bare metal on the Raspberry Pi 3
-in the [Rust] systems programming language. Emphasis is on leveraging Rust's zero-overhead abstractions to compile
+in the [Rust systems programming language](Rust). Emphasis is on leveraging Rust's zero-overhead abstractions to compile
 lean code that is readable, concise and safe (at least as safe as it gets on bare-metal hardware). 
 
-The target audience is hobby OS developers who are new to this hardware. It will give you examples on how to do common
+[Rust systems programming language]: https://www.rust-lang.org
+
+The target audience is **hobby OS developers** who are new to this hardware. It will give you examples on how to do common
 Operating Systems tasks, like writing to the serial console, reading keystrokes from it or use various peripherals like
 a hardware-backed random number generator.
 
-However, it is *not* a tutorial on how to write a _complete_ OS. I won't cover topics like memory management
+However, it is *not* a tutorial on how to write a _complete_ OS. I won't cover topics like advanced memory management
 and virtual file systems, or how to implement multi-tasking. Rather, it comprises a set of micro-tutorials that
 introduce different topics one after the other. Maybe in the distant future, we might introduce a meta tutorial
 that combines all the resources to a full-fleged kernel that can multi-task some simple userspace processes, but
@@ -85,7 +87,6 @@ The tutorial is basically a combination of two awesome resources.
      1. Rust code will be based on his files, READMEs will be adapted, and I might change things here and there if I think it is beneficial. However, credits to this guy plz!
   2. The second props go to [Jorge Aparicio] for ["The Embedonomicon"], from which the boot code is taken.
 
-[Rust]: https://www.rust-lang.org
 [Zoltan Baldaszti]: https://github.com/bztsrc
 [tutorial]: https://github.com/bztsrc/raspi3-tutorial
 [Jorge Aparicio]: https://github.com/japaric
