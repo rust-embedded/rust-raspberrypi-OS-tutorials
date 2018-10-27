@@ -84,21 +84,21 @@ fn setup_and_enter_el1_from_el2() -> ! {
     // Set up a simulated exception return.
     //
     // First, fake a saved program status, where all interrupts were
-    // masked and SP_EL0 was used as a stack pointer.
+    // masked and SP_EL1 was used as a stack pointer.
     SPSR_EL2.write(
         SPSR_EL2::D::Masked
             + SPSR_EL2::A::Masked
             + SPSR_EL2::I::Masked
             + SPSR_EL2::F::Masked
-            + SPSR_EL2::M::EL1t,
+            + SPSR_EL2::M::EL1h,
     );
 
     // Second, let the link register point to reset().
     ELR_EL2.set(reset as *const () as u64);
 
-    // Set up SP_EL0 (stack pointer), which will be used by EL1 once
+    // Set up SP_EL1 (stack pointer), which will be used by EL1 once
     // we "return" to it.
-    SP_EL0.set(0x80_000);
+    SP_EL1.set(0x80_000);
 
     // Use `eret` to "return" to EL1. This will result in execution of
     // `reset()` in EL1.
