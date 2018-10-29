@@ -7,8 +7,7 @@ can only generate pseudo-random numbers.
 
 ## rand.s
 
-Due to lack of documentation, we [mimic the respective Linux driver]
-(https://github.com/torvalds/linux/blob/master/drivers/char/hw_random/bcm2835-rng.c).
+Due to lack of documentation, we [mimic the respective Linux driver](https://github.com/torvalds/linux/blob/master/drivers/char/hw_random/bcm2835-rng.c).
 
 `Rng::init(&self)` initializes the hardware.
 
