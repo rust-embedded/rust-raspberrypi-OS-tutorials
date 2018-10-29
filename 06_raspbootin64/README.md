@@ -18,16 +18,16 @@ runs on your PC, we will rely on the original [raspbootcom][bootcom] utility.
 For convenience, it is already packaged in our `raspi3-utils` docker
 container. So if you are running a Linux host, it will be as easy as calling
 another Makefile target. It will be included starting with the next tutorial,
-`07_abstraction`. You can invoke it with
+`07_abstraction`. You can invoke it with:
 
-```bash
+```sh
 make raspboot
 ```
 
 If you want to use it with earlier versions of this tutorial, here is a bash
 command to invoke it:
 
-```bash
+```sh
 docker run -it --rm \
            --privileged -v /dev/:/dev/ \
            -v $PWD:/work -w /work \
@@ -53,8 +53,8 @@ same position in memory, therefore the latter thinks it was loaded by the
 firmware. To implement that, we use a different linking address this time (we
 subtract `2048` from the original address). You can check that with:
 
-```sh
-$ cargo nm -- kernel8 | grep _boot_cores
+```console
+ferris@box:~$ cargo nm -- kernel8 | grep _boot_cores
 000000000007f800 T _boot_cores
 ```
 

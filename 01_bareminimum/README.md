@@ -4,8 +4,8 @@ Okay, we're not going to do much here, just test our toolchain. The resulting
 kernel8.img should boot on the Raspberry Pi 3, and stop all CPU cores in an
 infinite waiting loop. You can check that by running
 
-```bash
-$ make qemu
+```console
+ferris@box:~$ make qemu
 ... some output removed for clearity: ...
 ----------------
 IN:

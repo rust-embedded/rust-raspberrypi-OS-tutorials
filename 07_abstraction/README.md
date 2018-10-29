@@ -92,8 +92,8 @@ inlined, so we fulfill this requirement. The compilation result of this function
 should yield something like the following, where you can see that the stack
 pointer is not used apart from ourselves setting it.
 
-```bash
-[andre:/work] $ cargo objdump --target aarch64-raspi3-none-elf.json -- -disassemble -print-imm-hex kernel8
+```console
+ferris@box:~$ cargo objdump --target aarch64-raspi3-none-elf.json -- -disassemble -print-imm-hex kernel8
 
 [...] (Some output omitted)
 
@@ -116,6 +116,6 @@ compiler.
 Since this is the first tutorial after we've written our own bootloader over
 serial, you can now for the first time test this convenient interface:
 
-```bash
+```sh
 make raspboot
 ```

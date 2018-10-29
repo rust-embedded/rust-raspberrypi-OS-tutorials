@@ -1,10 +1,13 @@
 # Tutorial 04 - Mailboxes
 
-Before we could go on with UART0, we need mailboxes. So in this tutorial we
-introduce the mailbox interface.  We'll use it to query the board's serial
-number and print that out on UART1.
+The Raspberry Pi 3 also has a more powerful UART, `UART0`, that among other
+features, supports programmable clock rates.  Before we can go on with setting
+up `UART0`, we need mailboxes. Mailboxes are an interface between the Pi's ARM
+CPU cores and the GPU. They will be used as a means to request work from the
+GPU, for example, requesting to program a certain clock for `UART0`.
 
-NOTE: qemu does not redirect UART1 to terminal by default, only UART0!
+In this tutorial, we'll start slowly and use it to query the Raspberry's serial
+number and print that out on the already functional `UART1`.
 
 ## uart.rs
 
@@ -74,4 +77,4 @@ instructions] to prevent this behavior would be needed.
 
 ## main.rs
 
-We query the board's serial number and then we display it on the serial console.
+We query the board's serial number and then we display it on the UART.

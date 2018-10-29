@@ -34,15 +34,15 @@ cores][dist]. To do so, we read the [mpidr_el1][mpdir] system register. If it is
 not zero, we enter the former infinite waiting loop, aka stopping the respective
 CPU core.
 
- If the result of the read from `mpidr_el1` is zero, which means we are
- executing on core0, we set up the stack for that core, and afterwards call the
- Rust `reset()` function of the boot code in `raspi3_boot/src/lib.rs`. In case
- the Rust code returns (which it never should), we also jump to the same
- infinite loop the other CPU cores are running.
+If the result of the read from `mpidr_el1` is zero, which means we are executing
+on core0, we set up the stack for that core, and afterwards call the Rust
+`reset()` function of the boot code in `raspi3_boot/src/lib.rs`. In case the
+Rust code returns (which it never should), we also jump to the same infinite
+loop the other CPU cores are running.
 
- The Rust `reset()`, in turn, will then zero-out the `bss section` (the next
- section explains what that is) and finally call our `main()` function from
- `main.rs`.
+The Rust `reset()`, in turn, will then zero-out the `bss section` (the next
+section explains what that is) and finally call our `main()` function from
+`main.rs`.
 
 [dist]: http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.den0024a/CFHCIDCH.html
 [mpdir]: http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ddi0500g/BABHBJCI.html
