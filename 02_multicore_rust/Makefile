@@ -61,3 +61,6 @@ clean:
 
 objdump:
 	cargo objdump --target $(TARGET) -- -disassemble -print-imm-hex kernel8
+
+nm:
+	cargo nm --target $(TARGET) -- kernel8 | sort
