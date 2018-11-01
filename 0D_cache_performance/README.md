@@ -33,8 +33,6 @@ of a `cacheline`, in steps of 8 bytes, aka one processor register at a time. We
 read the value, add 1, and write it back. This whole process is repeated
 `20_000` times.
 
-### main.rs
-
 The benchmark function is called twice. Once for the cacheable and once for the
 non-cacheable virtual addresses. Remember that both virtual addresses point to
 the _same_ physical DRAM, so the difference in time that we will see will

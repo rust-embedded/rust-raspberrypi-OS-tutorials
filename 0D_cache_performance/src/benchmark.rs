@@ -1,8 +1,9 @@
 use core::sync::atomic::{compiler_fence, Ordering};
 use cortex_a::{barrier, regs::*};
+use super::uart;
 
 /// We assume that addr is cacheline aligned
-pub fn batch_modify(addr: u64) -> u32 {
+fn batch_modify_time(addr: u64) -> Option<u64> {
     const CACHELINE_SIZE_BYTES: usize = 64; // TODO: retrieve this from a system register
     const NUM_CACHELINES_TOUCHED: usize = 5;
     const NUM_BENCH_ITERATIONS: usize = 20_000;
@@ -34,6 +35,62 @@ pub fn batch_modify(addr: u64) -> u32 {
     unsafe { barrier::dsb(barrier::SY) };
 
     let t2 = CNTPCT_EL0.get();
+    let frq = u64::from(CNTFRQ_EL0.get());
 
-    ((t2 - t1) * 1000 / u64::from(CNTFRQ_EL0.get())) as u32
+    ((t2 - t1) * 1000).checked_div(frq)
+}
+
+pub fn run(uart: &uart::Uart) {
+    const SIZE_2MIB: u64 = 2 * 1024 * 1024;
+    const ERROR_STRING: &str = "Something went wrong!";
+
+    // Start of the __SECOND__ virtual 2 MiB block (counting starts at zero).
+    // NON-cacheable DRAM memory.
+    let non_cacheable_addr: u64 = SIZE_2MIB;
+
+    // Start of the __THIRD__ virtual 2 MiB block.
+    // Cacheable DRAM memory
+    let cacheable_addr: u64 = 2 * SIZE_2MIB;
+
+    uart.puts("Benchmarking non-cacheable DRAM modifications at virtual 0x");
+    uart.hex(non_cacheable_addr as u32);
+    uart.puts(", physical 0x");
+    uart.hex(2 * SIZE_2MIB as u32);
+    uart.puts(":\n");
+
+    let result_nc = match batch_modify_time(non_cacheable_addr) {
+        Some(t) => {
+            uart.dec(t as u32);
+            uart.puts(" miliseconds.\n\n");
+            t
+        },
+        None => {
+            uart.puts(ERROR_STRING);
+            return;
+        }
+    };
+
+    uart.puts("Benchmarking cacheable DRAM modifications at virtual 0x");
+    uart.hex(cacheable_addr as u32);
+    uart.puts(", physical 0x");
+    uart.hex(2 * SIZE_2MIB as u32);
+    uart.puts(":\n");
+
+    let result_c = match batch_modify_time(cacheable_addr) {
+        Some(t) => {
+            uart.dec(t as u32);
+            uart.puts(" miliseconds.\n\n");
+            t
+        },
+        None => {
+            uart.puts(ERROR_STRING);
+            return;
+        }
+    };
+
+    if let Some(t) = (result_nc - result_c).checked_div(result_c) {
+        uart.puts("With caching, the function is ");
+        uart.dec((t * 100) as u32);
+        uart.puts("% faster!\n");
+    }
 }

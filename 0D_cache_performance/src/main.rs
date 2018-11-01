@@ -43,43 +43,6 @@ mod mmu;
 mod uart;
 mod benchmark;
 
-fn do_benchmarks(uart: &uart::Uart) {
-    const SIZE_2MIB: u64 = 2 * 1024 * 1024;
-
-    // Start of the __SECOND__ virtual 2 MiB block (counting starts at zero).
-    // NON-cacheable DRAM memory.
-    let non_cacheable_addr: u64 = SIZE_2MIB;
-
-    // Start of the __THIRD__ virtual 2 MiB block.
-    // Cacheable DRAM memory
-    let cacheable_addr: u64 = 2 * SIZE_2MIB;
-
-    uart.puts("Benchmarking non-cacheable DRAM modifications at virtual 0x");
-    uart.hex(non_cacheable_addr as u32);
-    uart.puts(", physical 0x");
-    uart.hex(2 * SIZE_2MIB as u32);
-    uart.puts(":\n");
-
-    let result_nc = benchmark::batch_modify(non_cacheable_addr);
-    uart.dec(result_nc);
-    uart.puts(" miliseconds.\n\n");
-
-    uart.puts("Benchmarking cacheable DRAM modifications at virtual 0x");
-    uart.hex(cacheable_addr as u32);
-    uart.puts(", physical 0x");
-    uart.hex(2 * SIZE_2MIB as u32);
-    uart.puts(":\n");
-    let result_c = benchmark::batch_modify(cacheable_addr);
-    uart.dec(result_c);
-    uart.puts(" miliseconds.\n\n");
-
-    let percent_diff = (result_nc - result_c) * 100 / result_c;
-
-    uart.puts("With caching, the function is ");
-    uart.dec(percent_diff);
-    uart.puts("% faster!\n");
-}
-
 entry!(kernel_entry);
 
 fn kernel_entry() -> ! {
@@ -102,7 +65,7 @@ fn kernel_entry() -> ! {
 
     uart.puts("MMU is live \\o/\n\n");
 
-    do_benchmarks(&uart);
+    benchmark::run(&uart);
 
     // echo everything back
     loop {

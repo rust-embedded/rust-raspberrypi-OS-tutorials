@@ -290,12 +290,10 @@ impl Uart {
     pub fn dec(&self, d: u32) {
         let mut digits: [char; 10] = ['\0'; 10];
         let mut d = d;
-        let mut i: usize = 0;
 
-        loop {
-            digits[i] = ((d % 10) + 0x30) as u8 as char;
+        for i in digits.iter_mut() {
+            *i = ((d % 10) + 0x30) as u8 as char;
 
-            i += 1;
             d /= 10;
 
             if d == 0 {
