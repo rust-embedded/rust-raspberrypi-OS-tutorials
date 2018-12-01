@@ -89,7 +89,7 @@ impl SysTmr {
         // mean infinite loop
         if t > 0 {
             loop {
-                if self.get_system_timer() < (t + n) {
+                if self.get_system_timer() > (t + n) {
                     break;
                 }
             }
@@ -108,7 +108,7 @@ pub fn wait_msec(n: u32) {
     let frq = CNTFRQ_EL0.get();
 
     // Calculate number of ticks
-    let tval = (frq as u32 / 1000) * n;
+    let tval = (u64::from(frq) * u64::from(n) / 1_000_000) as u32;
 
     // Set the compare value register
     CNTP_TVAL_EL0.set(tval);
