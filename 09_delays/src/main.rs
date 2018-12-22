@@ -52,20 +52,20 @@ fn kernel_entry() -> ! {
     delays::wait_cycles(1_000_000);
     uart.puts("OK\n");
 
-    uart.puts("Waiting 1000 microsec (ARM CPU): ");
-    delays::wait_msec(1000);
+    uart.puts("Waiting 1 second (ARM CPU): ");
+    delays::wait_msec(1_000_000);
     uart.puts("OK\n");
 
     let t = delays::SysTmr::new();
     if t.get_system_timer() != 0 {
-        uart.puts("Waiting 1000 microsec (BCM System Timer): ");
-        t.wait_msec_st(1000);
+        uart.puts("Waiting 1 second (BCM System Timer): ");
+        t.wait_msec_st(1_000_000);
         uart.puts("OK\n");
     }
 
     uart.puts("Looping forever now!\n");
     loop {
-        delays::wait_msec(1000);
+        delays::wait_msec(1_000_000);
         uart.puts("Tick: 1s\n");
     }
 }
