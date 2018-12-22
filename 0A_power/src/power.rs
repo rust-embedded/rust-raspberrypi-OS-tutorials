@@ -23,11 +23,11 @@
  */
 
 use super::MMIO_BASE;
+use crate::delays;
+use crate::gpio;
+use crate::mbox;
 use core::ops;
 use core::sync::atomic::{compiler_fence, Ordering};
-use delays;
-use gpio;
-use mbox;
 use register::mmio::*;
 
 const POWER_BASE: u32 = MMIO_BASE + 0x100_01C;

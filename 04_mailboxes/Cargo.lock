@@ -3,7 +3,7 @@ name = "kernel8"
 version = "0.1.0"
 dependencies = [
  "raspi3_boot 0.1.0",
- "register 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "register 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -26,19 +26,19 @@ dependencies = [
 
 [[package]]
 name = "register"
-version = "0.2.0"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "tock-registers 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tock-registers 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "tock-registers"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [metadata]
 "checksum panic-abort 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "2c14a66511ed17b6a8b4256b868d7fd207836d891db15eea5195dbcaf87e630f"
 "checksum r0 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "e2a38df5b15c8d5c7e8654189744d8e396bddc18ad48041a500ce52d6948941f"
-"checksum register 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "157a11ac0b1882ff4a527a92f911dd288df17367faaaa0c36f188cd61ec36fc1"
-"checksum tock-registers 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "3a385d94f3f62e60445a0adb9ff8d9621faa272234530d4c0f848ec98f88e316"
+"checksum register 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "a0f44a6dc9a98359515541a0c46ef4e3630a30879c1d7a4038f31dd533570bfb"
+"checksum tock-registers 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "c758f5195a2e0df9d9fecf6f506506b2766ff74cf64db1e995c87e2761a5c3e2"

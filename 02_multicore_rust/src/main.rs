@@ -25,10 +25,7 @@
 #![no_std]
 #![no_main]
 
-#[macro_use]
-extern crate raspi3_boot;
-
-entry!(kernel_entry);
+raspi3_boot::entry!(kernel_entry);
 
 fn kernel_entry() -> ! {
     loop {}

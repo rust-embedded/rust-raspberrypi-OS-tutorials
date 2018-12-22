@@ -25,7 +25,10 @@
 use super::MMIO_BASE;
 use core::ops;
 use cortex_a::asm;
-use register::mmio::{ReadOnly, WriteOnly};
+use register::{
+    mmio::{ReadOnly, WriteOnly},
+    register_bitfields,
+};
 
 register_bitfields! {
     u32,

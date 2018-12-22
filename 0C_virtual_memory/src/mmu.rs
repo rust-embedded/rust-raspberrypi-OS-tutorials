@@ -24,6 +24,7 @@
 
 use super::uart;
 use cortex_a::{barrier, regs::*};
+use register::register_bitfields;
 
 /// Parse the ID_AA64MMFR0_EL1 register for runtime information about supported
 /// MMU features.
@@ -130,7 +131,8 @@ pub unsafe fn init() {
     let lvl3_base: u64 = SINGLE_LVL3_TABLE.base_addr() >> 12;
     LVL2_TABLE[0] = (STAGE1_DESCRIPTOR::VALID::True
         + STAGE1_DESCRIPTOR::TYPE::Table
-        + STAGE1_DESCRIPTOR::NEXT_LVL_TABLE_ADDR_4KiB.val(lvl3_base)).value;
+        + STAGE1_DESCRIPTOR::NEXT_LVL_TABLE_ADDR_4KiB.val(lvl3_base))
+    .value;
 
     // For educational purposes and fun, let the start of the second 2 MiB block
     // point to the 2 MiB aperture which contains the UART's base address.

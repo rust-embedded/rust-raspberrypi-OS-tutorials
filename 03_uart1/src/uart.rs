@@ -23,9 +23,9 @@
  */
 
 use super::MMIO_BASE;
+use crate::gpio;
 use core::ops;
-use gpio;
-use register::mmio::*;
+use register::{mmio::*, register_bitfields};
 
 /// Auxilary mini UART registers
 //

@@ -2,6 +2,7 @@
 name = "kernel8"
 version = "0.1.0"
 authors = ["Andre Richter <andre.o.richter@gmail.com>"]
+edition = "2018"
 
 [dependencies]
 raspi3_boot = { path = "raspi3_boot" }

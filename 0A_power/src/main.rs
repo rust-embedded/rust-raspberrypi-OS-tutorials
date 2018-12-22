@@ -25,14 +25,6 @@
 #![no_std]
 #![no_main]
 
-extern crate cortex_a;
-
-#[macro_use]
-extern crate raspi3_boot;
-
-#[macro_use]
-extern crate register;
-
 const MMIO_BASE: u32 = 0x3F00_0000;
 
 mod delays;
@@ -41,7 +33,7 @@ mod mbox;
 mod power;
 mod uart;
 
-entry!(kernel_entry);
+raspi3_boot::entry!(kernel_entry);
 
 fn kernel_entry() -> ! {
     let gpio = gpio::GPIO::new();

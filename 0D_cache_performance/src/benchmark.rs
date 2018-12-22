@@ -1,6 +1,6 @@
+use super::uart;
 use core::sync::atomic::{compiler_fence, Ordering};
 use cortex_a::{barrier, regs::*};
-use super::uart;
 
 /// We assume that addr is cacheline aligned
 fn batch_modify_time(addr: u64) -> Option<u64> {
@@ -63,7 +63,7 @@ pub fn run(uart: &uart::Uart) {
             uart.dec(t as u32);
             uart.puts(" miliseconds.\n\n");
             t
-        },
+        }
         None => {
             uart.puts(ERROR_STRING);
             return;
@@ -81,7 +81,7 @@ pub fn run(uart: &uart::Uart) {
             uart.dec(t as u32);
             uart.puts(" miliseconds.\n\n");
             t
-        },
+        }
         None => {
             uart.puts(ERROR_STRING);
             return;

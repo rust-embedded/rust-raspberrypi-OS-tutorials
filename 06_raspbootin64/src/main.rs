@@ -26,19 +26,13 @@
 #![no_main]
 #![feature(asm)]
 
-#[macro_use]
-extern crate raspi3_boot;
-
-#[macro_use]
-extern crate register;
-
 const MMIO_BASE: u32 = 0x3F00_0000;
 
 mod gpio;
 mod mbox;
 mod uart;
 
-entry!(kernel_entry);
+raspi3_boot::entry!(kernel_entry);
 
 fn kernel_entry() -> ! {
     let mut mbox = mbox::Mbox::new();

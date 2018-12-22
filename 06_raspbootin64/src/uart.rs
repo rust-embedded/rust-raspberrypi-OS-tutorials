@@ -23,13 +23,13 @@
  */
 
 use super::MMIO_BASE;
+use crate::gpio;
+use crate::mbox;
 use core::{
     ops,
     sync::atomic::{compiler_fence, Ordering},
 };
-use gpio;
-use mbox;
-use register::mmio::*;
+use register::{mmio::*, register_bitfields};
 
 // PL011 UART registers.
 //

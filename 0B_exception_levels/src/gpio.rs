@@ -23,7 +23,7 @@
  */
 
 use super::MMIO_BASE;
-use register::mmio::ReadWrite;
+use register::{mmio::ReadWrite, register_bitfields};
 
 // Descriptions taken from
 // https://github.com/raspberrypi/documentation/files/1888662/BCM2837-ARM-Peripherals.-.Revised.-.V2-1.pdf

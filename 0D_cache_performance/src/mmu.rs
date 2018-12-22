@@ -23,6 +23,7 @@
  */
 
 use cortex_a::{barrier, regs::*};
+use register::register_bitfields;
 
 register_bitfields! {u64,
     // AArch64 Reference Manual page 2150
