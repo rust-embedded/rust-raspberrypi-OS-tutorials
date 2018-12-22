@@ -169,13 +169,18 @@ pub unsafe fn init() {
         *entry = (common + mem_attr + STAGE1_DESCRIPTOR::LVL2_OUTPUT_ADDR_4KiB.val(j)).value;
     }
 
-    // Finally, fill the single LVL3 table (4KiB granule). Differentiate between
-    // code/RO and RW sections.
+    // Finally, fill the single LVL3 table (4 KiB granule). Differentiate
+    // between code+RO and RW pages.
     //
-    // Using the linker script, we ensure that the RO sections are 4KiB aligned,
-    // and we export their boundaries via symbols.
+    // Using the linker script, we ensure that the RO area is consecutive and 4
+    // KiB aligned, and we export the boundaries via symbols.
     extern "C" {
+        // The inclusive start of the read-only area, aka the address of the
+        // first byte of the area.
         static mut __ro_start: u64;
+
+        // The non-inclusive end of the read-only area, aka the address of the
+        // first byte _after_ the RO area.
         static mut __ro_end: u64;
     }
 
