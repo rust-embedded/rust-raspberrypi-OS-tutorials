@@ -178,8 +178,12 @@ pub unsafe fn init() {
     }
 
     const PAGESIZE: u64 = 4096;
-    let ro_start: u64 = &__ro_start as *const _ as u64 / PAGESIZE;
-    let ro_end: u64 = &__ro_end as *const _ as u64 / PAGESIZE;
+    let ro_first_page_index: u64 = &__ro_start as *const _ as u64 / PAGESIZE;
+
+    // Notice the subtraction to calculate the last page index of the RO area
+    // and not the first page index after the RO area.
+    let ro_last_page_index: u64 = (&__ro_end as *const _ as u64 / PAGESIZE) - 1;
+
     let common = STAGE1_DESCRIPTOR::VALID::True
         + STAGE1_DESCRIPTOR::TYPE::Table
         + STAGE1_DESCRIPTOR::AttrIndx.val(mair::NORMAL)
@@ -189,7 +193,7 @@ pub unsafe fn init() {
     for (i, entry) in SINGLE_LVL3_TABLE.iter_mut().enumerate() {
         let j: u64 = i as u64;
 
-        let mem_attr = if j < ro_start || j > ro_end {
+        let mem_attr = if j < ro_first_page_index || j > ro_last_page_index {
             STAGE1_DESCRIPTOR::AP::RW_EL1 + STAGE1_DESCRIPTOR::XN::True
         } else {
             STAGE1_DESCRIPTOR::AP::RO_EL1 + STAGE1_DESCRIPTOR::XN::False
