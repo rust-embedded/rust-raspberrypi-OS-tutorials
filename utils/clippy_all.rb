@@ -1,12 +1,18 @@
 #!/usr/bin/env ruby
 
-crates = Dir["*/Cargo.toml"]
-crates.delete_if { |x| x.include?('bareminimum') }
+def clippy_all
+  crates = Dir["*/Cargo.toml"].sort!
+  crates.delete_if { |x| x.include?('bareminimum') }
 
-crates.each do |x|
-  x = File.dirname(x)
+  crates.each do |x|
+    x = File.dirname(x)
 
-  Dir.chdir(x) do
-    `make clippy`
+    Dir.chdir(x) do
+      system('make clippy')
+    end
   end
+end
+
+if __FILE__ == $0
+  clippy_all()
 end
