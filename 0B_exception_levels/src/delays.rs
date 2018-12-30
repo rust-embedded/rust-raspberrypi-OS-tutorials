@@ -22,6 +22,7 @@
  * SOFTWARE.
  */
 
+use cortex_a::asm;
 use cortex_a::regs::*;
 
 /*
@@ -52,4 +53,16 @@ pub fn wait_msec(n: u32) {
 
     // Disable counting again
     CNTP_CTL_EL0.modify(CNTP_CTL_EL0::ENABLE::CLEAR);
+}
+
+/*
+ *
+ * Using the CPU's cycles
+ *
+ */
+/// Wait N CPU cycles (ARM CPU only)
+pub fn wait_cycles(cyc: u32) {
+    for _ in 0..cyc {
+        asm::nop();
+    }
 }

@@ -64,20 +64,20 @@ replaced it with a Rust function. Why? Because we can, for the fun of it.
 #[link_section = ".text.boot"]
 #[no_mangle]
 pub unsafe extern "C" fn _boot_cores() -> ! {
-    use cortex_a::{asm, regs::mpidr_el1::*, regs::sp::*};
+    use cortex_a::{asm, regs::*};
 
+    const CORE_0: u64 = 0;
     const CORE_MASK: u64 = 0x3;
     const STACK_START: u64 = 0x80_000;
 
-    match MPIDR_EL1.get() & CORE_MASK {
-        0 => {
-            SP.set(STACK_START);
-            reset()
-        }
-        _ => loop {
-            // if not core0, infinitely wait for events
+    if CORE_0 == MPIDR_EL1.get() & CORE_MASK {
+        SP.set(STACK_START);
+        reset()
+    } else {
+        // if not core0, infinitely wait for events
+        loop {
             asm::wfe();
-        },
+        }
     }
 }
 ```
@@ -93,7 +93,7 @@ should yield something like the following, where you can see that the stack
 pointer is not used apart from ourselves setting it.
 
 ```console
-ferris@box:~$ cargo objdump --target aarch64-raspi3-none-elf.json -- -disassemble -print-imm-hex kernel8
+ferris@box:~$ cargo objdump --target aarch64-unknown-none -- -disassemble -print-imm-hex kernel8
 
 [...] (Some output omitted)
 
@@ -103,9 +103,9 @@ _boot_cores:
    80008:	60 00 00 54 	b.eq	#0xc <_boot_cores+0x14>
    8000c:	5f 20 03 d5 	wfe
    80010:	ff ff ff 17 	b	#-0x4 <_boot_cores+0xc>
-   80014:	e8 03 09 32 	orr	w8, wzr, #0x800000
+   80014:	e8 03 0d 32 	orr	w8, wzr, #0x80000
    80018:	1f 01 00 91 	mov	sp, x8
-   8001c:	35 02 00 94 	bl	#0x8d4 <raspi3_boot::reset::h90bc56752de44d1b>
+   8001c:	e0 01 00 94 	bl	#0x780 <raspi3_boot::reset::h6e794100bed457dc>
 ```
 
 It is important to always manually check this, and not blindly rely on the

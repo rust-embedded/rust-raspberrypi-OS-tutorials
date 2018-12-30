@@ -34,14 +34,17 @@ mod uart;
 
 use core::sync::atomic::{compiler_fence, Ordering};
 
-raspi3_boot::entry!(kernel_entry);
-
 fn kernel_entry() -> ! {
     let mut mbox = mbox::Mbox::new();
     let uart = uart::MiniUart::new();
 
     // set up serial console
     uart.init();
+    uart.puts("\n[0] UART is live!\n");
+
+    uart.puts("[1] Press a key to continue booting... ");
+    uart.getc();
+    uart.puts("Greetings fellow Rustacean!\n");
 
     // get the board's unique serial number with a mailbox call
     mbox.buffer[0] = 8 * 4; // length of the message
@@ -64,16 +67,13 @@ fn kernel_entry() -> ! {
         Ok(()) => true,
     };
 
-    uart.getc(); // Press a key first before being greeted
-    uart.puts("Hello Rustacean!\n");
-
     if serial_avail {
-        uart.puts("My serial number is: ");
+        uart.puts("[i] My serial number is: 0x");
         uart.hex(mbox.buffer[6]);
         uart.hex(mbox.buffer[5]);
         uart.puts("\n");
     } else {
-        uart.puts("Unable to query serial!\n");
+        uart.puts("[i] Unable to query serial!\n");
     }
 
     // echo everything back
@@ -81,3 +81,5 @@ fn kernel_entry() -> ! {
         uart.send(uart.getc());
     }
 }
+
+raspi3_boot::entry!(kernel_entry);

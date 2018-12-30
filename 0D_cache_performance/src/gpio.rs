@@ -23,6 +23,7 @@
  */
 
 use super::MMIO_BASE;
+use core::ops;
 use register::{mmio::ReadWrite, register_bitfields};
 
 // Descriptions taken from
@@ -66,10 +67,55 @@ register_bitfields! {
     ]
 }
 
-pub const GPFSEL1: *const ReadWrite<u32, GPFSEL1::Register> =
-    (MMIO_BASE + 0x0020_0004) as *const ReadWrite<u32, GPFSEL1::Register>;
+const GPIO_BASE: u32 = MMIO_BASE + 0x200_000;
 
-pub const GPPUD: *const ReadWrite<u32> = (MMIO_BASE + 0x0020_0094) as *const ReadWrite<u32>;
+#[allow(non_snake_case)]
+#[repr(C)]
+pub struct RegisterBlock {
+    pub GPFSEL0: ReadWrite<u32>,                        // 0x00
+    pub GPFSEL1: ReadWrite<u32, GPFSEL1::Register>,     // 0x04
+    pub GPFSEL2: ReadWrite<u32>,                        // 0x08
+    pub GPFSEL3: ReadWrite<u32>,                        // 0x0C
+    pub GPFSEL4: ReadWrite<u32>,                        // 0x10
+    pub GPFSEL5: ReadWrite<u32>,                        // 0x14
+    __reserved_0: u32,                                  // 0x18
+    GPSET0: ReadWrite<u32>,                             // 0x1C
+    GPSET1: ReadWrite<u32>,                             // 0x20
+    __reserved_1: u32,                                  //
+    GPCLR0: ReadWrite<u32>,                             // 0x28
+    __reserved_2: [u32; 2],                             //
+    GPLEV0: ReadWrite<u32>,                             // 0x34
+    GPLEV1: ReadWrite<u32>,                             // 0x38
+    __reserved_3: u32,                                  //
+    GPEDS0: ReadWrite<u32>,                             // 0x40
+    GPEDS1: ReadWrite<u32>,                             // 0x44
+    __reserved_4: [u32; 7],                             //
+    GPHEN0: ReadWrite<u32>,                             // 0x64
+    GPHEN1: ReadWrite<u32>,                             // 0x68
+    __reserved_5: [u32; 10],                            //
+    pub GPPUD: ReadWrite<u32>,                          // 0x94
+    pub GPPUDCLK0: ReadWrite<u32, GPPUDCLK0::Register>, // 0x98
+    pub GPPUDCLK1: ReadWrite<u32>,                      // 0x9C
+}
 
-pub const GPPUDCLK0: *const ReadWrite<u32, GPPUDCLK0::Register> =
-    (MMIO_BASE + 0x0020_0098) as *const ReadWrite<u32, GPPUDCLK0::Register>;
+/// Public interface to the GPIO MMIO area
+pub struct GPIO;
+
+impl ops::Deref for GPIO {
+    type Target = RegisterBlock;
+
+    fn deref(&self) -> &Self::Target {
+        unsafe { &*Self::ptr() }
+    }
+}
+
+impl GPIO {
+    pub fn new() -> GPIO {
+        GPIO
+    }
+
+    /// Returns a pointer to the register block
+    fn ptr() -> *const RegisterBlock {
+        GPIO_BASE as *const _
+    }
+}

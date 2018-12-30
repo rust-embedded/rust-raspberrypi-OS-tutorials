@@ -43,8 +43,8 @@ the host PC.
 
 ```console
 ferris@box:~$ make qemu
-<Press any key>
-Hello Rustacean!
+[0] UART is live!
+[1] Press a key to continue booting... Greetings fellow Rustacean!
 ```
 
 However, let it be said that it is more thrilling to see your first output from

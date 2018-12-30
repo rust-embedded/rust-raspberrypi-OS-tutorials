@@ -32,40 +32,42 @@ mod gpio;
 mod mbox;
 mod uart;
 
-raspi3_boot::entry!(kernel_entry);
-
 fn kernel_entry() -> ! {
     let mut mbox = mbox::Mbox::new();
     let uart = uart::Uart::new();
 
     // set up serial console
-    if uart.init(&mut mbox).is_err() {
-        loop {
-            cortex_a::asm::wfe()
-        } // If UART fails, abort early
+    match uart.init(&mut mbox) {
+        Ok(_) => uart.puts("\n[0] UART is live!\n"),
+        Err(_) => loop {
+            cortex_a::asm::wfe() // If UART fails, abort early
+        },
     }
 
-    uart.getc(); // Press a key first before being greeted
-    uart.puts("Hello Rustacean!\n");
+    uart.puts("[1] Press a key to continue booting... ");
+    uart.getc();
+    uart.puts("Greetings fellow Rustacean!\n");
 
-    uart.puts("Waiting 1_000_000 CPU cycles (ARM CPU): ");
+    uart.puts("[i] Waiting 1_000_000 CPU cycles (ARM CPU): ");
     delays::wait_cycles(1_000_000);
     uart.puts("OK\n");
 
-    uart.puts("Waiting 1 second (ARM CPU): ");
+    uart.puts("[i] Waiting 1 second (ARM CPU): ");
     delays::wait_msec(1_000_000);
     uart.puts("OK\n");
 
     let t = delays::SysTmr::new();
     if t.get_system_timer() != 0 {
-        uart.puts("Waiting 1 second (BCM System Timer): ");
+        uart.puts("[i] Waiting 1 second (BCM System Timer): ");
         t.wait_msec_st(1_000_000);
         uart.puts("OK\n");
     }
 
-    uart.puts("Looping forever now!\n");
+    uart.puts("[i] Looping forever now!\n");
     loop {
         delays::wait_msec(1_000_000);
         uart.puts("Tick: 1s\n");
     }
 }
+
+raspi3_boot::entry!(kernel_entry);

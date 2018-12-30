@@ -29,14 +29,14 @@
 
 const MMIO_BASE: u32 = 0x3F00_0000;
 
+mod delays;
 mod gpio;
 mod mbox;
 mod mmu;
 mod uart;
 
-raspi3_boot::entry!(kernel_entry);
-
 fn kernel_entry() -> ! {
+    let gpio = gpio::GPIO::new();
     let mut mbox = mbox::Mbox::new();
 
     {
@@ -44,18 +44,20 @@ fn kernel_entry() -> ! {
         let uart = uart::Uart::new(uart::UART_PHYS_BASE);
 
         // set up serial console
-        if uart.init(&mut mbox).is_err() {
-            loop {
+        match uart.init(&mut mbox, &gpio) {
+            Ok(_) => uart.puts("\n[0] UART is live!\n"),
+            Err(_) => loop {
                 cortex_a::asm::wfe() // If UART fails, abort early
-            }
+            },
         }
 
-        uart.getc(); // Press a key first before being greeted
-        uart.puts("Hello Rustacean!\n\n");
+        uart.puts("[1] Press a key to continue booting... ");
+        uart.getc();
+        uart.puts("Greetings fellow Rustacean!\n");
 
         mmu::print_features(&uart);
 
-        uart.puts("\nSwitching MMU on now...");
+        uart.puts("[2] Switching MMU on now... ");
     } // After this closure, the UART instance is not valid anymore.
 
     unsafe { mmu::init() };
@@ -66,7 +68,7 @@ fn kernel_entry() -> ! {
     let uart = uart::Uart::new(UART_VIRT_BASE);
 
     uart.puts("MMU is live \\o/\n\nWriting through the virtual mapping at 0x");
-    uart.hex(UART_VIRT_BASE);
+    uart.hex(UART_VIRT_BASE as u64);
     uart.puts(".\n");
 
     // echo everything back
@@ -74,3 +76,5 @@ fn kernel_entry() -> ! {
         uart.send(uart.getc());
     }
 }
+
+raspi3_boot::entry!(kernel_entry);

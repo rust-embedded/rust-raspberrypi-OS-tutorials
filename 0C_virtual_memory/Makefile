@@ -24,6 +24,8 @@
 
 TARGET = aarch64-unknown-none
 
+SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) link.ld
+
 OBJCOPY = cargo objcopy --
 OBJCOPY_PARAMS = --strip-all -O binary
 
@@ -33,23 +35,15 @@ DOCKER_TTY = --privileged -v /dev:/dev
 QEMU_CMD = qemu-system-aarch64 -M raspi3 -kernel kernel8.img
 RASPBOOT_CMD = raspbootcom /dev/ttyUSB0 kernel8.img
 
+.PHONY: all qemu raspboot clippy clean objdump nm
+
 all: clean kernel8.img
 
-target/$(TARGET)/debug/kernel8: src/main.rs
-	cargo xbuild --target=$(TARGET)
-	cp $@ .
-
-target/$(TARGET)/release/kernel8: src/main.rs
+target/$(TARGET)/release/kernel8: $(SOURCES)
 	cargo xbuild --target=$(TARGET) --release
-	cp $@ .
 
-ifeq ($(DEBUG),1)
-kernel8: target/$(TARGET)/debug/kernel8
-else
-kernel8: target/$(TARGET)/release/kernel8
-endif
-
-kernel8.img: kernel8
+kernel8.img: target/$(TARGET)/release/kernel8
+	cp $< .
 	$(OBJCOPY) $(OBJCOPY_PARAMS) $< kernel8.img
 
 qemu: all

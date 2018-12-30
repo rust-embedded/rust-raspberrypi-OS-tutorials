@@ -32,8 +32,6 @@ mod gpio;
 mod mbox;
 mod uart;
 
-raspi3_boot::entry!(kernel_entry);
-
 fn kernel_entry() -> ! {
     let mut mbox = mbox::Mbox::new();
     let uart = uart::Uart::new();
@@ -77,3 +75,5 @@ fn kernel_entry() -> ! {
     // Jump to loaded kernel and never return!
     kernel()
 }
+
+raspi3_boot::entry!(kernel_entry);

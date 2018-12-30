@@ -23,6 +23,7 @@
  */
 
 use super::MMIO_BASE;
+use crate::delays;
 use crate::gpio;
 use crate::mbox;
 use core::{
@@ -164,7 +165,7 @@ impl Uart {
     }
 
     ///Set baud rate and characteristics (115200 8N1) and map to GPIO
-    pub fn init(&self, mbox: &mut mbox::Mbox) -> Result<()> {
+    pub fn init(&self, mbox: &mut mbox::Mbox, gpio: &gpio::GPIO) -> Result<()> {
         // turn off UART0
         self.CR.set(0);
 
@@ -189,23 +190,18 @@ impl Uart {
         };
 
         // map UART0 to GPIO pins
-        unsafe {
-            (*gpio::GPFSEL1).modify(gpio::GPFSEL1::FSEL14::TXD0 + gpio::GPFSEL1::FSEL15::RXD0);
+        gpio.GPFSEL1
+            .modify(gpio::GPFSEL1::FSEL14::TXD0 + gpio::GPFSEL1::FSEL15::RXD0);
 
-            (*gpio::GPPUD).set(0); // enable pins 14 and 15
-            for _ in 0..150 {
-                asm::nop();
-            }
+        gpio.GPPUD.set(0); // enable pins 14 and 15
+        delays::wait_cycles(150);
 
-            (*gpio::GPPUDCLK0).modify(
-                gpio::GPPUDCLK0::PUDCLK14::AssertClock + gpio::GPPUDCLK0::PUDCLK15::AssertClock,
-            );
-            for _ in 0..150 {
-                asm::nop();
-            }
+        gpio.GPPUDCLK0.modify(
+            gpio::GPPUDCLK0::PUDCLK14::AssertClock + gpio::GPPUDCLK0::PUDCLK15::AssertClock,
+        );
+        delays::wait_cycles(150);
 
-            (*gpio::GPPUDCLK0).set(0);
-        }
+        gpio.GPPUDCLK0.set(0);
 
         self.ICR.write(ICR::ALL::CLEAR);
         self.IBRD.write(IBRD::IBRD.val(2)); // Results in 115200 baud
@@ -267,12 +263,12 @@ impl Uart {
     }
 
     /// Display a binary value in hexadecimal
-    pub fn hex(&self, d: u32) {
+    pub fn hex(&self, d: u64) {
         let mut n;
 
-        for i in 0..8 {
+        for i in 0..16 {
             // get highest tetrad
-            n = d.wrapping_shr(28 - i * 4) & 0xF;
+            n = d.wrapping_shr(60 - i * 4) & 0xF;
 
             // 0-9 => '0'-'9', 10-15 => 'A'-'F'
             // Add proper offset for ASCII table

@@ -34,13 +34,13 @@ pub fn print_features(uart: &uart::Uart) {
     if let Some(ID_AA64MMFR0_EL1::TGran4::Value::Supported) =
         mmfr.read_as_enum(ID_AA64MMFR0_EL1::TGran4)
     {
-        uart.puts("MMU: 4 KiB granule supported!\n");
+        uart.puts("[i] MMU: 4 KiB granule supported!\n");
     }
 
     if let Some(ID_AA64MMFR0_EL1::PARange::Value::Bits_40) =
         mmfr.read_as_enum(ID_AA64MMFR0_EL1::PARange)
     {
-        uart.puts("MMU: Up to 40 Bit physical address range supported!\n");
+        uart.puts("[i] MMU: Up to 40 Bit physical address range supported!\n");
     }
 }
 

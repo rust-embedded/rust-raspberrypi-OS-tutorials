@@ -53,9 +53,9 @@ pub fn run(uart: &uart::Uart) {
     let cacheable_addr: u64 = 2 * SIZE_2MIB;
 
     uart.puts("Benchmarking non-cacheable DRAM modifications at virtual 0x");
-    uart.hex(non_cacheable_addr as u32);
+    uart.hex(non_cacheable_addr);
     uart.puts(", physical 0x");
-    uart.hex(2 * SIZE_2MIB as u32);
+    uart.hex(2 * SIZE_2MIB);
     uart.puts(":\n");
 
     let result_nc = match batch_modify_time(non_cacheable_addr) {
@@ -71,9 +71,9 @@ pub fn run(uart: &uart::Uart) {
     };
 
     uart.puts("Benchmarking cacheable DRAM modifications at virtual 0x");
-    uart.hex(cacheable_addr as u32);
+    uart.hex(cacheable_addr);
     uart.puts(", physical 0x");
-    uart.hex(2 * SIZE_2MIB as u32);
+    uart.hex(2 * SIZE_2MIB);
     uart.puts(":\n");
 
     let result_c = match batch_modify_time(cacheable_addr) {

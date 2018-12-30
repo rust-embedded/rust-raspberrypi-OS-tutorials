@@ -22,11 +22,16 @@
  * SOFTWARE.
  */
 
-#![no_std]
-#![no_main]
+use cortex_a::asm;
 
-fn kernel_entry() -> ! {
-    loop {}
+/*
+ *
+ * Using the CPU's cycles
+ *
+ */
+/// Wait N CPU cycles (ARM CPU only)
+pub fn wait_cycles(cyc: u32) {
+    for _ in 0..cyc {
+        asm::nop();
+    }
 }
-
-raspi3_boot::entry!(kernel_entry);

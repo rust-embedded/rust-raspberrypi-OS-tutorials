@@ -36,17 +36,17 @@ use cortex_a::regs::*;
 
 fn check_timer(uart: &uart::Uart) {
     uart.puts(
-        "Testing EL1 access to timer registers.\n\
-         Delaying for 3 seconds now.\n",
+        "Testing EL1 access to timer registers:\
+         \n    Delaying for 3 seconds now.\n",
     );
-    delays::wait_msec(1000);
-    uart.puts("1..");
-    delays::wait_msec(1000);
+    delays::wait_msec(1_000_000);
+    uart.puts("    1..");
+    delays::wait_msec(1_000_000);
     uart.puts("2..");
-    delays::wait_msec(1000);
+    delays::wait_msec(1_000_000);
     uart.puts(
-        "3\n\
-         Works!\n\n",
+        "3\
+         \n    Works!\n\n",
     );
 }
 
@@ -55,10 +55,10 @@ fn check_daif(uart: &uart::Uart) {
 
     let daif = DAIF.extract();
     for x in &[
-        ("D: ", DAIF::D),
-        ("A: ", DAIF::A),
-        ("I: ", DAIF::I),
-        ("F: ", DAIF::F),
+        ("    D: ", DAIF::D),
+        ("    A: ", DAIF::A),
+        ("    I: ", DAIF::I),
+        ("    F: ", DAIF::F),
     ] {
         uart.puts(x.0);
         if daif.is_set(x.1) {
@@ -69,24 +69,25 @@ fn check_daif(uart: &uart::Uart) {
     }
 }
 
-raspi3_boot::entry!(kernel_entry);
-
 fn kernel_entry() -> ! {
+    let gpio = gpio::GPIO::new();
     let mut mbox = mbox::Mbox::new();
     let uart = uart::Uart::new();
 
     // set up serial console
-    if uart.init(&mut mbox).is_err() {
-        loop {
+    match uart.init(&mut mbox, &gpio) {
+        Ok(_) => uart.puts("\n[0] UART is live!\n"),
+        Err(_) => loop {
             cortex_a::asm::wfe() // If UART fails, abort early
-        }
+        },
     }
 
-    uart.getc(); // Press a key first before being greeted
-    uart.puts("Hello Rustacean!\n\n");
+    uart.puts("[1] Press a key to continue booting... ");
+    uart.getc();
+    uart.puts("Greetings fellow Rustacean!\n");
 
-    uart.puts("Executing in EL: ");
-    uart.hex(CurrentEL.read(CurrentEL::EL));
+    uart.puts("[i] Executing in EL: ");
+    uart.dec(CurrentEL.read(CurrentEL::EL));
     uart.puts("\n\n");
 
     check_timer(&uart);
@@ -97,3 +98,5 @@ fn kernel_entry() -> ! {
         uart.send(uart.getc());
     }
 }
+
+raspi3_boot::entry!(kernel_entry);

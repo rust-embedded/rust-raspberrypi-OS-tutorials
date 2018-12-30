@@ -43,13 +43,13 @@ showcase how much faster it is to operate on DRAM with caching enabled.
 On my Raspberry, I get the following results:
 
 ```text
-Benchmarking non-cacheable DRAM modifications at virtual 0x00200000, physical 0x00400000:
+Benchmarking non-cacheable DRAM modifications at virtual 0x0000000000200000, physical 0x0000000000400000:
 1040 miliseconds.
 
-Benchmarking cacheable DRAM modifications at virtual 0x00400000, physical 0x00400000:
+Benchmarking cacheable DRAM modifications at virtual 0x0000000000400000, physical 0x0000000000400000:
 53 miliseconds.
 
-With caching, the function is 1862% faster!
+With caching, the function is 1800% faster!
 ```
 
 Impressive, isn't it?

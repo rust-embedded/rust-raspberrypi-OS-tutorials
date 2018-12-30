@@ -32,25 +32,27 @@ mod mbox;
 mod rand;
 mod uart;
 
-raspi3_boot::entry!(kernel_entry);
-
 fn kernel_entry() -> ! {
     let mut mbox = mbox::Mbox::new();
     let uart = uart::Uart::new();
 
     // set up serial console
-    if uart.init(&mut mbox).is_err() {
-        loop {
-            cortex_a::asm::wfe()
-        } // If UART fails, abort early
+    match uart.init(&mut mbox) {
+        Ok(_) => uart.puts("\n[0] UART is live!\n"),
+        Err(_) => loop {
+            cortex_a::asm::wfe() // If UART fails, abort early
+        },
     }
 
-    uart.getc(); // Press a key first before being greeted
-    uart.puts("Hello Rustacean!\n");
+    uart.puts("[1] Press a key to continue booting... ");
+    uart.getc();
+    uart.puts("Greetings fellow Rustacean!\n");
 
     // set up random number generator
     let rng = rand::Rng::new();
     rng.init();
+
+    uart.puts("[2] RNG ready.\n\n");
 
     uart.puts("Press any key to generate random numbers.\n");
 
@@ -63,3 +65,5 @@ fn kernel_entry() -> ! {
         uart.puts("\n");
     }
 }
+
+raspi3_boot::entry!(kernel_entry);

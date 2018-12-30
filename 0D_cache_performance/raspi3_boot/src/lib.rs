@@ -69,6 +69,8 @@ unsafe fn reset() -> ! {
 fn setup_and_enter_el1_from_el2() -> ! {
     use cortex_a::{asm, regs::*};
 
+    const STACK_START: u64 = 0x80_000;
+
     // Enable timer counter registers for EL1
     CNTHCTL_EL2.write(CNTHCTL_EL2::EL1PCEN::SET + CNTHCTL_EL2::EL1PCTEN::SET);
 
@@ -96,7 +98,7 @@ fn setup_and_enter_el1_from_el2() -> ! {
 
     // Set up SP_EL1 (stack pointer), which will be used by EL1 once
     // we "return" to it.
-    SP_EL1.set(0x80_000);
+    SP_EL1.set(STACK_START);
 
     // Use `eret` to "return" to EL1. This will result in execution of
     // `reset()` in EL1.
@@ -116,10 +118,8 @@ pub unsafe extern "C" fn _boot_cores() -> ! {
     const CORE_MASK: u64 = 0x3;
     const EL2: u32 = CurrentEL::EL::EL2.value;
 
-    if let CORE_0 = MPIDR_EL1.get() & CORE_MASK {
-        if let EL2 = CurrentEL.get() {
-            setup_and_enter_el1_from_el2()
-        }
+    if (CORE_0 == MPIDR_EL1.get() & CORE_MASK) && (EL2 == CurrentEL.get()) {
+        setup_and_enter_el1_from_el2()
     }
 
     // if not core0 or EL != 2, infinitely wait for events

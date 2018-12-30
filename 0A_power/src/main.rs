@@ -33,8 +33,6 @@ mod mbox;
 mod power;
 mod uart;
 
-raspi3_boot::entry!(kernel_entry);
-
 fn kernel_entry() -> ! {
     let gpio = gpio::GPIO::new();
     let mut mbox = mbox::Mbox::new();
@@ -42,14 +40,16 @@ fn kernel_entry() -> ! {
     let power = power::Power::new();
 
     // set up serial console
-    if uart.init(&mut mbox, &gpio).is_err() {
-        loop {
-            cortex_a::asm::wfe()
-        } // If UART fails, abort early
+    match uart.init(&mut mbox, &gpio) {
+        Ok(_) => uart.puts("\n[0] UART is live!\n"),
+        Err(_) => loop {
+            cortex_a::asm::wfe() // If UART fails, abort early
+        },
     }
 
-    uart.getc(); // Press a key first before being greeted
-    uart.puts("Hello Rustacean!\n\n");
+    uart.puts("[1] Press a key to continue booting... ");
+    uart.getc();
+    uart.puts("Greetings fellow Rustacean!\n");
 
     loop {
         uart.puts("\n 1 - power off\n 2 - reset\nChoose one: ");
@@ -67,3 +67,5 @@ fn kernel_entry() -> ! {
         }
     }
 }
+
+raspi3_boot::entry!(kernel_entry);

@@ -73,17 +73,17 @@ unsafe fn reset() -> ! {
 pub unsafe extern "C" fn _boot_cores() -> ! {
     use cortex_a::{asm, regs::*};
 
+    const CORE_0: u64 = 0;
     const CORE_MASK: u64 = 0x3;
     const STACK_START: u64 = 0x80_000;
 
-    match MPIDR_EL1.get() & CORE_MASK {
-        0 => {
-            SP.set(STACK_START);
-            reset()
-        }
-        _ => loop {
-            // if not core0, infinitely wait for events
+    if CORE_0 == MPIDR_EL1.get() & CORE_MASK {
+        SP.set(STACK_START);
+        reset()
+    } else {
+        // if not core0, infinitely wait for events
+        loop {
             asm::wfe();
-        },
+        }
     }
 }
