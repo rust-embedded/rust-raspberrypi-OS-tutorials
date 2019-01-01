@@ -65,7 +65,7 @@ macro_rules! exception_return {
 /// is overwritten.
 #[naked]
 #[no_mangle]
-extern "C" fn default_exception_handler() {
+unsafe extern "C" fn default_exception_handler() {
     UART.puts("Unexpected exception. Halting CPU.\n");
 
     loop {
