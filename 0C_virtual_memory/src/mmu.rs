@@ -104,8 +104,19 @@ impl BaseAddr for [u64; 512] {
 
 const NUM_ENTRIES_4KIB: usize = 512;
 
-static mut LVL2_TABLE: [u64; NUM_ENTRIES_4KIB] = [0; NUM_ENTRIES_4KIB];
-static mut SINGLE_LVL3_TABLE: [u64; NUM_ENTRIES_4KIB] = [0; NUM_ENTRIES_4KIB];
+// We need a wrapper struct here so that we can make use of the align attribute.
+#[repr(C)]
+#[repr(align(4096))]
+struct PageTable {
+    entries: [u64; NUM_ENTRIES_4KIB],
+}
+
+static mut LVL2_TABLE: PageTable = PageTable {
+    entries: [0; NUM_ENTRIES_4KIB],
+};
+static mut SINGLE_LVL3_TABLE: PageTable = PageTable {
+    entries: [0; NUM_ENTRIES_4KIB],
+};
 
 /// Set up identity mapped page tables for the first 1 gigabyte of address
 /// space.
@@ -128,8 +139,8 @@ pub unsafe fn init() {
     }
 
     // Set up the first LVL2 entry, pointing to a 4KiB table base address.
-    let lvl3_base: u64 = SINGLE_LVL3_TABLE.base_addr() >> 12;
-    LVL2_TABLE[0] = (STAGE1_DESCRIPTOR::VALID::True
+    let lvl3_base: u64 = SINGLE_LVL3_TABLE.entries.base_addr() >> 12;
+    LVL2_TABLE.entries[0] = (STAGE1_DESCRIPTOR::VALID::True
         + STAGE1_DESCRIPTOR::TYPE::Table
         + STAGE1_DESCRIPTOR::NEXT_LVL_TABLE_ADDR_4KiB.val(lvl3_base))
     .value;
@@ -137,7 +148,7 @@ pub unsafe fn init() {
     // For educational purposes and fun, let the start of the second 2 MiB block
     // point to the 2 MiB aperture which contains the UART's base address.
     let uart_phys_base: u64 = (uart::UART_PHYS_BASE >> 21).into();
-    LVL2_TABLE[1] = (STAGE1_DESCRIPTOR::VALID::True
+    LVL2_TABLE.entries[1] = (STAGE1_DESCRIPTOR::VALID::True
         + STAGE1_DESCRIPTOR::TYPE::Block
         + STAGE1_DESCRIPTOR::AttrIndx.val(mair::DEVICE)
         + STAGE1_DESCRIPTOR::AP::RW_EL1
@@ -157,7 +168,7 @@ pub unsafe fn init() {
         + STAGE1_DESCRIPTOR::XN::True;
 
     // Notice the skip(2)
-    for (i, entry) in LVL2_TABLE.iter_mut().enumerate().skip(2) {
+    for (i, entry) in LVL2_TABLE.entries.iter_mut().enumerate().skip(2) {
         let j: u64 = i as u64;
 
         let mem_attr = if j >= mmio_base {
@@ -197,7 +208,7 @@ pub unsafe fn init() {
         + STAGE1_DESCRIPTOR::SH::InnerShareable
         + STAGE1_DESCRIPTOR::AF::True;
 
-    for (i, entry) in SINGLE_LVL3_TABLE.iter_mut().enumerate() {
+    for (i, entry) in SINGLE_LVL3_TABLE.entries.iter_mut().enumerate() {
         let j: u64 = i as u64;
 
         let mem_attr = if j < ro_first_page_index || j > ro_last_page_index {
@@ -210,7 +221,7 @@ pub unsafe fn init() {
     }
 
     // Point to the LVL2 table base address in TTBR0.
-    TTBR0_EL1.set_baddr(LVL2_TABLE.base_addr());
+    TTBR0_EL1.set_baddr(LVL2_TABLE.entries.base_addr());
 
     // Configure various settings of stage 1 of the EL1 translation regime.
     let ips = ID_AA64MMFR0_EL1.read(ID_AA64MMFR0_EL1::PARange);
