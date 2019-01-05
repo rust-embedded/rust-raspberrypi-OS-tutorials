@@ -66,7 +66,7 @@ fn kernel_entry() -> ! {
     let uart = uart::Uart::new(UART_VIRT_BASE);
 
     uart.puts("MMU is live \\o/\n\nWriting through the virtual mapping at 0x");
-    uart.hex(UART_VIRT_BASE as u64);
+    uart.hex(u64::from(UART_VIRT_BASE));
     uart.puts(".\n");
 
     // echo everything back
