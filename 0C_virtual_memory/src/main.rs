@@ -24,8 +24,6 @@
 
 #![no_std]
 #![no_main]
-#![feature(asm)]
-#![feature(const_fn)]
 
 const MMIO_BASE: u32 = 0x3F00_0000;
 
