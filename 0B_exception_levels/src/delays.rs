@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * Copyright (c) 2018 Andre Richter <andre.o.richter@gmail.com>
+ * Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,7 +31,7 @@ use cortex_a::regs::*;
  *
  */
 /// Wait N microsec (ARM CPU only)
-pub fn wait_msec(n: u32) {
+pub fn wait_usec(n: u32) {
     // Get the counter frequency
     let frq = CNTFRQ_EL0.get();
 

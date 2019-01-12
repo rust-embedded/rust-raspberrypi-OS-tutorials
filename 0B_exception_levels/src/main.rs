@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * Copyright (c) 2018 Andre Richter <andre.o.richter@gmail.com>
+ * Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -39,11 +39,11 @@ fn check_timer(uart: &uart::Uart) {
         "Testing EL1 access to timer registers:\
          \n    Delaying for 3 seconds now.\n",
     );
-    delays::wait_msec(1_000_000);
+    delays::wait_usec(1_000_000);
     uart.puts("    1..");
-    delays::wait_msec(1_000_000);
+    delays::wait_usec(1_000_000);
     uart.puts("2..");
-    delays::wait_msec(1_000_000);
+    delays::wait_usec(1_000_000);
     uart.puts(
         "3\
          \n    Works!\n\n",

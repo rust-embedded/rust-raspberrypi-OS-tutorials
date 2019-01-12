@@ -10,10 +10,10 @@ other two are µs based.
 `delays::wait_cycles(cyc: u32)` this is very straightforward, we execute the
 `nop` instruction n times.
 
-`delays::wait_msec(n: u32)` this implementation uses ARM system registers
+`delays::wait_usec(n: u32)` this implementation uses ARM system registers
 (available on all AArch64 CPUs).
 
-`delays::SysTmr::wait_msec_st(&self, n: u64)` is a BCM specific implementation,
+`delays::SysTmr::wait_usec_st(&self, n: u64)` is a BCM specific implementation,
 which uses the System Timer peripheral (not available on qemu).
 
 ## uart.rs

@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * Copyright (c) 2018 Andre Richter <andre.o.richter@gmail.com>
+ * Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -53,19 +53,19 @@ fn kernel_entry() -> ! {
     uart.puts("OK\n");
 
     uart.puts("[i] Waiting 1 second (ARM CPU): ");
-    delays::wait_msec(1_000_000);
+    delays::wait_usec(1_000_000);
     uart.puts("OK\n");
 
     let t = delays::SysTmr::new();
     if t.get_system_timer() != 0 {
         uart.puts("[i] Waiting 1 second (BCM System Timer): ");
-        t.wait_msec_st(1_000_000);
+        t.wait_usec_st(1_000_000);
         uart.puts("OK\n");
     }
 
     uart.puts("[i] Looping forever now!\n");
     loop {
-        delays::wait_msec(1_000_000);
+        delays::wait_usec(1_000_000);
         uart.puts("Tick: 1s\n");
     }
 }
