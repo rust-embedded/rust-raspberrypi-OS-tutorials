@@ -1,0 +1,20 @@
+#!/usr/bin/env ruby
+
+require_relative '../utils/copyrighted'
+
+source_files_exts = ['.S', '.rs', '.rb']
+
+staged_files = `git --no-pager diff --name-only --cached`.split(/\n/)
+
+need_inspection = []
+staged_files.each do |f|
+  need_inspection << f if
+    f == 'Makefile' || source_files_exts.include?(File.extname(f))
+end
+
+error = false
+need_inspection.each do |f|
+  error = true unless copyrighted?(f, true)
+end
+
+exit 1 if error
