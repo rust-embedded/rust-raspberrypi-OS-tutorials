@@ -8,8 +8,10 @@ staged_files = `git --no-pager diff --name-only --cached`.split(/\n/)
 
 need_inspection = []
 staged_files.each do |f|
+  puts f
+  exit
   need_inspection << f if
-    f == 'Makefile' || source_files_exts.include?(File.extname(f))
+    f.include?('Makefile') || source_files_exts.include?(File.extname(f))
 end
 
 error = false
