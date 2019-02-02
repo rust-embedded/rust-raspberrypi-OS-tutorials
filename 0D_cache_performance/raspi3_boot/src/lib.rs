@@ -79,8 +79,7 @@ fn setup_and_enter_el1_from_el2() -> ! {
     CNTVOFF_EL2.set(0);
 
     // Set EL1 execution state to AArch64
-    // TODO: Explain the SWIO bit
-    HCR_EL2.write(HCR_EL2::RW::EL1IsAarch64 + HCR_EL2::SWIO::SET);
+    HCR_EL2.write(HCR_EL2::RW::EL1IsAarch64);
 
     // Set up a simulated exception return.
     //
