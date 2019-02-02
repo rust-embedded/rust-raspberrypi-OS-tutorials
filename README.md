@@ -1,4 +1,4 @@
-# Bare Metal Rust Programming on Raspberry Pi 3
+# Bare-metal and Operating System development tutorials in Rust on the Raspberry Pi 3
 
 [![Build Status](https://travis-ci.org/rust-embedded/rust-raspi3-tutorial.svg?branch=master)](https://travis-ci.org/rust-embedded/rust-raspi3-tutorial)
 
@@ -11,18 +11,17 @@ readable, concise and safe (at least as safe as it gets on bare-metal hardware).
 
 [Rust systems programming language]: https://www.rust-lang.org
 
-The target audience is **hobby OS developers** who are new to this hardware. It
-will give you examples on how to do common Operating Systems tasks, like writing
-to the serial console, reading keystrokes from it or use various peripherals
-like a hardware-backed random number generator.
+The target audience is **hobby OS developers** who are new to [ARM's 64 bit ARMv8-A
+architecture](https://developer.arm.com/products/architecture/cpu-architecture/a-profile/docs).
+It will give you examples on how to do common Operating Systems tasks, like writing
+to the serial console, setting up virtual memory and exception handling and using
+various peripherals like a hardware-backed random number generator.
 
-However, it is *not* a tutorial on how to write a _complete_ OS. I won't cover
-topics like advanced memory management and virtual file systems, or how to
-implement multi-tasking. Rather, it comprises a set of micro-tutorials that
-introduce different topics one after the other. Maybe in the distant future, we
-might introduce a meta tutorial that combines all the resources to a full-fleged
-kernel that can multi-task some simple userspace processes, but don't take my
-word for it.
+However, it is *not* a tutorial on how to write a _complete_ OS from start to finish.
+Rather, it comprises a set of micro-tutorials that introduce different topics one
+after the other. Maybe in the distant future, a meta tutorial that
+combines all the resources to a full-fleged kernel that can multi-task some simple
+userspace processes is possible, but don't take my word for it.
 
 ## Environment
 
