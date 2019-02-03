@@ -186,10 +186,10 @@ pub unsafe fn init() {
 
     // Finally, fill the single LVL3 table (4 KiB granule). Differentiate
     // between code+RO and RW pages.
-    let (ro_start_addr, ro_end_addr) = super::get_ro_start_end();
+    let (ro_start_addr, ro_end_addr) = crate::memory::get_ro_start_end();
 
-    let ro_first_page_index = ro_start_addr / super::PAGESIZE;
-    let ro_last_page_index = ro_end_addr / super::PAGESIZE;
+    let ro_first_page_index = ro_start_addr / crate::memory::PAGESIZE;
+    let ro_last_page_index = ro_end_addr / crate::memory::PAGESIZE;
 
     let common = STAGE1_DESCRIPTOR::VALID::True
         + STAGE1_DESCRIPTOR::TYPE::Table

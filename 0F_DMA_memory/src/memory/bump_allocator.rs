@@ -36,7 +36,7 @@ pub struct BumpAllocator {
 
 unsafe impl Alloc for BumpAllocator {
     unsafe fn alloc(&mut self, layout: Layout) -> Result<NonNull<u8>, AllocErr> {
-        let start = super::aligned_addr_unchecked(self.next, layout.align());
+        let start = crate::memory::aligned_addr_unchecked(self.next, layout.align());
         let end = start + layout.size();
 
         if end <= self.pool_end {
