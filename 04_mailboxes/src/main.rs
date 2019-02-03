@@ -62,19 +62,15 @@ fn kernel_entry() -> ! {
     compiler_fence(Ordering::Release);
 
     // send the message to the GPU and receive answer
-    let serial_avail = match mbox.call(mbox::channel::PROP) {
-        Err(_) => false,
-        Ok(()) => true,
+    match mbox.call(mbox::channel::PROP) {
+        Err(_) => uart.puts("[i] Unable to query serial!\n"),
+        Ok(()) => {
+            uart.puts("[i] My serial number is: 0x");
+            uart.hex(mbox.buffer[6]);
+            uart.hex(mbox.buffer[5]);
+            uart.puts("\n");
+        }
     };
-
-    if serial_avail {
-        uart.puts("[i] My serial number is: 0x");
-        uart.hex(mbox.buffer[6]);
-        uart.hex(mbox.buffer[5]);
-        uart.puts("\n");
-    } else {
-        uart.puts("[i] Unable to query serial!\n");
-    }
 
     // echo everything back
     loop {

@@ -45,7 +45,7 @@ kernel8.img: target/$(TARGET)/release/kernel8
 	$(OBJCOPY) $(OBJCOPY_PARAMS) $< kernel8.img
 
 qemu: all
-	$(DOCKER_CMD) $(UTILS_CONTAINER) $(QEMU_CMD) -serial stdio
+	$(DOCKER_CMD) $(UTILS_CONTAINER) $(QEMU_CMD) -serial null -serial stdio
 
 clippy:
 	cargo xclippy --target=$(TARGET)
