@@ -118,10 +118,9 @@ static mut SINGLE_LVL3_TABLE: PageTable = PageTable {
     entries: [0; NUM_ENTRIES_4KIB],
 };
 
-/// Set up identity mapped page tables for the first 1 gigabyte of address
-/// space.
+/// Set up identity mapped page tables for the first 1 GiB of address space.
 pub unsafe fn init() {
-    // First, define the two memory types that we will map. Normal DRAM and
+    // First, define the two memory types that we will map. Cacheable normal DRAM and
     // device.
     MAIR_EL1.write(
         // Attribute 1
@@ -132,13 +131,20 @@ pub unsafe fn init() {
             + MAIR_EL1::Attr0_LOW_MEMORY::InnerWriteBack_NonTransient_ReadAlloc_WriteAlloc,
     );
 
-    // Two descriptive consts for indexing into the correct MAIR_EL1 attributes.
+    // Descriptive consts for indexing into the correct MAIR_EL1 attributes.
     mod mair {
         pub const NORMAL: u64 = 0;
         pub const DEVICE: u64 = 1;
     }
 
-    // Set up the first LVL2 entry, pointing to a 4KiB table base address.
+    // The first 2 MiB.
+    //
+    // Set up the first LVL2 entry, pointing to the base address of a follow-up
+    // table containing 4 KiB pages.
+    //
+    // 0x0000_0000_0000_0000 |
+    //                       |> 2 MiB
+    // 0x0000_0000_001F_FFFF |
     let lvl3_base: u64 = SINGLE_LVL3_TABLE.entries.base_addr() >> 12;
     LVL2_TABLE.entries[0] = (STAGE1_DESCRIPTOR::VALID::True
         + STAGE1_DESCRIPTOR::TYPE::Table
@@ -147,6 +153,10 @@ pub unsafe fn init() {
 
     // For educational purposes and fun, let the start of the second 2 MiB block
     // point to the 2 MiB aperture which contains the UART's base address.
+    //
+    // 0x0000_0000_0020_0000 |
+    //                       |> 2 MiB
+    // 0x0000_0000_003F_FFFF |
     let uart_phys_base: u64 = (uart::UART_PHYS_BASE >> 21).into();
     LVL2_TABLE.entries[1] = (STAGE1_DESCRIPTOR::VALID::True
         + STAGE1_DESCRIPTOR::TYPE::Block
@@ -158,20 +168,34 @@ pub unsafe fn init() {
         + STAGE1_DESCRIPTOR::XN::True)
         .value;
 
-    // Fill the rest of the LVL2 (2MiB) entries as block
-    // descriptors. Differentiate between normal and device mem.
-    let mmio_base: u64 = (super::MMIO_BASE >> 21).into();
+    // Fill the rest of the LVL2 (2 MiB) entries as block descriptors.
+    //
+    // Differentiate between
+    //   - cacheable DRAM
+    //   - device memory
+    //
+    // Ranges are stored in memory.rs.
+    //
+    // 0x0000_0000_0040_0000 |
+    //                       |> 1004 MiB cacheable DRAM
+    // 0x0000_0000_3EFF_FFFF |
+    // 0x0000_0000_3F00_0000 |
+    //                       |> 16 MiB device (MMIO)
+    // 0x0000_0000_4000_0000 |
+    let mmio_first_block_index: u64 = (super::MMIO_BASE >> 21).into();
+
     let common = STAGE1_DESCRIPTOR::VALID::True
         + STAGE1_DESCRIPTOR::TYPE::Block
         + STAGE1_DESCRIPTOR::AP::RW_EL1
         + STAGE1_DESCRIPTOR::AF::True
         + STAGE1_DESCRIPTOR::XN::True;
 
-    // Notice the skip(2)
+    // Notice the skip(2) which makes the iteration start at the third 2 MiB
+    // block (0x40_0000).
     for (i, entry) in LVL2_TABLE.entries.iter_mut().enumerate().skip(2) {
         let j: u64 = i as u64;
 
-        let mem_attr = if j >= mmio_base {
+        let mem_attr = if j >= mmio_first_block_index {
             STAGE1_DESCRIPTOR::SH::OuterShareable + STAGE1_DESCRIPTOR::AttrIndx.val(mair::DEVICE)
         } else {
             STAGE1_DESCRIPTOR::SH::InnerShareable + STAGE1_DESCRIPTOR::AttrIndx.val(mair::NORMAL)
@@ -211,10 +235,10 @@ pub unsafe fn init() {
     for (i, entry) in SINGLE_LVL3_TABLE.entries.iter_mut().enumerate() {
         let j: u64 = i as u64;
 
-        let mem_attr = if j < ro_first_page_index || j > ro_last_page_index {
-            STAGE1_DESCRIPTOR::AP::RW_EL1 + STAGE1_DESCRIPTOR::XN::True
-        } else {
+        let mem_attr = if (ro_first_page_index..=ro_last_page_index).contains(&j) {
             STAGE1_DESCRIPTOR::AP::RO_EL1 + STAGE1_DESCRIPTOR::XN::False
+        } else {
+            STAGE1_DESCRIPTOR::AP::RW_EL1 + STAGE1_DESCRIPTOR::XN::True
         };
 
         *entry = (common + mem_attr + STAGE1_DESCRIPTOR::NEXT_LVL_TABLE_ADDR_4KiB.val(j)).value;
