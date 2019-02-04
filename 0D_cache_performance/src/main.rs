@@ -24,6 +24,7 @@
 
 #![no_std]
 #![no_main]
+#![feature(range_contains)]
 
 const MMIO_BASE: u32 = 0x3F00_0000;
 
