@@ -1,6 +1,6 @@
 # Bare-metal and Operating System development tutorials in Rust on the Raspberry Pi 3
 
-[![Build Status](https://travis-ci.org/rust-embedded/rust-raspi3-tutorial.svg?branch=master)](https://travis-ci.org/rust-embedded/rust-raspi3-tutorial)
+[![Build Status](https://travis-ci.org/rust-embedded/rust-raspi3-OS-tutorials.svg?branch=master)](https://travis-ci.org/rust-embedded/rust-raspi3-OS-tutorials)
 
 ## Introduction
 
