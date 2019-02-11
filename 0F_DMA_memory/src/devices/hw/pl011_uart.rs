@@ -141,7 +141,7 @@ pub enum PL011UartError {
 pub type Result<T> = ::core::result::Result<T, PL011UartError>;
 
 pub struct PL011Uart {
-    base_addr: u32,
+    base_addr: usize,
 }
 
 impl ops::Deref for PL011Uart {
@@ -153,7 +153,7 @@ impl ops::Deref for PL011Uart {
 }
 
 impl PL011Uart {
-    pub fn new(base_addr: u32) -> PL011Uart {
+    pub fn new(base_addr: usize) -> PL011Uart {
         PL011Uart { base_addr }
     }
 

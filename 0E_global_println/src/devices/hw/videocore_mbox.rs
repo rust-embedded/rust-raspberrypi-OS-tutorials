@@ -87,7 +87,7 @@ pub struct VideocoreMbox {
     // can handle it properly. Hence, put it at the start of the struct so that
     // the align attribute is effective.
     pub buffer: [u32; 36],
-    base_addr: u32,
+    base_addr: usize,
 }
 
 /// Deref to RegisterBlock
@@ -109,7 +109,7 @@ impl ops::Deref for VideocoreMbox {
 }
 
 impl VideocoreMbox {
-    pub fn new(base_addr: u32) -> VideocoreMbox {
+    pub fn new(base_addr: usize) -> VideocoreMbox {
         VideocoreMbox {
             buffer: [0; 36],
             base_addr,

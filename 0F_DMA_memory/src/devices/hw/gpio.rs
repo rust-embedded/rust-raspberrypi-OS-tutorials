@@ -97,7 +97,7 @@ pub struct RegisterBlock {
 
 /// Public interface to the GPIO MMIO area
 pub struct GPIO {
-    base_addr: u32,
+    base_addr: usize,
 }
 
 impl ops::Deref for GPIO {
@@ -109,7 +109,7 @@ impl ops::Deref for GPIO {
 }
 
 impl GPIO {
-    pub fn new(base_addr: u32) -> GPIO {
+    pub fn new(base_addr: usize) -> GPIO {
         GPIO { base_addr }
     }
 

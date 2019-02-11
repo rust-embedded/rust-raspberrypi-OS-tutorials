@@ -22,26 +22,26 @@
  * SOFTWARE.
  */
 
-use super::uart;
+use crate::uart;
 use core::sync::atomic::{compiler_fence, Ordering};
 use cortex_a::{barrier, regs::*};
 
 /// We assume that addr is cacheline aligned
-fn batch_modify_time(addr: u64) -> Option<u64> {
+fn batch_modify_time(addr: usize) -> Option<u64> {
     const CACHELINE_SIZE_BYTES: usize = 64; // TODO: retrieve this from a system register
     const NUM_CACHELINES_TOUCHED: usize = 5;
     const NUM_BENCH_ITERATIONS: usize = 20_000;
 
     const NUM_BYTES_TOUCHED: usize = CACHELINE_SIZE_BYTES * NUM_CACHELINES_TOUCHED;
 
-    let mem = unsafe { core::slice::from_raw_parts_mut(addr as *mut u64, NUM_BYTES_TOUCHED) };
+    let mem = unsafe { core::slice::from_raw_parts_mut(addr as *mut usize, NUM_BYTES_TOUCHED) };
 
     // Benchmark starts here
     let t1 = CNTPCT_EL0.get();
 
     compiler_fence(Ordering::SeqCst);
 
-    let mut temp: u64;
+    let mut temp: usize;
     for _ in 0..NUM_BENCH_ITERATIONS {
         for qword in mem.iter_mut() {
             unsafe {
@@ -65,24 +65,17 @@ fn batch_modify_time(addr: u64) -> Option<u64> {
 }
 
 pub fn run(uart: &uart::Uart) {
-    const SIZE_2MIB: u64 = 2 * 1024 * 1024;
+    use crate::memory::map;
+
     const ERROR_STRING: &str = "Something went wrong!";
 
-    // Start of the __SECOND__ virtual 2 MiB block (counting starts at zero).
-    // NON-cacheable DRAM memory.
-    let non_cacheable_addr: u64 = SIZE_2MIB;
-
-    // Start of the __THIRD__ virtual 2 MiB block.
-    // Cacheable DRAM memory
-    let cacheable_addr: u64 = 2 * SIZE_2MIB;
-
     uart.puts("Benchmarking non-cacheable DRAM modifications at virtual 0x");
-    uart.hex(non_cacheable_addr);
+    uart.hex(map::virt::NON_CACHEABLE_START as u64);
     uart.puts(", physical 0x");
-    uart.hex(2 * SIZE_2MIB);
+    uart.hex(map::virt::CACHEABLE_START as u64);
     uart.puts(":\n");
 
-    let result_nc = match batch_modify_time(non_cacheable_addr) {
+    let result_nc = match batch_modify_time(map::virt::NON_CACHEABLE_START) {
         Some(t) => {
             uart.dec(t as u32);
             uart.puts(" miliseconds.\n\n");
@@ -95,12 +88,12 @@ pub fn run(uart: &uart::Uart) {
     };
 
     uart.puts("Benchmarking cacheable DRAM modifications at virtual 0x");
-    uart.hex(cacheable_addr);
+    uart.hex(map::virt::CACHEABLE_START as u64);
     uart.puts(", physical 0x");
-    uart.hex(2 * SIZE_2MIB);
+    uart.hex(map::virt::CACHEABLE_START as u64);
     uart.puts(":\n");
 
-    let result_c = match batch_modify_time(cacheable_addr) {
+    let result_c = match batch_modify_time(map::virt::CACHEABLE_START) {
         Some(t) => {
             uart.dec(t as u32);
             uart.puts(" miliseconds.\n\n");

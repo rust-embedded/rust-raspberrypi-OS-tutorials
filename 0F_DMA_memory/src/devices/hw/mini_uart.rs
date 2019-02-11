@@ -123,7 +123,7 @@ pub struct RegisterBlock {
 }
 
 pub struct MiniUart {
-    base_addr: u32,
+    base_addr: usize,
 }
 
 /// Deref to RegisterBlock
@@ -145,7 +145,7 @@ impl ops::Deref for MiniUart {
 }
 
 impl MiniUart {
-    pub fn new(base_addr: u32) -> MiniUart {
+    pub fn new(base_addr: usize) -> MiniUart {
         MiniUart { base_addr }
     }
 

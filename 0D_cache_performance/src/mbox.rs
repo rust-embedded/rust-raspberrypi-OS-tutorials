@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * Copyright (c) 2018 Andre Richter <andre.o.richter@gmail.com>
+ * Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +22,6 @@
  * SOFTWARE.
  */
 
-use super::MMIO_BASE;
 use core::ops;
 use cortex_a::asm;
 use register::{
@@ -38,8 +37,6 @@ register_bitfields! {
         EMPTY OFFSET(30) NUMBITS(1) []
     ]
 }
-
-const VIDEOCORE_MBOX: u32 = MMIO_BASE + 0xB880;
 
 #[allow(non_snake_case)]
 #[repr(C)]
@@ -89,6 +86,7 @@ pub struct Mbox {
     // The address for buffer needs to be 16-byte aligned so that the
     // Videcore can handle it properly.
     pub buffer: [u32; 36],
+    base_addr: usize,
 }
 
 /// Deref to RegisterBlock
@@ -105,18 +103,21 @@ impl ops::Deref for Mbox {
     type Target = RegisterBlock;
 
     fn deref(&self) -> &Self::Target {
-        unsafe { &*Self::ptr() }
+        unsafe { &*self.ptr() }
     }
 }
 
 impl Mbox {
-    pub fn new() -> Mbox {
-        Mbox { buffer: [0; 36] }
+    pub fn new(base_addr: usize) -> Mbox {
+        Mbox {
+            buffer: [0; 36],
+            base_addr,
+        }
     }
 
     /// Returns a pointer to the register block
-    fn ptr() -> *const RegisterBlock {
-        VIDEOCORE_MBOX as *const _
+    fn ptr(&self) -> *const RegisterBlock {
+        self.base_addr as *const _
     }
 
     /// Make a mailbox call. Returns Err(MboxError) on failure, Ok(()) success

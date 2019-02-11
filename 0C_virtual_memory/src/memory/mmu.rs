@@ -23,8 +23,27 @@
  */
 
 use crate::memory::{get_virt_addr_properties, AttributeFields};
+use crate::uart;
 use cortex_a::{barrier, regs::*};
 use register::register_bitfields;
+
+/// Parse the ID_AA64MMFR0_EL1 register for runtime information about supported
+/// MMU features.
+pub fn print_features(uart: &uart::Uart) {
+    let mmfr = ID_AA64MMFR0_EL1.extract();
+
+    if let Some(ID_AA64MMFR0_EL1::TGran4::Value::Supported) =
+        mmfr.read_as_enum(ID_AA64MMFR0_EL1::TGran4)
+    {
+        uart.puts("[i] MMU: 4 KiB granule supported!\n");
+    }
+
+    if let Some(ID_AA64MMFR0_EL1::PARange::Value::Bits_40) =
+        mmfr.read_as_enum(ID_AA64MMFR0_EL1::PARange)
+    {
+        uart.puts("[i] MMU: Up to 40 Bit physical address range supported!\n");
+    }
+}
 
 register_bitfields! {u64,
     // AArch64 Reference Manual page 2150
@@ -115,10 +134,6 @@ fn into_mmu_attributes(
         MemAttributes::CacheableDRAM => {
             STAGE1_DESCRIPTOR::SH::InnerShareable + STAGE1_DESCRIPTOR::AttrIndx.val(mair::NORMAL)
         }
-        MemAttributes::NonCacheableDRAM => {
-            STAGE1_DESCRIPTOR::SH::InnerShareable
-                + STAGE1_DESCRIPTOR::AttrIndx.val(mair::NORMAL_NON_CACHEABLE)
-        }
         MemAttributes::Device => {
             STAGE1_DESCRIPTOR::SH::OuterShareable + STAGE1_DESCRIPTOR::AttrIndx.val(mair::DEVICE)
         }
@@ -205,7 +220,6 @@ impl PageDescriptor {
 mod mair {
     pub const DEVICE: u64 = 0;
     pub const NORMAL: u64 = 1;
-    pub const NORMAL_NON_CACHEABLE: u64 = 2;
 }
 
 /// Setup function for the MAIR_EL1 register.
@@ -213,12 +227,8 @@ fn set_up_mair() {
     // Define the three memory types that we will map. Cacheable and
     // non-cacheable normal DRAM, and device.
     MAIR_EL1.write(
-        // Attribute 2
-        MAIR_EL1::Attr2_HIGH::Memory_OuterNonCacheable
-            + MAIR_EL1::Attr2_LOW_MEMORY::InnerNonCacheable
-
         // Attribute 1
-            + MAIR_EL1::Attr1_HIGH::Memory_OuterWriteBack_NonTransient_ReadAlloc_WriteAlloc
+        MAIR_EL1::Attr1_HIGH::Memory_OuterWriteBack_NonTransient_ReadAlloc_WriteAlloc
             + MAIR_EL1::Attr1_LOW_MEMORY::InnerWriteBack_NonTransient_ReadAlloc_WriteAlloc
 
             // Attribute 0

@@ -18,13 +18,12 @@ operating with data on the same DRAM with caching enabled and disabled.
 ### mmu.rs
 
 Therefore, we will map the same physical memory via two different virtual
-addresses. We set up our pagetables such that the virtual address `0x200000`
-points to the physical DRAM at `0x400000`, and we configure it as
+addresses. We set up our pagetables such that the virtual address `0x400000`
+points to the physical DRAM at `0x200000`, and we configure it as
 `non-cacheable` in the page tables.
 
-We are still using a `2 MiB` granule, and set up the next block, which starts at
-virtual `0x400000`, to point at physical `0x400000` (this is an identity mapped
-block). This time, the block is configured as cacheable.
+There is also an identity mapped block, which starts at virtual `0x200000` and
+points at physical `0x200000`. This time, the block is configured as cacheable.
 
 ### benchmark.rs
 
@@ -38,15 +37,20 @@ non-cacheable virtual addresses. Remember that both virtual addresses point to
 the _same_ physical DRAM, so the difference in time that we will see will
 showcase how much faster it is to operate on DRAM with caching enabled.
 
-## Results
+## Output
 
 On my Raspberry, I get the following results:
 
-```text
-Benchmarking non-cacheable DRAM modifications at virtual 0x0000000000200000, physical 0x0000000000400000:
+```console
+ferris@box:~$ make raspboot
+
+[0] UART is live!
+[1] Press a key to continue booting... Greetings fellow Rustacean!
+[2] MMU online.
+Benchmarking non-cacheable DRAM modifications at virtual 0x0000000000400000, physical 0x0000000000200000:
 1040 miliseconds.
 
-Benchmarking cacheable DRAM modifications at virtual 0x0000000000400000, physical 0x0000000000400000:
+Benchmarking cacheable DRAM modifications at virtual 0x0000000000200000, physical 0x0000000000200000:
 53 miliseconds.
 
 With caching, the function is 1800% faster!

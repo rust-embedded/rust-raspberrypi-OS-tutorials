@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * Copyright (c) 2018 Andre Richter <andre.o.richter@gmail.com>
+ * Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +22,6 @@
  * SOFTWARE.
  */
 
-use super::MMIO_BASE;
 use crate::delays;
 use crate::gpio;
 use crate::mbox;
@@ -120,8 +119,6 @@ register_bitfields! {
     ]
 }
 
-pub const UART_PHYS_BASE: u32 = MMIO_BASE + 0x20_1000;
-
 #[allow(non_snake_case)]
 #[repr(C)]
 pub struct RegisterBlock {
@@ -143,7 +140,7 @@ pub enum UartError {
 pub type Result<T> = ::core::result::Result<T, UartError>;
 
 pub struct Uart {
-    uart_base: u32,
+    base_addr: usize,
 }
 
 impl ops::Deref for Uart {
@@ -155,13 +152,13 @@ impl ops::Deref for Uart {
 }
 
 impl Uart {
-    pub fn new(uart_base: u32) -> Uart {
-        Uart { uart_base }
+    pub fn new(base_addr: usize) -> Uart {
+        Uart { base_addr }
     }
 
     /// Returns a pointer to the register block
     fn ptr(&self) -> *const RegisterBlock {
-        self.uart_base as *const _
+        self.base_addr as *const _
     }
 
     ///Set baud rate and characteristics (115200 8N1) and map to GPIO

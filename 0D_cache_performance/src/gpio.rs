@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * Copyright (c) 2018 Andre Richter <andre.o.richter@gmail.com>
+ * Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +22,6 @@
  * SOFTWARE.
  */
 
-use super::MMIO_BASE;
 use core::ops;
 use register::{mmio::ReadWrite, register_bitfields};
 
@@ -67,8 +66,6 @@ register_bitfields! {
     ]
 }
 
-const GPIO_BASE: u32 = MMIO_BASE + 0x200_000;
-
 #[allow(non_snake_case)]
 #[repr(C)]
 pub struct RegisterBlock {
@@ -99,23 +96,25 @@ pub struct RegisterBlock {
 }
 
 /// Public interface to the GPIO MMIO area
-pub struct GPIO;
+pub struct GPIO {
+    base_addr: usize,
+}
 
 impl ops::Deref for GPIO {
     type Target = RegisterBlock;
 
     fn deref(&self) -> &Self::Target {
-        unsafe { &*Self::ptr() }
+        unsafe { &*self.ptr() }
     }
 }
 
 impl GPIO {
-    pub fn new() -> GPIO {
-        GPIO
+    pub fn new(base_addr: usize) -> GPIO {
+        GPIO { base_addr }
     }
 
     /// Returns a pointer to the register block
-    fn ptr() -> *const RegisterBlock {
-        GPIO_BASE as *const _
+    fn ptr(&self) -> *const RegisterBlock {
+        self.base_addr as *const _
     }
 }

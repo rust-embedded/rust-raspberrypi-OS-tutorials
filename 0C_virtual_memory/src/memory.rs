@@ -22,8 +22,6 @@
  * SOFTWARE.
  */
 
-use crate::println;
-use core::fmt;
 use core::ops::RangeInclusive;
 
 pub mod mmu;
@@ -45,6 +43,10 @@ pub mod map {
     pub mod virt {
         pub const KERN_STACK_START:    usize =             super::START;
         pub const KERN_STACK_END:      usize =             0x0007_FFFF;
+
+        // The last 4 KiB slot in the first 2 MiB
+        pub const REMAPPED_UART_BASE:  usize =             0x001F_F000;
+        pub const REMAPPED_UART_END:   usize =             0x001F_FFFF;
     }
 }
 
@@ -53,11 +55,9 @@ pub mod map {
 pub mod kernel_mem_range {
     use core::ops::RangeInclusive;
 
-    #[allow(dead_code)]
     #[derive(Copy, Clone)]
     pub enum MemAttributes {
         CacheableDRAM,
-        NonCacheableDRAM,
         Device,
     }
 
@@ -67,7 +67,6 @@ pub mod kernel_mem_range {
         ReadWrite,
     }
 
-    #[allow(dead_code)]
     #[derive(Copy, Clone)]
     pub enum Translation {
         Identity,
@@ -92,7 +91,6 @@ pub mod kernel_mem_range {
     }
 
     pub struct Descriptor {
-        pub name: &'static str,
         pub virtual_range: fn() -> RangeInclusive<usize>,
         pub translation: Translation,
         pub attribute_fields: AttributeFields,
@@ -106,9 +104,9 @@ use kernel_mem_range::*;
 ///
 /// Contains only special ranges, aka anything that is _not_ normal cacheable
 /// DRAM.
-static KERNEL_VIRTUAL_LAYOUT: [Descriptor; 4] = [
+static KERNEL_VIRTUAL_LAYOUT: [Descriptor; 5] = [
+    // Kernel stack
     Descriptor {
-        name: "Kernel stack",
         virtual_range: || {
             RangeInclusive::new(map::virt::KERN_STACK_START, map::virt::KERN_STACK_END)
         },
@@ -119,8 +117,8 @@ static KERNEL_VIRTUAL_LAYOUT: [Descriptor; 4] = [
             execute_never: true,
         },
     },
+    // Kernel code and RO data
     Descriptor {
-        name: "Kernel code and RO data",
         virtual_range: || {
             // Using the linker script, we ensure that the RO area is consecutive and 4
             // KiB aligned, and we export the boundaries via symbols:
@@ -152,8 +150,8 @@ static KERNEL_VIRTUAL_LAYOUT: [Descriptor; 4] = [
             execute_never: false,
         },
     },
+    // Kernel data and BSS
     Descriptor {
-        name: "Kernel data and BSS",
         virtual_range: || {
             extern "C" {
                 static __ro_end: u64;
@@ -174,8 +172,20 @@ static KERNEL_VIRTUAL_LAYOUT: [Descriptor; 4] = [
             execute_never: true,
         },
     },
+    // Remapped UART
     Descriptor {
-        name: "Device MMIO",
+        virtual_range: || {
+            RangeInclusive::new(map::virt::REMAPPED_UART_BASE, map::virt::REMAPPED_UART_END)
+        },
+        translation: Translation::Offset(map::physical::UART_BASE),
+        attribute_fields: AttributeFields {
+            mem_attributes: MemAttributes::Device,
+            acc_perms: AccessPermissions::ReadWrite,
+            execute_never: true,
+        },
+    },
+    // Device MMIO
+    Descriptor {
         virtual_range: || RangeInclusive::new(map::physical::MMIO_BASE, map::physical::MMIO_END),
         translation: Translation::Identity,
         attribute_fields: AttributeFields {
@@ -208,61 +218,4 @@ fn get_virt_addr_properties(virt_addr: usize) -> Result<(usize, AttributeFields)
     }
 
     Ok((virt_addr, AttributeFields::default()))
-}
-
-/// Human-readable output of a Descriptor.
-impl fmt::Display for Descriptor {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        // Call the function to which self.range points, and dereference the
-        // result, which causes Rust to copy the value.
-        let start = *(self.virtual_range)().start();
-        let end = *(self.virtual_range)().end();
-        let size = end - start + 1;
-
-        // log2(1024)
-        const KIB_RSHIFT: u32 = 10;
-
-        // log2(1024 * 1024)
-        const MIB_RSHIFT: u32 = 20;
-
-        let (size, unit) = if (size >> MIB_RSHIFT) > 0 {
-            (size >> MIB_RSHIFT, "MiB")
-        } else if (size >> KIB_RSHIFT) > 0 {
-            (size >> KIB_RSHIFT, "KiB")
-        } else {
-            (size, "Byte")
-        };
-
-        let attr = match self.attribute_fields.mem_attributes {
-            MemAttributes::CacheableDRAM => "C",
-            MemAttributes::NonCacheableDRAM => "NC",
-            MemAttributes::Device => "Dev",
-        };
-
-        let acc_p = match self.attribute_fields.acc_perms {
-            AccessPermissions::ReadOnly => "RO",
-            AccessPermissions::ReadWrite => "RW",
-        };
-
-        let xn = if self.attribute_fields.execute_never {
-            "PXN"
-        } else {
-            "PX"
-        };
-
-        write!(
-            f,
-            "      {:#010X} - {:#010X} | {: >3} {} | {: <3} {} {: <3} | {}",
-            start, end, size, unit, attr, acc_p, xn, self.name
-        )
-    }
-}
-
-/// Print the kernel memory layout.
-pub fn print_layout() {
-    println!("[i] Kernel memory layout:");
-
-    for i in KERNEL_VIRTUAL_LAYOUT.iter() {
-        println!("{}", i);
-    }
 }

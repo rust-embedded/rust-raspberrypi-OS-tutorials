@@ -47,8 +47,8 @@ static CONSOLE: sync::NullLock<devices::virt::Console> =
 /// non-cacheable in the page tables.
 static DMA_ALLOCATOR: sync::NullLock<memory::BumpAllocator> =
     sync::NullLock::new(memory::BumpAllocator::new(
-        memory::map::DMA_HEAP_START as usize,
-        memory::map::DMA_HEAP_END as usize,
+        memory::map::virt::DMA_HEAP_START as usize,
+        memory::map::virt::DMA_HEAP_END as usize,
         "Global DMA Allocator",
     ));
 
@@ -63,12 +63,12 @@ fn kernel_entry() -> ! {
     //------------------------------------------------------------
     // Instantiate GPIO device
     //------------------------------------------------------------
-    let gpio = hw::GPIO::new(memory::map::GPIO_BASE);
+    let gpio = hw::GPIO::new(memory::map::physical::GPIO_BASE);
 
     //------------------------------------------------------------
     // Instantiate MiniUart
     //------------------------------------------------------------
-    let mini_uart = hw::MiniUart::new(memory::map::MINI_UART_BASE);
+    let mini_uart = hw::MiniUart::new(memory::map::physical::MINI_UART_BASE);
     mini_uart.init(&gpio);
 
     CONSOLE.lock(|c| {
@@ -87,24 +87,26 @@ fn kernel_entry() -> ! {
     });
     println!("Greetings fellow Rustacean!");
 
-    //------------------------------------------------------------
-    // Bring up memory subsystem
-    //------------------------------------------------------------
-    print!("[2] Switching MMU on now... ");
-    unsafe { memory::mmu::init() };
-    println!("MMU online.");
-
-    memory::print_layout();
-
     // We are now in a state where every next step can fail, but we can handle
     // the error with feedback for the user and fall through to our UART
     // loopback.
     'init: {
         //------------------------------------------------------------
+        // Bring up memory subsystem
+        //------------------------------------------------------------
+        if unsafe { memory::mmu::init() }.is_err() {
+            println!("[2][Error] Could not set up MMU. Aborting.");
+            break 'init;
+        };
+        println!("[2] MMU online.");
+
+        memory::print_layout();
+
+        //------------------------------------------------------------
         // Instantiate Videocore Mailbox
         //------------------------------------------------------------
         let mut v_mbox;
-        match hw::VideocoreMbox::new(memory::map::VIDEOCORE_MBOX_BASE) {
+        match hw::VideocoreMbox::new(memory::map::physical::VIDEOCORE_MBOX_BASE) {
             Ok(i) => {
                 println!("[3] Videocore Mailbox set up (DMA mem heap allocation successful).");
                 v_mbox = i;
@@ -119,7 +121,7 @@ fn kernel_entry() -> ! {
         //------------------------------------------------------------
         // Instantiate PL011 UART and replace MiniUart with it in CONSOLE
         //------------------------------------------------------------
-        let pl011_uart = hw::PL011Uart::new(memory::map::PL011_UART_BASE);
+        let pl011_uart = hw::PL011Uart::new(memory::map::physical::PL011_UART_BASE);
 
         // uart.init() will reconfigure the GPIO, which causes a race against
         // the MiniUart that is still putting out characters on the physical

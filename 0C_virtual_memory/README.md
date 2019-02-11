@@ -65,3 +65,18 @@ kernel8::mmu::init::h53df3fab6e51e098:
    80778:       0d a2 18 d5     msr     MAIR_EL1, x13
    ...
 ```
+
+## Output
+
+```console
+ferris@box:~$ make raspboot
+
+[0] UART is live!
+[1] Press a key to continue booting... Greetings fellow Rustacean!
+[i] MMU: 4 KiB granule supported!
+[i] MMU: Up to 40 Bit physical address range supported!
+[2] MMU online.
+
+Writing through the virtual mapping at 0x00000000001FF000.
+
+```

@@ -23,9 +23,9 @@
  */
 
 mod gpio;
-mod pl011_uart;
+mod uart;
 mod videocore_mbox;
 
 pub use gpio::GPIO;
-pub use pl011_uart::PL011Uart;
+pub use uart::Uart;
 pub use videocore_mbox::VideocoreMbox;

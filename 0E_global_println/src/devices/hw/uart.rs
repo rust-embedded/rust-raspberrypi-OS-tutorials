@@ -135,16 +135,16 @@ pub struct RegisterBlock {
     ICR: WriteOnly<u32, ICR::Register>,   // 0x44
 }
 
-pub enum PL011UartError {
+pub enum UartError {
     MailboxError,
 }
-pub type Result<T> = ::core::result::Result<T, PL011UartError>;
+pub type Result<T> = ::core::result::Result<T, UartError>;
 
-pub struct PL011Uart {
-    base_addr: u32,
+pub struct Uart {
+    base_addr: usize,
 }
 
-impl ops::Deref for PL011Uart {
+impl ops::Deref for Uart {
     type Target = RegisterBlock;
 
     fn deref(&self) -> &Self::Target {
@@ -152,9 +152,9 @@ impl ops::Deref for PL011Uart {
     }
 }
 
-impl PL011Uart {
-    pub fn new(base_addr: u32) -> PL011Uart {
-        PL011Uart { base_addr }
+impl Uart {
+    pub fn new(base_addr: usize) -> Uart {
+        Uart { base_addr }
     }
 
     /// Returns a pointer to the register block
@@ -188,7 +188,7 @@ impl PL011Uart {
         compiler_fence(Ordering::Release);
 
         if v_mbox.call(videocore_mbox::channel::PROP).is_err() {
-            return Err(PL011UartError::MailboxError); // Abort if UART clocks couldn't be set
+            return Err(UartError::MailboxError); // Abort if UART clocks couldn't be set
         };
 
         // map UART0 to GPIO pins
@@ -217,14 +217,14 @@ impl PL011Uart {
     }
 }
 
-impl Drop for PL011Uart {
+impl Drop for Uart {
     fn drop(&mut self) {
         self.CR
             .write(CR::UARTEN::Disabled + CR::TXE::Disabled + CR::RXE::Disabled);
     }
 }
 
-impl ConsoleOps for PL011Uart {
+impl ConsoleOps for Uart {
     /// Send a character
     fn putc(&self, c: char) {
         // wait until we can send

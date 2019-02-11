@@ -87,7 +87,7 @@ const MBOX_SIZE: usize = 36;
 // Public interface to the mailbox
 pub struct VideocoreMbox<'a> {
     pub buffer: &'a mut [u32],
-    base_addr: u32,
+    base_addr: usize,
 }
 
 /// Deref to RegisterBlock
@@ -109,7 +109,7 @@ impl<'a> ops::Deref for VideocoreMbox<'a> {
 }
 
 impl<'a> VideocoreMbox<'a> {
-    pub fn new(base_addr: u32) -> ::core::result::Result<VideocoreMbox<'a>, ()> {
+    pub fn new(base_addr: usize) -> ::core::result::Result<VideocoreMbox<'a>, ()> {
         let ret = crate::DMA_ALLOCATOR.lock(|d| d.alloc_slice_zeroed(MBOX_SIZE, MBOX_ALIGNMENT));
 
         if ret.is_err() {

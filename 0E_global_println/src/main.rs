@@ -50,17 +50,17 @@ fn kernel_entry() -> ! {
     //------------------------------------------------------------
     // Instantiate GPIO device
     //------------------------------------------------------------
-    let gpio = hw::GPIO::new(memory::map::GPIO_BASE);
+    let gpio = hw::GPIO::new(memory::map::physical::GPIO_BASE);
 
     //------------------------------------------------------------
     // Instantiate Videocore Mailbox
     //------------------------------------------------------------
-    let mut v_mbox = hw::VideocoreMbox::new(memory::map::VIDEOCORE_MBOX_BASE);
+    let mut v_mbox = hw::VideocoreMbox::new(memory::map::physical::VIDEOCORE_MBOX_BASE);
 
     //------------------------------------------------------------
     // Instantiate PL011 UART and put it in CONSOLE
     //------------------------------------------------------------
-    let uart = hw::PL011Uart::new(memory::map::PL011_UART_BASE);
+    let uart = hw::Uart::new(memory::map::physical::UART_BASE);
 
     match uart.init(&mut v_mbox, &gpio) {
         Ok(_) => {
@@ -89,9 +89,11 @@ fn kernel_entry() -> ! {
     //------------------------------------------------------------
     // Bring up memory subsystem
     //------------------------------------------------------------
-    print!("[2] Switching MMU on now... ");
-    unsafe { memory::mmu::init() };
-    println!("MMU online.");
+    if unsafe { memory::mmu::init() }.is_err() {
+        println!("[2][Error] Could not set up MMU. Aborting.");
+    } else {
+        println!("[2] MMU online.");
+    }
 
     memory::print_layout();
 

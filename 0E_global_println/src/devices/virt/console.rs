@@ -47,12 +47,12 @@ impl ConsoleOps for NullConsole {}
 /// Possible outputs which the console can store.
 pub enum Output {
     None(NullConsole),
-    PL011Uart(hw::PL011Uart),
+    Uart(hw::Uart),
 }
 
-impl From<hw::PL011Uart> for Output {
-    fn from(instance: hw::PL011Uart) -> Self {
-        Output::PL011Uart(instance)
+impl From<hw::Uart> for Output {
+    fn from(instance: hw::Uart) -> Self {
+        Output::Uart(instance)
     }
 }
 
@@ -71,7 +71,7 @@ impl Console {
     fn current_ptr(&self) -> &dyn ConsoleOps {
         match &self.output {
             Output::None(i) => i,
-            Output::PL011Uart(i) => i,
+            Output::Uart(i) => i,
         }
     }
 

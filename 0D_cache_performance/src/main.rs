@@ -26,19 +26,17 @@
 #![no_main]
 #![feature(range_contains)]
 
-const MMIO_BASE: u32 = 0x3F00_0000;
-
 mod benchmark;
 mod delays;
 mod gpio;
 mod mbox;
-mod mmu;
+mod memory;
 mod uart;
 
 fn kernel_entry() -> ! {
-    let gpio = gpio::GPIO::new();
-    let mut mbox = mbox::Mbox::new();
-    let uart = uart::Uart::new(uart::UART_PHYS_BASE);
+    let gpio = gpio::GPIO::new(memory::map::physical::GPIO_BASE);
+    let mut mbox = mbox::Mbox::new(memory::map::physical::VIDEOCORE_MBOX_BASE);
+    let uart = uart::Uart::new(memory::map::physical::UART_BASE);
 
     // set up serial console
     match uart.init(&mut mbox, &gpio) {
@@ -52,11 +50,14 @@ fn kernel_entry() -> ! {
     uart.getc();
     uart.puts("Greetings fellow Rustacean!\n");
 
-    uart.puts("[2] Switching MMU on now... ");
-
-    unsafe { mmu::init() };
-
-    uart.puts("MMU is live \\o/\n\n");
+    match unsafe { memory::mmu::init() } {
+        Err(s) => {
+            uart.puts("[2][Error] MMU: ");
+            uart.puts(s);
+            uart.puts("\n");
+        }
+        Ok(()) => uart.puts("[2] MMU online.\n"),
+    }
 
     benchmark::run(&uart);
 

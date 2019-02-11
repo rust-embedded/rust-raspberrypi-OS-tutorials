@@ -258,29 +258,35 @@ unsafe { core::ptr::read_volatile(big_addr as *mut u64) };
 ```
 
 Finally, this triggers our exception code, because we try to read from a virtual address for which no address translations have been installed. Remember, we only installed identity-mapped page tables for the first 1 GiB of address space in lesson `0C`.
-After the exception handler is finished, it returns to the first instruction after the memory read that caused the exception:
+After the exception handler is finished, it returns to the first instruction
+after the memory read that caused the exception.
+
+## Output
 
 ```console
 ferris@box:~$ make raspboot
+
 [0] MiniUart online.
 [1] Press a key to continue booting... Greetings fellow Rustacean!
-[2] Switching MMU on now... MMU online.
-[i] Memory layout:
-      0x00000000 - 0x0007FFFF |  512 KiB | Kernel stack
-      0x00080000 - 0x00084FFF |   20 KiB | Kernel code and RO data
-      0x00085000 - 0x00088007 |   12 KiB | Kernel data and BSS
-      0x00200000 - 0x005FFFFF |    4 MiB | DMA heap pool
-      0x3F000000 - 0x3FFFFFFF |   16 MiB | Device MMIO
+[2] MMU online.
+[i] Kernel memory layout:
+      0x00000000 - 0x0007FFFF | 512 KiB | C   RW PXN | Kernel stack
+      0x00080000 - 0x00084FFF |  20 KiB | C   RO PX  | Kernel code and RO data
+      0x00085000 - 0x0008800F |  12 KiB | C   RW PXN | Kernel data and BSS
+      0x00200000 - 0x005FFFFF |   4 MiB | NC  RW PXN | DMA heap pool
+      0x3F000000 - 0x3FFFFFFF |  16 MiB | Dev RW PXN | Device MMIO
 [i] Global DMA Allocator:
       Allocated Addr 0x00200000 Size 0x90
 [3] Videocore Mailbox set up (DMA mem heap allocation successful).
 [4] PL011 UART online. Output switched to it.
 [5] Exception vectors are set up.
 [!] A synchronous exception happened.
-      ELR_EL1: 0x000809C0
+      ELR_EL1: 0x00080C20
       Incrementing ELR_EL1 by 4 now to continue with the first instruction after the exception!
-      ELR_EL1 modified: 0x000809C4
+      ELR_EL1 modified: 0x00080C24
       Returning from exception...
 
 [i] Whoa! We recovered from an exception.
+
+$>
 ```
