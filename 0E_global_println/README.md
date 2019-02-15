@@ -17,12 +17,12 @@ ferris@box:~$ make raspboot
 
 [0] UART is live!
 [1] Press a key to continue booting... Greetings fellow Rustacean!
-[2] Switching MMU on now... MMU online.
-[i] Memory layout:
-      0x00000000 - 0x0007FFFF |  512 KiB | Kernel stack
-      0x00080000 - 0x00082FFF |   12 KiB | Kernel code and RO data
-      0x00083000 - 0x00085007 |    8 KiB | Kernel data and BSS
-      0x3F000000 - 0x3FFFFFFF |   16 MiB | Device MMIO
+[2] MMU online.
+[i] Kernel memory layout:
+      0x00000000 - 0x0007FFFF | 512 KiB | C   RW PXN | Kernel stack
+      0x00080000 - 0x00082FFF |  12 KiB | C   RO PX  | Kernel code and RO data
+      0x00083000 - 0x0008500F |   8 KiB | C   RW PXN | Kernel data and BSS
+      0x3F000000 - 0x3FFFFFFF |  16 MiB | Dev RW PXN | Device MMIO
 
 $>
 ```
