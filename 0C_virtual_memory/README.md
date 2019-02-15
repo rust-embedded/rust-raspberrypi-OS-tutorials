@@ -27,6 +27,13 @@ Hopefully, in a later tutorial, we will write or use (e.g. from the `cortex-a`
 crate) proper modules for page table handling, that, among others, cover topics
 such as using recursive mapping for maintenace.
 
+## Adress translation with the 4 KiB LVL3 table
+
+The following block diagram shows address translation by example of the UART's
+Control Register (CR).
+
+![4 KiB translation block diagram](../doc/page_tables_4KiB.png)
+
 ## Zero-cost abstraction
 
 The MMU init code is a good example to see the great potential of Rust's
