@@ -60,6 +60,8 @@ fn kernel_entry() -> ! {
                 uart.puts(s);
                 uart.puts("\n");
             }
+            // The following write is already using the identity mapped
+            // translation in the LVL2 table.
             Ok(()) => uart.puts("[2] MMU online.\n"),
         }
     } // After this closure, the UART instance is not valid anymore.
@@ -68,7 +70,7 @@ fn kernel_entry() -> ! {
     // again, though.
     let uart = uart::Uart::new(memory::map::virt::REMAPPED_UART_BASE);
 
-    uart.puts("\nWriting through the virtual mapping at 0x");
+    uart.puts("\nWriting through the virtual mapping at base address 0x");
     uart.hex(memory::map::virt::REMAPPED_UART_BASE as u64);
     uart.puts(".\n");
 
