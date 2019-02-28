@@ -57,12 +57,28 @@ pub fn setup_debug() {
 
 After enabling debugger, it goes empty loop to wait debugger connection.
 
+## Installing Openocd on Ubuntu 18.04
+
+Unfortunately, openocd from apt on Ubuntu 18.04 does not support aarch64; we need to build it.
+
+```bash
+sudo apt install build-essential automake libtool libudev-dev pkg-config libusb-1.0-0-dev gcc-6
+git clone https://github.com/daniel-k/openocd.git openocd-armv8
+cd openocd-armv8
+git checkout origin/armv8
+./bootstrap
+CC=gcc-6 ./configure --enable-ftdi
+# Error on gcc 7.3
+make
+sudo make install
+```
+
 ## Running debugger
 
 Run openocd with config files.
 
 ```console
-$ ./openocd.exe -f olimex-arm-usb-tiny-h.cfg -f rpi3.cfg
+$ sudo openocd -f olimex-arm-usb-tiny-h.cfg -f rpi3.cfg
 Open On-Chip Debugger 0.9.0-dev-gb796a58 (2019-02-19-01:36)
 Licensed under GNU GPL v2
 For bug reports, read
