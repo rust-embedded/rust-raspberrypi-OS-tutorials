@@ -2,23 +2,13 @@
 
 Debugging with a debugger is very effective, but it's a bit difficult on our Raspberry Pi. 
 
-[The Embedded Rust Book mentions](https://rust-embedded.github.io/book/start/hardware.html) about using debugger on `STM32F3DISCOVERY`, however, there are some differences from our environment. First, we need a config file (`xxx.cfg`) to use openocd with Raspberry Pi. Second, unlike `STM32F3DISCOVERY`, Raspberry Pi does not have embedded debugger on it's board; it means we need to get, connect, and setup it.
-
-
-## Config file
-
-Thanks to [daniel-k](https://github.com/daniel-k), config file for Raspberry Pi3 is already there.
-
-https://github.com/daniel-k/openocd/blob/armv8/tcl/target/rpi3.cfg
-
-https://github.com/daniel-k/openocd/blob/armv8/tcl/interface/olimex-arm-usb-tiny-h.cfg
+[The Embedded Rust Book mentions](https://rust-embedded.github.io/book/start/hardware.html) about using debugger on `STM32F3DISCOVERY`, however, there are some differences from our environment. The biggest one is lack of debugger hardware. Unlike `STM32F3DISCOVERY`, Raspberry Pi does not have embedded debugger on it's board; it means we need to get, connect, and setup it.
 
 ## Hardware debugger
 
 A debugger `ARM-USB-TINY-H` made by OLIMEX has tested with Raspberry Pi3 and openocd.
 
 https://www.olimex.com/Products/ARM/JTAG/ARM-USB-TINY-H/
-
 
 It has standard [ARM JTAG 20 connector](http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0499dj/BEHEIHCE.html), but unfortunately, Raspberry Pi doesn't; we have to connect like following:
 
@@ -36,7 +26,7 @@ It has standard [ARM JTAG 20 connector](http://infocenter.arm.com/help/index.jsp
 
 ## debugger.rs
 
-At last, GPIO pins have to be changed to alternative functions like using UART0. In this tutorial, `debugger.rs` sets the pins JTAG functions(all of them are assigned to Alt4) from default.
+And, GPIO pins have to be changed to alternative functions. In this tutorial, `debugger.rs` sets the pins JTAG functions(all of them are assigned to Alt4) from the default.
 
 ```rust
 pub fn setup_debug() {
@@ -57,28 +47,15 @@ pub fn setup_debug() {
 
 After enabling debugger, it goes empty loop to wait debugger connection.
 
-## Installing Openocd on Ubuntu 18.04
+## Running debugger on Linux with Docker
 
-Unfortunately, openocd from apt on Ubuntu 18.04 does not support aarch64; we need to build it.
+Using pre-built docker image like following command is easier way. This is tested on Ubuntu18.04.
 
-```bash
-sudo apt install build-essential automake libtool libudev-dev pkg-config libusb-1.0-0-dev gcc-6
-git clone https://github.com/daniel-k/openocd.git openocd-armv8
-cd openocd-armv8
-git checkout origin/armv8
-./bootstrap
-CC=gcc-6 ./configure --enable-ftdi
-# Error on gcc 7.3
-make
-sudo make install
-```
-
-## Running debugger
-
-Run openocd with config files.
+Note that a device you have to specify in this command (`--device=XXX`) may be attached on different point on your machine. You can find it on `syslog` after you connect the debugger to your PC. It's like `/dev/ttyUSB0` on Ubuntu.
 
 ```console
-$ sudo openocd -f olimex-arm-usb-tiny-h.cfg -f rpi3.cfg
+$ sudo docker run -p 3333:3333 -p 4444:4444 --rm --privileged --device=/dev/ttyUSB0 naotaco/openocd:armv8 /bin/sh -c "cd openocd-armv8 && openocd -f tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f tcl/target/rpi3.cfg"
+
 Open On-Chip Debugger 0.9.0-dev-gb796a58 (2019-02-19-01:36)
 Licensed under GNU GPL v2
 For bug reports, read
@@ -94,8 +71,7 @@ Info : rpi3.cpu2: hardware has 6 breakpoints, 4 watchpoints
 Info : rpi3.cpu3: hardware has 6 breakpoints, 4 watchpoints
 ```
 
-Then, from another console, connect to openocd, halt, and show status.  
-In this timing, value of `pc` may point an address of the empty loop.
+Then, from another console, use telnet to connect to openocd. Type `targets` to show status.
 
 ```console
 $ telnet localhost 4444
@@ -112,6 +88,13 @@ Open On-Chip Debugger
  1  rpi3.cpu1          aarch64    little rpi3.dap           running
  2  rpi3.cpu2          aarch64    little rpi3.dap           running
  3* rpi3.cpu3          aarch64    little rpi3.dap           running
+```
+
+If the Raspberry Pi is running and configured correctly, `State` will be `running`.
+
+You can change target cpu and break it.
+
+```console
 > targets rpi3.cpu # switch to core0
 > halt # stop CPU
 number of cache level 2
@@ -125,36 +108,43 @@ MMU: disabled, D-Cache: disabled, I-Cache: disabled
 ===== arm v8 registers
 (0) x0 (/64): 0x0000000000000000 (dirty)
 (1) x1 (/64): 0x0000000000080000
-(2) x2 (/64): 0x0000000000000000
-(3) x3 (/64): 0x0000000000000000
-(4) x4 (/64): 0x0000000000080000
-(5) x5 (/64): 0x0CE3728200000000
-(6) x6 (/64): 0x0000000000000000
-(7) x7 (/64): 0xE28EFFCBBC0D3F9A
-(8) x8 (/64): 0x000000003F200008
-(9) x9 (/64): 0x00000000086DB6C0
-(10) x10 (/64): 0x000000000001B6DB
-(11) x11 (/64): 0xFF706A1100000A6D
-(12) x12 (/64): 0xB2751590048043E9
-(13) x13 (/64): 0x240C9001B556D979
-(14) x14 (/64): 0x1494449B68400832
-(15) x15 (/64): 0x853041015D66C079
-(16) x16 (/64): 0xE0F0E480C0062E13
-(17) x17 (/64): 0x108108403B144270
-(18) x18 (/64): 0xA3F81384D91212E8
-(19) x19 (/64): 0xD4E85D8097C27EF2
-(20) x20 (/64): 0xA5099B470000006C
-(21) x21 (/64): 0x942A4C8000000000
-(22) x22 (/64): 0x44C30A969D494FF5
-(23) x23 (/64): 0x9CF7E1042808C5F4
-(24) x24 (/64): 0xE1CCA0080D449422
-(25) x25 (/64): 0xD18B1214B42A6E80
-(26) x26 (/64): 0xA5D0885000301356
-(27) x27 (/64): 0x326A69826505DD40
-(28) x28 (/64): 0xE1BF1305A2205551
+...
 (29) x29 (/64): 0xE55C2E08279A78D0
 (30) x30 (/64): 0x0000000000080080
 (31) sp (/64): 0x0000000000080000
 (32) pc (/64): 0x000000000008004C
 (33) CPSR (/32): 0x600003C9
 ```
+
+In this timing, value of `pc` may point an address of the empty loop.
+
+
+## Build/setup openocd directly
+
+Alternatively, you can build openocd to install to your local machine.
+
+### Installing Openocd on Ubuntu 18.04
+
+Unfortunately, openocd from apt on Ubuntu 18.04 does not support ARMv8; we need to build it.
+
+```bash
+sudo apt install build-essential automake libtool libudev-dev pkg-config libusb-1.0-0-dev gcc-6
+git clone https://github.com/daniel-k/openocd.git openocd-armv8
+cd openocd-armv8
+git checkout origin/armv8
+./bootstrap
+CC=gcc-6 ./configure --enable-ftdi
+# Error on gcc 7.3
+make
+sudo make install
+```
+
+### Running debugger
+
+```console
+# go to the repository you built to find config files
+$ cd openocd-armv8
+$ sudo openocd -f tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f tcl/target/rpi3.cfg
+```
+
+Now it waits connection at 3333/4444; you can connect as same as when using docker.
