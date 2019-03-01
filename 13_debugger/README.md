@@ -20,6 +20,7 @@ It has standard [ARM JTAG 20 connector](http://infocenter.arm.com/help/index.jsp
 | 26    | TDI   | 5     |         |
 | 27    | TMS   | 7     |         |
 | 25    | TCK   | 9     |         |
+| 23    | RTCK  | 11    |         |
 | 24    | TDO   | 13    |         |
 
 ![Connected debugger](doc/raspi3-arm-usb-tiny-h.jpg)
