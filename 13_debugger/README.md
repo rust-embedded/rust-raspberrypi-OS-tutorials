@@ -25,6 +25,8 @@ It has standard [ARM JTAG 20 connector](http://infocenter.arm.com/help/index.jsp
 
 ![Connected debugger](doc/raspi3-arm-usb-tiny-h.jpg)
 
+![wiring](doc/rapi3-jtag-wiring.png)
+
 ## debugger.rs
 
 And, GPIO pins have to be changed to alternative functions. In this tutorial, `debugger.rs` sets the pins JTAG functions(all of them are assigned to Alt4) from the default.
