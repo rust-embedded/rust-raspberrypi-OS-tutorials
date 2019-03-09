@@ -1,4 +1,4 @@
-# Tutorial 0B - Exception Levels
+# Tutorial 0C - Exception Levels
 
 In `AArch64`, there are four so-called exception levels:
 

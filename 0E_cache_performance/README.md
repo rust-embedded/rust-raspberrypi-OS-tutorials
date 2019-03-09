@@ -1,4 +1,4 @@
-# Tutorial 0D - Cache Performance
+# Tutorial 0E - Cache Performance
 
 Now that we finally have virtual memory capabilities available, we also have
 fine grained control over `cacheability`. You've caught a glimpse already in the

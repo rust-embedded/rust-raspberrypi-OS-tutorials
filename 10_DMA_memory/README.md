@@ -1,4 +1,4 @@
-# Tutorial 0F - DMA Memory
+# Tutorial 10 - DMA Memory
 
 Coming soon!
 

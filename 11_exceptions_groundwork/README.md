@@ -1,4 +1,4 @@
-# Tutorial 10 - Exceptions: Groundwork
+# Tutorial 11 - Exceptions: Groundwork
 
 
 In this tutorial, we lay the groundwork for taking exceptions, and write a very bare-bones handler for a synchronous exception that happens in `EL1`.
