@@ -26,7 +26,6 @@
 #![deny(missing_docs)]
 #![deny(warnings)]
 #![no_std]
-#![feature(global_asm)]
 
 //! Low-level boot of the Raspberry's processor
 
@@ -49,8 +48,7 @@ macro_rules! entry {
 /// Reset function.
 ///
 /// Initializes the bss section before calling into the user's `main()`.
-#[no_mangle]
-pub unsafe extern "C" fn reset() -> ! {
+unsafe fn reset() -> ! {
     extern "C" {
         // Boundaries of the .bss section, provided by the linker script
         static mut __bss_start: u64;
@@ -67,5 +65,26 @@ pub unsafe extern "C" fn reset() -> ! {
     main();
 }
 
-// Disable all cores except core 0, and then jump to reset()
-global_asm!(include_str!("boot_cores.S"));
+/// Entrypoint of the processor.
+///
+/// Parks all cores except core0, and then jumps to the internal
+/// `reset()` function.
+#[link_section = ".text.boot"]
+#[no_mangle]
+pub unsafe extern "C" fn _boot_cores() -> ! {
+    use cortex_a::{asm, regs::*};
+
+    const CORE_0: u64 = 0;
+    const CORE_MASK: u64 = 0x3;
+    const STACK_START: u64 = 0x80_000;
+
+    if CORE_0 == MPIDR_EL1.get() & CORE_MASK {
+        SP.set(STACK_START);
+        reset()
+    } else {
+        // if not core0, infinitely wait for events
+        loop {
+            asm::wfe();
+        }
+    }
+}
