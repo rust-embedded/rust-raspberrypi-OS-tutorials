@@ -1,4 +1,4 @@
-# Tutorial 0E - Global `println!`
+# Tutorial 0F - Global `println!`
 
 Coming soon!
 

@@ -1,4 +1,4 @@
-# Tutorial 0C - Virtual Memory
+# Tutorial 0D - Virtual Memory
 
 Virtual memory is an immensely complex, but exciting topic. In this first
 lesson, we start slow and switch on the MMU and use static page tables. We will
