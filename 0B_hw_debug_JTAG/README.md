@@ -6,7 +6,7 @@ processor's `Exception Level` or introducing `virtual memory`.
 
 A hardware based debugger can sometimes be the last resort when searching for a
 tricky bug. Especially for debugging intricate, architecture-specific HW issues,
-it will be handy, because in this area `QEMU` sometimes can not help, because it
+it will be handy, because in this area `QEMU` sometimes can not help, since it
 abstracts certain features of our RPi's HW and doesn't simulate down to the very
 last bit.
 
@@ -14,6 +14,11 @@ So lets introduce `JTAG` debugging. Once set up, it will allow us to single-step
 through our kernel on the real HW. How cool is that?!
 
 ![JTAG live demo](../doc/jtag_demo.gif)
+
+## Outline
+
+Functionally, this tutorial is the same as the previous one, where we reset or
+power down the RPi. Around that, we add infrastructure for JTAG debugging.
 
 ## Hardware
 
@@ -185,7 +190,7 @@ the minimal JTAG pin enablement binary).
 >>> break _boot_cores
 Breakpoint 1 at 0x80000
 >>> target remote :3333   # Connect to OpenOCD, raspi3.core0
->>> load kernel8_for_jtag # Load the kernel into the Raspi's DRAM over JTAG.
+>>> load                  # Load the kernel into the Raspi's DRAM over JTAG.
 Loading section .text, size 0x6cc lma 0x80000
 Loading section .rodata, size 0x9a lma 0x806cc
 Start address 0x80000, load size 1894
