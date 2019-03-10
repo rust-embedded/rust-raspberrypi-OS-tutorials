@@ -1,7 +1,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2018 Andre Richter <andre.o.richter@gmail.com>
+# Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -26,26 +26,34 @@ TARGET = aarch64-unknown-none
 
 SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) link.ld
 
-OBJCOPY = cargo objcopy --
+
+XRUSTC_CMD   = cargo xrustc --target=$(TARGET) --release
+CARGO_OUTPUT = target/$(TARGET)/release/kernel8
+
+OBJCOPY        = cargo objcopy --
 OBJCOPY_PARAMS = --strip-all -O binary
 
-UTILS_CONTAINER = andrerichter/raspi3-utils
-DOCKER_CMD = docker run -it --rm -v $(shell pwd):/work -w /work
-QEMU_CMD = qemu-system-aarch64 -M raspi3 -kernel kernel8.img
+CONTAINER_UTILS   = andrerichter/raspi3-utils
+
+DOCKER_CMD        = docker run -it --rm
+DOCKER_ARG_CURDIR = -v $(shell pwd):/work -w /work
+
+DOCKER_EXEC_QEMU     = qemu-system-aarch64 -M raspi3 -kernel kernel8.img
 
 .PHONY: all qemu clippy clean objdump nm
 
 all: clean kernel8.img
 
-target/$(TARGET)/release/kernel8: $(SOURCES)
-	cargo xbuild --target=$(TARGET) --release
+$(CARGO_OUTPUT): $(SOURCES)
+	$(XRUSTC_CMD)
 
-kernel8.img: target/$(TARGET)/release/kernel8
+kernel8.img: $(CARGO_OUTPUT)
 	cp $< .
 	$(OBJCOPY) $(OBJCOPY_PARAMS) $< kernel8.img
 
 qemu: all
-	$(DOCKER_CMD) $(UTILS_CONTAINER) $(QEMU_CMD) -serial stdio
+	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(CONTAINER_UTILS) \
+	$(DOCKER_EXEC_QEMU) -serial stdio
 
 clippy:
 	cargo xclippy --target=$(TARGET)

@@ -1,7 +1,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2018 Andre Richter <andre.o.richter@gmail.com>
+# Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -26,31 +26,44 @@ TARGET = aarch64-unknown-none
 
 SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) link.ld
 
-OBJCOPY = cargo objcopy --
+
+XRUSTC_CMD   = cargo xrustc --target=$(TARGET) --release
+CARGO_OUTPUT = target/$(TARGET)/release/kernel8
+
+OBJCOPY        = cargo objcopy --
 OBJCOPY_PARAMS = --strip-all -O binary
 
-UTILS_CONTAINER = andrerichter/raspi3-utils
-DOCKER_CMD = docker run -it --rm -v $(shell pwd):/work -w /work
-DOCKER_TTY = --privileged -v /dev:/dev
-QEMU_CMD = qemu-system-aarch64 -M raspi3 -kernel kernel8.img
-RASPBOOT_CMD = raspbootcom /dev/ttyUSB0 kernel8.img
+CONTAINER_UTILS   = andrerichter/raspi3-utils
+CONTAINER_OPENOCD = andrerichter/raspi3-openocd
+CONTAINER_GDB     = andrerichter/raspi3-gdb
 
-.PHONY: all qemu raspboot clippy clean objdump nm
+DOCKER_CMD        = docker run -it --rm
+DOCKER_ARG_CURDIR = -v $(shell pwd):/work -w /work
+DOCKER_ARG_TTY    = --privileged -v /dev:/dev
+DOCKER_ARG_JTAG   = -v $(shell pwd)/../X1_JTAG_boot:/jtag
+DOCKER_ARG_NET    = --network host
+
+DOCKER_EXEC_QEMU     = qemu-system-aarch64 -M raspi3 -kernel kernel8.img
+DOCKER_EXEC_RASPBOOT = raspbootcom /dev/ttyUSB0
+
+.PHONY: all qemu raspboot clippy clean objdump nm jtagboot openocd gdb gdb-opt0
 
 all: clean kernel8.img
 
-target/$(TARGET)/release/kernel8: $(SOURCES)
-	cargo xbuild --target=$(TARGET) --release
+$(CARGO_OUTPUT): $(SOURCES)
+	$(XRUSTC_CMD)
 
-kernel8.img: target/$(TARGET)/release/kernel8
+kernel8.img: $(CARGO_OUTPUT)
 	cp $< .
 	$(OBJCOPY) $(OBJCOPY_PARAMS) $< kernel8.img
 
 qemu: all
-	$(DOCKER_CMD) $(UTILS_CONTAINER) $(QEMU_CMD) -serial stdio
+	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(CONTAINER_UTILS) \
+	$(DOCKER_EXEC_QEMU) -serial stdio
 
 raspboot: all
-	$(DOCKER_CMD) $(DOCKER_TTY) $(UTILS_CONTAINER) $(RASPBOOT_CMD)
+	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(DOCKER_ARG_TTY) \
+	$(CONTAINER_UTILS) $(DOCKER_EXEC_RASPBOOT) kernel8.img
 
 clippy:
 	cargo xclippy --target=$(TARGET)
@@ -63,3 +76,23 @@ objdump:
 
 nm:
 	cargo nm --target $(TARGET) -- kernel8 | sort
+
+jtagboot:
+	$(DOCKER_CMD) $(DOCKER_ARG_TTY) $(DOCKER_ARG_JTAG) $(CONTAINER_UTILS) \
+	$(DOCKER_EXEC_RASPBOOT) /jtag/jtag_boot.img
+
+openocd:
+	$(DOCKER_CMD) $(DOCKER_ARG_TTY) $(DOCKER_ARG_NET) $(CONTAINER_OPENOCD)
+
+define gen_gdb
+	$(XRUSTC_CMD) -- $1
+	cp $(CARGO_OUTPUT) kernel8_for_jtag
+	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(DOCKER_ARG_NET) $(CONTAINER_GDB) \
+	gdb-multiarch -q kernel8_for_jtag
+endef
+
+gdb: clean $(SOURCES)
+	$(call gen_gdb,-C debuginfo=2)
+
+gdb-opt0: clean $(SOURCES)
+	$(call gen_gdb,-C debuginfo=2 -C opt-level=0)
