@@ -95,7 +95,7 @@ impl Power {
             compiler_fence(Ordering::Release);
 
             if mbox.call(mbox::channel::PROP).is_err() {
-                return Err(PowerError::MailboxError); // Abort if UART clocks couldn't be set
+                return Err(PowerError::MailboxError);
             };
         }
 
