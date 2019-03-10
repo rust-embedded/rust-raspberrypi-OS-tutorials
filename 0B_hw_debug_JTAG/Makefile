@@ -46,7 +46,7 @@ DOCKER_ARG_NET    = --network host
 DOCKER_EXEC_QEMU     = qemu-system-aarch64 -M raspi3 -kernel kernel8.img
 DOCKER_EXEC_RASPBOOT = raspbootcom /dev/ttyUSB0
 
-.PHONY: all qemu raspboot clippy clean objdump nm jtag
+.PHONY: all qemu raspboot clippy clean objdump nm jtagboot openocd gdb gdb-opt0
 
 all: clean kernel8.img
 
