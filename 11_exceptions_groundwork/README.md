@@ -257,7 +257,7 @@ let big_addr: u64 = 3 * 1024 * 1024 * 1024;
 unsafe { core::ptr::read_volatile(big_addr as *mut u64) };
 ```
 
-Finally, this triggers our exception code, because we try to read from a virtual address for which no address translations have been installed. Remember, we only installed identity-mapped page tables for the first 1 GiB of address space in lesson `0C`.
+Finally, this triggers our exception code, because we try to read from a virtual address for which no address translations have been installed. Remember, we only installed identity-mapped page tables for the first 1 GiB of address space in lesson `0D`.
 After the exception handler is finished, it returns to the first instruction
 after the memory read that caused the exception.
 
