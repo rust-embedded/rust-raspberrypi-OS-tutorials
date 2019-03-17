@@ -57,4 +57,5 @@ RUN set -ex;                                                            \
 
 COPY rpi3.cfg /openocd/
 
-ENTRYPOINT ["openocd", "-f", "/openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg", "-f", "/openocd/rpi3.cfg"]
+ENTRYPOINT ["openocd"]
+CMD ["-f", "/openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg", "-f", "/openocd/rpi3.cfg"]
