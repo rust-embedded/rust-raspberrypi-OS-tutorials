@@ -224,8 +224,8 @@ mod mair {
 
 /// Setup function for the MAIR_EL1 register.
 fn set_up_mair() {
-    // Define the three memory types that we will map. Cacheable and
-    // non-cacheable normal DRAM, and device.
+    // Define the memory types that we will map. Cacheable normal DRAM and
+    // device.
     MAIR_EL1.write(
         // Attribute 1
         MAIR_EL1::Attr1_HIGH::Memory_OuterWriteBack_NonTransient_ReadAlloc_WriteAlloc

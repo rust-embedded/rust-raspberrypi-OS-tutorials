@@ -98,6 +98,29 @@ and they are populated using `get_virt_addr_properties()` and a bunch of utility
 functions that convert our own descriptors to the actual `64 bit` descriptor
 entries needed by the MMU hardware for the page table arrays.
 
+Each page table has an entry (`AttrIndex`) that indexes into the
+[MAIR_EL1](http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ddi0500d/CIHDHJBB.html)
+register, which holds information about the cacheability of the respective
+page. We currently define normal cacheable memory and device memory (which is
+not cached).
+
+```rust
+/// Setup function for the MAIR_EL1 register.
+fn set_up_mair() {
+    // Define the memory types that we will map. Cacheable normal DRAM and
+    // device.
+    MAIR_EL1.write(
+        // Attribute 1
+        MAIR_EL1::Attr1_HIGH::Memory_OuterWriteBack_NonTransient_ReadAlloc_WriteAlloc
+            + MAIR_EL1::Attr1_LOW_MEMORY::InnerWriteBack_NonTransient_ReadAlloc_WriteAlloc
+
+            // Attribute 0
+            + MAIR_EL1::Attr0_HIGH::Device
+            + MAIR_EL1::Attr0_LOW_DEVICE::Device_nGnRE,
+    );
+}
+```
+
 Afterwards, the [Translation Table Base Register 0 - EL1](https://docs.rs/crate/cortex-a/2.4.0/source/src/regs/ttbr0_el1.rs) is set up with the base address of the `LVL3_TABLE` and
 the [Translation Control Register - EL1](https://docs.rs/crate/cortex-a/2.4.0/source/src/regs/tcr_el1.rs) is
 configured.
@@ -137,16 +160,20 @@ Take this piece of code for setting up the `MAIR_EL1` register using the
 
 
 ```rust
-// First, define the two memory types that we will map. Normal DRAM type and
-// device.
-MAIR_EL1.write(
-    // Attribute 1
-    MAIR_EL1::Attr1_HIGH::Device
-        + MAIR_EL1::Attr1_LOW_DEVICE::Device_nGnRE
-        // Attribute 0
-        + MAIR_EL1::Attr0_HIGH::Memory_OuterWriteBack_NonTransient_ReadAlloc_WriteAlloc
-        + MAIR_EL1::Attr0_LOW_MEMORY::InnerWriteBack_NonTransient_ReadAlloc_WriteAlloc,
-);
+/// Setup function for the MAIR_EL1 register.
+fn set_up_mair() {
+    // Define the memory types that we will map. Cacheable normal DRAM and
+    // device.
+    MAIR_EL1.write(
+        // Attribute 1
+        MAIR_EL1::Attr1_HIGH::Memory_OuterWriteBack_NonTransient_ReadAlloc_WriteAlloc
+            + MAIR_EL1::Attr1_LOW_MEMORY::InnerWriteBack_NonTransient_ReadAlloc_WriteAlloc
+
+            // Attribute 0
+            + MAIR_EL1::Attr0_HIGH::Device
+            + MAIR_EL1::Attr0_LOW_DEVICE::Device_nGnRE,
+    );
+}
 ```
 
 This piece of code is super expressive, and it makes use of `traits`, different
@@ -157,12 +184,11 @@ values according to the data sheet. Looking at the generated code, we can see
 that despite all the type-safety and abstractions, we get super lean code:
 
 ```text
-kernel8::mmu::init::h53df3fab6e51e098:
+00000000000803ac kernel8::memory::mmu::init::h7ef502c5548c1a62:
    ...
-   80768:       ed 9f 80 52     mov     w13, #0x4ff
+   803cc:       88 e0 9f 52     mov     w8, #0xff04
    ...
-   80778:       0d a2 18 d5     msr     MAIR_EL1, x13
-   ...
+   803d8:       08 a2 18 d5     msr     MAIR_EL1, x8
 ```
 
 ## Output
