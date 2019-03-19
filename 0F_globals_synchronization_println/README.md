@@ -436,3 +436,20 @@ Lots of things happened in this tutorial:
   2. You read about **Closures** vs. **RAII guards**.
 5. And finally, the `print!` and `println!` macros from the core library are now
    usable in the kernel!
+
+## Output
+
+```console
+ferris@box:~$ make raspboot
+
+[0] UART is live!
+[1] Press a key to continue booting... Greetings fellow Rustacean!
+[2] MMU online.
+[i] Kernel memory layout:
+      0x00000000 - 0x0007FFFF | 512 KiB | C   RW PXN | Kernel stack
+      0x00080000 - 0x00082FFF |  12 KiB | C   RO PX  | Kernel code and RO data
+      0x00083000 - 0x0008500F |   8 KiB | C   RW PXN | Kernel data and BSS
+      0x3F000000 - 0x3FFFFFFF |  16 MiB | Dev RW PXN | Device MMIO
+
+$>
+```
