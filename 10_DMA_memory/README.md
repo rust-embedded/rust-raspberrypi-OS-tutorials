@@ -38,8 +38,8 @@ the message, and not the `DRAM` content that contains the answer.
 
 ![DMA block diagram](../doc/dma_0.png)
 
-The regression did not manifest yet because the Mailbox is only used before the
-paging caching is switched on, and never afterwards. However, now is a good time
+The regression did not manifest yet because the Mailbox is only used before
+paging and caching is switched on, and never afterwards. However, now is a good time
 to fix this.
 
 ## An Allocator for DMA Memory
