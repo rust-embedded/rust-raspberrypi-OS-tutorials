@@ -49,10 +49,9 @@ static DMA_ALLOCATOR: sync::NullLock<memory::BumpAllocator> =
         memory::map::virt::DMA_HEAP_END as usize,
         "Global DMA Allocator",
         // Try the following arguments instead to see the PL011 UART init
-        // fail. It will cause the allocator to use memory that are marked
-        // cacheable and therefore not DMA-safe. The answer from the Videocore
-        // won't be received by the CPU because it reads an old cached value
-        // that resembles an error case instead.
+        // fail. It will cause the allocator to use memory that is marked
+        // cacheable and therefore not DMA-safe. The communication with the
+        // Videocore will therefore fail.
 
         // 0x00600000 as usize,
         // 0x007FFFFF as usize,
