@@ -2,6 +2,16 @@
 
 [![Build Status](https://travis-ci.org/rust-embedded/rust-raspi3-OS-tutorials.svg?branch=master)](https://travis-ci.org/rust-embedded/rust-raspi3-OS-tutorials)
 
+## Notice
+
+_Hi all.
+Just a short notice to everyone that progress on this repository not dead.
+The tutorials are currently undergoing a big refactoring that will take some more time.
+Stay tuned!_
+
+_Cheers,
+Andre_
+
 ## Introduction
 
 This repository aims to provide easy reference code for programming bare metal
