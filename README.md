@@ -61,16 +61,25 @@ time.
 ## Prerequisites
 
 Before you can start, you'll need a suitable Rust toolchain.
+Please browse to the [rustup components history] and note the date of the most recent
+build that shows `clippy` as `present`.
+
+[rustup components history]: https://rust-lang.github.io/rustup-components-history/
+
+
+Then, proceed to install this nightly using your noted date:
 ```bash
-curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly
-rustup component add rust-src llvm-tools-preview
+curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly-YOUR_DATE_HERE
+# For example:
+# curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly-2019-09-05
+
+rustup component add rust-src llvm-tools-preview clippy
 cargo install cargo-xbuild cargo-binutils
-rustup component add clippy-preview --toolchain=nightly
 ```
 
 Additionally, a Micro SD card with [firmware
 files](https://github.com/raspberrypi/firmware/tree/master/boot) on a FAT
-filesystem.
+filesystem is needed.
 
 I recommend to get a [Micro SD card USB
 adapter](http://media.kingston.com/images/products/prodReader-FCR-MRG2-img.jpg)
@@ -80,7 +89,7 @@ interface required (although many laptops have those these days).
 
 You can create an MBR partitioning scheme on the SD card with an LBA FAT32 (type
 0x0C) partition, format it and copy `bootcode.bin`, `start.elf` and `fixup.dat`
-onto it. **Delete all other files or booting might not work**. Or alternatively
+onto it. **Delete all other files or booting might not work**. Alternatively,
 you can download a raspbian image, `dd` it to the SD card, mount it and delete
 the unnecessary .img files. Whichever you prefer. What's important, you'll
 create `kernel8.img` with these tutorials which must be copied to the root
