@@ -5,6 +5,6 @@ authors = ["Andre Richter <andre.o.richter@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-cortex-a = "2.3.1"
+cortex-a = "2.7.0"
 panic-abort = "0.3.1"
 r0 = "0.2.2"

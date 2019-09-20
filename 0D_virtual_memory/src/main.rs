@@ -24,7 +24,6 @@
 
 #![no_std]
 #![no_main]
-#![feature(range_contains)]
 
 mod delays;
 mod gpio;

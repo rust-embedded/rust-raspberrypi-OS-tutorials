@@ -6,8 +6,8 @@ edition = "2018"
 
 [dependencies]
 raspi3_boot = { path = "raspi3_boot" }
-cortex-a = "2.3.1"
-register = "0.3.2"
+cortex-a = "2.7.0"
+register = "0.3.3"
 
 [package.metadata.cargo-xbuild]
 sysroot_path = "../xbuild_sysroot"

@@ -29,7 +29,6 @@
 #![feature(custom_attribute)]
 #![feature(format_args_nl)]
 #![feature(label_break_value)]
-#![feature(range_contains)]
 
 mod delays;
 mod devices;

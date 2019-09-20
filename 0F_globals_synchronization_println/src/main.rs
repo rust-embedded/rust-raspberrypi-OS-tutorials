@@ -27,7 +27,6 @@
 #![feature(const_fn)]
 #![feature(custom_attribute)]
 #![feature(format_args_nl)]
-#![feature(range_contains)]
 
 mod delays;
 mod devices;

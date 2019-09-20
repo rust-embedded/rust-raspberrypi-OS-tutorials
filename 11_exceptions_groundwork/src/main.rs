@@ -30,7 +30,6 @@
 #![feature(format_args_nl)]
 #![feature(global_asm)]
 #![feature(label_break_value)]
-#![feature(range_contains)]
 
 mod delays;
 mod devices;

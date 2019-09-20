@@ -27,7 +27,7 @@ use core::ops;
 use cortex_a::asm;
 use register::{mmio::*, register_bitfields};
 
-/// Auxilary mini UART registers
+// Auxilary mini UART registers
 //
 // Descriptions taken from
 // https://github.com/raspberrypi/documentation/files/1888662/BCM2837-ARM-Peripherals.-.Revised.-.V2-1.pdf
