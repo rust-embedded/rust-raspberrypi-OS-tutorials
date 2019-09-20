@@ -1,8 +1,9 @@
-#!/usr/bin/env ruby
+# frozen_string_literal: true
+
 #
 # MIT License
 #
-# Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
+# Copyright (c) 2019 Andre Richter <andre.o.richter@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,18 +24,42 @@
 # SOFTWARE.
 #
 
-def make_panic_test
-  crates = Dir['**/Cargo.toml'].sort!
+def checkin_years(file)
+  checkin_years = `git --no-pager log \
+                   --reverse --pretty=format:'%ad' --date=format:'%Y' #{file}`
 
-  crates.each do |x|
-    next if x.include?('raspi3_boot')
-
-    x = File.dirname(x)
-    puts "\n" + x.to_s + ':'
-    Dir.chdir(x) do
-      system('make nm | grep panic_fmt')
-    end
-  end
+  checkin_years.split(/\n/).map!(&:to_i)
 end
 
-make_panic_test if $PROGRAM_NAME == __FILE__
+def copyrighted?(file, is_being_checked_in)
+  checkin_years = checkin_years(file)
+
+  checkin_years << Time.now.year if is_being_checked_in
+
+  checkin_min = checkin_years.min
+  checkin_max = checkin_years.max
+
+  copyright_lines = File.readlines(file).grep(/.*Copyright.*/)
+
+  min_seen = false
+  max_seen = false
+  copyright_lines.each do |x|
+    x.scan(/\d\d\d\d/).each do |y|
+      y = y.to_i
+
+      min_seen = true if y == checkin_min
+      max_seen = true if y == checkin_max
+    end
+  end
+
+  unless min_seen && max_seen
+    puts file + ': '
+    puts "\tHeader:   " + copyright_lines.inspect
+    puts "\tMin year: " + checkin_min.to_s
+    puts "\tMax year: " + checkin_max.to_s
+
+    return false
+  end
+
+  true
+end

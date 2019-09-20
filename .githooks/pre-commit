@@ -1,6 +1,10 @@
 #!/usr/bin/env ruby
+# frozen_string_literal: true
 
-require_relative '../utils/copyrighted'
+require_relative '../utils/helpers/copyrighted'
+
+puts "Warning, git pre-commit hooks temporarily disabled!"
+exit
 
 source_files_exts = ['.S', '.rs', '.rb']
 
@@ -9,7 +13,6 @@ staged_files = `git --no-pager diff --name-only --cached`.split(/\n/)
 need_inspection = []
 staged_files.each do |f|
   puts f
-  exit
   need_inspection << f if
     f.include?('Makefile') || source_files_exts.include?(File.extname(f))
 end

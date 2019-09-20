@@ -1,4 +1,6 @@
 #!/usr/bin/env ruby
+# frozen_string_literal: true
+
 #
 # MIT License
 #
@@ -23,7 +25,7 @@
 # SOFTWARE.
 #
 
-require_relative 'copyrighted'
+require_relative 'helpers/copyrighted'
 
 def patched?
   crates = Dir['**/Cargo.toml'].sort!

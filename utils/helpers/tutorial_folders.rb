@@ -1,4 +1,6 @@
-#!/usr/bin/env bash
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
 #
 # MIT License
 #
@@ -23,21 +25,19 @@
 # SOFTWARE.
 #
 
-tmux new-session -d -s raspi3 &
-sleep 1
-tmux new-window -t raspi3:1
-tmux new-window -t raspi3:2
+require 'fileutils'
 
-tmux send-keys -t raspi3:0 "clear; echo '=== MiniUart ==='; bash /dev/ptmx" C-m
-tmux send-keys -t raspi3:1 "clear; printf '=== PL011 Uart ===\n\n';bash /dev/ptmx" C-m
+EXCLUDES = [
+  'boot2rust',
+  'bsp'
+].freeze
 
-FIRST=$(ps aux | grep ptmx | sort | awk '{print $7}' | sed '1q;d')
-SECOND=$(ps aux | grep ptmx | sort | awk '{print $7}' | sed '2q;d')
+def tutorial_folders
+  crates = Dir['**/Cargo.toml']
 
-tmux send-keys -t raspi3:2 "clear; cat /emulation/instructions.txt && qemu-system-aarch64 -M raspi3 -kernel kernel8.img -serial /dev/$SECOND -serial /dev/$FIRST && tmux kill-session" C-m
+  EXCLUDES.each { |x| crates.delete_if { |y| y.include?(x) } }
 
-tmux join-pane -s raspi3:0 -t 2
-tmux join-pane -s raspi3:1 -t 2
+  crates.sort!
+end
 
-tmux select-pane -t 1
-tmux attach-session -t raspi3
+puts tutorial_folders if $PROGRAM_NAME == __FILE__

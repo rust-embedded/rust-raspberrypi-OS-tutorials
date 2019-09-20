@@ -1,4 +1,6 @@
 #!/usr/bin/env ruby
+# frozen_string_literal: true
+
 #
 # MIT License
 #
@@ -23,12 +25,12 @@
 # SOFTWARE.
 #
 
+require_relative 'helpers/tutorial_folders.rb'
+
 def make_all
-  crates = Dir['**/Cargo.toml'].sort!
+  crates = tutorial_folders
 
   crates.each do |x|
-    next if x.include?('raspi3_boot')
-
     x = File.dirname(x)
     puts "\n\n" + x.to_s + "\n\n"
     Dir.chdir(x) do
