@@ -28,7 +28,7 @@
 # =============================================================================
 FROM ubuntu:18.04
 
-LABEL maintainer="The Cortex-A team <cortex-a@teams.rust-embedded.org>, Andre Richter <andre.o.richter@gmail.com>"
+LABEL maintainer="The resources team <resources@teams.rust-embedded.org>, Andre Richter <andre.o.richter@gmail.com>"
 
 RUN set -ex;                                                            \
     tempPkgs='                                                          \

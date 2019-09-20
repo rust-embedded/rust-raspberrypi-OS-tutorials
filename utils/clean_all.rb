@@ -1,4 +1,6 @@
 #!/usr/bin/env ruby
+# frozen_string_literal: true
+
 #
 # MIT License
 #
@@ -24,13 +26,12 @@
 #
 
 require 'fileutils'
+require_relative 'helpers/tutorial_folders.rb'
 
 def clean_all
-  crates = Dir['**/Cargo.toml'].sort!
+  crates = tutorial_folders
 
   crates.each do |x|
-    next if x.include?('raspi3_boot')
-
     x = File.dirname(x)
     Dir.chdir(x) do
       system('make clean') || exit(1)

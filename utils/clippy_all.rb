@@ -1,4 +1,6 @@
 #!/usr/bin/env ruby
+# frozen_string_literal: true
+
 #
 # MIT License
 #
@@ -25,7 +27,6 @@
 
 def clippy_all
   crates = Dir['*/Cargo.toml'].sort!
-  crates.delete_if { |x| x.include?('bareminimum') }
 
   crates.each do |x|
     x = File.dirname(x)
