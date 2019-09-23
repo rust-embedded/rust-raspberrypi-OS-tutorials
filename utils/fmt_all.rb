@@ -32,6 +32,7 @@ def fmt_all
     x = File.dirname(x)
 
     Dir.chdir(x) do
+      puts "Formatting #{x}"
       system('cargo fmt')
     end
   end
