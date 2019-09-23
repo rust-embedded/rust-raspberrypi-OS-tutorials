@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-CONTAINER_UTILS="andrerichter/raspi3-utils"
+CONTAINER_UTILS="rustembedded/osdev-utils"
 
 DOCKER_CMD="docker run -it --rm"
 DOCKER_ARG_CURDIR="-v $(pwd):/work -w /work"
