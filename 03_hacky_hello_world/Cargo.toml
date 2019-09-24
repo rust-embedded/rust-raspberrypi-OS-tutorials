@@ -1,0 +1,16 @@
+[package]
+name = "kernel"
+version = "0.1.0"
+authors = ["Andre Richter <andre.o.richter@gmail.com>"]
+edition = "2018"
+
+[package.metadata.cargo-xbuild]
+sysroot_path = "../xbuild_sysroot"
+
+# The features section is used to select the target board.
+[features]
+default = []
+bsp_rpi3 = []
+
+[dependencies]
+r0 = "0.2.2"
