@@ -2,6 +2,9 @@
 //
 // Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
 
+// Rust embedded logo for `make doc`.
+#![doc(html_logo_url = "https://git.io/JeGIp")]
+
 //! The `kernel`
 
 #![feature(asm)]
