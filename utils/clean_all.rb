@@ -34,7 +34,8 @@ def clean_all
   crates.each do |x|
     x = File.dirname(x)
     Dir.chdir(x) do
-      system('make clean') || exit(1)
+      puts "Cleaning #{x}"
+      system('rm -rf target') || exit(1)
     end
   end
 
