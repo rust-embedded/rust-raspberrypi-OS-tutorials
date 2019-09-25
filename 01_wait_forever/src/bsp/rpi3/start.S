@@ -2,6 +2,8 @@
 //
 // Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
 
+.section ".text._start"
+
 .global _start
 
 _start:
