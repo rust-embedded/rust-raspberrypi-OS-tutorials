@@ -2,8 +2,9 @@
 
 ## Notice
 
-This is a work-in-progress rewrite started on September 2019. I will first add
-code, and later write accompanying prose.
+**This is a work-in-progress rewrite started on September 2019. I will first add
+code and minimal READMEs, and later write accompanying full-fledged tutorial
+text.**
 
 _Cheers,
 Andre_
