@@ -4,10 +4,7 @@
 
 ## Notice
 
-_Hi all.
-Just a short notice to everyone that progress on this repository not dead.
-The tutorials are currently undergoing a big refactoring that will take some more time.
-Stay tuned!_
+**The tutorials are being rewritten [on the v2 branch](https://github.com/rust-embedded/rust-raspi3-OS-tutorials/tree/rewrite_for_v2), so please have a look from time to time. The master branch will only receive updates if something breaks.**
 
 _Cheers,
 Andre_
