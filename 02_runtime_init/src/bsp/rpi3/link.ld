@@ -10,26 +10,26 @@ SECTIONS
 
     .text :
     {
-        *(.text)
+        *(.text._start) *(.text*)
     }
 
     .rodata :
     {
-        *(.rodata)
+        *(.rodata*)
     }
 
     .data :
     {
-        *(.data)
+        *(.data*)
     }
 
     /* Align to 8 byte boundary */
     .bss ALIGN(8):
     {
         __bss_start = .;
-        *(.bss);
+        *(.bss*);
         __bss_end = .;
     }
 
-    /DISCARD/ : { *(.comment) }
+    /DISCARD/ : { *(.comment*) }
 }

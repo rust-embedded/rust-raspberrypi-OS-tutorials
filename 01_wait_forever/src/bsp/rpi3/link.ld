@@ -10,8 +10,8 @@ SECTIONS
 
     .text :
     {
-        *(.text)
+        *(.text._start) *(.text*)
     }
 
-    /DISCARD/ : { *(.comment) }
+    /DISCARD/ : { *(.comment*) }
 }
