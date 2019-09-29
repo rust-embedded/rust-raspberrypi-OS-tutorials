@@ -9,6 +9,7 @@
 
 #![feature(asm)]
 #![feature(global_asm)]
+#![feature(naked_functions)]
 #![no_main]
 #![no_std]
 
