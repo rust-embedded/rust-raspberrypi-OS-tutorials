@@ -13,4 +13,4 @@ default = []
 bsp_rpi3 = []
 
 [dependencies]
-
+cortex-a = "2.7.0"
