@@ -5,6 +5,7 @@
 //! Board Support Package for the Raspberry Pi 3.
 
 mod panic_wait;
+mod start;
 
 use crate::interface::console;
 use core::fmt;
