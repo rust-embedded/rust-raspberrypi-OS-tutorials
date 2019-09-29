@@ -16,6 +16,7 @@
 #![feature(asm)]
 #![feature(format_args_nl)]
 #![feature(global_asm)]
+#![feature(naked_functions)]
 #![feature(panic_info_message)]
 #![no_main]
 #![no_std]

@@ -14,3 +14,4 @@ bsp_rpi3 = []
 
 [dependencies]
 r0 = "0.2.2"
+cortex-a = "2.7.0"

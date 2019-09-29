@@ -5,11 +5,10 @@
 //! Board Support Package for the Raspberry Pi 3.
 
 mod panic_wait;
+mod start;
 
 use crate::interface::console;
 use core::fmt;
-
-global_asm!(include_str!("rpi3/start.S"));
 
 /// A mystical, magical device for generating QEMU output out of the void.
 struct QEMUOutput;
