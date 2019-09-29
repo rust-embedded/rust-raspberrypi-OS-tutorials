@@ -66,11 +66,11 @@ clippy:
 clean:
 	cargo clean
 
-readelf:
+readelf: all
 	readelf -a kernel
 
-objdump:
+objdump: all
 	cargo objdump --target $(TARGET) -- -disassemble -print-imm-hex kernel
 
-nm:
+nm: all
 	cargo nm --target $(TARGET) -- kernel | sort
