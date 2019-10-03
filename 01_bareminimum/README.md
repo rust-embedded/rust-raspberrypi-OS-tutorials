@@ -26,9 +26,9 @@ much as possible, we are already setting up a Rust crate. This allows us to use
 
 The Raspberry Pi 3 features a processor that uses ARM's `AArch64` architecture.
 Conveniently, Rust already provides a generic target for bare-metal aarch64 code
-that we can leverage. It is called [aarch64-unknown-none].
+that we can leverage. It is called [aarch64-unknown-none-softfloat].
 
-[aarch64-unknown-none]: https://github.com/andre-richter/rust/blob/master/src/librustc_target/spec/aarch64_unknown_none.rs
+[aarch64-unknown-none-softfloat]: https://github.com/rust-lang/rust/blob/master/src/librustc_target/spec/aarch64_unknown_none_softfloat.rs
 
 In the `Makefile`, we select this target in various places by passing it to
 cargo using the `--target` cmdline argument.
@@ -37,17 +37,20 @@ Additionally, we provide a config file in `.cargo/config` were we make further
 specializations:
 
 ```toml
-[target.aarch64-unknown-none]
+[target.aarch64-unknown-none-softfloat]
 rustflags = [
   "-C", "link-arg=-Tlink.ld",
-  "-C", "target-feature=-fp-armv8",
   "-C", "target-cpu=cortex-a53",
 ]
 ```
 
-The first line tells rustc to use our custom `link.ld` linker script. The second
-line instructs the compiler to not use floating point operations. This is a
-common choice when writing an operating system kernel. If floating point is not
+The first line tells rustc to use our custom `link.ld` linker script. The
+second argument specifies the exact CPU type that is used on Raspberry Pi 3, so
+that the compiler can optimize for it.
+
+The target itself tells the compiler already to not use floating point
+operations, which is hinted by the `-softfloat` appendix. This is a common
+choice when writing an operating system kernel. If floating point is not
 explicitly disabled, it is possible that the compiler uses auto-vectorization to
 optimize, for example, operations on array data structures. This would
 implicitly result in use of floating point registers and operations. However,
@@ -55,10 +58,7 @@ since it is very costly to save and restore floating point registers during
 context-switches, use of fp is usually disabled from the get go to save the
 cycles and optimize the kernel for fast context switching.
 
-Finally, the third arguments specifies the exact CPU type that is used in
-Raspberry Pi 3, so that the compiler can optimize for it.
-
-Since the `aarch64-unknown-none` target is not shipped with an associated
+Since the `aarch64-unknown-none-softfloat` target is not shipped with an associated
 precompiled standard library, and since we anyways modify the target via the
 `.cargo/config` file, we are using [cargo-xbuild][xbuild] to compile our own
 standard library. This way, we can ensure that our bare-metal code is optimized

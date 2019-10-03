@@ -27,6 +27,10 @@ use cortex_a::{barrier, regs::*};
 
 global_asm!(include_str!("vectors.S"));
 
+/// # Safety
+///
+/// - User must ensure to call this function at a suitable place, since it
+///   changes the state of the hardware.
 pub unsafe fn set_vbar_el1_checked(vec_base_addr: u64) -> bool {
     if vec_base_addr.trailing_zeros() < 11 {
         false

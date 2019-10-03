@@ -266,6 +266,10 @@ static mut LVL3_TABLE: PageTable = PageTable {
 /// Set up identity mapped page tables for the first 1 GiB of address space.
 ///
 /// The first 2 MiB are 4 KiB granule, the rest 2 MiB.
+///
+/// # Safety
+///
+/// - User must ensure that the hardware supports the paremeters being set here.
 pub unsafe fn init() -> Result<(), &'static str> {
     // Prepare the memory attribute indirection register.
     set_up_mair();

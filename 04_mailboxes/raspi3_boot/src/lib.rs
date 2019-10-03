@@ -36,6 +36,10 @@ extern crate panic_abort;
 #[macro_export]
 macro_rules! entry {
     ($path:path) => {
+        /// # Safety
+        ///
+        /// - User must ensure to provide a suitable main function for the
+        ///   platform.
         #[export_name = "main"]
         pub unsafe fn __main() -> ! {
             // type check the given path
@@ -49,6 +53,10 @@ macro_rules! entry {
 /// Reset function.
 ///
 /// Initializes the bss section before calling into the user's `main()`.
+///
+/// # Safety
+///
+/// - Only a single core must be active and running this function.
 #[no_mangle]
 pub unsafe extern "C" fn reset() -> ! {
     extern "C" {

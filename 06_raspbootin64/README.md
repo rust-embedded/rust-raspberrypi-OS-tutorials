@@ -92,10 +92,9 @@ To enable PIC for our loader, we add the following line to the compiler flags in
 the`.cargo/config`:
 
 ```toml
-[target.aarch64-unknown-none]
+[target.aarch64-unknown-none-softfloat]
 rustflags = [
   "-C", "link-arg=-Tlink.ld",
-  "-C", "target-feature=-fp-armv8",
   "-C", "target-cpu=cortex-a53",
   "-C", "relocation-model=pic", # <-- New
 ]

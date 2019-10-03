@@ -93,7 +93,7 @@ should yield something like the following, where you can see that the stack
 pointer is not used apart from ourselves setting it.
 
 ```console
-ferris@box:~$ cargo objdump --target aarch64-unknown-none -- -disassemble -print-imm-hex kernel8
+ferris@box:~$ cargo objdump --target aarch64-unknown-none-softfloat -- -disassemble -print-imm-hex kernel8
 
 [...] (Some output omitted)
 

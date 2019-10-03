@@ -35,6 +35,10 @@ extern crate panic_abort;
 #[macro_export]
 macro_rules! entry {
     ($path:path) => {
+        /// # Safety
+        ///
+        /// - User must ensure to provide a suitable main function for the
+        ///   platform.
         #[export_name = "main"]
         pub unsafe fn __main() -> ! {
             // type check the given path
@@ -48,6 +52,10 @@ macro_rules! entry {
 /// Reset function.
 ///
 /// Initializes the bss section before calling into the user's `main()`.
+///
+/// # Safety
+///
+/// - Only a single core must be active and running this function.
 unsafe fn reset() -> ! {
     extern "C" {
         // Boundaries of the .bss section, provided by the linker script
@@ -109,6 +117,10 @@ fn setup_and_enter_el1_from_el2() -> ! {
 ///
 /// Parks all cores except core0 and checks if we started in EL2. If
 /// so, proceeds with setting up EL1.
+///
+/// # Safety
+///
+/// - Linker script must ensure to place this function at `0x80_000`.
 #[link_section = ".text.boot"]
 #[no_mangle]
 pub unsafe extern "C" fn _boot_cores() -> ! {

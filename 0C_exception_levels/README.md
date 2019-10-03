@@ -122,7 +122,7 @@ do not have a stack yet. We should double-check the generated machine code:
 
 ```console
 ferris@box:~$ make objdump
-cargo objdump --target aarch64-unknown-none -- -disassemble -print-imm-hex kernel8
+cargo objdump --target aarch64-unknown-none-softfloat -- -disassemble -print-imm-hex kernel8
 
 kernel8:	file format ELF64-aarch64-little
 
