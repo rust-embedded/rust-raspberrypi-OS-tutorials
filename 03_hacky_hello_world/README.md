@@ -15,8 +15,8 @@ enabled step-by-step in following tutorials.
 ```diff
 
 diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
---- 02_runtime_init/Makefile	2019-09-23 15:10:43.906916928 +0200
-+++ 03_hacky_hello_world/Makefile	2019-09-23 15:11:53.602555646 +0200
+--- 02_runtime_init/Makefile
++++ 03_hacky_hello_world/Makefile
 @@ -13,7 +13,7 @@
  	OUTPUT = kernel8.img
  	QEMU_BINARY = qemu-system-aarch64
@@ -24,12 +24,12 @@ diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
 -	QEMU_MISC_ARGS = -d in_asm
 +	QEMU_MISC_ARGS = -serial null -serial stdio
  	LINKER_FILE = src/bsp/rpi3/link.ld
- 	RUSTC_MISC_ARGS = -C target-feature=-fp-armv8 -C target-cpu=cortex-a53
+ 	RUSTC_MISC_ARGS = -C target-cpu=cortex-a53
  endif
 
 diff -uNr 02_runtime_init/src/bsp/rpi3/panic_wait.rs 03_hacky_hello_world/src/bsp/rpi3/panic_wait.rs
---- 02_runtime_init/src/bsp/rpi3/panic_wait.rs	2019-09-23 15:10:15.767036845 +0200
-+++ 03_hacky_hello_world/src/bsp/rpi3/panic_wait.rs	2019-09-24 00:48:21.431980264 +0200
+--- 02_runtime_init/src/bsp/rpi3/panic_wait.rs
++++ 03_hacky_hello_world/src/bsp/rpi3/panic_wait.rs
 @@ -4,10 +4,17 @@
 
  //! A panic handler that infinitely waits.
@@ -51,8 +51,8 @@ diff -uNr 02_runtime_init/src/bsp/rpi3/panic_wait.rs 03_hacky_hello_world/src/bs
              asm!("wfe" :::: "volatile")
 
 diff -uNr 02_runtime_init/src/bsp/rpi3.rs 03_hacky_hello_world/src/bsp/rpi3.rs
---- 02_runtime_init/src/bsp/rpi3.rs	2019-09-23 15:10:15.767036845 +0200
-+++ 03_hacky_hello_world/src/bsp/rpi3.rs	2019-09-24 22:34:35.220657927 +0200
+--- 02_runtime_init/src/bsp/rpi3.rs
++++ 03_hacky_hello_world/src/bsp/rpi3.rs
 @@ -6,4 +6,38 @@
 
  mod panic_wait;
@@ -94,8 +94,8 @@ diff -uNr 02_runtime_init/src/bsp/rpi3.rs 03_hacky_hello_world/src/bsp/rpi3.rs
 +}
 
 diff -uNr 02_runtime_init/src/interface.rs 03_hacky_hello_world/src/interface.rs
---- 02_runtime_init/src/interface.rs	1970-01-01 01:00:00.000000000 +0100
-+++ 03_hacky_hello_world/src/interface.rs	2019-09-24 22:35:18.288465568 +0200
+--- 02_runtime_init/src/interface.rs
++++ 03_hacky_hello_world/src/interface.rs
 @@ -0,0 +1,36 @@
 +// SPDX-License-Identifier: MIT
 +//
@@ -135,8 +135,8 @@ diff -uNr 02_runtime_init/src/interface.rs 03_hacky_hello_world/src/interface.rs
 +}
 
 diff -uNr 02_runtime_init/src/main.rs 03_hacky_hello_world/src/main.rs
---- 02_runtime_init/src/main.rs	2019-09-24 22:57:32.811412514 +0200
-+++ 03_hacky_hello_world/src/main.rs	2019-09-24 22:56:54.635538411 +0200
+--- 02_runtime_init/src/main.rs
++++ 03_hacky_hello_world/src/main.rs
 @@ -6,9 +6,17 @@
  #![doc(html_logo_url = "https://git.io/JeGIp")]
 
@@ -171,8 +171,8 @@ diff -uNr 02_runtime_init/src/main.rs 03_hacky_hello_world/src/main.rs
  }
 
 diff -uNr 02_runtime_init/src/print.rs 03_hacky_hello_world/src/print.rs
---- 02_runtime_init/src/print.rs	1970-01-01 01:00:00.000000000 +0100
-+++ 03_hacky_hello_world/src/print.rs	2019-09-24 22:30:10.489867506 +0200
+--- 02_runtime_init/src/print.rs
++++ 03_hacky_hello_world/src/print.rs
 @@ -0,0 +1,32 @@
 +// SPDX-License-Identifier: MIT
 +//

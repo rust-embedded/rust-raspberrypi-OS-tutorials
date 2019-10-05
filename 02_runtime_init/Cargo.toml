@@ -13,4 +13,4 @@ default = []
 bsp_rpi3 = []
 
 [dependencies]
-r0 = "0.2.2"
+r0 = "0.2.*"

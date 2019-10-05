@@ -19,46 +19,46 @@ We are calling into Rust code for the first time.
 ```diff
 
 diff -uNr 01_wait_forever/Cargo.toml 02_runtime_init/Cargo.toml
---- 01_wait_forever/Cargo.toml	2019-09-23 15:09:10.919233495 +0200
-+++ 02_runtime_init/Cargo.toml	2019-09-23 15:10:15.775036819 +0200
+--- 01_wait_forever/Cargo.toml
++++ 02_runtime_init/Cargo.toml
 @@ -13,4 +13,4 @@
  bsp_rpi3 = []
 
  [dependencies]
 -
-+r0 = "0.2.2"
++r0 = "0.2.*"
 
 diff -uNr 01_wait_forever/src/bsp/rpi3/link.ld 02_runtime_init/src/bsp/rpi3/link.ld
---- 01_wait_forever/src/bsp/rpi3/link.ld	2019-09-23 15:09:10.919233495 +0200
-+++ 02_runtime_init/src/bsp/rpi3/link.ld	2019-09-23 15:10:15.767036845 +0200
+--- 01_wait_forever/src/bsp/rpi3/link.ld
++++ 02_runtime_init/src/bsp/rpi3/link.ld
 @@ -13,5 +13,23 @@
-         *(.text)
+         *(.text._start) *(.text*)
      }
 
 +    .rodata :
 +    {
-+        *(.rodata)
++        *(.rodata*)
 +    }
 +
 +    .data :
 +    {
-+        *(.data)
++        *(.data*)
 +    }
 +
 +    /* Align to 8 byte boundary */
 +    .bss ALIGN(8):
 +    {
 +        __bss_start = .;
-+        *(.bss);
++        *(.bss*);
 +        __bss_end = .;
 +    }
 +
-     /DISCARD/ : { *(.comment) }
+     /DISCARD/ : { *(.comment*) }
  }
 
 diff -uNr 01_wait_forever/src/bsp/rpi3/start.S 02_runtime_init/src/bsp/rpi3/start.S
---- 01_wait_forever/src/bsp/rpi3/start.S	2019-09-23 15:09:10.919233495 +0200
-+++ 02_runtime_init/src/bsp/rpi3/start.S	2019-09-23 15:10:15.767036845 +0200
+--- 01_wait_forever/src/bsp/rpi3/start.S
++++ 02_runtime_init/src/bsp/rpi3/start.S
 @@ -7,5 +7,15 @@
  .global _start
 
@@ -79,8 +79,8 @@ diff -uNr 01_wait_forever/src/bsp/rpi3/start.S 02_runtime_init/src/bsp/rpi3/star
 +                            // park this core aswell
 
 diff -uNr 01_wait_forever/src/main.rs 02_runtime_init/src/main.rs
---- 01_wait_forever/src/main.rs	2019-09-24 22:57:44.947372097 +0200
-+++ 02_runtime_init/src/main.rs	2019-09-24 22:57:32.811412514 +0200
+--- 01_wait_forever/src/main.rs
++++ 02_runtime_init/src/main.rs
 @@ -16,4 +16,11 @@
  // `_start()` function, the first function to run.
  mod bsp;
@@ -96,8 +96,8 @@ diff -uNr 01_wait_forever/src/main.rs 02_runtime_init/src/main.rs
 +}
 
 diff -uNr 01_wait_forever/src/runtime_init.rs 02_runtime_init/src/runtime_init.rs
---- 01_wait_forever/src/runtime_init.rs	1970-01-01 01:00:00.000000000 +0100
-+++ 02_runtime_init/src/runtime_init.rs	2019-09-24 22:32:25.569243801 +0200
+--- 01_wait_forever/src/runtime_init.rs
++++ 02_runtime_init/src/runtime_init.rs
 @@ -0,0 +1,27 @@
 +// SPDX-License-Identifier: MIT
 +//

@@ -10,8 +10,10 @@ sysroot_path = "../xbuild_sysroot"
 # The features section is used to select the target board.
 [features]
 default = []
-bsp_rpi3 = []
+bsp_rpi3 = ["cortex-a"]
 
 [dependencies]
-r0 = "0.2.2"
-cortex-a = "2.7.0"
+r0 = "0.2.*"
+
+# Optional dependencies
+cortex-a = { version = "2.*", optional = true }

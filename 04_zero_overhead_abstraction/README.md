@@ -11,17 +11,24 @@ which provides zero-overhead abstractions and wraps the `unsafe` parts.
 ```diff
 
 diff -uNr 03_hacky_hello_world/Cargo.toml 04_zero_overhead_abstraction/Cargo.toml
---- 03_hacky_hello_world/Cargo.toml	2019-09-25 14:41:51.089487788 +0200
-+++ 04_zero_overhead_abstraction/Cargo.toml	2019-09-25 13:59:33.588482692 +0200
-@@ -14,3 +14,4 @@
+--- 03_hacky_hello_world/Cargo.toml
++++ 04_zero_overhead_abstraction/Cargo.toml
+@@ -10,7 +10,10 @@
+ # The features section is used to select the target board.
+ [features]
+ default = []
+-bsp_rpi3 = []
++bsp_rpi3 = ["cortex-a"]
 
  [dependencies]
- r0 = "0.2.2"
-+cortex-a = "2.7.0"
+ r0 = "0.2.*"
++
++# Optional dependencies
++cortex-a = { version = "2.*", optional = true }
 
 diff -uNr 03_hacky_hello_world/src/bsp/rpi3/panic_wait.rs 04_zero_overhead_abstraction/src/bsp/rpi3/panic_wait.rs
---- 03_hacky_hello_world/src/bsp/rpi3/panic_wait.rs	2019-09-25 14:41:51.093487759 +0200
-+++ 04_zero_overhead_abstraction/src/bsp/rpi3/panic_wait.rs	2019-09-25 15:26:48.988205284 +0200
+--- 03_hacky_hello_world/src/bsp/rpi3/panic_wait.rs
++++ 04_zero_overhead_abstraction/src/bsp/rpi3/panic_wait.rs
 @@ -6,6 +6,7 @@
 
  use crate::println;
@@ -44,8 +51,8 @@ diff -uNr 03_hacky_hello_world/src/bsp/rpi3/panic_wait.rs 04_zero_overhead_abstr
  }
 
 diff -uNr 03_hacky_hello_world/src/bsp/rpi3/start.S 04_zero_overhead_abstraction/src/bsp/rpi3/start.S
---- 03_hacky_hello_world/src/bsp/rpi3/start.S	2019-09-25 15:07:28.593140386 +0200
-+++ 04_zero_overhead_abstraction/src/bsp/rpi3/start.S	1970-01-01 01:00:00.000000000 +0100
+--- 03_hacky_hello_world/src/bsp/rpi3/start.S
++++ 04_zero_overhead_abstraction/src/bsp/rpi3/start.S
 @@ -1,21 +0,0 @@
 -// SPDX-License-Identifier: MIT
 -//
@@ -70,8 +77,8 @@ diff -uNr 03_hacky_hello_world/src/bsp/rpi3/start.S 04_zero_overhead_abstraction
 -                            // park this core aswell
 
 diff -uNr 03_hacky_hello_world/src/bsp/rpi3.rs 04_zero_overhead_abstraction/src/bsp/rpi3.rs
---- 03_hacky_hello_world/src/bsp/rpi3.rs	2019-09-25 14:41:51.093487759 +0200
-+++ 04_zero_overhead_abstraction/src/bsp/rpi3.rs	2019-09-25 15:19:14.474175689 +0200
+--- 03_hacky_hello_world/src/bsp/rpi3.rs
++++ 04_zero_overhead_abstraction/src/bsp/rpi3.rs
 @@ -8,8 +8,34 @@
 
  use crate::interface::console;
@@ -110,8 +117,8 @@ diff -uNr 03_hacky_hello_world/src/bsp/rpi3.rs 04_zero_overhead_abstraction/src/
  struct QEMUOutput;
 
 diff -uNr 03_hacky_hello_world/src/main.rs 04_zero_overhead_abstraction/src/main.rs
---- 03_hacky_hello_world/src/main.rs	2019-09-25 14:41:52.341478676 +0200
-+++ 04_zero_overhead_abstraction/src/main.rs	2019-09-25 15:22:45.433268740 +0200
+--- 03_hacky_hello_world/src/main.rs
++++ 04_zero_overhead_abstraction/src/main.rs
 @@ -13,9 +13,7 @@
  //!
  //! [`kernel::interface`]: interface/index.html
@@ -133,8 +140,8 @@ diff -uNr 03_hacky_hello_world/src/main.rs 04_zero_overhead_abstraction/src/main
  }
 
 diff -uNr 03_hacky_hello_world/src/runtime_init.rs 04_zero_overhead_abstraction/src/runtime_init.rs
---- 03_hacky_hello_world/src/runtime_init.rs	2019-09-25 14:41:51.093487759 +0200
-+++ 04_zero_overhead_abstraction/src/runtime_init.rs	2019-09-25 14:00:32.560262587 +0200
+--- 03_hacky_hello_world/src/runtime_init.rs
++++ 04_zero_overhead_abstraction/src/runtime_init.rs
 @@ -13,7 +13,7 @@
  ///
  /// - Only a single core must be active and running this function.
