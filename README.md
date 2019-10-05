@@ -49,11 +49,11 @@ Please notice that you won't need to download or prepare the containers
 upfront. As long as you have docker installed, they will be pulled automatically
 the first time the Makefile needs them.
 
+If you want to know more about docker and peek at the the containers used in these
+tutorials, please refer [to the repository's docker folder](docker).
+
 [install Docker for your distro]: https://www.docker.com/community-edition#/download
 [This]: https://github.com/andre-richter/docker-raspi3-qemu
-
-For now, only a few basic tutorials are ready, but more will be ported over
-time.
 
 ## Prerequisites
 
