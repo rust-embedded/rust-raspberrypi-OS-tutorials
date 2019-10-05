@@ -34,68 +34,20 @@ Unfortunately, the RPi does not, so we have to connect it via jumper wires.
 
 ### Wiring
 
-<table>
-    <thead>
-        <tr>
-            <th>GPIO #</th>
-			<th>Name</th>
-			<th>JTAG #</th>
-			<th>Note</th>
-			<th width="60%">Diagram</th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr>
-            <td></td>
-            <td>VTREF</td>
-            <td>1</td>
-            <td>to 3.3V</td>
-            <td rowspan="8"><img src="../doc/wiring_jtag.png"></td>
-        </tr>
-        <tr>
-            <td></td>
-            <td>GND</td>
-            <td>4</td>
-            <td>to GND</td>
-        </tr>
-        <tr>
-            <td>22</td>
-            <td>TRST</td>
-            <td>3</td>
-            <td></td>
-        </tr>
-        <tr>
-            <td>26</td>
-            <td>TDI</td>
-            <td>5</td>
-            <td></td>
-        </tr>
-        <tr>
-            <td>27</td>
-            <td>TMS</td>
-            <td>7</td>
-            <td></td>
-        </tr>
-        <tr>
-            <td>25</td>
-            <td>TCK</td>
-            <td>9</td>
-            <td></td>
-        </tr>
-        <tr>
-            <td>23</td>
-            <td>RTCK</td>
-            <td>11</td>
-            <td></td>
-        </tr>
-        <tr>
-            <td>24</td>
-            <td>TDO</td>
-            <td>13</td>
-            <td></td>
-        </tr>
-    </tbody>
-</table>
+
+```
+ GPIO Name  JTAG Note
+----------------------
+ 1    VTREF 1    3.3v
+ 6    GND   4    Gnd
+ 22   TRST  3
+ 26   TDI   5
+ 27   TMS   7
+ 25   TCK   9
+ 23   RTCK  11
+ 24   TDO   13
+```
+<p align="center"><img src="../doc/wiring_jtag.png" width="100%"></p>
 
 <p align="center"><img src="../doc/image_jtag_connected.jpg" width="50%"></p>
 
