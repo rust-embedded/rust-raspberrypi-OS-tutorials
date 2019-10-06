@@ -6,7 +6,7 @@
 
 mod panic_wait;
 
-use crate::interface::console;
+use crate::interface;
 use core::fmt;
 use cortex_a::{asm, regs::*};
 
@@ -47,7 +47,7 @@ struct QEMUOutput;
 /// See [`src/print.rs`].
 ///
 /// [`src/print.rs`]: ../../print/index.html
-impl console::Write for QEMUOutput {
+impl interface::console::Write for QEMUOutput {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         for c in s.chars() {
             unsafe {
@@ -64,6 +64,6 @@ impl console::Write for QEMUOutput {
 ////////////////////////////////////////////////////////////////////////////////
 
 /// Returns a ready-to-use `console::Write` implementation.
-pub fn console() -> impl console::Write {
+pub fn console() -> impl interface::console::Write {
     QEMUOutput {}
 }

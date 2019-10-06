@@ -5,7 +5,7 @@
 //! Printing facilities.
 
 use crate::bsp;
-use crate::interface::console::Write;
+use crate::interface;
 use core::fmt;
 
 /// Prints without a newline.
@@ -28,5 +28,7 @@ macro_rules! println {
 }
 
 pub fn _print(args: fmt::Arguments) {
+    use interface::console::Write;
+
     bsp::console().write_fmt(args).unwrap();
 }

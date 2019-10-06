@@ -57,7 +57,7 @@ diff -uNr 02_runtime_init/src/bsp/rpi3.rs 03_hacky_hello_world/src/bsp/rpi3.rs
 
  mod panic_wait;
 
-+use crate::interface::console;
++use crate::interface;
 +use core::fmt;
 +
  global_asm!(include_str!("rpi3/start.S"));
@@ -72,7 +72,7 @@ diff -uNr 02_runtime_init/src/bsp/rpi3.rs 03_hacky_hello_world/src/bsp/rpi3.rs
 +/// See [`src/print.rs`].
 +///
 +/// [`src/print.rs`]: ../../print/index.html
-+impl console::Write for QEMUOutput {
++impl interface::console::Write for QEMUOutput {
 +    fn write_str(&mut self, s: &str) -> fmt::Result {
 +        for c in s.chars() {
 +            unsafe {
@@ -89,7 +89,7 @@ diff -uNr 02_runtime_init/src/bsp/rpi3.rs 03_hacky_hello_world/src/bsp/rpi3.rs
 +////////////////////////////////////////////////////////////////////////////////
 +
 +/// Returns a ready-to-use `console::Write` implementation.
-+pub fn console() -> impl console::Write {
++pub fn console() -> impl interface::console::Write {
 +    QEMUOutput {}
 +}
 
@@ -173,7 +173,7 @@ diff -uNr 02_runtime_init/src/main.rs 03_hacky_hello_world/src/main.rs
 diff -uNr 02_runtime_init/src/print.rs 03_hacky_hello_world/src/print.rs
 --- 02_runtime_init/src/print.rs
 +++ 03_hacky_hello_world/src/print.rs
-@@ -0,0 +1,32 @@
+@@ -0,0 +1,34 @@
 +// SPDX-License-Identifier: MIT
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
@@ -181,7 +181,7 @@ diff -uNr 02_runtime_init/src/print.rs 03_hacky_hello_world/src/print.rs
 +//! Printing facilities.
 +
 +use crate::bsp;
-+use crate::interface::console::Write;
++use crate::interface;
 +use core::fmt;
 +
 +/// Prints without a newline.
@@ -205,6 +205,8 @@ diff -uNr 02_runtime_init/src/print.rs 03_hacky_hello_world/src/print.rs
 +}
 +
 +pub fn _print(args: fmt::Arguments) {
++    use interface::console::Write;
++
 +    bsp::console().write_fmt(args).unwrap();
 +}
 ```

@@ -81,7 +81,7 @@ diff -uNr 03_hacky_hello_world/src/bsp/rpi3.rs 04_zero_overhead_abstraction/src/
 +++ 04_zero_overhead_abstraction/src/bsp/rpi3.rs
 @@ -8,8 +8,34 @@
 
- use crate::interface::console;
+ use crate::interface;
  use core::fmt;
 +use cortex_a::{asm, regs::*};
 
