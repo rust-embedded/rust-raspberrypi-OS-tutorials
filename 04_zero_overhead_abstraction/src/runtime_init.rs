@@ -7,7 +7,7 @@
 /// Equivalent to `crt0` or `c0` code in C/C++ world. Clears the `bss` section,
 /// then calls the kernel entry.
 ///
-/// Called from BSP code.
+/// Called from `BSP` code.
 ///
 /// # Safety
 ///

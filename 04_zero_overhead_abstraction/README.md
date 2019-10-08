@@ -31,15 +31,7 @@ diff -uNr 03_hacky_hello_world/Cargo.toml 04_zero_overhead_abstraction/Cargo.tom
 diff -uNr 03_hacky_hello_world/src/bsp/rpi3/panic_wait.rs 04_zero_overhead_abstraction/src/bsp/rpi3/panic_wait.rs
 --- 03_hacky_hello_world/src/bsp/rpi3/panic_wait.rs
 +++ 04_zero_overhead_abstraction/src/bsp/rpi3/panic_wait.rs
-@@ -6,6 +6,7 @@
-
- use crate::println;
- use core::panic::PanicInfo;
-+use cortex_a::asm;
-
- #[panic_handler]
- fn panic(info: &PanicInfo) -> ! {
-@@ -15,9 +16,7 @@
+@@ -15,9 +15,5 @@
          println!("Kernel panic!");
      }
 
@@ -47,9 +39,8 @@ diff -uNr 03_hacky_hello_world/src/bsp/rpi3/panic_wait.rs 04_zero_overhead_abstr
 -        loop {
 -            asm!("wfe" :::: "volatile")
 -        }
-+    loop {
-+        asm::wfe();
-     }
+-    }
++    super::wait_forever()
  }
 
 diff -uNr 03_hacky_hello_world/src/bsp/rpi3/start.S 04_zero_overhead_abstraction/src/bsp/rpi3/start.S

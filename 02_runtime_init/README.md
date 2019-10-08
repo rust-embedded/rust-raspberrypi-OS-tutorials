@@ -108,7 +108,7 @@ diff -uNr 01_wait_forever/src/runtime_init.rs 02_runtime_init/src/runtime_init.r
 +/// Equivalent to `crt0` or `c0` code in C/C++ world. Clears the `bss` section,
 +/// then calls the kernel entry.
 +///
-+/// Called from BSP code.
++/// Called from `BSP` code.
 +///
 +/// # Safety
 +///
