@@ -11,7 +11,7 @@ text.**
   since you last visited, make sure to clone a clean copy to be safe.
 
 _Cheers,
-Andre_
+[Andre](https://github.com/andre-richter)_
 
 ## Prerequisites
 
