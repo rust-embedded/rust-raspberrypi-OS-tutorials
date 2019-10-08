@@ -6,7 +6,9 @@
 code and minimal READMEs, and later write accompanying full-fledged tutorial
 text.**
 
-The rewrite also supports both, the Raspberry Pi 3 and the **Raspberry Pi 4**!
+- Check out the `make doc` command to browse the code with HTML goodness.
+- Note that the branch is subject to frequent force pushing. If updates happened
+  since you last visited, make sure to clone a clean copy to be safe.
 
 _Cheers,
 Andre_
