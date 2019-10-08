@@ -63,6 +63,13 @@ impl interface::console::Write for QEMUOutput {
 // Implementation of the kernel's BSP calls
 ////////////////////////////////////////////////////////////////////////////////
 
+/// Park execution on the calling CPU core.
+pub fn wait_forever() -> ! {
+    loop {
+        asm::wfe()
+    }
+}
+
 /// Returns a ready-to-use `console::Write` implementation.
 pub fn console() -> impl interface::console::Write {
     QEMUOutput {}

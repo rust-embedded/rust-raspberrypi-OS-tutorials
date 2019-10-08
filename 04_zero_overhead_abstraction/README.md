@@ -5,6 +5,8 @@
 All hand-written assembly is replaced by Rust code from the [cortex-a] crate,
 which provides zero-overhead abstractions and wraps the `unsafe` parts.
 
+- `bsp::wait_forever()` is introduced.
+
 [cortex-a]: https://github.com/rust-embedded/cortex-a
 
 ## Diff to previous
@@ -115,6 +117,20 @@ diff -uNr 03_hacky_hello_world/src/bsp/rpi3.rs 04_zero_overhead_abstraction/src/
 
  /// A mystical, magical device for generating QEMU output out of the void.
  struct QEMUOutput;
+@@ -37,6 +63,13 @@
+ // Implementation of the kernel's BSP calls
+ ////////////////////////////////////////////////////////////////////////////////
+
++/// Park execution on the calling CPU core.
++pub fn wait_forever() -> ! {
++    loop {
++        asm::wfe()
++    }
++}
++
+ /// Returns a ready-to-use `console::Write` implementation.
+ pub fn console() -> impl interface::console::Write {
+     QEMUOutput {}
 
 diff -uNr 03_hacky_hello_world/src/main.rs 04_zero_overhead_abstraction/src/main.rs
 --- 03_hacky_hello_world/src/main.rs
@@ -129,14 +145,16 @@ diff -uNr 03_hacky_hello_world/src/main.rs 04_zero_overhead_abstraction/src/main
  #![feature(panic_info_message)]
  #![no_main]
  #![no_std]
-@@ -33,7 +31,7 @@
+@@ -33,7 +31,8 @@
 
  /// Entrypoint of the `kernel`.
  fn kernel_entry() -> ! {
 -    println!("Hello from Rust!");
-+    println!("Hello from pure Rust!");
++    println!("[0] Hello from pure Rust!");
 
-     panic!("Stopping here.")
+-    panic!("Stopping here.")
++    println!("[1] Stopping here.");
++    bsp::wait_forever()
  }
 
 diff -uNr 03_hacky_hello_world/src/runtime_init.rs 04_zero_overhead_abstraction/src/runtime_init.rs

@@ -31,7 +31,8 @@ mod print;
 
 /// Entrypoint of the `kernel`.
 fn kernel_entry() -> ! {
-    println!("Hello from pure Rust!");
+    println!("[0] Hello from pure Rust!");
 
-    panic!("Stopping here.")
+    println!("[1] Stopping here.");
+    bsp::wait_forever()
 }

@@ -10,6 +10,7 @@ enabled step-by-step in following tutorials.
 - `interface.rs` is introduced:
 	- Provides `Traits` for abstracting `kernel` from `BSP` code.
 - Panic handler `print!()`s supplied error messages.
+    - This is showcased in `main()`.
 
 ## Diff to previous
 ```diff
@@ -41,7 +42,7 @@ diff -uNr 02_runtime_init/src/bsp/rpi3/panic_wait.rs 03_hacky_hello_world/src/bs
 -fn panic(_info: &PanicInfo) -> ! {
 +fn panic(info: &PanicInfo) -> ! {
 +    if let Some(args) = info.message() {
-+        println!("{}", args);
++        println!("Kernel panic: {}", args);
 +    } else {
 +        println!("Kernel panic!");
 +    }
@@ -121,9 +122,9 @@ diff -uNr 02_runtime_init/src/interface.rs 03_hacky_hello_world/src/interface.rs
 +pub mod console {
 +    /// Console write functions.
 +    ///
-+    /// `core::fmt::Write` is exactly what we need. Re-export it here because
-+    /// implementing `console::Write` gives a better hint to the reader about
-+    /// the intention.
++    /// `core::fmt::Write` is exactly what we need for now. Re-export it here
++    /// because implementing `console::Write` gives a better hint to the reader
++    /// about the intention.
 +    pub use core::fmt::Write;
 +
 +    /// Console read functions.
