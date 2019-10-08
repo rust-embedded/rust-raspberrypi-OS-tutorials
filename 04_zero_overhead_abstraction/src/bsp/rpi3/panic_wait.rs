@@ -6,7 +6,6 @@
 
 use crate::println;
 use core::panic::PanicInfo;
-use cortex_a::asm;
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
@@ -16,7 +15,5 @@ fn panic(info: &PanicInfo) -> ! {
         println!("Kernel panic!");
     }
 
-    loop {
-        asm::wfe();
-    }
+    super::wait_forever();
 }
