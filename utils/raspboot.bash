@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
+
 CONTAINER_UTILS="rustembedded/osdev-utils"
 
 DOCKER_CMD="docker run -it --rm"

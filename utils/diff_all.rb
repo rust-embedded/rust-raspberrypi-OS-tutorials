@@ -8,18 +8,15 @@
 require 'fileutils'
 require_relative 'helpers/tutorial_folders.rb'
 
-def clean_all
+def diff_all
   crates = tutorial_folders
 
-  crates.each do |x|
-    x = File.dirname(x)
-    Dir.chdir(x) do
-      puts "Cleaning #{x}"
-      system('rm -rf target') || exit(1)
-    end
+  for i in 0..(crates.length - 2)
+    old = File.dirname(crates[i])
+    new = File.dirname(crates[i + 1])
+    puts "Diffing #{old} -> #{new}"
+    system("bash utils/helpers/diff_tut_folders.bash #{old} #{new}")
   end
-
-  FileUtils.rm_rf('xbuild_sysroot')
 end
 
 clean_all if $PROGRAM_NAME == __FILE__
