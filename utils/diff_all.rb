@@ -19,4 +19,4 @@ def diff_all
   end
 end
 
-clean_all if $PROGRAM_NAME == __FILE__
+diff_all if $PROGRAM_NAME == __FILE__
