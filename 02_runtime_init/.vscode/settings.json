@@ -1,4 +1,5 @@
 {
+    "editor.formatOnSave": true,
     "rust.features": ["bsp_rpi3"],
     "rust.all_targets": false,
 }

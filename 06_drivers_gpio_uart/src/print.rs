@@ -4,8 +4,7 @@
 
 //! Printing facilities.
 
-use crate::bsp;
-use crate::interface;
+use crate::{bsp, interface};
 use core::fmt;
 
 /// Prints without a newline.
