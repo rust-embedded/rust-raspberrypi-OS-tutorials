@@ -9,9 +9,12 @@ text.**
 - Check out the `make doc` command to browse the code with HTML goodness.
 - Note that the branch is subject to frequent force pushing. If updates happened
   since you last visited, make sure to clone a clean copy to be safe.
+- For practical purposes, the kernel will be a classic [monolith].
 
 _Cheers,
 [Andre](https://github.com/andre-richter)_
+
+ [monolith]: https://en.wikipedia.org/wiki/Monolithic_kernel
 
 ## Prerequisites
 
