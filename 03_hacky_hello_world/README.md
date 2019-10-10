@@ -155,11 +155,12 @@ diff -uNr 02_runtime_init/src/panic_wait.rs 03_hacky_hello_world/src/panic_wait.
 
  //! A panic handler that infinitely waits.
 
-+use crate::println;
++use crate::{arch, println};
  use core::panic::PanicInfo;
 
  #[panic_handler]
 -fn panic(_info: &PanicInfo) -> ! {
+-    crate::arch::wait_forever()
 +fn panic(info: &PanicInfo) -> ! {
 +    if let Some(args) = info.message() {
 +        println!("Kernel panic: {}", args);
@@ -167,7 +168,7 @@ diff -uNr 02_runtime_init/src/panic_wait.rs 03_hacky_hello_world/src/panic_wait.
 +        println!("Kernel panic!");
 +    }
 +
-     crate::arch::wait_forever()
++    arch::wait_forever()
  }
 
 diff -uNr 02_runtime_init/src/print.rs 03_hacky_hello_world/src/print.rs

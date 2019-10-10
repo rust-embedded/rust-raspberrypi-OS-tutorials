@@ -4,7 +4,7 @@
 
 //! A panic handler that infinitely waits.
 
-use crate::println;
+use crate::{arch, println};
 use core::panic::PanicInfo;
 
 #[panic_handler]
@@ -15,5 +15,5 @@ fn panic(info: &PanicInfo) -> ! {
         println!("Kernel panic!");
     }
 
-    crate::arch::wait_forever()
+    arch::wait_forever()
 }
