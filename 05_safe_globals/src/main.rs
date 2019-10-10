@@ -19,15 +19,19 @@
 #![no_main]
 #![no_std]
 
-// This module conditionally includes the correct `BSP` which provides the
+// Conditionally includes the selected `architecture` code, which provides the
 // `_start()` function, the first function to run.
-mod bsp;
+mod arch;
 
-// Afterwards, `BSP`'s early init code calls `runtime_init::init()` of this
-// module, which on completion, jumps to `kernel_entry()`.
+// `_start()` then calls `runtime_init::init()`, which on completion, jumps to
+// `kernel_entry()`.
 mod runtime_init;
 
+// Conditionally includes the selected `BSP` code.
+mod bsp;
+
 mod interface;
+mod panic_wait;
 mod print;
 
 /// Entrypoint of the `kernel`.
@@ -39,5 +43,5 @@ fn kernel_entry() -> ! {
     println!("[1] Chars written: {}", bsp::console().chars_written());
 
     println!("[2] Stopping here.");
-    bsp::wait_forever()
+    arch::wait_forever()
 }

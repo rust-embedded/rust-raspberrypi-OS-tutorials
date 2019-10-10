@@ -15,5 +15,5 @@ fn panic(info: &PanicInfo) -> ! {
         println!("Kernel panic!");
     }
 
-    super::wait_forever()
+    crate::arch::wait_forever()
 }

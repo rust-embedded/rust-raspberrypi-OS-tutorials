@@ -12,8 +12,13 @@
 #![no_main]
 #![no_std]
 
-// This module conditionally includes the correct `BSP` which provides the
+// Conditionally includes the selected `architecture` code, which provides the
 // `_start()` function, the first function to run.
+mod arch;
+
+// Conditionally includes the selected `BSP` code.
 mod bsp;
+
+mod panic_wait;
 
 // Kernel code coming next tutorial.

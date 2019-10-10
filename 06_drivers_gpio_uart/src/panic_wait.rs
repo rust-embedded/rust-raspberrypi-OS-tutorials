@@ -15,9 +15,5 @@ fn panic(info: &PanicInfo) -> ! {
         println!("Kernel panic!");
     }
 
-    unsafe {
-        loop {
-            asm!("wfe" :::: "volatile")
-        }
-    }
+    crate::arch::wait_forever()
 }

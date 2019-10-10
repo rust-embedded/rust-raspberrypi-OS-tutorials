@@ -28,40 +28,16 @@ diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
  	RUSTC_MISC_ARGS = -C target-cpu=cortex-a53
  endif
 
-diff -uNr 02_runtime_init/src/bsp/rpi3/panic_wait.rs 03_hacky_hello_world/src/bsp/rpi3/panic_wait.rs
---- 02_runtime_init/src/bsp/rpi3/panic_wait.rs
-+++ 03_hacky_hello_world/src/bsp/rpi3/panic_wait.rs
-@@ -4,10 +4,17 @@
-
- //! A panic handler that infinitely waits.
-
-+use crate::println;
- use core::panic::PanicInfo;
-
- #[panic_handler]
--fn panic(_info: &PanicInfo) -> ! {
-+fn panic(info: &PanicInfo) -> ! {
-+    if let Some(args) = info.message() {
-+        println!("Kernel panic: {}", args);
-+    } else {
-+        println!("Kernel panic!");
-+    }
-+
-     unsafe {
-         loop {
-             asm!("wfe" :::: "volatile")
-
 diff -uNr 02_runtime_init/src/bsp/rpi3.rs 03_hacky_hello_world/src/bsp/rpi3.rs
 --- 02_runtime_init/src/bsp/rpi3.rs
 +++ 03_hacky_hello_world/src/bsp/rpi3.rs
-@@ -6,4 +6,38 @@
+@@ -4,4 +4,36 @@
 
- mod panic_wait;
+ //! Board Support Package for the Raspberry Pi 3.
 
+-// Coming soon.
 +use crate::interface;
 +use core::fmt;
-+
- global_asm!(include_str!("rpi3/start.S"));
 +
 +/// A mystical, magical device for generating QEMU output out of the void.
 +struct QEMUOutput;
@@ -156,13 +132,14 @@ diff -uNr 02_runtime_init/src/main.rs 03_hacky_hello_world/src/main.rs
  #![no_main]
  #![no_std]
 
-@@ -20,7 +28,12 @@
- // module, which on completion, jumps to `kernel_entry()`.
- mod runtime_init;
+@@ -23,9 +31,13 @@
+ // Conditionally includes the selected `BSP` code.
+ mod bsp;
 
 +mod interface;
+ mod panic_wait;
 +mod print;
-+
+
  /// Entrypoint of the `kernel`.
  fn kernel_entry() -> ! {
 -    panic!()
@@ -171,18 +148,39 @@ diff -uNr 02_runtime_init/src/main.rs 03_hacky_hello_world/src/main.rs
 +    panic!("Stopping here.")
  }
 
+diff -uNr 02_runtime_init/src/panic_wait.rs 03_hacky_hello_world/src/panic_wait.rs
+--- 02_runtime_init/src/panic_wait.rs
++++ 03_hacky_hello_world/src/panic_wait.rs
+@@ -4,9 +4,16 @@
+
+ //! A panic handler that infinitely waits.
+
++use crate::println;
+ use core::panic::PanicInfo;
+
+ #[panic_handler]
+-fn panic(_info: &PanicInfo) -> ! {
++fn panic(info: &PanicInfo) -> ! {
++    if let Some(args) = info.message() {
++        println!("Kernel panic: {}", args);
++    } else {
++        println!("Kernel panic!");
++    }
++
+     crate::arch::wait_forever()
+ }
+
 diff -uNr 02_runtime_init/src/print.rs 03_hacky_hello_world/src/print.rs
 --- 02_runtime_init/src/print.rs
 +++ 03_hacky_hello_world/src/print.rs
-@@ -0,0 +1,34 @@
+@@ -0,0 +1,33 @@
 +// SPDX-License-Identifier: MIT
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Printing facilities.
 +
-+use crate::bsp;
-+use crate::interface;
++use crate::{bsp, interface};
 +use core::fmt;
 +
 +/// Prints without a newline.

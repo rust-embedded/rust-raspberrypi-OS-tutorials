@@ -28,6 +28,28 @@ diff -uNr 01_wait_forever/Cargo.toml 02_runtime_init/Cargo.toml
 -
 +r0 = "0.2.*"
 
+diff -uNr 01_wait_forever/src/arch/aarch64/start.S 02_runtime_init/src/arch/aarch64/start.S
+--- 01_wait_forever/src/arch/aarch64/start.S
++++ 02_runtime_init/src/arch/aarch64/start.S
+@@ -7,5 +7,15 @@
+ .global _start
+
+ _start:
+-1:  wfe         // Wait for event
+-    b       1b  // In case an event happend, jump back to 1
++    mrs     x1, mpidr_el1   // Read Multiprocessor Affinity Register
++    and     x1, x1, #3      // Clear all bits except [1:0], which hold core id
++    cbz     x1, 2f          // Jump to label 2 if we are core 0
++1:  wfe                     // Wait for event
++    b       1b              // In case an event happend, jump back to 1
++2:                          // If we are here, we are core0
++    ldr     x1, =_start     // Load address of function "_start()"
++    mov     sp, x1          // Set start of stack to before our code, aka first
++                            // address before "_start()"
++    bl      init            // Jump to the "init()" kernel function
++    b       1b              // We should never reach here. But just in case,
++                            // park this core aswell
+
 diff -uNr 01_wait_forever/src/bsp/rpi3/link.ld 02_runtime_init/src/bsp/rpi3/link.ld
 --- 01_wait_forever/src/bsp/rpi3/link.ld
 +++ 02_runtime_init/src/bsp/rpi3/link.ld
@@ -56,40 +78,23 @@ diff -uNr 01_wait_forever/src/bsp/rpi3/link.ld 02_runtime_init/src/bsp/rpi3/link
      /DISCARD/ : { *(.comment*) }
  }
 
-diff -uNr 01_wait_forever/src/bsp/rpi3/start.S 02_runtime_init/src/bsp/rpi3/start.S
---- 01_wait_forever/src/bsp/rpi3/start.S
-+++ 02_runtime_init/src/bsp/rpi3/start.S
-@@ -7,5 +7,15 @@
- .global _start
-
- _start:
--1:  wfe         // Wait for event
--    b       1b  // In case an event happend, jump back to 1
-+    mrs     x1, mpidr_el1   // Read Multiprocessor Affinity Register
-+    and     x1, x1, #3      // Clear all bits except [1:0], which hold core id
-+    cbz     x1, 2f          // Jump to label 2 if we are core 0
-+1:  wfe                     // Wait for event
-+    b       1b              // In case an event happend, jump back to 1
-+2:                          // If we are here, we are core0
-+    ldr     x1, =_start     // Load address of function "_start()"
-+    mov     sp, x1          // Set start of stack to before our code, aka first
-+                            // address before "_start()"
-+    bl      init            // Jump to the "init()" kernel function
-+    b       1b              // We should never reach here. But just in case,
-+                            // park this core aswell
-
 diff -uNr 01_wait_forever/src/main.rs 02_runtime_init/src/main.rs
 --- 01_wait_forever/src/main.rs
 +++ 02_runtime_init/src/main.rs
-@@ -16,4 +16,11 @@
+@@ -16,9 +16,16 @@
  // `_start()` function, the first function to run.
- mod bsp;
+ mod arch;
 
--// Kernel code coming next tutorial.
-+// Afterwards, `BSP`'s early init code calls `runtime_init::init()` of this
-+// module, which on completion, jumps to `kernel_entry()`.
++// `_start()` then calls `runtime_init::init()`, which on completion, jumps to
++// `kernel_entry()`.
 +mod runtime_init;
 +
+ // Conditionally includes the selected `BSP` code.
+ mod bsp;
+
+ mod panic_wait;
+
+-// Kernel code coming next tutorial.
 +/// Entrypoint of the `kernel`.
 +fn kernel_entry() -> ! {
 +    panic!()

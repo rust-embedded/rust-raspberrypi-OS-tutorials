@@ -21,8 +21,8 @@ The borrow checker can't help here).
 The solution to this problem is to wrap the global into a synchronization
 primitive. In our case, a variant of a *MUTual EXclusion* primivite. `Mutex` is
 introduced as a trait in `interfaces.rs`, and implemented by the name of
-`NullLock` in `sync.rs` in the `bsp` folder. For teaching purposes, to make the
-code lean, it leaves out the actual platform-specific logic for protection
+`NullLock` in `sync.rs` in the `arch` folder. For teaching purposes, to make the
+code lean, it leaves out the actual architecture-specific logic for protection
 against concurrent access, since we don't need it as long as the kernel only
 exeuts on a single core with interrupts disabled.
 
@@ -42,15 +42,15 @@ can check out implemntations in the [spin crate] or the [parking lot crate].
 ## Diff to previous
 ```diff
 
-diff -uNr 04_zero_overhead_abstraction/src/bsp/rpi3/sync.rs 05_safe_globals/src/bsp/rpi3/sync.rs
---- 04_zero_overhead_abstraction/src/bsp/rpi3/sync.rs
-+++ 05_safe_globals/src/bsp/rpi3/sync.rs
+diff -uNr 04_zero_overhead_abstraction/src/arch/aarch64/sync.rs 05_safe_globals/src/arch/aarch64/sync.rs
+--- 04_zero_overhead_abstraction/src/arch/aarch64/sync.rs
++++ 05_safe_globals/src/arch/aarch64/sync.rs
 @@ -0,0 +1,47 @@
 +// SPDX-License-Identifier: MIT
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
 +
-+//! Board-specific synchronization primitives.
++//! Synchronization primitives.
 +
 +use crate::interface;
 +use core::cell::UnsafeCell;
@@ -94,24 +94,32 @@ diff -uNr 04_zero_overhead_abstraction/src/bsp/rpi3/sync.rs 05_safe_globals/src/
 +    }
 +}
 
+diff -uNr 04_zero_overhead_abstraction/src/arch/aarch64.rs 05_safe_globals/src/arch/aarch64.rs
+--- 04_zero_overhead_abstraction/src/arch/aarch64.rs
++++ 05_safe_globals/src/arch/aarch64.rs
+@@ -4,6 +4,8 @@
+
+ //! AArch64.
+
++pub mod sync;
++
+ use crate::bsp;
+ use cortex_a::{asm, regs::*};
+
+
 diff -uNr 04_zero_overhead_abstraction/src/bsp/rpi3.rs 05_safe_globals/src/bsp/rpi3.rs
 --- 04_zero_overhead_abstraction/src/bsp/rpi3.rs
 +++ 05_safe_globals/src/bsp/rpi3.rs
-@@ -5,10 +5,12 @@
+@@ -4,39 +4,111 @@
+
  //! Board Support Package for the Raspberry Pi 3.
 
- mod panic_wait;
-+mod sync;
-
- use crate::interface;
+-use crate::interface;
++use crate::{arch::sync::NullLock, interface};
  use core::fmt;
- use cortex_a::{asm, regs::*};
-+use sync::NullLock;
 
- /// The entry of the `kernel` binary.
- ///
-@@ -38,28 +40,100 @@
- }
+ pub const BOOT_CORE_ID: u64 = 0;
+ pub const BOOT_CORE_STACK_START: u64 = 0x80_000;
 
  /// A mystical, magical device for generating QEMU output out of the void.
 -struct QEMUOutput;
@@ -218,10 +226,6 @@ diff -uNr 04_zero_overhead_abstraction/src/bsp/rpi3.rs 05_safe_globals/src/bsp/r
  // Implementation of the kernel's BSP calls
  ////////////////////////////////////////////////////////////////////////////////
 
-@@ -70,7 +144,7 @@
-     }
- }
-
 -/// Returns a ready-to-use `console::Write` implementation.
 -pub fn console() -> impl interface::console::Write {
 -    QEMUOutput {}
@@ -229,6 +233,19 @@ diff -uNr 04_zero_overhead_abstraction/src/bsp/rpi3.rs 05_safe_globals/src/bsp/r
 +pub fn console() -> &'static impl interface::console::All {
 +    &QEMU_OUTPUT
  }
+
+diff -uNr 04_zero_overhead_abstraction/src/bsp.rs 05_safe_globals/src/bsp.rs
+--- 04_zero_overhead_abstraction/src/bsp.rs
++++ 05_safe_globals/src/bsp.rs
+@@ -5,7 +5,7 @@
+ //! Conditional exporting of Board Support Packages.
+
+ #[cfg(feature = "bsp_rpi3")]
+-pub mod rpi3;
++mod rpi3;
+
+ #[cfg(feature = "bsp_rpi3")]
+ pub use rpi3::*;
 
 diff -uNr 04_zero_overhead_abstraction/src/interface.rs 05_safe_globals/src/interface.rs
 --- 04_zero_overhead_abstraction/src/interface.rs
@@ -320,7 +337,7 @@ diff -uNr 04_zero_overhead_abstraction/src/main.rs 05_safe_globals/src/main.rs
  #![no_main]
  #![no_std]
 
-@@ -31,8 +32,12 @@
+@@ -35,8 +36,12 @@
 
  /// Entrypoint of the `kernel`.
  fn kernel_entry() -> ! {
@@ -332,6 +349,6 @@ diff -uNr 04_zero_overhead_abstraction/src/main.rs 05_safe_globals/src/main.rs
 +    println!("[1] Chars written: {}", bsp::console().chars_written());
 +
 +    println!("[2] Stopping here.");
-     bsp::wait_forever()
+     arch::wait_forever()
  }
 ```

@@ -12,13 +12,18 @@
 #![no_main]
 #![no_std]
 
-// This module conditionally includes the correct `BSP` which provides the
+// Conditionally includes the selected `architecture` code, which provides the
 // `_start()` function, the first function to run.
+mod arch;
+
+// `_start()` then calls `runtime_init::init()`, which on completion, jumps to
+// `kernel_entry()`.
+mod runtime_init;
+
+// Conditionally includes the selected `BSP` code.
 mod bsp;
 
-// Afterwards, `BSP`'s early init code calls `runtime_init::init()` of this
-// module, which on completion, jumps to `kernel_entry()`.
-mod runtime_init;
+mod panic_wait;
 
 /// Entrypoint of the `kernel`.
 fn kernel_entry() -> ! {

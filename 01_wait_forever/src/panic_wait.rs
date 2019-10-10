@@ -8,9 +8,5 @@ use core::panic::PanicInfo;
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
-    unsafe {
-        loop {
-            asm!("wfe" :::: "volatile")
-        }
-    }
+    crate::arch::wait_forever()
 }

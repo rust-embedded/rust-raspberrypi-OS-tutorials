@@ -5,8 +5,6 @@
 All hand-written assembly is replaced by Rust code from the [cortex-a] crate,
 which provides zero-overhead abstractions and wraps the `unsafe` parts.
 
-- `bsp::wait_forever()` is introduced.
-
 [cortex-a]: https://github.com/rust-embedded/cortex-a
 
 ## Diff to previous
@@ -28,24 +26,9 @@ diff -uNr 03_hacky_hello_world/Cargo.toml 04_zero_overhead_abstraction/Cargo.tom
 +# Optional dependencies
 +cortex-a = { version = "2.*", optional = true }
 
-diff -uNr 03_hacky_hello_world/src/bsp/rpi3/panic_wait.rs 04_zero_overhead_abstraction/src/bsp/rpi3/panic_wait.rs
---- 03_hacky_hello_world/src/bsp/rpi3/panic_wait.rs
-+++ 04_zero_overhead_abstraction/src/bsp/rpi3/panic_wait.rs
-@@ -15,9 +15,5 @@
-         println!("Kernel panic!");
-     }
-
--    unsafe {
--        loop {
--            asm!("wfe" :::: "volatile")
--        }
--    }
-+    super::wait_forever()
- }
-
-diff -uNr 03_hacky_hello_world/src/bsp/rpi3/start.S 04_zero_overhead_abstraction/src/bsp/rpi3/start.S
---- 03_hacky_hello_world/src/bsp/rpi3/start.S
-+++ 04_zero_overhead_abstraction/src/bsp/rpi3/start.S
+diff -uNr 03_hacky_hello_world/src/arch/aarch64/start.S 04_zero_overhead_abstraction/src/arch/aarch64/start.S
+--- 03_hacky_hello_world/src/arch/aarch64/start.S
++++ 04_zero_overhead_abstraction/src/arch/aarch64/start.S
 @@ -1,21 +0,0 @@
 -// SPDX-License-Identifier: MIT
 -//
@@ -69,16 +52,17 @@ diff -uNr 03_hacky_hello_world/src/bsp/rpi3/start.S 04_zero_overhead_abstraction
 -    b       1b              // We should never reach here. But just in case,
 -                            // park this core aswell
 
-diff -uNr 03_hacky_hello_world/src/bsp/rpi3.rs 04_zero_overhead_abstraction/src/bsp/rpi3.rs
---- 03_hacky_hello_world/src/bsp/rpi3.rs
-+++ 04_zero_overhead_abstraction/src/bsp/rpi3.rs
-@@ -8,8 +8,34 @@
+diff -uNr 03_hacky_hello_world/src/arch/aarch64.rs 04_zero_overhead_abstraction/src/arch/aarch64.rs
+--- 03_hacky_hello_world/src/arch/aarch64.rs
++++ 04_zero_overhead_abstraction/src/arch/aarch64.rs
+@@ -4,7 +4,29 @@
 
- use crate::interface;
- use core::fmt;
+ //! AArch64.
+
+-global_asm!(include_str!("aarch64/start.S"));
++use crate::bsp;
 +use cortex_a::{asm, regs::*};
-
--global_asm!(include_str!("rpi3/start.S"));
++
 +/// The entry of the `kernel` binary.
 +///
 +/// The function must be named `_start`, because the linker is looking for this
@@ -89,39 +73,45 @@ diff -uNr 03_hacky_hello_world/src/bsp/rpi3.rs 04_zero_overhead_abstraction/src/
 +/// - Linker script must ensure to place this function at `0x80_000`.
 +#[no_mangle]
 +pub unsafe extern "C" fn _start() -> ! {
-+    use crate::runtime_init;
-+
-+    const CORE_0: u64 = 0;
 +    const CORE_MASK: u64 = 0x3;
-+    const STACK_START: u64 = 0x80_000;
 +
-+    if CORE_0 == MPIDR_EL1.get() & CORE_MASK {
-+        SP.set(STACK_START);
-+        runtime_init::init()
++    if bsp::BOOT_CORE_ID == MPIDR_EL1.get() & CORE_MASK {
++        SP.set(bsp::BOOT_CORE_STACK_START);
++        crate::runtime_init::init()
 +    } else {
 +        // if not core0, infinitely wait for events
-+        loop {
-+            asm::wfe();
-+        }
++        wait_forever()
 +    }
 +}
 
- /// A mystical, magical device for generating QEMU output out of the void.
- struct QEMUOutput;
-@@ -37,6 +63,13 @@
- // Implementation of the kernel's BSP calls
  ////////////////////////////////////////////////////////////////////////////////
-
-+/// Park execution on the calling CPU core.
-+pub fn wait_forever() -> ! {
+ // Implementation of the kernel's architecture abstraction code
+@@ -13,9 +35,7 @@
+ /// Pause execution on the calling CPU core.
+ #[inline(always)]
+ pub fn wait_forever() -> ! {
+-    unsafe {
+-        loop {
+-            asm!("wfe" :::: "volatile")
+-        }
 +    loop {
 +        asm::wfe()
-+    }
-+}
+     }
+ }
+
+diff -uNr 03_hacky_hello_world/src/bsp/rpi3.rs 04_zero_overhead_abstraction/src/bsp/rpi3.rs
+--- 03_hacky_hello_world/src/bsp/rpi3.rs
++++ 04_zero_overhead_abstraction/src/bsp/rpi3.rs
+@@ -7,6 +7,9 @@
+ use crate::interface;
+ use core::fmt;
+
++pub const BOOT_CORE_ID: u64 = 0;
++pub const BOOT_CORE_STACK_START: u64 = 0x80_000;
 +
- /// Returns a ready-to-use `console::Write` implementation.
- pub fn console() -> impl interface::console::Write {
-     QEMUOutput {}
+ /// A mystical, magical device for generating QEMU output out of the void.
+ struct QEMUOutput;
+
 
 diff -uNr 03_hacky_hello_world/src/main.rs 04_zero_overhead_abstraction/src/main.rs
 --- 03_hacky_hello_world/src/main.rs
@@ -136,7 +126,7 @@ diff -uNr 03_hacky_hello_world/src/main.rs 04_zero_overhead_abstraction/src/main
  #![feature(panic_info_message)]
  #![no_main]
  #![no_std]
-@@ -33,7 +31,8 @@
+@@ -37,7 +35,8 @@
 
  /// Entrypoint of the `kernel`.
  fn kernel_entry() -> ! {
@@ -145,7 +135,7 @@ diff -uNr 03_hacky_hello_world/src/main.rs 04_zero_overhead_abstraction/src/main
 
 -    panic!("Stopping here.")
 +    println!("[1] Stopping here.");
-+    bsp::wait_forever()
++    arch::wait_forever()
  }
 
 diff -uNr 03_hacky_hello_world/src/runtime_init.rs 04_zero_overhead_abstraction/src/runtime_init.rs

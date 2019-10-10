@@ -6,15 +6,17 @@ Now that we enabled safe globals in the previous tutorial, the infrastructure is
 laid for adding the first real device drivers. We throw out the magic QEMU
 console and use a real UART now. Like real though embedded people do!
 
-- A `DeviceDriver` trait is added for abstracting BSP driver implementations
+- A `DeviceDriver` trait is added for abstracting `BSP` driver implementations
   from kernel code.
-- Introducing the `GPIO` driver, which pinmuxes the RPi's Mini UART.
-- Most importantly, the `MiniUart` driver: It implements the `Console` traits
-  and is from now on used as the system console output.
-    - **Be sure to check it out by booting this kernel from the SD card and
-      watching the output!**
-- `memory_map.rs` contains the RPi3 device's MMIO addresses.
-
+- Drivers are stored in `bsp/driver`, and can be reused between `BSP`s.
+    - Introducing the `GPIO` driver, which pinmuxes the RPi's Mini UART.
+    - Most importantly, the `MiniUart` driver: It implements the `Console`
+      traits and is from now on used as the system console output.
+        - **Be sure to check it out by booting this kernel from the SD card and
+          watching the output!**
+- `BSP`s now contain a`memory_map.rs`. In the specific case, they contain the
+  RPi's MMIO addresses which are used to instantiate compatible device drivers
+  from `bsp/driver`.
 
 ## Diff to previous
 ```diff
@@ -36,20 +38,31 @@ diff -uNr 05_safe_globals/Cargo.toml 06_drivers_gpio_uart/Cargo.toml
  cortex-a = { version = "2.*", optional = true }
 +register = { version = "0.3.*", optional = true }
 
-diff -uNr 05_safe_globals/src/bsp/rpi3/driver/gpio.rs 06_drivers_gpio_uart/src/bsp/rpi3/driver/gpio.rs
---- 05_safe_globals/src/bsp/rpi3/driver/gpio.rs
-+++ 06_drivers_gpio_uart/src/bsp/rpi3/driver/gpio.rs
-@@ -0,0 +1,164 @@
+diff -uNr 05_safe_globals/src/arch/aarch64.rs 06_drivers_gpio_uart/src/arch/aarch64.rs
+--- 05_safe_globals/src/arch/aarch64.rs
++++ 06_drivers_gpio_uart/src/arch/aarch64.rs
+@@ -34,6 +34,8 @@
+ // Implementation of the kernel's architecture abstraction code
+ ////////////////////////////////////////////////////////////////////////////////
+
++pub use asm::nop;
++
+ /// Pause execution on the calling CPU core.
+ #[inline(always)]
+ pub fn wait_forever() -> ! {
+
+diff -uNr 05_safe_globals/src/bsp/driver/bcm2837_gpio.rs 06_drivers_gpio_uart/src/bsp/driver/bcm2837_gpio.rs
+--- 05_safe_globals/src/bsp/driver/bcm2837_gpio.rs
++++ 06_drivers_gpio_uart/src/bsp/driver/bcm2837_gpio.rs
+@@ -0,0 +1,162 @@
 +// SPDX-License-Identifier: MIT
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! GPIO driver.
 +
-+use super::super::NullLock;
-+use crate::interface;
++use crate::{arch, arch::sync::NullLock, interface};
 +use core::ops;
-+use cortex_a::asm;
 +use register::{mmio::ReadWrite, register_bitfields};
 +
 +// GPIO registers.
@@ -160,13 +173,13 @@ diff -uNr 05_safe_globals/src/bsp/rpi3/driver/gpio.rs 06_drivers_gpio_uart/src/b
 +        // Enable pins 14 and 15.
 +        self.GPPUD.set(0);
 +        for _ in 0..150 {
-+            asm::nop();
++            arch::nop();
 +        }
 +
 +        self.GPPUDCLK0
 +            .write(GPPUDCLK0::PUDCLK14::AssertClock + GPPUDCLK0::PUDCLK15::AssertClock);
 +        for _ in 0..150 {
-+            asm::nop();
++            arch::nop();
 +        }
 +
 +        self.GPPUDCLK0.set(0);
@@ -205,20 +218,18 @@ diff -uNr 05_safe_globals/src/bsp/rpi3/driver/gpio.rs 06_drivers_gpio_uart/src/b
 +    }
 +}
 
-diff -uNr 05_safe_globals/src/bsp/rpi3/driver/mini_uart.rs 06_drivers_gpio_uart/src/bsp/rpi3/driver/mini_uart.rs
---- 05_safe_globals/src/bsp/rpi3/driver/mini_uart.rs
-+++ 06_drivers_gpio_uart/src/bsp/rpi3/driver/mini_uart.rs
-@@ -0,0 +1,263 @@
+diff -uNr 05_safe_globals/src/bsp/driver/bcm2xxx_mini_uart.rs 06_drivers_gpio_uart/src/bsp/driver/bcm2xxx_mini_uart.rs
+--- 05_safe_globals/src/bsp/driver/bcm2xxx_mini_uart.rs
++++ 06_drivers_gpio_uart/src/bsp/driver/bcm2xxx_mini_uart.rs
+@@ -0,0 +1,261 @@
 +// SPDX-License-Identifier: MIT
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Mini UART driver.
 +
-+use super::super::NullLock;
-+use crate::interface;
++use crate::{arch, arch::sync::NullLock, interface};
 +use core::{fmt, ops};
-+use cortex_a::asm;
 +use register::{mmio::*, register_bitfields};
 +
 +// Mini UART registers.
@@ -381,7 +392,7 @@ diff -uNr 05_safe_globals/src/bsp/rpi3/driver/mini_uart.rs 06_drivers_gpio_uart/
 +                break;
 +            }
 +
-+            asm::nop();
++            arch::nop();
 +        }
 +
 +        // Write the character to the buffer.
@@ -405,8 +416,7 @@ diff -uNr 05_safe_globals/src/bsp/rpi3/driver/mini_uart.rs 06_drivers_gpio_uart/
 +            // Convert newline to carrige return + newline.
 +            if c == '
 ' {
-+                self.write_char('
-')
++                self.write_char('')
 +            }
 +
 +            self.write_char(c);
@@ -475,21 +485,27 @@ diff -uNr 05_safe_globals/src/bsp/rpi3/driver/mini_uart.rs 06_drivers_gpio_uart/
 +    }
 +}
 
-diff -uNr 05_safe_globals/src/bsp/rpi3/driver.rs 06_drivers_gpio_uart/src/bsp/rpi3/driver.rs
---- 05_safe_globals/src/bsp/rpi3/driver.rs
-+++ 06_drivers_gpio_uart/src/bsp/rpi3/driver.rs
-@@ -0,0 +1,11 @@
+diff -uNr 05_safe_globals/src/bsp/driver.rs 06_drivers_gpio_uart/src/bsp/driver.rs
+--- 05_safe_globals/src/bsp/driver.rs
++++ 06_drivers_gpio_uart/src/bsp/driver.rs
+@@ -0,0 +1,17 @@
 +// SPDX-License-Identifier: MIT
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
 +
-+//! Collection of device drivers.
++//! Drivers.
 +
-+mod gpio;
-+mod mini_uart;
++#[cfg(feature = "bsp_rpi3")]
++mod bcm2837_gpio;
 +
-+pub use gpio::GPIO;
-+pub use mini_uart::MiniUart;
++#[cfg(feature = "bsp_rpi3")]
++mod bcm2xxx_mini_uart;
++
++#[cfg(feature = "bsp_rpi3")]
++pub use bcm2837_gpio::GPIO;
++
++#[cfg(feature = "bsp_rpi3")]
++pub use bcm2xxx_mini_uart::MiniUart;
 
 diff -uNr 05_safe_globals/src/bsp/rpi3/memory_map.rs 06_drivers_gpio_uart/src/bsp/rpi3/memory_map.rs
 --- 05_safe_globals/src/bsp/rpi3/memory_map.rs
@@ -512,23 +528,19 @@ diff -uNr 05_safe_globals/src/bsp/rpi3/memory_map.rs 06_drivers_gpio_uart/src/bs
 diff -uNr 05_safe_globals/src/bsp/rpi3.rs 06_drivers_gpio_uart/src/bsp/rpi3.rs
 --- 05_safe_globals/src/bsp/rpi3.rs
 +++ 06_drivers_gpio_uart/src/bsp/rpi3.rs
-@@ -4,11 +4,12 @@
+@@ -4,105 +4,21 @@
 
  //! Board Support Package for the Raspberry Pi 3.
 
-+mod driver;
-+mod memory_map;
- mod panic_wait;
- mod sync;
-
- use crate::interface;
+-use crate::{arch::sync::NullLock, interface};
 -use core::fmt;
- use cortex_a::{asm, regs::*};
- use sync::NullLock;
++mod memory_map;
++
++use super::driver;
++use crate::interface;
 
-@@ -39,99 +40,13 @@
-     }
- }
+ pub const BOOT_CORE_ID: u64 = 0;
+ pub const BOOT_CORE_STACK_START: u64 = 0x80_000;
 
 -/// A mystical, magical device for generating QEMU output out of the void.
 -///
@@ -566,8 +578,7 @@ diff -uNr 05_safe_globals/src/bsp/rpi3.rs 06_drivers_gpio_uart/src/bsp/rpi3.rs
 -            // Convert newline to carrige return + newline.
 -            if c == '
 ' {
--                self.write_char('
-')
+-                self.write_char('')
 -            }
 -
 -            self.write_char(c);
@@ -579,11 +590,10 @@ diff -uNr 05_safe_globals/src/bsp/rpi3.rs 06_drivers_gpio_uart/src/bsp/rpi3.rs
 -    }
 -}
 -
- ////////////////////////////////////////////////////////////////////////////////
+-////////////////////////////////////////////////////////////////////////////////
 -// OS interface implementations
-+// Global BSP driver instances
- ////////////////////////////////////////////////////////////////////////////////
-
+-////////////////////////////////////////////////////////////////////////////////
+-
 -/// The main struct.
 -pub struct QEMUOutput {
 -    inner: NullLock<QEMUOutputInner>,
@@ -621,10 +631,11 @@ diff -uNr 05_safe_globals/src/bsp/rpi3.rs 06_drivers_gpio_uart/src/bsp/rpi3.rs
 -    }
 -}
 -
--////////////////////////////////////////////////////////////////////////////////
+ ////////////////////////////////////////////////////////////////////////////////
 -// Global instances
--////////////////////////////////////////////////////////////////////////////////
--
++// Global BSP driver instances
+ ////////////////////////////////////////////////////////////////////////////////
+
 -static QEMU_OUTPUT: QEMUOutput = QEMUOutput::new();
 +static GPIO: driver::GPIO = unsafe { driver::GPIO::new(memory_map::mmio::GPIO_BASE) };
 +static MINI_UART: driver::MiniUart =
@@ -632,7 +643,7 @@ diff -uNr 05_safe_globals/src/bsp/rpi3.rs 06_drivers_gpio_uart/src/bsp/rpi3.rs
 
  ////////////////////////////////////////////////////////////////////////////////
  // Implementation of the kernel's BSP calls
-@@ -146,5 +61,15 @@
+@@ -110,5 +26,15 @@
 
  /// Return a reference to a `console::All` implementation.
  pub fn console() -> &'static impl interface::console::All {
@@ -649,6 +660,19 @@ diff -uNr 05_safe_globals/src/bsp/rpi3.rs 06_drivers_gpio_uart/src/bsp/rpi3.rs
 +pub fn device_drivers() -> [&'static dyn interface::driver::DeviceDriver; 2] {
 +    [&GPIO, &MINI_UART]
  }
+
+diff -uNr 05_safe_globals/src/bsp.rs 06_drivers_gpio_uart/src/bsp.rs
+--- 05_safe_globals/src/bsp.rs
++++ 06_drivers_gpio_uart/src/bsp.rs
+@@ -4,6 +4,8 @@
+
+ //! Conditional exporting of Board Support Packages.
+
++mod driver;
++
+ #[cfg(feature = "bsp_rpi3")]
+ mod rpi3;
+
 
 diff -uNr 05_safe_globals/src/interface.rs 06_drivers_gpio_uart/src/interface.rs
 --- 05_safe_globals/src/interface.rs
@@ -678,7 +702,7 @@ diff -uNr 05_safe_globals/src/interface.rs 06_drivers_gpio_uart/src/interface.rs
 diff -uNr 05_safe_globals/src/main.rs 06_drivers_gpio_uart/src/main.rs
 --- 05_safe_globals/src/main.rs
 +++ 06_drivers_gpio_uart/src/main.rs
-@@ -34,10 +34,27 @@
+@@ -38,10 +38,27 @@
  fn kernel_entry() -> ! {
      use interface::console::Statistics;
 
@@ -706,6 +730,6 @@ diff -uNr 05_safe_globals/src/main.rs 06_drivers_gpio_uart/src/main.rs
 
 -    println!("[2] Stopping here.");
 +    println!("[3] Stopping here.");
-     bsp::wait_forever()
+     arch::wait_forever()
  }
 ```

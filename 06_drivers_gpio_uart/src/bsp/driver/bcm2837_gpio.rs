@@ -4,10 +4,8 @@
 
 //! GPIO driver.
 
-use super::super::NullLock;
-use crate::interface;
+use crate::{arch, arch::sync::NullLock, interface};
 use core::ops;
-use cortex_a::asm;
 use register::{mmio::ReadWrite, register_bitfields};
 
 // GPIO registers.
@@ -118,13 +116,13 @@ impl GPIOInner {
         // Enable pins 14 and 15.
         self.GPPUD.set(0);
         for _ in 0..150 {
-            asm::nop();
+            arch::nop();
         }
 
         self.GPPUDCLK0
             .write(GPPUDCLK0::PUDCLK14::AssertClock + GPPUDCLK0::PUDCLK15::AssertClock);
         for _ in 0..150 {
-            asm::nop();
+            arch::nop();
         }
 
         self.GPPUDCLK0.set(0);

@@ -4,10 +4,8 @@
 
 //! Mini UART driver.
 
-use super::super::NullLock;
-use crate::interface;
+use crate::{arch, arch::sync::NullLock, interface};
 use core::{fmt, ops};
-use cortex_a::asm;
 use register::{mmio::*, register_bitfields};
 
 // Mini UART registers.
@@ -170,7 +168,7 @@ impl MiniUartInner {
                 break;
             }
 
-            asm::nop();
+            arch::nop();
         }
 
         // Write the character to the buffer.

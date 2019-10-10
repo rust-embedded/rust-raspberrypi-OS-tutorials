@@ -2,7 +2,7 @@
 //
 // Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
 
-//! Board-specific synchronization primitives.
+//! Synchronization primitives.
 
 use crate::interface;
 use core::cell::UnsafeCell;

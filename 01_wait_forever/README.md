@@ -2,10 +2,11 @@
 
 ## tl;dr
 
-Project skeleton is set up; Code just halts all CPU cores.
+Project skeleton is set up; Code just halts all CPU cores executing kernel code.
 
 - Toolchain: `cargo xbuild` tools (`xrustc`, `xclippy`) and the
-  `aarch64-unknown-none-softfloat` target are used for building `AArch64` bare-metal code.
+  `aarch64-unknown-none-softfloat` target are used for building `AArch64`
+  bare-metal code.
 - `Makefile` targets:
     - `doc`: Generate documentation.
     - `qemu`: Run the `kernel` in QEMU
@@ -14,9 +15,10 @@ Project skeleton is set up; Code just halts all CPU cores.
     - `readelf`: Inspect the `ELF` output.
     - `objdump`: Inspect the assembly.
     - `nm`: Inspect the symbols.
-- Code is organized into `kernel` and `BSP` (Board Support Package) parts.
-    - Conditional compilation includes a `BSP` according to user-supplied
-      arguments.
+- Code is organized into `kernel`, `arch` and `BSP` (Board Support Package)
+  parts.
+    - Conditional compilation includes respective `arch` and `BSP` according to
+      user-supplied arguments.
 - Custom `link.ld` linker script.
     - Load address at `0x80_000`
     - Only `.text` section.
