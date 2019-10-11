@@ -12,11 +12,24 @@ console and use a real UART now. Like real though embedded people do!
     - Introducing the `GPIO` driver, which pinmuxes the RPi's Mini UART.
     - Most importantly, the `MiniUart` driver: It implements the `Console`
       traits and is from now on used as the system console output.
-        - **Be sure to check it out by booting this kernel from the SD card and
-          watching the output!**
 - `BSP`s now contain a`memory_map.rs`. In the specific case, they contain the
   RPi's MMIO addresses which are used to instantiate compatible device drivers
   from `bsp/driver`.
+
+## Boot it from SD card
+
+1. Make a single `FAT32` partition named `boot`.
+2. Copy [bootcode.bin](https://github.com/raspberrypi/firmware/raw/master/boot/bootcode.bin), [fixup.dat](https://github.com/raspberrypi/firmware/raw/master/boot/fixup.dat) and [start.elf](https://github.com/raspberrypi/firmware/raw/master/boot/start.elf) from the [Raspberry Pi firmware repo](https://github.com/raspberrypi/firmware/tree/master/boot) onto the SD card.
+3. Copy our [kernel8.img](kernel8.img) onto the SD card.
+4. Insert the SD card into the RPi and connect the USB serial to your host PC.
+    - Wiring diagram at [top-level README](../README.md#usb-serial)
+5. Run `screen` (might need to install it first):
+
+```console
+sudo screen /dev/ttyUSB0 115200
+```
+
+6. Exit screen again by pressing <kbd>ctrl-a</kbd> <kbd>ctrl-d</kbd> or disconnecting the USB serial.
 
 ## Diff to previous
 ```diff
@@ -395,7 +408,8 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 06_drivers_gpi
 +            // Convert newline to carrige return + newline.
 +            if c == '
 ' {
-+                self.write_char('')
++                self.write_char('
+')
 +            }
 +
 +            self.write_char(c);
@@ -490,7 +504,8 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 06_drivers_gpi
 +            let mut ret = inner.AUX_MU_IO.get() as u8 as char;
 +
 +            // Convert carrige return to newline.
-+            if ret == '' {
++            if ret == '
+' {
 +                ret = '
 '
 +            }
@@ -610,7 +625,8 @@ diff -uNr 05_safe_globals/src/bsp/rpi3.rs 06_drivers_gpio_uart/src/bsp/rpi3.rs
 -            // Convert newline to carrige return + newline.
 -            if c == '
 ' {
--                self.write_char('')
+-                self.write_char('
+')
 -            }
 -
 -            self.write_char(c);
