@@ -51,9 +51,9 @@ diff -uNr 05_safe_globals/src/arch/aarch64.rs 06_drivers_gpio_uart/src/arch/aarc
  #[inline(always)]
  pub fn wait_forever() -> ! {
 
-diff -uNr 05_safe_globals/src/bsp/driver/bcm2837_gpio.rs 06_drivers_gpio_uart/src/bsp/driver/bcm2837_gpio.rs
---- 05_safe_globals/src/bsp/driver/bcm2837_gpio.rs
-+++ 06_drivers_gpio_uart/src/bsp/driver/bcm2837_gpio.rs
+diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2837_gpio.rs 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2837_gpio.rs
+--- 05_safe_globals/src/bsp/driver/bcm/bcm2837_gpio.rs
++++ 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2837_gpio.rs
 @@ -0,0 +1,162 @@
 +// SPDX-License-Identifier: MIT
 +//
@@ -78,8 +78,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm2837_gpio.rs 06_drivers_gpio_uart/sr
 +        FSEL15 OFFSET(15) NUMBITS(3) [
 +            Input = 0b000,
 +            Output = 0b001,
-+            RXD0 = 0b100, // UART0     - Alternate function 0
-+            RXD1 = 0b010  // Mini UART - Alternate function 5
++            AltFunc5 = 0b010  // Mini UART RX
 +
 +        ],
 +
@@ -87,8 +86,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm2837_gpio.rs 06_drivers_gpio_uart/sr
 +        FSEL14 OFFSET(12) NUMBITS(3) [
 +            Input = 0b000,
 +            Output = 0b001,
-+            TXD0 = 0b100, // UART0     - Alternate function 0
-+            TXD1 = 0b010  // Mini UART - Alternate function 5
++            AltFunc5 = 0b010  // Mini UART TX
 +        ]
 +    ],
 +
@@ -165,10 +163,10 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm2837_gpio.rs 06_drivers_gpio_uart/sr
 +    ///
 +    /// TX to pin 14
 +    /// RX to pin 15
-+    fn map_mini_uart(&mut self) {
++    pub fn map_mini_uart(&mut self) {
 +        // Map to pins.
 +        self.GPFSEL1
-+            .modify(GPFSEL1::FSEL14::TXD1 + GPFSEL1::FSEL15::RXD1);
++            .modify(GPFSEL1::FSEL14::AltFunc5 + GPFSEL1::FSEL15::AltFunc5);
 +
 +        // Enable pins 14 and 15.
 +        self.GPPUD.set(0);
@@ -187,10 +185,11 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm2837_gpio.rs 06_drivers_gpio_uart/sr
 +}
 +
 +////////////////////////////////////////////////////////////////////////////////
-+// OS interface implementations
++// BSP-public
 +////////////////////////////////////////////////////////////////////////////////
++use interface::sync::Mutex;
 +
-+/// The driver's public data.
++/// The driver's main struct.
 +pub struct GPIO {
 +    inner: NullLock<GPIOInner>,
 +}
@@ -201,27 +200,28 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm2837_gpio.rs 06_drivers_gpio_uart/sr
 +            inner: NullLock::new(GPIOInner::new(base_addr)),
 +        }
 +    }
++
++    // Only visible to other BSP code.
++    pub fn map_mini_uart(&self) {
++        let mut r = &self.inner;
++        r.lock(|inner| inner.map_mini_uart());
++    }
 +}
++
++////////////////////////////////////////////////////////////////////////////////
++// OS interface implementations
++////////////////////////////////////////////////////////////////////////////////
 +
 +impl interface::driver::DeviceDriver for GPIO {
 +    fn compatible(&self) -> &str {
 +        "GPIO"
 +    }
-+
-+    fn init(&self) -> interface::driver::Result {
-+        use interface::sync::Mutex;
-+
-+        let mut r = &self.inner;
-+        r.lock(|i| i.map_mini_uart());
-+
-+        Ok(())
-+    }
 +}
 
-diff -uNr 05_safe_globals/src/bsp/driver/bcm2xxx_mini_uart.rs 06_drivers_gpio_uart/src/bsp/driver/bcm2xxx_mini_uart.rs
---- 05_safe_globals/src/bsp/driver/bcm2xxx_mini_uart.rs
-+++ 06_drivers_gpio_uart/src/bsp/driver/bcm2xxx_mini_uart.rs
-@@ -0,0 +1,261 @@
+diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs
+--- 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs
++++ 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs
+@@ -0,0 +1,258 @@
 +// SPDX-License-Identifier: MIT
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
@@ -363,27 +363,6 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm2xxx_mini_uart.rs 06_drivers_gpio_ua
 +        self.base_addr as *const _
 +    }
 +
-+    /// Set up baud rate and characteristics (115200 8N1).
-+    fn init(&mut self) -> interface::driver::Result {
-+        self.AUX_ENABLES.modify(AUX_ENABLES::MINI_UART_ENABLE::SET);
-+        self.AUX_MU_IER.set(0);
-+        self.AUX_MU_CNTL.set(0);
-+        self.AUX_MU_LCR.write(AUX_MU_LCR::DATA_SIZE::EightBit);
-+        self.AUX_MU_MCR.set(0);
-+        self.AUX_MU_IER.set(0);
-+        self.AUX_MU_IIR.write(AUX_MU_IIR::FIFO_CLEAR::All);
-+        self.AUX_MU_BAUD.write(AUX_MU_BAUD::RATE.val(270)); // 115200 baud
-+
-+        // Enable receive and send.
-+        self.AUX_MU_CNTL
-+            .write(AUX_MU_CNTL::RX_EN::Enabled + AUX_MU_CNTL::TX_EN::Enabled);
-+
-+        // Clear FIFOs before using the device.
-+        self.AUX_MU_IIR.write(AUX_MU_IIR::FIFO_CLEAR::All);
-+
-+        Ok(())
-+    }
-+
 +    /// Send a character.
 +    fn write_char(&mut self, c: char) {
 +        // Wait until we can send.
@@ -429,7 +408,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm2xxx_mini_uart.rs 06_drivers_gpio_ua
 +}
 +
 +////////////////////////////////////////////////////////////////////////////////
-+// OS interface implementations
++// BSP-public
 +////////////////////////////////////////////////////////////////////////////////
 +
 +/// The driver's main struct.
@@ -448,16 +427,38 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm2xxx_mini_uart.rs 06_drivers_gpio_ua
 +    }
 +}
 +
++////////////////////////////////////////////////////////////////////////////////
++// OS interface implementations
++////////////////////////////////////////////////////////////////////////////////
++use interface::sync::Mutex;
++
 +impl interface::driver::DeviceDriver for MiniUart {
 +    fn compatible(&self) -> &str {
 +        "MiniUart"
 +    }
 +
++    /// Set up baud rate and characteristics (115200 8N1).
 +    fn init(&self) -> interface::driver::Result {
-+        use interface::sync::Mutex;
-+
 +        let mut r = &self.inner;
-+        r.lock(|i| i.init())
++        r.lock(|inner| {
++            // Enable register access to the MiniUart
++            inner.AUX_ENABLES.modify(AUX_ENABLES::MINI_UART_ENABLE::SET);
++            inner.AUX_MU_IER.set(0); // disable RX and TX interrupts
++            inner.AUX_MU_CNTL.set(0); // disable send and receive
++            inner.AUX_MU_LCR.write(AUX_MU_LCR::DATA_SIZE::EightBit);
++            inner.AUX_MU_BAUD.write(AUX_MU_BAUD::RATE.val(270)); // 115200 baud
++            inner.AUX_MU_MCR.set(0); // set "ready to send" high
++
++            // Clear FIFOs before using the device.
++            inner.AUX_MU_IIR.write(AUX_MU_IIR::FIFO_CLEAR::All);
++
++            // Enable receive and send.
++            inner
++                .AUX_MU_CNTL
++                .write(AUX_MU_CNTL::RX_EN::Enabled + AUX_MU_CNTL::TX_EN::Enabled);
++        });
++
++        Ok(())
 +    }
 +}
 +
@@ -465,12 +466,10 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm2xxx_mini_uart.rs 06_drivers_gpio_ua
 +/// by a Mutex to serialize access.
 +impl interface::console::Write for MiniUart {
 +    fn write_fmt(&self, args: core::fmt::Arguments) -> fmt::Result {
-+        use interface::sync::Mutex;
-+
 +        // Fully qualified syntax for the call to
 +        // `core::fmt::Write::write:fmt()` to increase readability.
 +        let mut r = &self.inner;
-+        r.lock(|i| fmt::Write::write_fmt(i, args))
++        r.lock(|inner| fmt::Write::write_fmt(inner, args))
 +    }
 +}
 +
@@ -478,17 +477,31 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm2xxx_mini_uart.rs 06_drivers_gpio_ua
 +
 +impl interface::console::Statistics for MiniUart {
 +    fn chars_written(&self) -> usize {
-+        use interface::sync::Mutex;
-+
 +        let mut r = &self.inner;
-+        r.lock(|i| i.chars_written)
++        r.lock(|inner| inner.chars_written)
 +    }
 +}
+
+diff -uNr 05_safe_globals/src/bsp/driver/bcm.rs 06_drivers_gpio_uart/src/bsp/driver/bcm.rs
+--- 05_safe_globals/src/bsp/driver/bcm.rs
++++ 06_drivers_gpio_uart/src/bsp/driver/bcm.rs
+@@ -0,0 +1,11 @@
++// SPDX-License-Identifier: MIT
++//
++// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
++
++//! BCM driver top level.
++
++mod bcm2837_gpio;
++mod bcm2xxx_mini_uart;
++
++pub use bcm2837_gpio::GPIO;
++pub use bcm2xxx_mini_uart::MiniUart;
 
 diff -uNr 05_safe_globals/src/bsp/driver.rs 06_drivers_gpio_uart/src/bsp/driver.rs
 --- 05_safe_globals/src/bsp/driver.rs
 +++ 06_drivers_gpio_uart/src/bsp/driver.rs
-@@ -0,0 +1,17 @@
+@@ -0,0 +1,11 @@
 +// SPDX-License-Identifier: MIT
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
@@ -496,16 +509,10 @@ diff -uNr 05_safe_globals/src/bsp/driver.rs 06_drivers_gpio_uart/src/bsp/driver.
 +//! Drivers.
 +
 +#[cfg(feature = "bsp_rpi3")]
-+mod bcm2837_gpio;
++mod bcm;
 +
 +#[cfg(feature = "bsp_rpi3")]
-+mod bcm2xxx_mini_uart;
-+
-+#[cfg(feature = "bsp_rpi3")]
-+pub use bcm2837_gpio::GPIO;
-+
-+#[cfg(feature = "bsp_rpi3")]
-+pub use bcm2xxx_mini_uart::MiniUart;
++pub use bcm::*;
 
 diff -uNr 05_safe_globals/src/bsp/rpi3/memory_map.rs 06_drivers_gpio_uart/src/bsp/rpi3/memory_map.rs
 --- 05_safe_globals/src/bsp/rpi3/memory_map.rs
@@ -528,7 +535,7 @@ diff -uNr 05_safe_globals/src/bsp/rpi3/memory_map.rs 06_drivers_gpio_uart/src/bs
 diff -uNr 05_safe_globals/src/bsp/rpi3.rs 06_drivers_gpio_uart/src/bsp/rpi3.rs
 --- 05_safe_globals/src/bsp/rpi3.rs
 +++ 06_drivers_gpio_uart/src/bsp/rpi3.rs
-@@ -4,105 +4,21 @@
+@@ -4,115 +4,59 @@
 
  //! Board Support Package for the Raspberry Pi 3.
 
@@ -590,10 +597,11 @@ diff -uNr 05_safe_globals/src/bsp/rpi3.rs 06_drivers_gpio_uart/src/bsp/rpi3.rs
 -    }
 -}
 -
--////////////////////////////////////////////////////////////////////////////////
--// OS interface implementations
--////////////////////////////////////////////////////////////////////////////////
--
+ ////////////////////////////////////////////////////////////////////////////////
+-// BSP-public
++// Global BSP driver instances
+ ////////////////////////////////////////////////////////////////////////////////
+
 -/// The main struct.
 -pub struct QEMUOutput {
 -    inner: NullLock<QEMUOutputInner>,
@@ -606,7 +614,15 @@ diff -uNr 05_safe_globals/src/bsp/rpi3.rs 06_drivers_gpio_uart/src/bsp/rpi3.rs
 -        }
 -    }
 -}
--
++static GPIO: driver::GPIO = unsafe { driver::GPIO::new(memory_map::mmio::GPIO_BASE) };
++static MINI_UART: driver::MiniUart =
++    unsafe { driver::MiniUart::new(memory_map::mmio::MINI_UART_BASE) };
+
+ ////////////////////////////////////////////////////////////////////////////////
+-// OS interface implementations
++// Implementation of the kernel's BSP calls
+ ////////////////////////////////////////////////////////////////////////////////
+
 -/// Passthrough of `args` to the `core::fmt::Write` implementation, but guarded
 -/// by a Mutex to serialize access.
 -impl interface::console::Write for QEMUOutput {
@@ -616,10 +632,13 @@ diff -uNr 05_safe_globals/src/bsp/rpi3.rs 06_drivers_gpio_uart/src/bsp/rpi3.rs
 -        // Fully qualified syntax for the call to
 -        // `core::fmt::Write::write:fmt()` to increase readability.
 -        let mut r = &self.inner;
--        r.lock(|i| fmt::Write::write_fmt(i, args))
+-        r.lock(|inner| fmt::Write::write_fmt(inner, args))
 -    }
--}
--
++/// Board identification.
++pub fn board_name() -> &'static str {
++    "Raspberry Pi 3"
+ }
+
 -impl interface::console::Read for QEMUOutput {}
 -
 -impl interface::console::Statistics for QEMUOutput {
@@ -627,30 +646,18 @@ diff -uNr 05_safe_globals/src/bsp/rpi3.rs 06_drivers_gpio_uart/src/bsp/rpi3.rs
 -        use interface::sync::Mutex;
 -
 -        let mut r = &self.inner;
--        r.lock(|i| i.chars_written)
+-        r.lock(|inner| inner.chars_written)
 -    }
--}
--
- ////////////////////////////////////////////////////////////////////////////////
--// Global instances
-+// Global BSP driver instances
- ////////////////////////////////////////////////////////////////////////////////
-
--static QEMU_OUTPUT: QEMUOutput = QEMUOutput::new();
-+static GPIO: driver::GPIO = unsafe { driver::GPIO::new(memory_map::mmio::GPIO_BASE) };
-+static MINI_UART: driver::MiniUart =
-+    unsafe { driver::MiniUart::new(memory_map::mmio::MINI_UART_BASE) };
-
- ////////////////////////////////////////////////////////////////////////////////
- // Implementation of the kernel's BSP calls
-@@ -110,5 +26,15 @@
-
- /// Return a reference to a `console::All` implementation.
- pub fn console() -> &'static impl interface::console::All {
--    &QEMU_OUTPUT
++/// Return a reference to a `console::All` implementation.
++pub fn console() -> &'static impl interface::console::All {
 +    &MINI_UART
-+}
-+
+ }
+
+-////////////////////////////////////////////////////////////////////////////////
+-// Global instances
+-////////////////////////////////////////////////////////////////////////////////
+-
+-static QEMU_OUTPUT: QEMUOutput = QEMUOutput::new();
 +/// Return an array of references to all `DeviceDriver` compatible `BSP`
 +/// drivers.
 +///
@@ -659,6 +666,29 @@ diff -uNr 05_safe_globals/src/bsp/rpi3.rs 06_drivers_gpio_uart/src/bsp/rpi3.rs
 +/// The order of devices is the order in which `DeviceDriver::init()` is called.
 +pub fn device_drivers() -> [&'static dyn interface::driver::DeviceDriver; 2] {
 +    [&GPIO, &MINI_UART]
++}
+
+-////////////////////////////////////////////////////////////////////////////////
+-// Implementation of the kernel's BSP calls
+-////////////////////////////////////////////////////////////////////////////////
++/// The BSP's main initialization function.
++///
++/// Called early on kernel start.
++pub fn init() {
++    for i in device_drivers().iter() {
++        if let Err(()) = i.init() {
++            // This message will only be readable if, at the time of failure,
++            // the return value of `bsp::console()` is already in functioning
++            // state.
++            panic!("Error loading driver: {}", i.compatible())
++        }
++    }
+
+-/// Return a reference to a `console::All` implementation.
+-pub fn console() -> &'static impl interface::console::All {
+-    &QEMU_OUTPUT
++    // Configure MiniUart's output pins.
++    GPIO.map_mini_uart();
  }
 
 diff -uNr 05_safe_globals/src/bsp.rs 06_drivers_gpio_uart/src/bsp.rs
@@ -702,33 +732,26 @@ diff -uNr 05_safe_globals/src/interface.rs 06_drivers_gpio_uart/src/interface.rs
 diff -uNr 05_safe_globals/src/main.rs 06_drivers_gpio_uart/src/main.rs
 --- 05_safe_globals/src/main.rs
 +++ 06_drivers_gpio_uart/src/main.rs
-@@ -38,10 +38,27 @@
+@@ -38,10 +38,19 @@
  fn kernel_entry() -> ! {
      use interface::console::Statistics;
 
-+    // Initialize the BSP's device drivers.
-+    for i in bsp::device_drivers().iter() {
-+        if let Err(()) = i.init() {
-+            // This message will only be readable if, at the time of failure,
-+            // the return value of `bsp::console()` is already in functioning
-+            // state.
-+            panic!("Error loading driver: {}", i.compatible())
-+        }
-+    }
-+
-+    // If all drivers are loaded, UART is functional now and `println!()` calls
-+    // are transmitted on the physical wires.
-     println!("[0] Hello from pure Rust!");
+-    println!("[0] Hello from pure Rust!");
++    // Run the BSP's initialization code.
++    bsp::init();
 
 -    println!("[1] Chars written: {}", bsp::console().chars_written());
-+    println!("[1] Drivers probed:");
++    // UART should be functional now and `println!()` calls are transmitted on
++    // the physical wires.
++    println!("[0] Booting on: <{}>.", bsp::board_name());
+
+-    println!("[2] Stopping here.");
++    println!("[1] Drivers loaded:");
 +    for (i, driver) in bsp::device_drivers().iter().enumerate() {
-+        println!("    {}. {}", i + 1, driver.compatible());
++        println!("      {}. {}", i + 1, driver.compatible());
 +    }
 +
 +    println!("[2] Chars written: {}", bsp::console().chars_written());
-
--    println!("[2] Stopping here.");
 +    println!("[3] Stopping here.");
      arch::wait_forever()
  }

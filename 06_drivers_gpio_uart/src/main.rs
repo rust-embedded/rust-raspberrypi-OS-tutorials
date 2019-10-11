@@ -38,27 +38,19 @@ mod print;
 fn kernel_entry() -> ! {
     use interface::console::Statistics;
 
-    // Initialize the BSP's device drivers.
-    for i in bsp::device_drivers().iter() {
-        if let Err(()) = i.init() {
-            // This message will only be readable if, at the time of failure,
-            // the return value of `bsp::console()` is already in functioning
-            // state.
-            panic!("Error loading driver: {}", i.compatible())
-        }
-    }
+    // Run the BSP's initialization code.
+    bsp::init();
 
-    // If all drivers are loaded, UART is functional now and `println!()` calls
-    // are transmitted on the physical wires.
-    println!("[0] Hello from pure Rust!");
+    // UART should be functional now and `println!()` calls are transmitted on
+    // the physical wires.
+    println!("[0] Booting on: <{}>.", bsp::board_name());
 
-    println!("[1] Drivers probed:");
+    println!("[1] Drivers loaded:");
     for (i, driver) in bsp::device_drivers().iter().enumerate() {
-        println!("    {}. {}", i + 1, driver.compatible());
+        println!("      {}. {}", i + 1, driver.compatible());
     }
 
     println!("[2] Chars written: {}", bsp::console().chars_written());
-
     println!("[3] Stopping here.");
     arch::wait_forever()
 }

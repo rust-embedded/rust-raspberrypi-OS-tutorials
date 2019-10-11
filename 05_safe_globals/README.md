@@ -110,7 +110,7 @@ diff -uNr 04_zero_overhead_abstraction/src/arch/aarch64.rs 05_safe_globals/src/a
 diff -uNr 04_zero_overhead_abstraction/src/bsp/rpi3.rs 05_safe_globals/src/bsp/rpi3.rs
 --- 04_zero_overhead_abstraction/src/bsp/rpi3.rs
 +++ 05_safe_globals/src/bsp/rpi3.rs
-@@ -4,39 +4,111 @@
+@@ -4,39 +4,115 @@
 
  //! Board Support Package for the Raspberry Pi 3.
 
@@ -128,8 +128,7 @@ diff -uNr 04_zero_overhead_abstraction/src/bsp/rpi3.rs 05_safe_globals/src/bsp/r
 +struct QEMUOutputInner {
 +    chars_written: usize,
 +}
-
--/// Implementing `console::Write` enables usage of the `format_args!` macros,
++
 +impl QEMUOutputInner {
 +    const fn new() -> QEMUOutputInner {
 +        QEMUOutputInner { chars_written: 0 }
@@ -142,7 +141,8 @@ diff -uNr 04_zero_overhead_abstraction/src/bsp/rpi3.rs 05_safe_globals/src/bsp/r
 +        }
 +    }
 +}
-+
+
+-/// Implementing `console::Write` enables usage of the `format_args!` macros,
 +/// Implementing `core::fmt::Write` enables usage of the `format_args!` macros,
  /// which in turn are used to implement the `kernel`'s `print!` and `println!`
 -/// macros.
@@ -176,7 +176,7 @@ diff -uNr 04_zero_overhead_abstraction/src/bsp/rpi3.rs 05_safe_globals/src/bsp/r
  }
 
  ////////////////////////////////////////////////////////////////////////////////
-+// OS interface implementations
++// BSP-public
 +////////////////////////////////////////////////////////////////////////////////
 +
 +/// The main struct.
@@ -192,6 +192,10 @@ diff -uNr 04_zero_overhead_abstraction/src/bsp/rpi3.rs 05_safe_globals/src/bsp/r
 +    }
 +}
 +
++////////////////////////////////////////////////////////////////////////////////
++// OS interface implementations
++////////////////////////////////////////////////////////////////////////////////
++
 +/// Passthrough of `args` to the `core::fmt::Write` implementation, but guarded
 +/// by a Mutex to serialize access.
 +impl interface::console::Write for QEMUOutput {
@@ -201,7 +205,7 @@ diff -uNr 04_zero_overhead_abstraction/src/bsp/rpi3.rs 05_safe_globals/src/bsp/r
 +        // Fully qualified syntax for the call to
 +        // `core::fmt::Write::write:fmt()` to increase readability.
 +        let mut r = &self.inner;
-+        r.lock(|i| fmt::Write::write_fmt(i, args))
++        r.lock(|inner| fmt::Write::write_fmt(inner, args))
 +    }
 +}
 +
@@ -212,7 +216,7 @@ diff -uNr 04_zero_overhead_abstraction/src/bsp/rpi3.rs 05_safe_globals/src/bsp/r
 +        use interface::sync::Mutex;
 +
 +        let mut r = &self.inner;
-+        r.lock(|i| i.chars_written)
++        r.lock(|inner| inner.chars_written)
 +    }
 +}
 +

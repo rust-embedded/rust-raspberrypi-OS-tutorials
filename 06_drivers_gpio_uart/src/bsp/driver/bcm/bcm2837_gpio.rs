@@ -21,8 +21,7 @@ register_bitfields! {
         FSEL15 OFFSET(15) NUMBITS(3) [
             Input = 0b000,
             Output = 0b001,
-            RXD0 = 0b100, // UART0     - Alternate function 0
-            RXD1 = 0b010  // Mini UART - Alternate function 5
+            AltFunc5 = 0b010  // Mini UART RX
 
         ],
 
@@ -30,8 +29,7 @@ register_bitfields! {
         FSEL14 OFFSET(12) NUMBITS(3) [
             Input = 0b000,
             Output = 0b001,
-            TXD0 = 0b100, // UART0     - Alternate function 0
-            TXD1 = 0b010  // Mini UART - Alternate function 5
+            AltFunc5 = 0b010  // Mini UART TX
         ]
     ],
 
@@ -108,10 +106,10 @@ impl GPIOInner {
     ///
     /// TX to pin 14
     /// RX to pin 15
-    fn map_mini_uart(&mut self) {
+    pub fn map_mini_uart(&mut self) {
         // Map to pins.
         self.GPFSEL1
-            .modify(GPFSEL1::FSEL14::TXD1 + GPFSEL1::FSEL15::RXD1);
+            .modify(GPFSEL1::FSEL14::AltFunc5 + GPFSEL1::FSEL15::AltFunc5);
 
         // Enable pins 14 and 15.
         self.GPPUD.set(0);
@@ -130,10 +128,11 @@ impl GPIOInner {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// OS interface implementations
+// BSP-public
 ////////////////////////////////////////////////////////////////////////////////
+use interface::sync::Mutex;
 
-/// The driver's public data.
+/// The driver's main struct.
 pub struct GPIO {
     inner: NullLock<GPIOInner>,
 }
@@ -144,19 +143,20 @@ impl GPIO {
             inner: NullLock::new(GPIOInner::new(base_addr)),
         }
     }
+
+    // Only visible to other BSP code.
+    pub fn map_mini_uart(&self) {
+        let mut r = &self.inner;
+        r.lock(|inner| inner.map_mini_uart());
+    }
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// OS interface implementations
+////////////////////////////////////////////////////////////////////////////////
 
 impl interface::driver::DeviceDriver for GPIO {
     fn compatible(&self) -> &str {
         "GPIO"
-    }
-
-    fn init(&self) -> interface::driver::Result {
-        use interface::sync::Mutex;
-
-        let mut r = &self.inner;
-        r.lock(|i| i.map_mini_uart());
-
-        Ok(())
     }
 }

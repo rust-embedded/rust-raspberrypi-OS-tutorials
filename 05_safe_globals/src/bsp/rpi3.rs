@@ -58,7 +58,7 @@ impl fmt::Write for QEMUOutputInner {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// OS interface implementations
+// BSP-public
 ////////////////////////////////////////////////////////////////////////////////
 
 /// The main struct.
@@ -74,6 +74,10 @@ impl QEMUOutput {
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// OS interface implementations
+////////////////////////////////////////////////////////////////////////////////
+
 /// Passthrough of `args` to the `core::fmt::Write` implementation, but guarded
 /// by a Mutex to serialize access.
 impl interface::console::Write for QEMUOutput {
@@ -83,7 +87,7 @@ impl interface::console::Write for QEMUOutput {
         // Fully qualified syntax for the call to
         // `core::fmt::Write::write:fmt()` to increase readability.
         let mut r = &self.inner;
-        r.lock(|i| fmt::Write::write_fmt(i, args))
+        r.lock(|inner| fmt::Write::write_fmt(inner, args))
     }
 }
 
@@ -94,7 +98,7 @@ impl interface::console::Statistics for QEMUOutput {
         use interface::sync::Mutex;
 
         let mut r = &self.inner;
-        r.lock(|i| i.chars_written)
+        r.lock(|inner| inner.chars_written)
     }
 }
 

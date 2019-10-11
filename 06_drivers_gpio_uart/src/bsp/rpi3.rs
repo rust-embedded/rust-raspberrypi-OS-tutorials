@@ -24,6 +24,11 @@ static MINI_UART: driver::MiniUart =
 // Implementation of the kernel's BSP calls
 ////////////////////////////////////////////////////////////////////////////////
 
+/// Board identification.
+pub fn board_name() -> &'static str {
+    "Raspberry Pi 3"
+}
+
 /// Return a reference to a `console::All` implementation.
 pub fn console() -> &'static impl interface::console::All {
     &MINI_UART
@@ -37,4 +42,21 @@ pub fn console() -> &'static impl interface::console::All {
 /// The order of devices is the order in which `DeviceDriver::init()` is called.
 pub fn device_drivers() -> [&'static dyn interface::driver::DeviceDriver; 2] {
     [&GPIO, &MINI_UART]
+}
+
+/// The BSP's main initialization function.
+///
+/// Called early on kernel start.
+pub fn init() {
+    for i in device_drivers().iter() {
+        if let Err(()) = i.init() {
+            // This message will only be readable if, at the time of failure,
+            // the return value of `bsp::console()` is already in functioning
+            // state.
+            panic!("Error loading driver: {}", i.compatible())
+        }
+    }
+
+    // Configure MiniUart's output pins.
+    GPIO.map_mini_uart();
 }

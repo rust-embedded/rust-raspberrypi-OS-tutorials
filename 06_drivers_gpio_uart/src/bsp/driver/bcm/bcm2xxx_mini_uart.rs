@@ -139,27 +139,6 @@ impl MiniUartInner {
         self.base_addr as *const _
     }
 
-    /// Set up baud rate and characteristics (115200 8N1).
-    fn init(&mut self) -> interface::driver::Result {
-        self.AUX_ENABLES.modify(AUX_ENABLES::MINI_UART_ENABLE::SET);
-        self.AUX_MU_IER.set(0);
-        self.AUX_MU_CNTL.set(0);
-        self.AUX_MU_LCR.write(AUX_MU_LCR::DATA_SIZE::EightBit);
-        self.AUX_MU_MCR.set(0);
-        self.AUX_MU_IER.set(0);
-        self.AUX_MU_IIR.write(AUX_MU_IIR::FIFO_CLEAR::All);
-        self.AUX_MU_BAUD.write(AUX_MU_BAUD::RATE.val(270)); // 115200 baud
-
-        // Enable receive and send.
-        self.AUX_MU_CNTL
-            .write(AUX_MU_CNTL::RX_EN::Enabled + AUX_MU_CNTL::TX_EN::Enabled);
-
-        // Clear FIFOs before using the device.
-        self.AUX_MU_IIR.write(AUX_MU_IIR::FIFO_CLEAR::All);
-
-        Ok(())
-    }
-
     /// Send a character.
     fn write_char(&mut self, c: char) {
         // Wait until we can send.
@@ -204,7 +183,7 @@ impl fmt::Write for MiniUartInner {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// OS interface implementations
+// BSP-public
 ////////////////////////////////////////////////////////////////////////////////
 
 /// The driver's main struct.
@@ -223,16 +202,38 @@ impl MiniUart {
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// OS interface implementations
+////////////////////////////////////////////////////////////////////////////////
+use interface::sync::Mutex;
+
 impl interface::driver::DeviceDriver for MiniUart {
     fn compatible(&self) -> &str {
         "MiniUart"
     }
 
+    /// Set up baud rate and characteristics (115200 8N1).
     fn init(&self) -> interface::driver::Result {
-        use interface::sync::Mutex;
-
         let mut r = &self.inner;
-        r.lock(|i| i.init())
+        r.lock(|inner| {
+            // Enable register access to the MiniUart
+            inner.AUX_ENABLES.modify(AUX_ENABLES::MINI_UART_ENABLE::SET);
+            inner.AUX_MU_IER.set(0); // disable RX and TX interrupts
+            inner.AUX_MU_CNTL.set(0); // disable send and receive
+            inner.AUX_MU_LCR.write(AUX_MU_LCR::DATA_SIZE::EightBit);
+            inner.AUX_MU_BAUD.write(AUX_MU_BAUD::RATE.val(270)); // 115200 baud
+            inner.AUX_MU_MCR.set(0); // set "ready to send" high
+
+            // Clear FIFOs before using the device.
+            inner.AUX_MU_IIR.write(AUX_MU_IIR::FIFO_CLEAR::All);
+
+            // Enable receive and send.
+            inner
+                .AUX_MU_CNTL
+                .write(AUX_MU_CNTL::RX_EN::Enabled + AUX_MU_CNTL::TX_EN::Enabled);
+        });
+
+        Ok(())
     }
 }
 
@@ -240,12 +241,10 @@ impl interface::driver::DeviceDriver for MiniUart {
 /// by a Mutex to serialize access.
 impl interface::console::Write for MiniUart {
     fn write_fmt(&self, args: core::fmt::Arguments) -> fmt::Result {
-        use interface::sync::Mutex;
-
         // Fully qualified syntax for the call to
         // `core::fmt::Write::write:fmt()` to increase readability.
         let mut r = &self.inner;
-        r.lock(|i| fmt::Write::write_fmt(i, args))
+        r.lock(|inner| fmt::Write::write_fmt(inner, args))
     }
 }
 
@@ -253,9 +252,7 @@ impl interface::console::Read for MiniUart {}
 
 impl interface::console::Statistics for MiniUart {
     fn chars_written(&self) -> usize {
-        use interface::sync::Mutex;
-
         let mut r = &self.inner;
-        r.lock(|i| i.chars_written)
+        r.lock(|inner| inner.chars_written)
     }
 }
