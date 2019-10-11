@@ -36,13 +36,18 @@ mod print;
 
 /// Entrypoint of the `kernel`.
 fn kernel_entry() -> ! {
-    use interface::console::Statistics;
+    use interface::console::{Read, Statistics};
 
     // Run the BSP's initialization code.
     bsp::init();
 
-    // UART should be functional now and `println!()` calls are transmitted on
-    // the physical wires.
+    // UART should be functional now. Wait for user to hit Enter.
+    loop {
+        if bsp::console().read_char() == '\n' {
+            break;
+        }
+    }
+
     println!("[0] Booting on: <{}>.", bsp::board_name());
 
     println!("[1] Drivers loaded:");
@@ -51,6 +56,9 @@ fn kernel_entry() -> ! {
     }
 
     println!("[2] Chars written: {}", bsp::console().chars_written());
-    println!("[3] Stopping here.");
-    arch::wait_forever()
+    println!("[3] Echoing input now.");
+
+    loop {
+        print!("{}", bsp::console().read_char());
+    }
 }

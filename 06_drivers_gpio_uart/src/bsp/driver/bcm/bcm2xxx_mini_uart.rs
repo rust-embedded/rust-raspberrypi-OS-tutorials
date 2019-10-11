@@ -248,7 +248,31 @@ impl interface::console::Write for MiniUart {
     }
 }
 
-impl interface::console::Read for MiniUart {}
+impl interface::console::Read for MiniUart {
+    fn read_char(&self) -> char {
+        let mut r = &self.inner;
+        r.lock(|inner| {
+            // Wait until buffer is is filled.
+            loop {
+                if inner.AUX_MU_LSR.is_set(AUX_MU_LSR::DATA_READY) {
+                    break;
+                }
+
+                arch::nop();
+            }
+
+            // Read one character.
+            let mut ret = inner.AUX_MU_IO.get() as u8 as char;
+
+            // Convert carrige return to newline.
+            if ret == '\r' {
+                ret = '\n'
+            }
+
+            ret
+        })
+    }
+}
 
 impl interface::console::Statistics for MiniUart {
     fn chars_written(&self) -> usize {

@@ -221,7 +221,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2837_gpio.rs 06_drivers_gpio_uar
 diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs
 --- 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs
 +++ 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs
-@@ -0,0 +1,258 @@
+@@ -0,0 +1,282 @@
 +// SPDX-License-Identifier: MIT
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
@@ -473,7 +473,32 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 06_drivers_gpi
 +    }
 +}
 +
-+impl interface::console::Read for MiniUart {}
++impl interface::console::Read for MiniUart {
++    fn read_char(&self) -> char {
++        let mut r = &self.inner;
++        r.lock(|inner| {
++            // Wait until buffer is is filled.
++            loop {
++                if inner.AUX_MU_LSR.is_set(AUX_MU_LSR::DATA_READY) {
++                    break;
++                }
++
++                arch::nop();
++            }
++
++            // Read one character.
++            let mut ret = inner.AUX_MU_IO.get() as u8 as char;
++
++            // Convert carrige return to newline.
++            if ret == '' {
++                ret = '
+'
++            }
++
++            ret
++        })
++    }
++}
 +
 +impl interface::console::Statistics for MiniUart {
 +    fn chars_written(&self) -> usize {
@@ -732,27 +757,40 @@ diff -uNr 05_safe_globals/src/interface.rs 06_drivers_gpio_uart/src/interface.rs
 diff -uNr 05_safe_globals/src/main.rs 06_drivers_gpio_uart/src/main.rs
 --- 05_safe_globals/src/main.rs
 +++ 06_drivers_gpio_uart/src/main.rs
-@@ -38,10 +38,19 @@
+@@ -36,12 +36,29 @@
+
+ /// Entrypoint of the `kernel`.
  fn kernel_entry() -> ! {
-     use interface::console::Statistics;
+-    use interface::console::Statistics;
++    use interface::console::{Read, Statistics};
 
 -    println!("[0] Hello from pure Rust!");
 +    // Run the BSP's initialization code.
 +    bsp::init();
 
 -    println!("[1] Chars written: {}", bsp::console().chars_written());
-+    // UART should be functional now and `println!()` calls are transmitted on
-+    // the physical wires.
-+    println!("[0] Booting on: <{}>.", bsp::board_name());
++    // UART should be functional now. Wait for user to hit Enter.
++    loop {
++        if bsp::console().read_char() == '
+' {
++            break;
++        }
++    }
 
 -    println!("[2] Stopping here.");
+-    arch::wait_forever()
++    println!("[0] Booting on: <{}>.", bsp::board_name());
++
 +    println!("[1] Drivers loaded:");
 +    for (i, driver) in bsp::device_drivers().iter().enumerate() {
 +        println!("      {}. {}", i + 1, driver.compatible());
 +    }
 +
 +    println!("[2] Chars written: {}", bsp::console().chars_written());
-+    println!("[3] Stopping here.");
-     arch::wait_forever()
++    println!("[3] Echoing input now.");
++
++    loop {
++        print!("{}", bsp::console().read_char());
++    }
  }
 ```
