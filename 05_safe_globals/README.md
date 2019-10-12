@@ -24,14 +24,14 @@ introduced as a trait in `interfaces.rs`, and implemented by the name of
 `NullLock` in `sync.rs` in the `arch` folder. For teaching purposes, to make the
 code lean, it leaves out the actual architecture-specific logic for protection
 against concurrent access, since we don't need it as long as the kernel only
-exeuts on a single core with interrupts disabled.
+executes on a single core with interrupts disabled.
 
-Instead, it focuses on showcasing the core concept of [interior mutability].
+Instead, it focuses on showcasing the Rust core concept of [interior mutability].
 Make sure to read up on it. I also recommend to read this article about an
 [accurate mental model for Rust's reference types].
 
-If you want to compare the `NullLock` to some real-world implementations, you
-can check out implemntations in the [spin crate] or the [parking lot crate].
+If you want to compare the `NullLock` to some real-world mutex implementations,
+you can check out implemntations in the [spin crate] or the [parking lot crate].
 
 [tutorial 03]: ../03_hacky_hello_world
 [interior mutability]: https://doc.rust-lang.org/std/cell/index.html
@@ -163,7 +163,8 @@ diff -uNr 04_zero_overhead_abstraction/src/bsp/rpi3.rs 05_safe_globals/src/bsp/r
 +            // Convert newline to carrige return + newline.
 +            if c == '
 ' {
-+                self.write_char('')
++                self.write_char('
+')
              }
 +
 +            self.write_char(c);
