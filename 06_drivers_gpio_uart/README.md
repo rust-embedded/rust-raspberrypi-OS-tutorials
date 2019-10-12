@@ -29,7 +29,8 @@ console and use a real UART now. Like real tough embedded people do!
 sudo screen /dev/ttyUSB0 115200
 ```
 
-6. Exit screen by pressing <kbd>ctrl-a</kbd> <kbd>ctrl-d</kbd> or disconnecting the USB serial.
+6. Hit <kbd>Enter</kbd> to kick off the kernel boot process.
+7. Exit screen by pressing <kbd>ctrl-a</kbd> <kbd>ctrl-d</kbd> or disconnecting the USB serial.
 
 ## Diff to previous
 ```diff
