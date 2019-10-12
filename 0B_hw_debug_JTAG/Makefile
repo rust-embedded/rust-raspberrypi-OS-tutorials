@@ -33,9 +33,11 @@ CARGO_OUTPUT = target/$(TARGET)/release/kernel8
 OBJCOPY        = cargo objcopy --
 OBJCOPY_PARAMS = --strip-all -O binary
 
-CONTAINER_UTILS   = andrerichter/raspi3-utils
-CONTAINER_OPENOCD = andrerichter/raspi3-openocd
-CONTAINER_GDB     = andrerichter/raspi3-gdb
+CONTAINER_UTILS       = andrerichter/raspi3-utils
+CONTAINER_OPENOCD     = andrerichter/raspi3-openocd
+CONTAINER_OPENOCD_ARG = 
+# CONTAINER_OPENOCD_ARG = -f openocd/tcl/interface/ftdi/olimex-jtag-tiny.cfg -f /openocd/rpi3.cfg
+CONTAINER_GDB         = andrerichter/raspi3-gdb
 
 DOCKER_CMD        = docker run -it --rm
 DOCKER_ARG_CURDIR = -v $(shell pwd):/work -w /work
@@ -43,8 +45,10 @@ DOCKER_ARG_TTY    = --privileged -v /dev:/dev
 DOCKER_ARG_JTAG   = -v $(shell pwd)/../X1_JTAG_boot:/jtag
 DOCKER_ARG_NET    = --network host
 
-DOCKER_EXEC_QEMU     = qemu-system-aarch64 -M raspi3 -kernel kernel8.img
-DOCKER_EXEC_RASPBOOT = raspbootcom /dev/ttyUSB0
+DOCKER_EXEC_QEMU         = qemu-system-aarch64 -M raspi3 -kernel kernel8.img
+DOCKER_EXEC_RASPBOOT     = raspbootcom
+DOCKER_EXEC_RASPBOOT_DEV = /dev/ttyUSB0
+# DOCKER_EXEC_RASPBOOT_DEV = /dev/ttyACM0
 
 .PHONY: all qemu raspboot clippy clean objdump nm jtagboot openocd gdb gdb-opt0
 
@@ -79,10 +83,10 @@ nm:
 
 jtagboot:
 	$(DOCKER_CMD) $(DOCKER_ARG_TTY) $(DOCKER_ARG_JTAG) $(CONTAINER_UTILS) \
-	$(DOCKER_EXEC_RASPBOOT) /jtag/jtag_boot.img
+	$(DOCKER_EXEC_RASPBOOT) $(DOCKER_EXEC_RASPBOOT_DEV) /jtag/jtag_boot.img
 
 openocd:
-	$(DOCKER_CMD) $(DOCKER_ARG_TTY) $(DOCKER_ARG_NET) $(CONTAINER_OPENOCD)
+	$(DOCKER_CMD) $(DOCKER_ARG_TTY) $(DOCKER_ARG_NET) $(CONTAINER_OPENOCD) $(CONTAINER_OPENOCD_ARG)
 
 define gen_gdb
 	$(XRUSTC_CMD) -- $1
