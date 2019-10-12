@@ -4,7 +4,7 @@
 
 Now that we enabled safe globals in the previous tutorial, the infrastructure is
 laid for adding the first real device drivers. We throw out the magic QEMU
-console and use a real UART now. Like real though embedded people do!
+console and use a real UART now. Like real tough embedded people do!
 
 - A `DeviceDriver` trait is added for abstracting `BSP` driver implementations
   from kernel code.
@@ -22,14 +22,14 @@ console and use a real UART now. Like real though embedded people do!
 2. Copy [bootcode.bin](https://github.com/raspberrypi/firmware/raw/master/boot/bootcode.bin), [fixup.dat](https://github.com/raspberrypi/firmware/raw/master/boot/fixup.dat) and [start.elf](https://github.com/raspberrypi/firmware/raw/master/boot/start.elf) from the [Raspberry Pi firmware repo](https://github.com/raspberrypi/firmware/tree/master/boot) onto the SD card.
 3. Copy our [kernel8.img](kernel8.img) onto the SD card.
 4. Insert the SD card into the RPi and connect the USB serial to your host PC.
-    - Wiring diagram at [top-level README](../README.md#usb-serial)
-5. Run `screen` (might need to install it first):
+    - Wiring diagram at [top-level README](../README.md#usb-serial).
+5. Run `screen` (you might need to install it first):
 
 ```console
 sudo screen /dev/ttyUSB0 115200
 ```
 
-6. Exit screen again by pressing <kbd>ctrl-a</kbd> <kbd>ctrl-d</kbd> or disconnecting the USB serial.
+6. Exit screen by pressing <kbd>ctrl-a</kbd> <kbd>ctrl-d</kbd> or disconnecting the USB serial.
 
 ## Diff to previous
 ```diff
