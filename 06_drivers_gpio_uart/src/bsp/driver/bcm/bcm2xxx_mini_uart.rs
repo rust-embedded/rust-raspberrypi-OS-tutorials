@@ -240,6 +240,11 @@ impl interface::driver::DeviceDriver for MiniUart {
 /// Passthrough of `args` to the `core::fmt::Write` implementation, but guarded
 /// by a Mutex to serialize access.
 impl interface::console::Write for MiniUart {
+    fn write_char(&self, c: char) {
+        let mut r = &self.inner;
+        r.lock(|inner| inner.write_char(c));
+    }
+
     fn write_fmt(&self, args: core::fmt::Arguments) -> fmt::Result {
         // Fully qualified syntax for the call to
         // `core::fmt::Write::write:fmt()` to increase readability.

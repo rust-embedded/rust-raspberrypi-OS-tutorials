@@ -36,7 +36,7 @@ mod print;
 
 /// Entrypoint of the `kernel`.
 fn kernel_entry() -> ! {
-    use interface::console::{Read, Statistics};
+    use interface::console::All;
 
     // Run the BSP's initialization code.
     bsp::init();
@@ -59,6 +59,7 @@ fn kernel_entry() -> ! {
     println!("[3] Echoing input now.");
 
     loop {
-        print!("{}", bsp::console().read_char());
+        let c = bsp::console().read_char();
+        bsp::console().write_char(c);
     }
 }

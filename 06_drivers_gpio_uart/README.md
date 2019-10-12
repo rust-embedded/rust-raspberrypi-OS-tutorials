@@ -235,7 +235,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2837_gpio.rs 06_drivers_gpio_uar
 diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs
 --- 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs
 +++ 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs
-@@ -0,0 +1,282 @@
+@@ -0,0 +1,287 @@
 +// SPDX-License-Identifier: MIT
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
@@ -409,8 +409,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 06_drivers_gpi
 +            // Convert newline to carrige return + newline.
 +            if c == '
 ' {
-+                self.write_char('
-')
++                self.write_char('')
 +            }
 +
 +            self.write_char(c);
@@ -480,6 +479,11 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 06_drivers_gpi
 +/// Passthrough of `args` to the `core::fmt::Write` implementation, but guarded
 +/// by a Mutex to serialize access.
 +impl interface::console::Write for MiniUart {
++    fn write_char(&self, c: char) {
++        let mut r = &self.inner;
++        r.lock(|inner| inner.write_char(c));
++    }
++
 +    fn write_fmt(&self, args: core::fmt::Arguments) -> fmt::Result {
 +        // Fully qualified syntax for the call to
 +        // `core::fmt::Write::write:fmt()` to increase readability.
@@ -505,8 +509,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 06_drivers_gpi
 +            let mut ret = inner.AUX_MU_IO.get() as u8 as char;
 +
 +            // Convert carrige return to newline.
-+            if ret == '
-' {
++            if ret == '' {
 +                ret = '
 '
 +            }
@@ -626,8 +629,7 @@ diff -uNr 05_safe_globals/src/bsp/rpi3.rs 06_drivers_gpio_uart/src/bsp/rpi3.rs
 -            // Convert newline to carrige return + newline.
 -            if c == '
 ' {
--                self.write_char('
-')
+-                self.write_char('')
 -            }
 -
 -            self.write_char(c);
@@ -749,7 +751,15 @@ diff -uNr 05_safe_globals/src/bsp.rs 06_drivers_gpio_uart/src/bsp.rs
 diff -uNr 05_safe_globals/src/interface.rs 06_drivers_gpio_uart/src/interface.rs
 --- 05_safe_globals/src/interface.rs
 +++ 06_drivers_gpio_uart/src/interface.rs
-@@ -85,3 +85,20 @@
+@@ -24,6 +24,7 @@
+
+     /// Console write functions.
+     pub trait Write {
++        fn write_char(&self, c: char);
+         fn write_fmt(&self, args: fmt::Arguments) -> fmt::Result;
+     }
+
+@@ -85,3 +86,20 @@
          fn lock<R>(&mut self, f: impl FnOnce(&mut Self::Data) -> R) -> R;
      }
  }
@@ -774,12 +784,12 @@ diff -uNr 05_safe_globals/src/interface.rs 06_drivers_gpio_uart/src/interface.rs
 diff -uNr 05_safe_globals/src/main.rs 06_drivers_gpio_uart/src/main.rs
 --- 05_safe_globals/src/main.rs
 +++ 06_drivers_gpio_uart/src/main.rs
-@@ -36,12 +36,29 @@
+@@ -36,12 +36,30 @@
 
  /// Entrypoint of the `kernel`.
  fn kernel_entry() -> ! {
 -    use interface::console::Statistics;
-+    use interface::console::{Read, Statistics};
++    use interface::console::All;
 
 -    println!("[0] Hello from pure Rust!");
 +    // Run the BSP's initialization code.
@@ -807,7 +817,8 @@ diff -uNr 05_safe_globals/src/main.rs 06_drivers_gpio_uart/src/main.rs
 +    println!("[3] Echoing input now.");
 +
 +    loop {
-+        print!("{}", bsp::console().read_char());
++        let c = bsp::console().read_char();
++        bsp::console().write_char(c);
 +    }
  }
 ```

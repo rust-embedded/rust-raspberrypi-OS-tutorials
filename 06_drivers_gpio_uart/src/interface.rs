@@ -24,6 +24,7 @@ pub mod console {
 
     /// Console write functions.
     pub trait Write {
+        fn write_char(&self, c: char);
         fn write_fmt(&self, args: fmt::Arguments) -> fmt::Result;
     }
 
