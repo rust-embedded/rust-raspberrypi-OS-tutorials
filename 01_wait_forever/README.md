@@ -27,7 +27,6 @@ Project skeleton is set up; Code just halts all CPU cores executing kernel code.
 - Assembly `_start()` function that executes `wfe` (Wait For Event), halting all
   cores that are executing `_start()`.
 - We (have to) define a `#[panic_handler]` function.
-    - Done in `BSP` code.
-	- Just executes `wfe`.
+    - Just waits infinitely for a cpu event.
 
 [inner attributes]: https://doc.rust-lang.org/reference/attributes.html
