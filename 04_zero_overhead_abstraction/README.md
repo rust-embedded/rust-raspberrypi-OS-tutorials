@@ -141,10 +141,11 @@ diff -uNr 03_hacky_hello_world/src/main.rs 04_zero_overhead_abstraction/src/main
 diff -uNr 03_hacky_hello_world/src/runtime_init.rs 04_zero_overhead_abstraction/src/runtime_init.rs
 --- 03_hacky_hello_world/src/runtime_init.rs
 +++ 04_zero_overhead_abstraction/src/runtime_init.rs
-@@ -13,7 +13,7 @@
+@@ -12,8 +12,7 @@
+ /// # Safety
  ///
  /// - Only a single core must be active and running this function.
- #[no_mangle]
+-#[no_mangle]
 -pub unsafe extern "C" fn init() -> ! {
 +pub unsafe fn init() -> ! {
      extern "C" {

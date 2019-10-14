@@ -12,7 +12,6 @@
 /// # Safety
 ///
 /// - Only a single core must be active and running this function.
-#[no_mangle]
 pub unsafe fn init() -> ! {
     extern "C" {
         // Boundaries of the .bss section, provided by the linker script
