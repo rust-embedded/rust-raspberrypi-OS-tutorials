@@ -35,7 +35,6 @@ OBJCOPY_PARAMS = --strip-all -O binary
 
 CONTAINER_UTILS       = andrerichter/raspi3-utils
 CONTAINER_OPENOCD     = andrerichter/raspi3-openocd
-CONTAINER_OPENOCD_ARG = 
 # CONTAINER_OPENOCD_ARG = -f openocd/tcl/interface/ftdi/olimex-jtag-tiny.cfg -f /openocd/rpi3.cfg
 CONTAINER_GDB         = andrerichter/raspi3-gdb
 
