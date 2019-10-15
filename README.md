@@ -58,19 +58,12 @@ tutorials, please refer [to the repository's docker folder](docker).
 ## Prerequisites
 
 Before you can start, you'll need a suitable Rust toolchain.
-Please browse to the [rustup components history] and note the date of the most recent
-build that shows `clippy` as `present`.
 
-[rustup components history]: https://rust-lang.github.io/rustup-components-history/
-
-
-Then, proceed to install this nightly using your noted date:
 ```bash
-curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly-YOUR_DATE_HERE
-# For example:
-# curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly-2019-09-05
+curl https://sh.rustup.rs -sSf | sh -s -- \
+                                       --default-toolchain nightly \
+                                       --component rust-src llvm-tools-preview clippy rustfmt
 
-rustup component add rust-src llvm-tools-preview clippy
 cargo install cargo-xbuild cargo-binutils
 ```
 
