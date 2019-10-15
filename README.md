@@ -9,7 +9,7 @@ text.**
 - Check out the `make doc` command to browse the code with HTML goodness.
 - Note that the branch is subject to frequent force pushing. If updates happened
   since you last visited, make sure to clone a clean copy to be safe.
-- For editing, I recommend [Visual Studio Code] with the [Rust Language Server] extension.  
+- For editing, I recommend [Visual Studio Code] with the [Rust Language Server] extension.
 - For practical purposes, the kernel will be a classic [monolith].
 
 _Cheers,
@@ -22,19 +22,14 @@ _Cheers,
 ## Prerequisites
 
 Before you can start, you'll need a suitable Rust toolchain.
-Please browse to the [rustup components history] and note the date of the most recent
-build that shows `clippy` as `present`.
 
-[rustup components history]: https://rust-lang.github.io/rustup-components-history/
-
-
-Then, proceed to install this nightly using your noted date:
 ```bash
-curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly-YOUR_DATE_HERE
-# For example:
-# curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly-2019-09-05
+curl https://sh.rustup.rs -sSf  \
+    |                           \
+    sh -s --                    \
+    --default-toolchain nightly \
+    --component rust-src llvm-tools-preview clippy rustfmt rls rust-analysis
 
-rustup component add rust-src llvm-tools-preview clippy rustfmt
 cargo install cargo-xbuild cargo-binutils
 ```
 
