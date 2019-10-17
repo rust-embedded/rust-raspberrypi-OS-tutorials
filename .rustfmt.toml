@@ -1,0 +1,9 @@
+newline_style = "Unix"
+edition = "2018"
+merge_imports = true
+format_code_in_doc_comments = true
+normalize_comments = true
+wrap_comments = true
+comment_width = 100
+report_fixme = "Always"
+report_todo = "Always"
