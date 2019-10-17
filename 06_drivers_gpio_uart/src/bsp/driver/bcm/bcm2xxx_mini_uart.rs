@@ -224,22 +224,22 @@ impl interface::driver::DeviceDriver for MiniUart {
             inner.AUX_MU_BAUD.write(AUX_MU_BAUD::RATE.val(270)); // 115200 baud
             inner.AUX_MU_MCR.set(0); // set "ready to send" high
 
-            // Clear FIFOs before using the device.
-            inner.AUX_MU_IIR.write(AUX_MU_IIR::FIFO_CLEAR::All);
-
             // Enable receive and send.
             inner
                 .AUX_MU_CNTL
                 .write(AUX_MU_CNTL::RX_EN::Enabled + AUX_MU_CNTL::TX_EN::Enabled);
+
+            // Clear FIFOs before using the device.
+            inner.AUX_MU_IIR.write(AUX_MU_IIR::FIFO_CLEAR::All);
         });
 
         Ok(())
     }
 }
 
-/// Passthrough of `args` to the `core::fmt::Write` implementation, but guarded
-/// by a Mutex to serialize access.
 impl interface::console::Write for MiniUart {
+    /// Passthrough of `args` to the `core::fmt::Write` implementation, but
+    /// guarded by a Mutex to serialize access.
     fn write_char(&self, c: char) {
         let mut r = &self.inner;
         r.lock(|inner| inner.write_char(c));
@@ -257,7 +257,7 @@ impl interface::console::Read for MiniUart {
     fn read_char(&self) -> char {
         let mut r = &self.inner;
         r.lock(|inner| {
-            // Wait until buffer is is filled.
+            // Wait until buffer is filled.
             loop {
                 if inner.AUX_MU_LSR.is_set(AUX_MU_LSR::DATA_READY) {
                     break;

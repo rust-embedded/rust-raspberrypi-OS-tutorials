@@ -41,7 +41,7 @@ DOCKER_CMD        = docker run -it --rm
 DOCKER_ARG_CURDIR = -v $(shell pwd):/work -w /work
 DOCKER_EXEC_QEMU  = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE) -kernel $(OUTPUT)
 
-.PHONY: all qemu clippy clean readelf objdump nm
+.PHONY: all doc qemu clippy clean readelf objdump nm
 
 all: clean $(OUTPUT)
 

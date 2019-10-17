@@ -121,12 +121,12 @@ diff -uNr 01_wait_forever/src/runtime_init.rs 02_runtime_init/src/runtime_init.r
 +#[no_mangle]
 +pub unsafe extern "C" fn init() -> ! {
 +    extern "C" {
-+        // Boundaries of the .bss section, provided by the linker script
++        // Boundaries of the .bss section, provided by the linker script.
 +        static mut __bss_start: u64;
 +        static mut __bss_end: u64;
 +    }
 +
-+    // Zero out the .bss section
++    // Zero out the .bss section.
 +    r0::zero_bss(&mut __bss_start, &mut __bss_end);
 +
 +    crate::kernel_entry()

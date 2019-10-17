@@ -463,22 +463,22 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 06_drivers_gpi
 +            inner.AUX_MU_BAUD.write(AUX_MU_BAUD::RATE.val(270)); // 115200 baud
 +            inner.AUX_MU_MCR.set(0); // set "ready to send" high
 +
-+            // Clear FIFOs before using the device.
-+            inner.AUX_MU_IIR.write(AUX_MU_IIR::FIFO_CLEAR::All);
-+
 +            // Enable receive and send.
 +            inner
 +                .AUX_MU_CNTL
 +                .write(AUX_MU_CNTL::RX_EN::Enabled + AUX_MU_CNTL::TX_EN::Enabled);
++
++            // Clear FIFOs before using the device.
++            inner.AUX_MU_IIR.write(AUX_MU_IIR::FIFO_CLEAR::All);
 +        });
 +
 +        Ok(())
 +    }
 +}
 +
-+/// Passthrough of `args` to the `core::fmt::Write` implementation, but guarded
-+/// by a Mutex to serialize access.
 +impl interface::console::Write for MiniUart {
++    /// Passthrough of `args` to the `core::fmt::Write` implementation, but
++    /// guarded by a Mutex to serialize access.
 +    fn write_char(&self, c: char) {
 +        let mut r = &self.inner;
 +        r.lock(|inner| inner.write_char(c));
@@ -496,7 +496,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 06_drivers_gpi
 +    fn read_char(&self) -> char {
 +        let mut r = &self.inner;
 +        r.lock(|inner| {
-+            // Wait until buffer is is filled.
++            // Wait until buffer is filled.
 +            loop {
 +                if inner.AUX_MU_LSR.is_set(AUX_MU_LSR::DATA_READY) {
 +                    break;
@@ -784,7 +784,7 @@ diff -uNr 05_safe_globals/src/interface.rs 06_drivers_gpio_uart/src/interface.rs
 diff -uNr 05_safe_globals/src/main.rs 06_drivers_gpio_uart/src/main.rs
 --- 05_safe_globals/src/main.rs
 +++ 06_drivers_gpio_uart/src/main.rs
-@@ -36,12 +36,30 @@
+@@ -36,12 +36,23 @@
 
  /// Entrypoint of the `kernel`.
  fn kernel_entry() -> ! {
@@ -796,25 +796,17 @@ diff -uNr 05_safe_globals/src/main.rs 06_drivers_gpio_uart/src/main.rs
 +    bsp::init();
 
 -    println!("[1] Chars written: {}", bsp::console().chars_written());
-+    // UART should be functional now. Wait for user to hit Enter.
-+    loop {
-+        if bsp::console().read_char() == '
-' {
-+            break;
-+        }
-+    }
++    println!("[0] Booting on: {}", bsp::board_name());
 
 -    println!("[2] Stopping here.");
 -    arch::wait_forever()
-+    println!("[0] Booting on: <{}>.", bsp::board_name());
-+
 +    println!("[1] Drivers loaded:");
 +    for (i, driver) in bsp::device_drivers().iter().enumerate() {
 +        println!("      {}. {}", i + 1, driver.compatible());
 +    }
 +
 +    println!("[2] Chars written: {}", bsp::console().chars_written());
-+    println!("[3] Echoing input now.");
++    println!("[3] Echoing input now");
 +
 +    loop {
 +        let c = bsp::console().read_char();

@@ -149,6 +149,6 @@ diff -uNr 03_hacky_hello_world/src/runtime_init.rs 04_zero_overhead_abstraction/
 -pub unsafe extern "C" fn init() -> ! {
 +pub unsafe fn init() -> ! {
      extern "C" {
-         // Boundaries of the .bss section, provided by the linker script
+         // Boundaries of the .bss section, provided by the linker script.
          static mut __bss_start: u64;
 ```
