@@ -12,17 +12,17 @@ use crate::interface;
 pub const BOOT_CORE_ID: u64 = 0;
 pub const BOOT_CORE_STACK_START: u64 = 0x80_000;
 
-////////////////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------------------------------------
 // Global BSP driver instances
-////////////////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------------------------------------
 
 static GPIO: driver::GPIO = unsafe { driver::GPIO::new(memory_map::mmio::GPIO_BASE) };
 static MINI_UART: driver::MiniUart =
     unsafe { driver::MiniUart::new(memory_map::mmio::MINI_UART_BASE) };
 
-////////////////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------------------------------------
 // Implementation of the kernel's BSP calls
-////////////////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------------------------------------
 
 /// Board identification.
 pub fn board_name() -> &'static str {
@@ -34,8 +34,7 @@ pub fn console() -> &'static impl interface::console::All {
     &MINI_UART
 }
 
-/// Return an array of references to all `DeviceDriver` compatible `BSP`
-/// drivers.
+/// Return an array of references to all `DeviceDriver` compatible `BSP` drivers.
 ///
 /// # Safety
 ///
@@ -50,9 +49,8 @@ pub fn device_drivers() -> [&'static dyn interface::driver::DeviceDriver; 2] {
 pub fn init() {
     for i in device_drivers().iter() {
         if let Err(()) = i.init() {
-            // This message will only be readable if, at the time of failure,
-            // the return value of `bsp::console()` is already in functioning
-            // state.
+            // This message will only be readable if, at the time of failure, the return value of
+            // `bsp::console()` is already in functioning state.
             panic!("Error loading driver: {}", i.compatible())
         }
     }

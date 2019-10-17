@@ -12,12 +12,11 @@
 #![no_main]
 #![no_std]
 
-// Conditionally includes the selected `architecture` code, which provides the
-// `_start()` function, the first function to run.
+// Conditionally includes the selected `architecture` code, which provides the `_start()` function,
+// the first function to run.
 mod arch;
 
-// `_start()` then calls `runtime_init::init()`, which on completion, jumps to
-// `kernel_entry()`.
+// `_start()` then calls `runtime_init::init()`, which on completion, jumps to `kernel_entry()`.
 mod runtime_init;
 
 // Conditionally includes the selected `BSP` code.

@@ -10,9 +10,8 @@ use core::fmt;
 /// A mystical, magical device for generating QEMU output out of the void.
 struct QEMUOutput;
 
-/// Implementing `console::Write` enables usage of the `format_args!` macros,
-/// which in turn are used to implement the `kernel`'s `print!` and `println!`
-/// macros.
+/// Implementing `console::Write` enables usage of the `format_args!` macros, which in turn are used
+/// to implement the `kernel`'s `print!` and `println!` macros.
 ///
 /// See [`src/print.rs`].
 ///
@@ -29,9 +28,9 @@ impl interface::console::Write for QEMUOutput {
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------------------------------------
 // Implementation of the kernel's BSP calls
-////////////////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------------------------------------
 
 /// Returns a ready-to-use `console::Write` implementation.
 pub fn console() -> impl interface::console::Write {

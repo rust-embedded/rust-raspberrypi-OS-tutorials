@@ -27,8 +27,8 @@ pub mod console {
         fn write_char(&self, c: char);
         fn write_fmt(&self, args: fmt::Arguments) -> fmt::Result;
 
-        /// Block execution until the last character has been physically put on
-        /// the TX wire (draining TX buffers/FIFOs, if any).
+        /// Block execution until the last character has been physically put on the TX wire
+        /// (draining TX buffers/FIFOs, if any).
         fn flush(&self);
     }
 
@@ -61,20 +61,19 @@ pub mod console {
 
 /// Synchronization primitives.
 pub mod sync {
-    /// Any object implementing this trait guarantees exclusive access to the
-    /// data contained within the mutex for the duration of the lock.
+    /// Any object implementing this trait guarantees exclusive access to the data contained within
+    /// the mutex for the duration of the lock.
     ///
     /// The trait follows the [Rust embedded WG's
-    /// proposal](https://github.com/korken89/wg/blob/master/rfcs/0377-mutex-trait.md)
-    /// and therefore provides some goodness such as [deadlock
+    /// proposal](https://github.com/korken89/wg/blob/master/rfcs/0377-mutex-trait.md) and therefore
+    /// provides some goodness such as [deadlock
     /// prevention](https://github.com/korken89/wg/blob/master/rfcs/0377-mutex-trait.md#design-decisions-and-compatibility).
     ///
     /// # Example
     ///
-    /// Since the lock function takes an `&mut self` to enable
-    /// deadlock-prevention, the trait is best implemented **for a reference to
-    /// a container struct**, and has a usage pattern that might feel strange at
-    /// first:
+    /// Since the lock function takes an `&mut self` to enable deadlock-prevention, the trait is
+    /// best implemented **for a reference to a container struct**, and has a usage pattern that
+    /// might feel strange at first:
     ///
     /// ```
     /// static MUT: Mutex<RefCell<i32>> = Mutex::new(RefCell::new(0));
@@ -88,8 +87,7 @@ pub mod sync {
         /// Type of data encapsulated by the mutex.
         type Data;
 
-        /// Creates a critical section and grants temporary mutable access to
-        /// the encapsulated data.
+        /// Creates a critical section and grants temporary mutable access to the encapsulated data.
         fn lock<R>(&mut self, f: impl FnOnce(&mut Self::Data) -> R) -> R;
     }
 }

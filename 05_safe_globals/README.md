@@ -45,7 +45,7 @@ you can check out implemntations in the [spin crate] or the [parking lot crate].
 diff -uNr 04_zero_overhead_abstraction/src/arch/aarch64/sync.rs 05_safe_globals/src/arch/aarch64/sync.rs
 --- 04_zero_overhead_abstraction/src/arch/aarch64/sync.rs
 +++ 05_safe_globals/src/arch/aarch64/sync.rs
-@@ -0,0 +1,47 @@
+@@ -0,0 +1,44 @@
 +// SPDX-License-Identifier: MIT
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
@@ -59,13 +59,11 @@ diff -uNr 04_zero_overhead_abstraction/src/arch/aarch64/sync.rs 05_safe_globals/
 +///
 +/// Used to introduce [interior mutability].
 +///
-+/// In contrast to a real Mutex implementation, does not protect against
-+/// concurrent access to the contained data. This part is preserved for later
-+/// lessons.
++/// In contrast to a real Mutex implementation, does not protect against concurrent access to the
++/// contained data. This part is preserved for later lessons.
 +///
-+/// The lock will only be used as long as it is safe to do so, i.e. as long as
-+/// the kernel is executing single-threaded, aka only running on a single core
-+/// with interrupts disabled.
++/// The lock will only be used as long as it is safe to do so, i.e. as long as the kernel is
++/// executing single-threaded, aka only running on a single core with interrupts disabled.
 +///
 +/// [interior mutability]: https://doc.rust-lang.org/std/cell/index.html
 +pub struct NullLock<T: ?Sized> {
@@ -87,9 +85,8 @@ diff -uNr 04_zero_overhead_abstraction/src/arch/aarch64/sync.rs 05_safe_globals/
 +    type Data = T;
 +
 +    fn lock<R>(&mut self, f: impl FnOnce(&mut Self::Data) -> R) -> R {
-+        // In a real lock, there would be code encapsulating this line that
-+        // ensures that this mutable reference will ever only be given out once
-+        // at a time.
++        // In a real lock, there would be code encapsulating this line that ensures that this
++        // mutable reference will ever only be given out once at a time.
 +        f(unsafe { &mut *self.data.get() })
 +    }
 +}
@@ -110,7 +107,7 @@ diff -uNr 04_zero_overhead_abstraction/src/arch/aarch64.rs 05_safe_globals/src/a
 diff -uNr 04_zero_overhead_abstraction/src/bsp/rpi3.rs 05_safe_globals/src/bsp/rpi3.rs
 --- 04_zero_overhead_abstraction/src/bsp/rpi3.rs
 +++ 05_safe_globals/src/bsp/rpi3.rs
-@@ -4,39 +4,115 @@
+@@ -4,38 +4,114 @@
 
  //! Board Support Package for the Raspberry Pi 3.
 
@@ -142,14 +139,13 @@ diff -uNr 04_zero_overhead_abstraction/src/bsp/rpi3.rs 05_safe_globals/src/bsp/r
 +    }
 +}
 
--/// Implementing `console::Write` enables usage of the `format_args!` macros,
-+/// Implementing `core::fmt::Write` enables usage of the `format_args!` macros,
- /// which in turn are used to implement the `kernel`'s `print!` and `println!`
--/// macros.
-+/// macros. By implementing `write_str()`, we get `write_fmt()` automatically.
+-/// Implementing `console::Write` enables usage of the `format_args!` macros, which in turn are used
+-/// to implement the `kernel`'s `print!` and `println!` macros.
++/// Implementing `core::fmt::Write` enables usage of the `format_args!` macros, which in turn are
++/// used to implement the `kernel`'s `print!` and `println!` macros. By implementing `write_str()`,
++/// we get `write_fmt()` automatically.
 +///
-+/// The function takes an `&mut self`, so it must be implemented for the inner
-+/// struct.
++/// The function takes an `&mut self`, so it must be implemented for the inner struct.
  ///
  /// See [`src/print.rs`].
  ///
@@ -175,9 +171,9 @@ diff -uNr 04_zero_overhead_abstraction/src/bsp/rpi3.rs 05_safe_globals/src/bsp/r
      }
  }
 
- ////////////////////////////////////////////////////////////////////////////////
+ //--------------------------------------------------------------------------------------------------
 +// BSP-public
-+////////////////////////////////////////////////////////////////////////////////
++//--------------------------------------------------------------------------------------------------
 +
 +/// The main struct.
 +pub struct QEMUOutput {
@@ -192,18 +188,18 @@ diff -uNr 04_zero_overhead_abstraction/src/bsp/rpi3.rs 05_safe_globals/src/bsp/r
 +    }
 +}
 +
-+////////////////////////////////////////////////////////////////////////////////
++//--------------------------------------------------------------------------------------------------
 +// OS interface implementations
-+////////////////////////////////////////////////////////////////////////////////
++//--------------------------------------------------------------------------------------------------
 +
-+/// Passthrough of `args` to the `core::fmt::Write` implementation, but guarded
-+/// by a Mutex to serialize access.
++/// Passthrough of `args` to the `core::fmt::Write` implementation, but guarded by a Mutex to
++/// serialize access.
 +impl interface::console::Write for QEMUOutput {
 +    fn write_fmt(&self, args: core::fmt::Arguments) -> fmt::Result {
 +        use interface::sync::Mutex;
 +
-+        // Fully qualified syntax for the call to
-+        // `core::fmt::Write::write:fmt()` to increase readability.
++        // Fully qualified syntax for the call to `core::fmt::Write::write:fmt()` to increase
++        // readability.
 +        let mut r = &self.inner;
 +        r.lock(|inner| fmt::Write::write_fmt(inner, args))
 +    }
@@ -220,15 +216,15 @@ diff -uNr 04_zero_overhead_abstraction/src/bsp/rpi3.rs 05_safe_globals/src/bsp/r
 +    }
 +}
 +
-+////////////////////////////////////////////////////////////////////////////////
++//--------------------------------------------------------------------------------------------------
 +// Global instances
-+////////////////////////////////////////////////////////////////////////////////
++//--------------------------------------------------------------------------------------------------
 +
 +static QEMU_OUTPUT: QEMUOutput = QEMUOutput::new();
 +
-+////////////////////////////////////////////////////////////////////////////////
++//--------------------------------------------------------------------------------------------------
  // Implementation of the kernel's BSP calls
- ////////////////////////////////////////////////////////////////////////////////
+ //--------------------------------------------------------------------------------------------------
 
 -/// Returns a ready-to-use `console::Write` implementation.
 -pub fn console() -> impl interface::console::Write {
@@ -238,23 +234,10 @@ diff -uNr 04_zero_overhead_abstraction/src/bsp/rpi3.rs 05_safe_globals/src/bsp/r
 +    &QEMU_OUTPUT
  }
 
-diff -uNr 04_zero_overhead_abstraction/src/bsp.rs 05_safe_globals/src/bsp.rs
---- 04_zero_overhead_abstraction/src/bsp.rs
-+++ 05_safe_globals/src/bsp.rs
-@@ -5,7 +5,7 @@
- //! Conditional exporting of Board Support Packages.
-
- #[cfg(feature = "bsp_rpi3")]
--pub mod rpi3;
-+mod rpi3;
-
- #[cfg(feature = "bsp_rpi3")]
- pub use rpi3::*;
-
 diff -uNr 04_zero_overhead_abstraction/src/interface.rs 05_safe_globals/src/interface.rs
 --- 04_zero_overhead_abstraction/src/interface.rs
 +++ 05_safe_globals/src/interface.rs
-@@ -20,17 +20,68 @@
+@@ -20,17 +20,66 @@
 
  /// System console operations.
  pub mod console {
@@ -262,9 +245,9 @@ diff -uNr 04_zero_overhead_abstraction/src/interface.rs 05_safe_globals/src/inte
 +
      /// Console write functions.
 -    ///
--    /// `core::fmt::Write` is exactly what we need for now. Re-export it here
--    /// because implementing `console::Write` gives a better hint to the reader
--    /// about the intention.
+-    /// `core::fmt::Write` is exactly what we need for now. Re-export it here because
+-    /// implementing `console::Write` gives a better hint to the reader about the
+-    /// intention.
 -    pub use core::fmt::Write;
 +    pub trait Write {
 +        fn write_fmt(&self, args: fmt::Arguments) -> fmt::Result;
@@ -297,20 +280,19 @@ diff -uNr 04_zero_overhead_abstraction/src/interface.rs 05_safe_globals/src/inte
 +
 +/// Synchronization primitives.
 +pub mod sync {
-+    /// Any object implementing this trait guarantees exclusive access to the
-+    /// data contained within the mutex for the duration of the lock.
++    /// Any object implementing this trait guarantees exclusive access to the data contained within
++    /// the mutex for the duration of the lock.
 +    ///
 +    /// The trait follows the [Rust embedded WG's
-+    /// proposal](https://github.com/korken89/wg/blob/master/rfcs/0377-mutex-trait.md)
-+    /// and therefore provides some goodness such as [deadlock
++    /// proposal](https://github.com/korken89/wg/blob/master/rfcs/0377-mutex-trait.md) and therefore
++    /// provides some goodness such as [deadlock
 +    /// prevention](https://github.com/korken89/wg/blob/master/rfcs/0377-mutex-trait.md#design-decisions-and-compatibility).
 +    ///
 +    /// # Example
 +    ///
-+    /// Since the lock function takes an `&mut self` to enable
-+    /// deadlock-prevention, the trait is best implemented **for a reference to
-+    /// a container struct**, and has a usage pattern that might feel strange at
-+    /// first:
++    /// Since the lock function takes an `&mut self` to enable deadlock-prevention, the trait is
++    /// best implemented **for a reference to a container struct**, and has a usage pattern that
++    /// might feel strange at first:
 +    ///
 +    /// ```
 +    /// static MUT: Mutex<RefCell<i32>> = Mutex::new(RefCell::new(0));
@@ -324,8 +306,7 @@ diff -uNr 04_zero_overhead_abstraction/src/interface.rs 05_safe_globals/src/inte
 +        /// Type of data encapsulated by the mutex.
 +        type Data;
 +
-+        /// Creates a critical section and grants temporary mutable access to
-+        /// the encapsulated data.
++        /// Creates a critical section and grants temporary mutable access to the encapsulated data.
 +        fn lock<R>(&mut self, f: impl FnOnce(&mut Self::Data) -> R) -> R;
 +    }
  }
@@ -333,7 +314,7 @@ diff -uNr 04_zero_overhead_abstraction/src/interface.rs 05_safe_globals/src/inte
 diff -uNr 04_zero_overhead_abstraction/src/main.rs 05_safe_globals/src/main.rs
 --- 04_zero_overhead_abstraction/src/main.rs
 +++ 05_safe_globals/src/main.rs
-@@ -15,6 +15,7 @@
+@@ -21,6 +21,7 @@
 
  #![feature(format_args_nl)]
  #![feature(panic_info_message)]
@@ -341,7 +322,17 @@ diff -uNr 04_zero_overhead_abstraction/src/main.rs 05_safe_globals/src/main.rs
  #![no_main]
  #![no_std]
 
-@@ -35,8 +36,12 @@
+@@ -28,8 +29,7 @@
+ // the first function to run.
+ mod arch;
+
+-// `_start()` then calls `runtime_init::init()`, which on completion, jumps to
+-// `kernel_entry()`.
++// `_start()` then calls `runtime_init::init()`, which on completion, jumps to `kernel_entry()`.
+ mod runtime_init;
+
+ // Conditionally includes the selected `BSP` code.
+@@ -41,8 +41,12 @@
 
  /// Entrypoint of the `kernel`.
  fn kernel_entry() -> ! {

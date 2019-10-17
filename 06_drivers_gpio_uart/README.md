@@ -55,9 +55,9 @@ diff -uNr 05_safe_globals/Cargo.toml 06_drivers_gpio_uart/Cargo.toml
 diff -uNr 05_safe_globals/src/arch/aarch64.rs 06_drivers_gpio_uart/src/arch/aarch64.rs
 --- 05_safe_globals/src/arch/aarch64.rs
 +++ 06_drivers_gpio_uart/src/arch/aarch64.rs
-@@ -34,6 +34,8 @@
+@@ -33,6 +33,8 @@
  // Implementation of the kernel's architecture abstraction code
- ////////////////////////////////////////////////////////////////////////////////
+ //--------------------------------------------------------------------------------------------------
 
 +pub use asm::nop;
 +
@@ -198,9 +198,9 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2837_gpio.rs 06_drivers_gpio_uar
 +    }
 +}
 +
-+////////////////////////////////////////////////////////////////////////////////
++//--------------------------------------------------------------------------------------------------
 +// BSP-public
-+////////////////////////////////////////////////////////////////////////////////
++//--------------------------------------------------------------------------------------------------
 +use interface::sync::Mutex;
 +
 +/// The driver's main struct.
@@ -222,9 +222,9 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2837_gpio.rs 06_drivers_gpio_uar
 +    }
 +}
 +
-+////////////////////////////////////////////////////////////////////////////////
++//--------------------------------------------------------------------------------------------------
 +// OS interface implementations
-+////////////////////////////////////////////////////////////////////////////////
++//--------------------------------------------------------------------------------------------------
 +
 +impl interface::driver::DeviceDriver for GPIO {
 +    fn compatible(&self) -> &str {
@@ -235,7 +235,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2837_gpio.rs 06_drivers_gpio_uar
 diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs
 --- 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs
 +++ 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs
-@@ -0,0 +1,287 @@
+@@ -0,0 +1,283 @@
 +// SPDX-License-Identifier: MIT
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
@@ -255,11 +255,10 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 06_drivers_gpi
 +
 +    /// Auxiliary enables
 +    AUX_ENABLES [
-+        /// If set the mini UART is enabled. The UART will immediately
-+        /// start receiving data, especially if the UART1_RX line is
-+        /// low.
-+        /// If clear the mini UART is disabled. That also disables any
-+        /// mini UART register access
++        /// If set the mini UART is enabled. The UART will immediately start receiving data,
++        /// especially if the UART1_RX line is low.
++        ///
++        /// If clear the mini UART is disabled. That also disables any mini UART register access
 +        MINI_UART_ENABLE OFFSET(0) NUMBITS(1) []
 +    ],
 +
@@ -285,16 +284,14 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 06_drivers_gpi
 +
 +    /// Mini Uart Line Status
 +    AUX_MU_LSR [
-+        /// This bit is set if the transmit FIFO is empty and the transmitter is
-+        /// idle. (Finished shifting out the last bit).
++        /// This bit is set if the transmit FIFO is empty and the transmitter is idle. (Finished
++        /// shifting out the last bit).
 +        TX_IDLE    OFFSET(6) NUMBITS(1) [],
 +
-+        /// This bit is set if the transmit FIFO can accept at least
-+        /// one byte.
++        /// This bit is set if the transmit FIFO can accept at least one byte.
 +        TX_EMPTY   OFFSET(5) NUMBITS(1) [],
 +
-+        /// This bit is set if the receive FIFO holds at least 1
-+        /// symbol.
++        /// This bit is set if the receive FIFO holds at least 1 symbol.
 +        DATA_READY OFFSET(0) NUMBITS(1) []
 +    ],
 +
@@ -393,12 +390,11 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 06_drivers_gpi
 +    }
 +}
 +
-+/// Implementing `core::fmt::Write` enables usage of the `format_args!` macros,
-+/// which in turn are used to implement the `kernel`'s `print!` and `println!`
-+/// macros. By implementing `write_str()`, we get `write_fmt()` automatically.
++/// Implementing `core::fmt::Write` enables usage of the `format_args!` macros, which in turn are
++/// used to implement the `kernel`'s `print!` and `println!` macros. By implementing `write_str()`,
++/// we get `write_fmt()` automatically.
 +///
-+/// The function takes an `&mut self`, so it must be implemented for the inner
-+/// struct.
++/// The function takes an `&mut self`, so it must be implemented for the inner struct.
 +///
 +/// See [`src/print.rs`].
 +///
@@ -421,9 +417,9 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 06_drivers_gpi
 +    }
 +}
 +
-+////////////////////////////////////////////////////////////////////////////////
++//--------------------------------------------------------------------------------------------------
 +// BSP-public
-+////////////////////////////////////////////////////////////////////////////////
++//--------------------------------------------------------------------------------------------------
 +
 +/// The driver's main struct.
 +pub struct MiniUart {
@@ -441,9 +437,9 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 06_drivers_gpi
 +    }
 +}
 +
-+////////////////////////////////////////////////////////////////////////////////
++//--------------------------------------------------------------------------------------------------
 +// OS interface implementations
-+////////////////////////////////////////////////////////////////////////////////
++//--------------------------------------------------------------------------------------------------
 +use interface::sync::Mutex;
 +
 +impl interface::driver::DeviceDriver for MiniUart {
@@ -477,16 +473,16 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 06_drivers_gpi
 +}
 +
 +impl interface::console::Write for MiniUart {
-+    /// Passthrough of `args` to the `core::fmt::Write` implementation, but
-+    /// guarded by a Mutex to serialize access.
++    /// Passthrough of `args` to the `core::fmt::Write` implementation, but guarded by a Mutex to
++    /// serialize access.
 +    fn write_char(&self, c: char) {
 +        let mut r = &self.inner;
 +        r.lock(|inner| inner.write_char(c));
 +    }
 +
 +    fn write_fmt(&self, args: core::fmt::Arguments) -> fmt::Result {
-+        // Fully qualified syntax for the call to
-+        // `core::fmt::Write::write:fmt()` to increase readability.
++        // Fully qualified syntax for the call to `core::fmt::Write::write:fmt()` to increase
++        // readability.
 +        let mut r = &self.inner;
 +        r.lock(|inner| fmt::Write::write_fmt(inner, args))
 +    }
@@ -579,7 +575,7 @@ diff -uNr 05_safe_globals/src/bsp/rpi3/memory_map.rs 06_drivers_gpio_uart/src/bs
 diff -uNr 05_safe_globals/src/bsp/rpi3.rs 06_drivers_gpio_uart/src/bsp/rpi3.rs
 --- 05_safe_globals/src/bsp/rpi3.rs
 +++ 06_drivers_gpio_uart/src/bsp/rpi3.rs
-@@ -4,115 +4,59 @@
+@@ -4,114 +4,58 @@
 
  //! Board Support Package for the Raspberry Pi 3.
 
@@ -613,12 +609,11 @@ diff -uNr 05_safe_globals/src/bsp/rpi3.rs 06_drivers_gpio_uart/src/bsp/rpi3.rs
 -    }
 -}
 -
--/// Implementing `core::fmt::Write` enables usage of the `format_args!` macros,
--/// which in turn are used to implement the `kernel`'s `print!` and `println!`
--/// macros. By implementing `write_str()`, we get `write_fmt()` automatically.
+-/// Implementing `core::fmt::Write` enables usage of the `format_args!` macros, which in turn are
+-/// used to implement the `kernel`'s `print!` and `println!` macros. By implementing `write_str()`,
+-/// we get `write_fmt()` automatically.
 -///
--/// The function takes an `&mut self`, so it must be implemented for the inner
--/// struct.
+-/// The function takes an `&mut self`, so it must be implemented for the inner struct.
 -///
 -/// See [`src/print.rs`].
 -///
@@ -641,10 +636,10 @@ diff -uNr 05_safe_globals/src/bsp/rpi3.rs 06_drivers_gpio_uart/src/bsp/rpi3.rs
 -    }
 -}
 -
- ////////////////////////////////////////////////////////////////////////////////
+ //--------------------------------------------------------------------------------------------------
 -// BSP-public
 +// Global BSP driver instances
- ////////////////////////////////////////////////////////////////////////////////
+ //--------------------------------------------------------------------------------------------------
 
 -/// The main struct.
 -pub struct QEMUOutput {
@@ -662,19 +657,19 @@ diff -uNr 05_safe_globals/src/bsp/rpi3.rs 06_drivers_gpio_uart/src/bsp/rpi3.rs
 +static MINI_UART: driver::MiniUart =
 +    unsafe { driver::MiniUart::new(memory_map::mmio::MINI_UART_BASE) };
 
- ////////////////////////////////////////////////////////////////////////////////
+ //--------------------------------------------------------------------------------------------------
 -// OS interface implementations
 +// Implementation of the kernel's BSP calls
- ////////////////////////////////////////////////////////////////////////////////
+ //--------------------------------------------------------------------------------------------------
 
--/// Passthrough of `args` to the `core::fmt::Write` implementation, but guarded
--/// by a Mutex to serialize access.
+-/// Passthrough of `args` to the `core::fmt::Write` implementation, but guarded by a Mutex to
+-/// serialize access.
 -impl interface::console::Write for QEMUOutput {
 -    fn write_fmt(&self, args: core::fmt::Arguments) -> fmt::Result {
 -        use interface::sync::Mutex;
 -
--        // Fully qualified syntax for the call to
--        // `core::fmt::Write::write:fmt()` to increase readability.
+-        // Fully qualified syntax for the call to `core::fmt::Write::write:fmt()` to increase
+-        // readability.
 -        let mut r = &self.inner;
 -        r.lock(|inner| fmt::Write::write_fmt(inner, args))
 -    }
@@ -697,9 +692,9 @@ diff -uNr 05_safe_globals/src/bsp/rpi3.rs 06_drivers_gpio_uart/src/bsp/rpi3.rs
 +    &MINI_UART
  }
 
--////////////////////////////////////////////////////////////////////////////////
+-//--------------------------------------------------------------------------------------------------
 -// Global instances
--////////////////////////////////////////////////////////////////////////////////
+-//--------------------------------------------------------------------------------------------------
 -
 -static QEMU_OUTPUT: QEMUOutput = QEMUOutput::new();
 +/// Return an array of references to all `DeviceDriver` compatible `BSP`
@@ -712,18 +707,17 @@ diff -uNr 05_safe_globals/src/bsp/rpi3.rs 06_drivers_gpio_uart/src/bsp/rpi3.rs
 +    [&GPIO, &MINI_UART]
 +}
 
--////////////////////////////////////////////////////////////////////////////////
+-//--------------------------------------------------------------------------------------------------
 -// Implementation of the kernel's BSP calls
--////////////////////////////////////////////////////////////////////////////////
+-//--------------------------------------------------------------------------------------------------
 +/// The BSP's main initialization function.
 +///
 +/// Called early on kernel start.
 +pub fn init() {
 +    for i in device_drivers().iter() {
 +        if let Err(()) = i.init() {
-+            // This message will only be readable if, at the time of failure,
-+            // the return value of `bsp::console()` is already in functioning
-+            // state.
++            // This message will only be readable if, at the time of failure, the return value of
++            // `bsp::console()` is already in functioning state.
 +            panic!("Error loading driver: {}", i.compatible())
 +        }
 +    }
@@ -759,7 +753,7 @@ diff -uNr 05_safe_globals/src/interface.rs 06_drivers_gpio_uart/src/interface.rs
          fn write_fmt(&self, args: fmt::Arguments) -> fmt::Result;
      }
 
-@@ -85,3 +86,20 @@
+@@ -83,3 +84,20 @@
          fn lock<R>(&mut self, f: impl FnOnce(&mut Self::Data) -> R) -> R;
      }
  }
@@ -784,7 +778,7 @@ diff -uNr 05_safe_globals/src/interface.rs 06_drivers_gpio_uart/src/interface.rs
 diff -uNr 05_safe_globals/src/main.rs 06_drivers_gpio_uart/src/main.rs
 --- 05_safe_globals/src/main.rs
 +++ 06_drivers_gpio_uart/src/main.rs
-@@ -36,12 +36,23 @@
+@@ -41,12 +41,23 @@
 
  /// Entrypoint of the `kernel`.
  fn kernel_entry() -> ! {

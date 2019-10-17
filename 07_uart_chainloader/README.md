@@ -103,7 +103,7 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
 diff -uNr 06_drivers_gpio_uart/src/arch/aarch64.rs 07_uart_chainloader/src/arch/aarch64.rs
 --- 06_drivers_gpio_uart/src/arch/aarch64.rs
 +++ 07_uart_chainloader/src/arch/aarch64.rs
-@@ -23,7 +23,7 @@
+@@ -22,7 +22,7 @@
 
      if bsp::BOOT_CORE_ID == MPIDR_EL1.get() & CORE_MASK {
          SP.set(bsp::BOOT_CORE_STACK_START);
@@ -116,7 +116,22 @@ diff -uNr 06_drivers_gpio_uart/src/arch/aarch64.rs 07_uart_chainloader/src/arch/
 diff -uNr 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 07_uart_chainloader/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs
 --- 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs
 +++ 07_uart_chainloader/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs
-@@ -251,6 +251,15 @@
+@@ -50,10 +50,12 @@
+         /// shifting out the last bit).
+         TX_IDLE    OFFSET(6) NUMBITS(1) [],
+
+-        /// This bit is set if the transmit FIFO can accept at least one byte.
++        /// This bit is set if the transmit FIFO can accept at least
++        /// one byte.
+         TX_EMPTY   OFFSET(5) NUMBITS(1) [],
+
+-        /// This bit is set if the receive FIFO holds at least 1 symbol.
++        /// This bit is set if the receive FIFO holds at least 1
++        /// symbol.
+         DATA_READY OFFSET(0) NUMBITS(1) []
+     ],
+
+@@ -247,6 +249,15 @@
          let mut r = &self.inner;
          r.lock(|inner| fmt::Write::write_fmt(inner, args))
      }
@@ -132,15 +147,14 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 07_uart_c
  }
 
  impl interface::console::Read for MiniUart {
-@@ -267,14 +276,14 @@
+@@ -263,14 +274,14 @@
              }
 
              // Read one character.
 -            let mut ret = inner.AUX_MU_IO.get() as u8 as char;
 -
 -            // Convert carrige return to newline.
--            if ret == '
-' {
+-            if ret == '' {
 -                ret = '
 '
 -            }
@@ -199,9 +213,19 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/rpi3.rs 07_uart_chainloader/src/bsp/rpi3.
 +/// The address on which the RPi3 firmware loads every binary by default.
 +pub const BOARD_DEFAULT_LOAD_ADDRESS: usize = 0x80_000;
 +
- ////////////////////////////////////////////////////////////////////////////////
+ //--------------------------------------------------------------------------------------------------
  // Global BSP driver instances
- ////////////////////////////////////////////////////////////////////////////////
+ //--------------------------------------------------------------------------------------------------
+@@ -34,8 +37,7 @@
+     &MINI_UART
+ }
+
+-/// Return an array of references to all `DeviceDriver` compatible `BSP`
+-/// drivers.
++/// Return an array of references to all `DeviceDriver` compatible `BSP` drivers.
+ ///
+ /// # Safety
+ ///
 
 diff -uNr 06_drivers_gpio_uart/src/interface.rs 07_uart_chainloader/src/interface.rs
 --- 06_drivers_gpio_uart/src/interface.rs
@@ -211,8 +235,8 @@ diff -uNr 06_drivers_gpio_uart/src/interface.rs 07_uart_chainloader/src/interfac
          fn write_char(&self, c: char);
          fn write_fmt(&self, args: fmt::Arguments) -> fmt::Result;
 +
-+        /// Block execution until the last character has been physically put on
-+        /// the TX wire (draining TX buffers/FIFOs, if any).
++        /// Block execution until the last character has been physically put on the TX wire
++        /// (draining TX buffers/FIFOs, if any).
 +        fn flush(&self);
      }
 
@@ -231,21 +255,20 @@ diff -uNr 06_drivers_gpio_uart/src/interface.rs 07_uart_chainloader/src/interfac
 diff -uNr 06_drivers_gpio_uart/src/main.rs 07_uart_chainloader/src/main.rs
 --- 06_drivers_gpio_uart/src/main.rs
 +++ 07_uart_chainloader/src/main.rs
-@@ -23,8 +23,11 @@
- // `_start()` function, the first function to run.
+@@ -29,7 +29,11 @@
+ // the first function to run.
  mod arch;
 
--// `_start()` then calls `runtime_init::init()`, which on completion, jumps to
--// `kernel_entry()`.
+-// `_start()` then calls `runtime_init::init()`, which on completion, jumps to `kernel_entry()`.
 +// `_start()` then calls `relocate::relocate_self()`.
 +mod relocate;
 +
-+// `relocate::relocate_self()` calls `runtime_init::init()`, which on
-+// completion, jumps to `kernel_entry()`.
++// `relocate::relocate_self()` calls `runtime_init::init()`, which on completion, jumps to
++// `kernel_entry()`.
  mod runtime_init;
 
  // Conditionally includes the selected `BSP` code.
-@@ -41,18 +44,48 @@
+@@ -46,18 +50,48 @@
      // Run the BSP's initialization code.
      bsp::init();
 
@@ -260,8 +283,8 @@ diff -uNr 06_drivers_gpio_uart/src/main.rs 07_uart_chainloader/src/main.rs
 +    println!("[ML] Requesting binary");
 +    bsp::console().flush();
 +
-+    // Clear the RX FIFOs, if any, of spurious received characters before
-+    // starting with the loader protocol.
++    // Clear the RX FIFOs, if any, of spurious received characters before starting with the loader
++    // protocol.
 +    bsp::console().clear();
 +
 +    // Notify raspbootcom to send the binary.
@@ -309,15 +332,15 @@ diff -uNr 06_drivers_gpio_uart/src/main.rs 07_uart_chainloader/src/main.rs
 diff -uNr 06_drivers_gpio_uart/src/relocate.rs 07_uart_chainloader/src/relocate.rs
 --- 06_drivers_gpio_uart/src/relocate.rs
 +++ 07_uart_chainloader/src/relocate.rs
-@@ -0,0 +1,47 @@
+@@ -0,0 +1,46 @@
 +// SPDX-License-Identifier: MIT
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Relocation code.
 +
-+/// Relocates the own binary from `bsp::BOARD_DEFAULT_LOAD_ADDRESS` to the
-+/// `__binary_start` address from the linker script.
++/// Relocates the own binary from `bsp::BOARD_DEFAULT_LOAD_ADDRESS` to the `__binary_start` address
++/// from the linker script.
 +///
 +/// # Safety
 +///
@@ -341,8 +364,7 @@ diff -uNr 06_drivers_gpio_uart/src/relocate.rs 07_uart_chainloader/src/relocate.
 +
 +    // Copy the whole binary.
 +    //
-+    // This is essentially a `memcpy()` optimized for throughput by transferring
-+    // in chunks of T.
++    // This is essentially a `memcpy()` optimized for throughput by transferring in chunks of T.
 +    let n = binary_size_in_byte / core::mem::size_of::<T>();
 +    for _ in 0..n {
 +        use core::ptr;
@@ -352,28 +374,26 @@ diff -uNr 06_drivers_gpio_uart/src/relocate.rs 07_uart_chainloader/src/relocate.
 +        src_addr = src_addr.offset(1);
 +    }
 +
-+    // Call `init()` through a trait object, causing the jump to use an absolute
-+    // address to reach the relocated binary. An elaborate explanation can be
-+    // found in the runtime_init.rs source comments.
++    // Call `init()` through a trait object, causing the jump to use an absolute address to reach
++    // the relocated binary. An elaborate explanation can be found in the runtime_init.rs source
++    // comments.
 +    crate::runtime_init::get().init()
 +}
 
 diff -uNr 06_drivers_gpio_uart/src/runtime_init.rs 07_uart_chainloader/src/runtime_init.rs
 --- 06_drivers_gpio_uart/src/runtime_init.rs
 +++ 07_uart_chainloader/src/runtime_init.rs
-@@ -4,23 +4,44 @@
+@@ -4,23 +4,41 @@
 
  //! Rust runtime initialization code.
 
--/// Equivalent to `crt0` or `c0` code in C/C++ world. Clears the `bss` section,
--/// then calls the kernel entry.
-+/// We are outsmarting the compiler here by using a trait as a layer of
-+/// indirection. Because we are generating PIC code, a static dispatch to
-+/// `init()` would generate a relative jump from the callee to `init()`.
-+/// However, when calling `init()`, code just finished copying the binary to the
-+/// actual link-time address, and hence is still running at whatever location
-+/// the previous loader has put it. So we do not want a relative jump, because
-+/// it would not jump to the relocated code.
+-/// Equivalent to `crt0` or `c0` code in C/C++ world. Clears the `bss` section, then calls the
+-/// kernel entry.
++/// We are outsmarting the compiler here by using a trait as a layer of indirection. Because we are
++/// generating PIC code, a static dispatch to `init()` would generate a relative jump from the
++/// callee to `init()`. However, when calling `init()`, code just finished copying the binary to the
++/// actual link-time address, and hence is still running at whatever location the previous loader
++/// has put it. So we do not want a relative jump, because it would not jump to the relocated code.
  ///
 -/// Called from `BSP` code.
 -///
@@ -385,12 +405,11 @@ diff -uNr 06_drivers_gpio_uart/src/runtime_init.rs 07_uart_chainloader/src/runti
 -        // Boundaries of the .bss section, provided by the linker script.
 -        static mut __bss_start: u64;
 -        static mut __bss_end: u64;
-+/// By indirecting through a trait object, we can make use of the property that
-+/// vtables store absolute addresses. So calling `init()` this way will kick
-+/// execution to the relocated binary.
++/// By indirecting through a trait object, we can make use of the property that vtables store
++/// absolute addresses. So calling `init()` this way will kick execution to the relocated binary.
 +pub trait RunTimeInit {
-+    /// Equivalent to `crt0` or `c0` code in C/C++ world. Clears the `bss` section,
-+    /// then calls the kernel entry.
++    /// Equivalent to `crt0` or `c0` code in C/C++ world. Clears the `bss` section, then calls the
++    /// kernel entry.
 +    ///
 +    /// Called from `BSP` code.
 +    ///

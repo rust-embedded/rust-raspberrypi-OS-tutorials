@@ -17,11 +17,10 @@ register_bitfields! {
 
     /// Auxiliary enables
     AUX_ENABLES [
-        /// If set the mini UART is enabled. The UART will immediately
-        /// start receiving data, especially if the UART1_RX line is
-        /// low.
-        /// If clear the mini UART is disabled. That also disables any
-        /// mini UART register access
+        /// If set the mini UART is enabled. The UART will immediately start receiving data,
+        /// especially if the UART1_RX line is low.
+        ///
+        /// If clear the mini UART is disabled. That also disables any mini UART register access
         MINI_UART_ENABLE OFFSET(0) NUMBITS(1) []
     ],
 
@@ -47,16 +46,14 @@ register_bitfields! {
 
     /// Mini Uart Line Status
     AUX_MU_LSR [
-        /// This bit is set if the transmit FIFO is empty and the transmitter is
-        /// idle. (Finished shifting out the last bit).
+        /// This bit is set if the transmit FIFO is empty and the transmitter is idle. (Finished
+        /// shifting out the last bit).
         TX_IDLE    OFFSET(6) NUMBITS(1) [],
 
-        /// This bit is set if the transmit FIFO can accept at least
-        /// one byte.
+        /// This bit is set if the transmit FIFO can accept at least one byte.
         TX_EMPTY   OFFSET(5) NUMBITS(1) [],
 
-        /// This bit is set if the receive FIFO holds at least 1
-        /// symbol.
+        /// This bit is set if the receive FIFO holds at least 1 symbol.
         DATA_READY OFFSET(0) NUMBITS(1) []
     ],
 
@@ -155,12 +152,11 @@ impl MiniUartInner {
     }
 }
 
-/// Implementing `core::fmt::Write` enables usage of the `format_args!` macros,
-/// which in turn are used to implement the `kernel`'s `print!` and `println!`
-/// macros. By implementing `write_str()`, we get `write_fmt()` automatically.
+/// Implementing `core::fmt::Write` enables usage of the `format_args!` macros, which in turn are
+/// used to implement the `kernel`'s `print!` and `println!` macros. By implementing `write_str()`,
+/// we get `write_fmt()` automatically.
 ///
-/// The function takes an `&mut self`, so it must be implemented for the inner
-/// struct.
+/// The function takes an `&mut self`, so it must be implemented for the inner struct.
 ///
 /// See [`src/print.rs`].
 ///
@@ -182,9 +178,9 @@ impl fmt::Write for MiniUartInner {
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------------------------------------
 // BSP-public
-////////////////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------------------------------------
 
 /// The driver's main struct.
 pub struct MiniUart {
@@ -202,9 +198,9 @@ impl MiniUart {
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------------------------------------
 // OS interface implementations
-////////////////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------------------------------------
 use interface::sync::Mutex;
 
 impl interface::driver::DeviceDriver for MiniUart {
@@ -238,16 +234,16 @@ impl interface::driver::DeviceDriver for MiniUart {
 }
 
 impl interface::console::Write for MiniUart {
-    /// Passthrough of `args` to the `core::fmt::Write` implementation, but
-    /// guarded by a Mutex to serialize access.
+    /// Passthrough of `args` to the `core::fmt::Write` implementation, but guarded by a Mutex to
+    /// serialize access.
     fn write_char(&self, c: char) {
         let mut r = &self.inner;
         r.lock(|inner| inner.write_char(c));
     }
 
     fn write_fmt(&self, args: core::fmt::Arguments) -> fmt::Result {
-        // Fully qualified syntax for the call to
-        // `core::fmt::Write::write:fmt()` to increase readability.
+        // Fully qualified syntax for the call to `core::fmt::Write::write:fmt()` to increase
+        // readability.
         let mut r = &self.inner;
         r.lock(|inner| fmt::Write::write_fmt(inner, args))
     }

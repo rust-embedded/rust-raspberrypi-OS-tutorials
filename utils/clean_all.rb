@@ -9,17 +9,17 @@ require 'fileutils'
 require_relative 'helpers/tutorial_folders.rb'
 
 def clean_all
-  crates = tutorial_folders
+    crates = tutorial_folders
 
-  crates.each do |x|
-    x = File.dirname(x)
-    Dir.chdir(x) do
-      puts "Cleaning #{x}"
-      system('rm -rf target') || exit(1)
+    crates.each do |x|
+        x = File.dirname(x)
+        Dir.chdir(x) do
+            puts "Cleaning #{x}"
+            system('rm -rf target') || exit(1)
+        end
     end
-  end
 
-  FileUtils.rm_rf('xbuild_sysroot')
+    FileUtils.rm_rf('xbuild_sysroot')
 end
 
 clean_all if $PROGRAM_NAME == __FILE__

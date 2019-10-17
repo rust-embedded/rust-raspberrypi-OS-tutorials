@@ -28,10 +28,26 @@ diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
  	RUSTC_MISC_ARGS = -C target-cpu=cortex-a53
  endif
 
+diff -uNr 02_runtime_init/src/arch/aarch64.rs 03_hacky_hello_world/src/arch/aarch64.rs
+--- 02_runtime_init/src/arch/aarch64.rs
++++ 03_hacky_hello_world/src/arch/aarch64.rs
+@@ -6,9 +6,9 @@
+
+ global_asm!(include_str!("aarch64/start.S"));
+
+-////////////////////////////////////////////////////////////////////////////////////////////////////
++//--------------------------------------------------------------------------------------------------
+ // Implementation of the kernel's architecture abstraction code
+-////////////////////////////////////////////////////////////////////////////////////////////////////
++//--------------------------------------------------------------------------------------------------
+
+ /// Pause execution on the calling CPU core.
+ #[inline(always)]
+
 diff -uNr 02_runtime_init/src/bsp/rpi3.rs 03_hacky_hello_world/src/bsp/rpi3.rs
 --- 02_runtime_init/src/bsp/rpi3.rs
 +++ 03_hacky_hello_world/src/bsp/rpi3.rs
-@@ -4,4 +4,36 @@
+@@ -4,4 +4,35 @@
 
  //! Board Support Package for the Raspberry Pi 3.
 
@@ -42,9 +58,8 @@ diff -uNr 02_runtime_init/src/bsp/rpi3.rs 03_hacky_hello_world/src/bsp/rpi3.rs
 +/// A mystical, magical device for generating QEMU output out of the void.
 +struct QEMUOutput;
 +
-+/// Implementing `console::Write` enables usage of the `format_args!` macros,
-+/// which in turn are used to implement the `kernel`'s `print!` and `println!`
-+/// macros.
++/// Implementing `console::Write` enables usage of the `format_args!` macros, which in turn are used
++/// to implement the `kernel`'s `print!` and `println!` macros.
 +///
 +/// See [`src/print.rs`].
 +///
@@ -61,9 +76,9 @@ diff -uNr 02_runtime_init/src/bsp/rpi3.rs 03_hacky_hello_world/src/bsp/rpi3.rs
 +    }
 +}
 +
-+////////////////////////////////////////////////////////////////////////////////
++//--------------------------------------------------------------------------------------------------
 +// Implementation of the kernel's BSP calls
-+////////////////////////////////////////////////////////////////////////////////
++//--------------------------------------------------------------------------------------------------
 +
 +/// Returns a ready-to-use `console::Write` implementation.
 +pub fn console() -> impl interface::console::Write {
@@ -98,9 +113,9 @@ diff -uNr 02_runtime_init/src/interface.rs 03_hacky_hello_world/src/interface.rs
 +pub mod console {
 +    /// Console write functions.
 +    ///
-+    /// `core::fmt::Write` is exactly what we need for now. Re-export it here
-+    /// because implementing `console::Write` gives a better hint to the reader
-+    /// about the intention.
++    /// `core::fmt::Write` is exactly what we need for now. Re-export it here because
++    /// implementing `console::Write` gives a better hint to the reader about the
++    /// intention.
 +    pub use core::fmt::Write;
 +
 +    /// Console read functions.
@@ -114,15 +129,21 @@ diff -uNr 02_runtime_init/src/interface.rs 03_hacky_hello_world/src/interface.rs
 diff -uNr 02_runtime_init/src/main.rs 03_hacky_hello_world/src/main.rs
 --- 02_runtime_init/src/main.rs
 +++ 03_hacky_hello_world/src/main.rs
-@@ -6,9 +6,17 @@
+@@ -6,9 +6,23 @@
  #![doc(html_logo_url = "https://git.io/JeGIp")]
 
  //! The `kernel`
 +//!
-+//! The `kernel` is composed by glueing together hardware-specific Board Support
-+//! Package (`BSP`) code and hardware-agnostic `kernel` code through the
-+//! [`kernel::interface`] traits.
++//! The `kernel` is composed by glueing together code from
 +//!
++//!   - [Hardware-specific Board Support Packages] (`BSPs`).
++//!   - [Architecture-specific code].
++//!   - HW- and architecture-agnostic `kernel` code.
++//!
++//! using the [`kernel::interface`] traits.
++//!
++//! [Hardware-specific Board Support Packages]: bsp/index.html
++//! [Architecture-specific code]: arch/index.html
 +//! [`kernel::interface`]: interface/index.html
 
  #![feature(asm)]
@@ -132,7 +153,15 @@ diff -uNr 02_runtime_init/src/main.rs 03_hacky_hello_world/src/main.rs
  #![no_main]
  #![no_std]
 
-@@ -23,9 +31,13 @@
+@@ -16,15 +30,20 @@
+ // the first function to run.
+ mod arch;
+
+-// `_start()` then calls `runtime_init::init()`, which on completion, jumps to `kernel_entry()`.
++// `_start()` then calls `runtime_init::init()`, which on completion, jumps to
++// `kernel_entry()`.
+ mod runtime_init;
+
  // Conditionally includes the selected `BSP` code.
  mod bsp;
 

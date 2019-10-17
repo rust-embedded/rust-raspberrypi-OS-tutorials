@@ -7,10 +7,16 @@
 
 //! The `kernel`
 //!
-//! The `kernel` is composed by glueing together hardware-specific Board Support
-//! Package (`BSP`) code and hardware-agnostic `kernel` code through the
-//! [`kernel::interface`] traits.
+//! The `kernel` is composed by glueing together code from
 //!
+//!   - [Hardware-specific Board Support Packages] (`BSPs`).
+//!   - [Architecture-specific code].
+//!   - HW- and architecture-agnostic `kernel` code.
+//!
+//! using the [`kernel::interface`] traits.
+//!
+//! [Hardware-specific Board Support Packages]: bsp/index.html
+//! [Architecture-specific code]: arch/index.html
 //! [`kernel::interface`]: interface/index.html
 
 #![feature(format_args_nl)]
@@ -19,15 +25,15 @@
 #![no_main]
 #![no_std]
 
-// Conditionally includes the selected `architecture` code, which provides the
-// `_start()` function, the first function to run.
+// Conditionally includes the selected `architecture` code, which provides the `_start()` function,
+// the first function to run.
 mod arch;
 
 // `_start()` then calls `relocate::relocate_self()`.
 mod relocate;
 
-// `relocate::relocate_self()` calls `runtime_init::init()`, which on
-// completion, jumps to `kernel_entry()`.
+// `relocate::relocate_self()` calls `runtime_init::init()`, which on completion, jumps to
+// `kernel_entry()`.
 mod runtime_init;
 
 // Conditionally includes the selected `BSP` code.
@@ -54,8 +60,8 @@ fn kernel_entry() -> ! {
     println!("[ML] Requesting binary");
     bsp::console().flush();
 
-    // Clear the RX FIFOs, if any, of spurious received characters before
-    // starting with the loader protocol.
+    // Clear the RX FIFOs, if any, of spurious received characters before starting with the loader
+    // protocol.
     bsp::console().clear();
 
     // Notify raspbootcom to send the binary.

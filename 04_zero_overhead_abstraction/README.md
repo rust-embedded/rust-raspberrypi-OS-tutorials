@@ -55,7 +55,7 @@ diff -uNr 03_hacky_hello_world/src/arch/aarch64/start.S 04_zero_overhead_abstrac
 diff -uNr 03_hacky_hello_world/src/arch/aarch64.rs 04_zero_overhead_abstraction/src/arch/aarch64.rs
 --- 03_hacky_hello_world/src/arch/aarch64.rs
 +++ 04_zero_overhead_abstraction/src/arch/aarch64.rs
-@@ -4,7 +4,29 @@
+@@ -4,7 +4,28 @@
 
  //! AArch64.
 
@@ -65,8 +65,7 @@ diff -uNr 03_hacky_hello_world/src/arch/aarch64.rs 04_zero_overhead_abstraction/
 +
 +/// The entry of the `kernel` binary.
 +///
-+/// The function must be named `_start`, because the linker is looking for this
-+/// exact name.
++/// The function must be named `_start`, because the linker is looking for this exact name.
 +///
 +/// # Safety
 +///
@@ -84,9 +83,9 @@ diff -uNr 03_hacky_hello_world/src/arch/aarch64.rs 04_zero_overhead_abstraction/
 +    }
 +}
 
- ////////////////////////////////////////////////////////////////////////////////
+ //--------------------------------------------------------------------------------------------------
  // Implementation of the kernel's architecture abstraction code
-@@ -13,9 +35,7 @@
+@@ -13,9 +34,7 @@
  /// Pause execution on the calling CPU core.
  #[inline(always)]
  pub fn wait_forever() -> ! {
@@ -116,8 +115,8 @@ diff -uNr 03_hacky_hello_world/src/bsp/rpi3.rs 04_zero_overhead_abstraction/src/
 diff -uNr 03_hacky_hello_world/src/main.rs 04_zero_overhead_abstraction/src/main.rs
 --- 03_hacky_hello_world/src/main.rs
 +++ 04_zero_overhead_abstraction/src/main.rs
-@@ -13,9 +13,7 @@
- //!
+@@ -19,9 +19,7 @@
+ //! [Architecture-specific code]: arch/index.html
  //! [`kernel::interface`]: interface/index.html
 
 -#![feature(asm)]
@@ -126,7 +125,7 @@ diff -uNr 03_hacky_hello_world/src/main.rs 04_zero_overhead_abstraction/src/main
  #![feature(panic_info_message)]
  #![no_main]
  #![no_std]
-@@ -37,7 +35,8 @@
+@@ -43,7 +41,8 @@
 
  /// Entrypoint of the `kernel`.
  fn kernel_entry() -> ! {

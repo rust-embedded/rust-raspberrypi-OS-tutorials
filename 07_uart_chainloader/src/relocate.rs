@@ -4,8 +4,8 @@
 
 //! Relocation code.
 
-/// Relocates the own binary from `bsp::BOARD_DEFAULT_LOAD_ADDRESS` to the
-/// `__binary_start` address from the linker script.
+/// Relocates the own binary from `bsp::BOARD_DEFAULT_LOAD_ADDRESS` to the `__binary_start` address
+/// from the linker script.
 ///
 /// # Safety
 ///
@@ -29,8 +29,7 @@ pub unsafe fn relocate_self<T>() -> ! {
 
     // Copy the whole binary.
     //
-    // This is essentially a `memcpy()` optimized for throughput by transferring
-    // in chunks of T.
+    // This is essentially a `memcpy()` optimized for throughput by transferring in chunks of T.
     let n = binary_size_in_byte / core::mem::size_of::<T>();
     for _ in 0..n {
         use core::ptr;
@@ -40,8 +39,8 @@ pub unsafe fn relocate_self<T>() -> ! {
         src_addr = src_addr.offset(1);
     }
 
-    // Call `init()` through a trait object, causing the jump to use an absolute
-    // address to reach the relocated binary. An elaborate explanation can be
-    // found in the runtime_init.rs source comments.
+    // Call `init()` through a trait object, causing the jump to use an absolute address to reach
+    // the relocated binary. An elaborate explanation can be found in the runtime_init.rs source
+    // comments.
     crate::runtime_init::get().init()
 }

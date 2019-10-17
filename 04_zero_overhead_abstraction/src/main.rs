@@ -7,10 +7,16 @@
 
 //! The `kernel`
 //!
-//! The `kernel` is composed by glueing together hardware-specific Board Support
-//! Package (`BSP`) code and hardware-agnostic `kernel` code through the
-//! [`kernel::interface`] traits.
+//! The `kernel` is composed by glueing together code from
 //!
+//!   - [Hardware-specific Board Support Packages] (`BSPs`).
+//!   - [Architecture-specific code].
+//!   - HW- and architecture-agnostic `kernel` code.
+//!
+//! using the [`kernel::interface`] traits.
+//!
+//! [Hardware-specific Board Support Packages]: bsp/index.html
+//! [Architecture-specific code]: arch/index.html
 //! [`kernel::interface`]: interface/index.html
 
 #![feature(format_args_nl)]
@@ -18,8 +24,8 @@
 #![no_main]
 #![no_std]
 
-// Conditionally includes the selected `architecture` code, which provides the
-// `_start()` function, the first function to run.
+// Conditionally includes the selected `architecture` code, which provides the `_start()` function,
+// the first function to run.
 mod arch;
 
 // `_start()` then calls `runtime_init::init()`, which on completion, jumps to

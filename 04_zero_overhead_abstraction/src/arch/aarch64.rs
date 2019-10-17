@@ -9,8 +9,7 @@ use cortex_a::{asm, regs::*};
 
 /// The entry of the `kernel` binary.
 ///
-/// The function must be named `_start`, because the linker is looking for this
-/// exact name.
+/// The function must be named `_start`, because the linker is looking for this exact name.
 ///
 /// # Safety
 ///
@@ -28,9 +27,9 @@ pub unsafe extern "C" fn _start() -> ! {
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------------------------------------
 // Implementation of the kernel's architecture abstraction code
-////////////////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------------------------------------
 
 /// Pause execution on the calling CPU core.
 #[inline(always)]

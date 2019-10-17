@@ -30,12 +30,11 @@ impl QEMUOutputInner {
     }
 }
 
-/// Implementing `core::fmt::Write` enables usage of the `format_args!` macros,
-/// which in turn are used to implement the `kernel`'s `print!` and `println!`
-/// macros. By implementing `write_str()`, we get `write_fmt()` automatically.
+/// Implementing `core::fmt::Write` enables usage of the `format_args!` macros, which in turn are
+/// used to implement the `kernel`'s `print!` and `println!` macros. By implementing `write_str()`,
+/// we get `write_fmt()` automatically.
 ///
-/// The function takes an `&mut self`, so it must be implemented for the inner
-/// struct.
+/// The function takes an `&mut self`, so it must be implemented for the inner struct.
 ///
 /// See [`src/print.rs`].
 ///
@@ -57,9 +56,9 @@ impl fmt::Write for QEMUOutputInner {
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------------------------------------
 // BSP-public
-////////////////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------------------------------------
 
 /// The main struct.
 pub struct QEMUOutput {
@@ -74,18 +73,18 @@ impl QEMUOutput {
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------------------------------------
 // OS interface implementations
-////////////////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------------------------------------
 
-/// Passthrough of `args` to the `core::fmt::Write` implementation, but guarded
-/// by a Mutex to serialize access.
+/// Passthrough of `args` to the `core::fmt::Write` implementation, but guarded by a Mutex to
+/// serialize access.
 impl interface::console::Write for QEMUOutput {
     fn write_fmt(&self, args: core::fmt::Arguments) -> fmt::Result {
         use interface::sync::Mutex;
 
-        // Fully qualified syntax for the call to
-        // `core::fmt::Write::write:fmt()` to increase readability.
+        // Fully qualified syntax for the call to `core::fmt::Write::write:fmt()` to increase
+        // readability.
         let mut r = &self.inner;
         r.lock(|inner| fmt::Write::write_fmt(inner, args))
     }
@@ -102,15 +101,15 @@ impl interface::console::Statistics for QEMUOutput {
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------------------------------------
 // Global instances
-////////////////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------------------------------------
 
 static QEMU_OUTPUT: QEMUOutput = QEMUOutput::new();
 
-////////////////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------------------------------------
 // Implementation of the kernel's BSP calls
-////////////////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------------------------------------
 
 /// Return a reference to a `console::All` implementation.
 pub fn console() -> &'static impl interface::console::All {

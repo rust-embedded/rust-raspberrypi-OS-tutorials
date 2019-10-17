@@ -8,16 +8,16 @@
 require_relative 'helpers/tutorial_folders.rb'
 
 def clippy_all
-  crates = tutorial_folders
+    crates = tutorial_folders
 
-  crates.each do |x|
-    x = File.dirname(x)
+    crates.each do |x|
+        x = File.dirname(x)
 
-    Dir.chdir(x) do
-      puts "Clippy: #{x}"
-      system('make clippy')
+        Dir.chdir(x) do
+            puts "Clippy: #{x}"
+            system('make clippy')
+        end
     end
-  end
 end
 
 clippy_all if $PROGRAM_NAME == __FILE__

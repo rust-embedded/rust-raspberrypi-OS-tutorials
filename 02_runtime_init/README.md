@@ -50,6 +50,22 @@ diff -uNr 01_wait_forever/src/arch/aarch64/start.S 02_runtime_init/src/arch/aarc
 +    b       1b              // We should never reach here. But just in case,
 +                            // park this core aswell
 
+diff -uNr 01_wait_forever/src/arch/aarch64.rs 02_runtime_init/src/arch/aarch64.rs
+--- 01_wait_forever/src/arch/aarch64.rs
++++ 02_runtime_init/src/arch/aarch64.rs
+@@ -6,9 +6,9 @@
+
+ global_asm!(include_str!("aarch64/start.S"));
+
+-////////////////////////////////////////////////////////////////////////////////
++////////////////////////////////////////////////////////////////////////////////////////////////////
+ // Implementation of the kernel's architecture abstraction code
+-////////////////////////////////////////////////////////////////////////////////
++////////////////////////////////////////////////////////////////////////////////////////////////////
+
+ /// Pause execution on the calling CPU core.
+ #[inline(always)]
+
 diff -uNr 01_wait_forever/src/bsp/rpi3/link.ld 02_runtime_init/src/bsp/rpi3/link.ld
 --- 01_wait_forever/src/bsp/rpi3/link.ld
 +++ 02_runtime_init/src/bsp/rpi3/link.ld
@@ -81,12 +97,11 @@ diff -uNr 01_wait_forever/src/bsp/rpi3/link.ld 02_runtime_init/src/bsp/rpi3/link
 diff -uNr 01_wait_forever/src/main.rs 02_runtime_init/src/main.rs
 --- 01_wait_forever/src/main.rs
 +++ 02_runtime_init/src/main.rs
-@@ -16,9 +16,16 @@
- // `_start()` function, the first function to run.
+@@ -16,9 +16,15 @@
+ // the first function to run.
  mod arch;
 
-+// `_start()` then calls `runtime_init::init()`, which on completion, jumps to
-+// `kernel_entry()`.
++// `_start()` then calls `runtime_init::init()`, which on completion, jumps to `kernel_entry()`.
 +mod runtime_init;
 +
  // Conditionally includes the selected `BSP` code.
@@ -110,8 +125,8 @@ diff -uNr 01_wait_forever/src/runtime_init.rs 02_runtime_init/src/runtime_init.r
 +
 +//! Rust runtime initialization code.
 +
-+/// Equivalent to `crt0` or `c0` code in C/C++ world. Clears the `bss` section,
-+/// then calls the kernel entry.
++/// Equivalent to `crt0` or `c0` code in C/C++ world. Clears the `bss` section, then calls the
++/// kernel entry.
 +///
 +/// Called from `BSP` code.
 +///

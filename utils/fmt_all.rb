@@ -8,16 +8,16 @@
 require_relative 'helpers/tutorial_folders.rb'
 
 def fmt_all
-  crates = tutorial_folders
+    crates = tutorial_folders
 
-  crates.each do |x|
-    x = File.dirname(x)
+    crates.each do |x|
+        x = File.dirname(x)
 
-    Dir.chdir(x) do
-      puts "Formatting #{x}"
-      system('cargo fmt')
+        Dir.chdir(x) do
+            puts "Formatting #{x}"
+            system('cargo fmt')
+        end
     end
-  end
 end
 
 fmt_all if $PROGRAM_NAME == __FILE__
