@@ -5,7 +5,7 @@
 Running from an SD card was a nice experience, but it would be extremely tedious
 to do it for every new binary. Let's write a [chainloader] using [position
 independent code]. This will be the last binary you need to put on the SD card
-for quite some time. Each following tutorial will prove a `chainboot` target in
+for quite some time. Each following tutorial will provide a `chainboot` target in
 the `Makefile` that lets you conveniently load the kernel over `UART`.
 
 Our chainloader is called `MiniLoad` and is inspired by [raspbootin].
@@ -139,7 +139,8 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 07_uart_c
 -            let mut ret = inner.AUX_MU_IO.get() as u8 as char;
 -
 -            // Convert carrige return to newline.
--            if ret == '' {
+-            if ret == '
+' {
 -                ret = '
 '
 -            }
