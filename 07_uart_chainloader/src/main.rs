@@ -1,0 +1,91 @@
+// SPDX-License-Identifier: MIT
+//
+// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
+
+// Rust embedded logo for `make doc`.
+#![doc(html_logo_url = "https://git.io/JeGIp")]
+
+//! The `kernel`
+//!
+//! The `kernel` is composed by glueing together hardware-specific Board Support
+//! Package (`BSP`) code and hardware-agnostic `kernel` code through the
+//! [`kernel::interface`] traits.
+//!
+//! [`kernel::interface`]: interface/index.html
+
+#![feature(format_args_nl)]
+#![feature(panic_info_message)]
+#![feature(trait_alias)]
+#![no_main]
+#![no_std]
+
+// Conditionally includes the selected `architecture` code, which provides the
+// `_start()` function, the first function to run.
+mod arch;
+
+// `_start()` then calls `relocate::relocate_self()`.
+mod relocate;
+
+// `relocate::relocate_self()` calls `runtime_init::init()`, which on
+// completion, jumps to `kernel_entry()`.
+mod runtime_init;
+
+// Conditionally includes the selected `BSP` code.
+mod bsp;
+
+mod interface;
+mod panic_wait;
+mod print;
+
+/// Entrypoint of the `kernel`.
+fn kernel_entry() -> ! {
+    use interface::console::All;
+
+    // Run the BSP's initialization code.
+    bsp::init();
+
+    println!(" __  __ _      _ _                 _ ");
+    println!("|  \\/  (_)_ _ (_) |   ___  __ _ __| |");
+    println!("| |\\/| | | ' \\| | |__/ _ \\/ _` / _` |");
+    println!("|_|  |_|_|_||_|_|____\\___/\\__,_\\__,_|");
+    println!();
+    println!("{:^37}", bsp::board_name());
+    println!();
+    println!("[ML] Requesting binary");
+    bsp::console().flush();
+
+    // Clear the RX FIFOs, if any, of spurious received characters before
+    // starting with the loader protocol.
+    bsp::console().clear();
+
+    // Notify raspbootcom to send the binary.
+    for _ in 0..3 {
+        bsp::console().write_char(3 as char);
+    }
+
+    // Read the binary's size.
+    let mut size: u32 = u32::from(bsp::console().read_char() as u8);
+    size |= u32::from(bsp::console().read_char() as u8) << 8;
+    size |= u32::from(bsp::console().read_char() as u8) << 16;
+    size |= u32::from(bsp::console().read_char() as u8) << 24;
+
+    // Trust it's not too big.
+    print!("OK");
+
+    let kernel_addr: *mut u8 = bsp::BOARD_DEFAULT_LOAD_ADDRESS as *mut u8;
+    unsafe {
+        // Read the kernel byte by byte.
+        for i in 0..size {
+            *kernel_addr.offset(i as isize) = bsp::console().read_char() as u8;
+        }
+    }
+
+    println!("[ML] Loaded! Executing the payload now\n");
+    bsp::console().flush();
+
+    // Use black magic to get a function pointer.
+    let kernel: extern "C" fn() -> ! = unsafe { core::mem::transmute(kernel_addr as *const ()) };
+
+    // Jump to loaded kernel!
+    kernel()
+}
