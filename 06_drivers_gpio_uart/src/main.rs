@@ -46,6 +46,13 @@ fn kernel_entry() -> ! {
     // Run the BSP's initialization code.
     bsp::init();
 
+    // UART should be functional now. Wait for user to hit Enter.
+    loop {
+        if bsp::console().read_char() == '\n' {
+            break;
+        }
+    }
+
     println!("[0] Booting on: {}", bsp::board_name());
 
     println!("[1] Drivers loaded:");
