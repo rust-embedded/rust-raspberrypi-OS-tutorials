@@ -16,7 +16,7 @@
 // the first function to run.
 mod arch;
 
-// `_start()` then calls `runtime_init::init()`, which on completion, jumps to `kernel_entry()`.
+// `_start()` then calls `runtime_init::init()`, which on completion, jumps to `kernel_init()`.
 mod runtime_init;
 
 // Conditionally includes the selected `BSP` code.
@@ -24,7 +24,11 @@ mod bsp;
 
 mod panic_wait;
 
-/// Entrypoint of the `kernel`.
-fn kernel_entry() -> ! {
+/// Early init code.
+///
+/// # Safety
+///
+/// - Only a single core must be active and running this function.
+unsafe fn kernel_init() -> ! {
     panic!()
 }

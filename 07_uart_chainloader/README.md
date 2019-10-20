@@ -116,22 +116,7 @@ diff -uNr 06_drivers_gpio_uart/src/arch/aarch64.rs 07_uart_chainloader/src/arch/
 diff -uNr 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 07_uart_chainloader/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs
 --- 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs
 +++ 07_uart_chainloader/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs
-@@ -50,10 +50,12 @@
-         /// shifting out the last bit).
-         TX_IDLE    OFFSET(6) NUMBITS(1) [],
-
--        /// This bit is set if the transmit FIFO can accept at least one byte.
-+        /// This bit is set if the transmit FIFO can accept at least
-+        /// one byte.
-         TX_EMPTY   OFFSET(5) NUMBITS(1) [],
-
--        /// This bit is set if the receive FIFO holds at least 1 symbol.
-+        /// This bit is set if the receive FIFO holds at least 1
-+        /// symbol.
-         DATA_READY OFFSET(0) NUMBITS(1) []
-     ],
-
-@@ -247,6 +249,15 @@
+@@ -247,6 +247,15 @@
          let mut r = &self.inner;
          r.lock(|inner| fmt::Write::write_fmt(inner, args))
      }
@@ -147,7 +132,7 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 07_uart_c
  }
 
  impl interface::console::Read for MiniUart {
-@@ -263,14 +274,14 @@
+@@ -263,14 +272,14 @@
              }
 
              // Read one character.
@@ -216,16 +201,6 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/rpi3.rs 07_uart_chainloader/src/bsp/rpi3.
  //--------------------------------------------------------------------------------------------------
  // Global BSP driver instances
  //--------------------------------------------------------------------------------------------------
-@@ -34,8 +37,7 @@
-     &MINI_UART
- }
-
--/// Return an array of references to all `DeviceDriver` compatible `BSP`
--/// drivers.
-+/// Return an array of references to all `DeviceDriver` compatible `BSP` drivers.
- ///
- /// # Safety
- ///
 
 diff -uNr 06_drivers_gpio_uart/src/interface.rs 07_uart_chainloader/src/interface.rs
 --- 06_drivers_gpio_uart/src/interface.rs
@@ -259,20 +234,25 @@ diff -uNr 06_drivers_gpio_uart/src/main.rs 07_uart_chainloader/src/main.rs
  // the first function to run.
  mod arch;
 
--// `_start()` then calls `runtime_init::init()`, which on completion, jumps to `kernel_entry()`.
+-// `_start()` then calls `runtime_init::init()`, which on completion, jumps to `kernel_init()`.
 +// `_start()` then calls `relocate::relocate_self()`.
 +mod relocate;
 +
 +// `relocate::relocate_self()` calls `runtime_init::init()`, which on completion, jumps to
-+// `kernel_entry()`.
++// `kernel_init()`.
  mod runtime_init;
 
  // Conditionally includes the selected `BSP` code.
-@@ -46,18 +50,48 @@
-     // Run the BSP's initialization code.
-     bsp::init();
+@@ -66,25 +70,48 @@
+ fn kernel_main() -> ! {
+     use interface::console::All;
 
--    println!("[0] Booting on: {}", bsp::board_name());
+-    // UART should be functional now. Wait for user to hit Enter.
+-    loop {
+-        if bsp::console().read_char() == '
+' {
+-            break;
+-        }
 +    println!(" __  __ _      _ _                 _ ");
 +    println!("|  \/  (_)_ _ (_) |   ___  __ _ __| |");
 +    println!("| |\/| | | ' \| | |__/ _ \/ _` / _` |");
@@ -290,8 +270,10 @@ diff -uNr 06_drivers_gpio_uart/src/main.rs 07_uart_chainloader/src/main.rs
 +    // Notify raspbootcom to send the binary.
 +    for _ in 0..3 {
 +        bsp::console().write_char(3 as char);
-+    }
+     }
 
+-    println!("[0] Booting on: {}", bsp::board_name());
+-
 -    println!("[1] Drivers loaded:");
 -    for (i, driver) in bsp::device_drivers().iter().enumerate() {
 -        println!("      {}. {}", i + 1, driver.compatible());
@@ -383,20 +365,18 @@ diff -uNr 06_drivers_gpio_uart/src/relocate.rs 07_uart_chainloader/src/relocate.
 diff -uNr 06_drivers_gpio_uart/src/runtime_init.rs 07_uart_chainloader/src/runtime_init.rs
 --- 06_drivers_gpio_uart/src/runtime_init.rs
 +++ 07_uart_chainloader/src/runtime_init.rs
-@@ -4,23 +4,41 @@
+@@ -4,21 +4,39 @@
 
  //! Rust runtime initialization code.
 
--/// Equivalent to `crt0` or `c0` code in C/C++ world. Clears the `bss` section, then calls the
--/// kernel entry.
+-/// Equivalent to `crt0` or `c0` code in C/C++ world. Clears the `bss` section, then jumps to kernel
+-/// init code.
 +/// We are outsmarting the compiler here by using a trait as a layer of indirection. Because we are
 +/// generating PIC code, a static dispatch to `init()` would generate a relative jump from the
 +/// callee to `init()`. However, when calling `init()`, code just finished copying the binary to the
 +/// actual link-time address, and hence is still running at whatever location the previous loader
 +/// has put it. So we do not want a relative jump, because it would not jump to the relocated code.
  ///
--/// Called from `BSP` code.
--///
 -/// # Safety
 -///
 -/// - Only a single core must be active and running this function.
@@ -408,10 +388,8 @@ diff -uNr 06_drivers_gpio_uart/src/runtime_init.rs 07_uart_chainloader/src/runti
 +/// By indirecting through a trait object, we can make use of the property that vtables store
 +/// absolute addresses. So calling `init()` this way will kick execution to the relocated binary.
 +pub trait RunTimeInit {
-+    /// Equivalent to `crt0` or `c0` code in C/C++ world. Clears the `bss` section, then calls the
-+    /// kernel entry.
-+    ///
-+    /// Called from `BSP` code.
++    /// Equivalent to `crt0` or `c0` code in C/C++ world. Clears the `bss` section, then jumps to kernel
++    /// init code.
 +    ///
 +    /// # Safety
 +    ///
@@ -426,7 +404,7 @@ diff -uNr 06_drivers_gpio_uart/src/runtime_init.rs 07_uart_chainloader/src/runti
 +        // Zero out the .bss section.
 +        r0::zero_bss(&mut __bss_start, &mut __bss_end);
 +
-+        crate::kernel_entry()
++        crate::kernel_init()
      }
 +}
 
@@ -435,7 +413,7 @@ diff -uNr 06_drivers_gpio_uart/src/runtime_init.rs 07_uart_chainloader/src/runti
 +struct Traitor;
 +impl RunTimeInit for Traitor {}
 
--    crate::kernel_entry()
+-    crate::kernel_init()
 +/// Give the callee a `RunTimeInit` trait object.
 +pub fn get() -> &'static dyn RunTimeInit {
 +    &Traitor {}

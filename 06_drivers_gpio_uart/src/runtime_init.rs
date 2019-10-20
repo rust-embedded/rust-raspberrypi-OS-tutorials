@@ -4,10 +4,8 @@
 
 //! Rust runtime initialization code.
 
-/// Equivalent to `crt0` or `c0` code in C/C++ world. Clears the `bss` section, then calls the
-/// kernel entry.
-///
-/// Called from `BSP` code.
+/// Equivalent to `crt0` or `c0` code in C/C++ world. Clears the `bss` section, then jumps to kernel
+/// init code.
 ///
 /// # Safety
 ///
@@ -22,5 +20,5 @@ pub unsafe fn init() -> ! {
     // Zero out the .bss section.
     r0::zero_bss(&mut __bss_start, &mut __bss_end);
 
-    crate::kernel_entry()
+    crate::kernel_init()
 }

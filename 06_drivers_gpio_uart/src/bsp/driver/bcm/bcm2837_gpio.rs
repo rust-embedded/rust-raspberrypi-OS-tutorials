@@ -113,15 +113,11 @@ impl GPIOInner {
 
         // Enable pins 14 and 15.
         self.GPPUD.set(0);
-        for _ in 0..150 {
-            arch::nop();
-        }
+        arch::spin_for_cycles(150);
 
         self.GPPUDCLK0
             .write(GPPUDCLK0::PUDCLK14::AssertClock + GPPUDCLK0::PUDCLK15::AssertClock);
-        for _ in 0..150 {
-            arch::nop();
-        }
+        arch::spin_for_cycles(150);
 
         self.GPPUDCLK0.set(0);
     }

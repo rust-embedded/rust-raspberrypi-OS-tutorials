@@ -13,7 +13,8 @@ DIFF=$(
 	 -x target \
 	 $1 $2 \
 	| sed -r "s/[12][90][127][90]-.*//g" \
-	| sed -r "s/[[:space:]]*$//g"
+	| sed -r "s/[[:space:]]*$//g" \
+	| sed -r "s/%/modulo/g"
      )
 
 HEADER="## Diff to previous"

@@ -10,9 +10,9 @@ We are calling into Rust code for the first time.
 - `_start()`:
      - Halt core if core != `core0`.
      - `core0` jumps to `init()` Rust function.
-- `init()`
+- `init()` in `runtime.rs`
      - Zeros the `.bss` section.
-     - Calls `kernel_entry()`, which calls `panic!()`, which eventually halts
+     - Calls `kernel_init()`, which calls `panic!()`, which eventually halts
        `core0` as well.
 
 ## Diff to previous
@@ -50,22 +50,6 @@ diff -uNr 01_wait_forever/src/arch/aarch64/start.S 02_runtime_init/src/arch/aarc
 +    b       1b              // We should never reach here. But just in case,
 +                            // park this core aswell
 
-diff -uNr 01_wait_forever/src/arch/aarch64.rs 02_runtime_init/src/arch/aarch64.rs
---- 01_wait_forever/src/arch/aarch64.rs
-+++ 02_runtime_init/src/arch/aarch64.rs
-@@ -6,9 +6,9 @@
-
- global_asm!(include_str!("aarch64/start.S"));
-
--////////////////////////////////////////////////////////////////////////////////
-+////////////////////////////////////////////////////////////////////////////////////////////////////
- // Implementation of the kernel's architecture abstraction code
--////////////////////////////////////////////////////////////////////////////////
-+////////////////////////////////////////////////////////////////////////////////////////////////////
-
- /// Pause execution on the calling CPU core.
- #[inline(always)]
-
 diff -uNr 01_wait_forever/src/bsp/rpi3/link.ld 02_runtime_init/src/bsp/rpi3/link.ld
 --- 01_wait_forever/src/bsp/rpi3/link.ld
 +++ 02_runtime_init/src/bsp/rpi3/link.ld
@@ -97,11 +81,11 @@ diff -uNr 01_wait_forever/src/bsp/rpi3/link.ld 02_runtime_init/src/bsp/rpi3/link
 diff -uNr 01_wait_forever/src/main.rs 02_runtime_init/src/main.rs
 --- 01_wait_forever/src/main.rs
 +++ 02_runtime_init/src/main.rs
-@@ -16,9 +16,15 @@
+@@ -16,9 +16,19 @@
  // the first function to run.
  mod arch;
 
-+// `_start()` then calls `runtime_init::init()`, which on completion, jumps to `kernel_entry()`.
++// `_start()` then calls `runtime_init::init()`, which on completion, jumps to `kernel_init()`.
 +mod runtime_init;
 +
  // Conditionally includes the selected `BSP` code.
@@ -110,25 +94,27 @@ diff -uNr 01_wait_forever/src/main.rs 02_runtime_init/src/main.rs
  mod panic_wait;
 
 -// Kernel code coming next tutorial.
-+/// Entrypoint of the `kernel`.
-+fn kernel_entry() -> ! {
++/// Early init code.
++///
++/// # Safety
++///
++/// - Only a single core must be active and running this function.
++unsafe fn kernel_init() -> ! {
 +    panic!()
 +}
 
 diff -uNr 01_wait_forever/src/runtime_init.rs 02_runtime_init/src/runtime_init.rs
 --- 01_wait_forever/src/runtime_init.rs
 +++ 02_runtime_init/src/runtime_init.rs
-@@ -0,0 +1,27 @@
+@@ -0,0 +1,25 @@
 +// SPDX-License-Identifier: MIT
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Rust runtime initialization code.
 +
-+/// Equivalent to `crt0` or `c0` code in C/C++ world. Clears the `bss` section, then calls the
-+/// kernel entry.
-+///
-+/// Called from `BSP` code.
++/// Equivalent to `crt0` or `c0` code in C/C++ world. Clears the `bss` section, then jumps to kernel
++/// init code.
 +///
 +/// # Safety
 +///
@@ -144,6 +130,6 @@ diff -uNr 01_wait_forever/src/runtime_init.rs 02_runtime_init/src/runtime_init.r
 +    // Zero out the .bss section.
 +    r0::zero_bss(&mut __bss_start, &mut __bss_end);
 +
-+    crate::kernel_entry()
++    crate::kernel_init()
 +}
 ```

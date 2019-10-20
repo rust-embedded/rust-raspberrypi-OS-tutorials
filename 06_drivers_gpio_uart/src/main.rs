@@ -29,7 +29,7 @@
 // the first function to run.
 mod arch;
 
-// `_start()` then calls `runtime_init::init()`, which on completion, jumps to `kernel_entry()`.
+// `_start()` then calls `runtime_init::init()`, which on completion, jumps to `kernel_init()`.
 mod runtime_init;
 
 // Conditionally includes the selected `BSP` code.
@@ -39,12 +39,32 @@ mod interface;
 mod panic_wait;
 mod print;
 
-/// Entrypoint of the `kernel`.
-fn kernel_entry() -> ! {
-    use interface::console::All;
+/// Early init code.
+///
+/// Concerned with with initializing `BSP` and `arch` parts.
+///
+/// # Safety
+///
+/// - Only a single core must be active and running this function.
+/// - The init calls in this function must appear in the correct order.
+unsafe fn kernel_init() -> ! {
+    for i in bsp::device_drivers().iter() {
+        if let Err(()) = i.init() {
+            // This message will only be readable if, at the time of failure, the return value of
+            // `bsp::console()` is already in functioning state.
+            panic!("Error loading driver: {}", i.compatible())
+        }
+    }
 
-    // Run the BSP's initialization code.
-    bsp::init();
+    bsp::post_driver_init();
+
+    // Transition from unsafe to safe.
+    kernel_main()
+}
+
+/// The main function running after the early init.
+fn kernel_main() -> ! {
+    use interface::console::All;
 
     // UART should be functional now. Wait for user to hit Enter.
     loop {

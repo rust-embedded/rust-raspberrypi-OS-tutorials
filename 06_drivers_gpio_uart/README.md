@@ -4,7 +4,7 @@
 
 Now that we enabled safe globals in the previous tutorial, the infrastructure is
 laid for adding the first real device drivers. We throw out the magic QEMU
-console and use a real UART now. Like real tough embedded people do!
+console and use a real UART now. Like serious embedded hackers do!
 
 - A `DeviceDriver` trait is added for abstracting `BSP` driver implementations
   from kernel code.
@@ -55,11 +55,18 @@ diff -uNr 05_safe_globals/Cargo.toml 06_drivers_gpio_uart/Cargo.toml
 diff -uNr 05_safe_globals/src/arch/aarch64.rs 06_drivers_gpio_uart/src/arch/aarch64.rs
 --- 05_safe_globals/src/arch/aarch64.rs
 +++ 06_drivers_gpio_uart/src/arch/aarch64.rs
-@@ -33,6 +33,8 @@
+@@ -33,6 +33,15 @@
  // Implementation of the kernel's architecture abstraction code
  //--------------------------------------------------------------------------------------------------
 
 +pub use asm::nop;
++
++/// Spin for `n` cycles.
++pub fn spin_for_cycles(n: usize) {
++    for _ in 0..n {
++        asm::nop();
++    }
++}
 +
  /// Pause execution on the calling CPU core.
  #[inline(always)]
@@ -68,7 +75,7 @@ diff -uNr 05_safe_globals/src/arch/aarch64.rs 06_drivers_gpio_uart/src/arch/aarc
 diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2837_gpio.rs 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2837_gpio.rs
 --- 05_safe_globals/src/bsp/driver/bcm/bcm2837_gpio.rs
 +++ 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2837_gpio.rs
-@@ -0,0 +1,162 @@
+@@ -0,0 +1,158 @@
 +// SPDX-License-Identifier: MIT
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
@@ -184,15 +191,11 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2837_gpio.rs 06_drivers_gpio_uar
 +
 +        // Enable pins 14 and 15.
 +        self.GPPUD.set(0);
-+        for _ in 0..150 {
-+            arch::nop();
-+        }
++        arch::spin_for_cycles(150);
 +
 +        self.GPPUDCLK0
 +            .write(GPPUDCLK0::PUDCLK14::AssertClock + GPPUDCLK0::PUDCLK15::AssertClock);
-+        for _ in 0..150 {
-+            arch::nop();
-+        }
++        arch::spin_for_cycles(150);
 +
 +        self.GPPUDCLK0.set(0);
 +    }
@@ -575,7 +578,7 @@ diff -uNr 05_safe_globals/src/bsp/rpi3/memory_map.rs 06_drivers_gpio_uart/src/bs
 diff -uNr 05_safe_globals/src/bsp/rpi3.rs 06_drivers_gpio_uart/src/bsp/rpi3.rs
 --- 05_safe_globals/src/bsp/rpi3.rs
 +++ 06_drivers_gpio_uart/src/bsp/rpi3.rs
-@@ -4,114 +4,58 @@
+@@ -4,114 +4,47 @@
 
  //! Board Support Package for the Raspberry Pi 3.
 
@@ -697,8 +700,11 @@ diff -uNr 05_safe_globals/src/bsp/rpi3.rs 06_drivers_gpio_uart/src/bsp/rpi3.rs
 -//--------------------------------------------------------------------------------------------------
 -
 -static QEMU_OUTPUT: QEMUOutput = QEMUOutput::new();
-+/// Return an array of references to all `DeviceDriver` compatible `BSP`
-+/// drivers.
+-
+-//--------------------------------------------------------------------------------------------------
+-// Implementation of the kernel's BSP calls
+-//--------------------------------------------------------------------------------------------------
++/// Return an array of references to all `DeviceDriver` compatible `BSP` drivers.
 +///
 +/// # Safety
 +///
@@ -707,24 +713,11 @@ diff -uNr 05_safe_globals/src/bsp/rpi3.rs 06_drivers_gpio_uart/src/bsp/rpi3.rs
 +    [&GPIO, &MINI_UART]
 +}
 
--//--------------------------------------------------------------------------------------------------
--// Implementation of the kernel's BSP calls
--//--------------------------------------------------------------------------------------------------
-+/// The BSP's main initialization function.
-+///
-+/// Called early on kernel start.
-+pub fn init() {
-+    for i in device_drivers().iter() {
-+        if let Err(()) = i.init() {
-+            // This message will only be readable if, at the time of failure, the return value of
-+            // `bsp::console()` is already in functioning state.
-+            panic!("Error loading driver: {}", i.compatible())
-+        }
-+    }
-
 -/// Return a reference to a `console::All` implementation.
 -pub fn console() -> &'static impl interface::console::All {
 -    &QEMU_OUTPUT
++/// BSP initialization code that runs after driver init.
++pub fn post_driver_init() {
 +    // Configure MiniUart's output pins.
 +    GPIO.map_mini_uart();
  }
@@ -763,7 +756,7 @@ diff -uNr 05_safe_globals/src/interface.rs 06_drivers_gpio_uart/src/interface.rs
 +    /// Driver result type, e.g. for indicating successful driver init.
 +    pub type Result = core::result::Result<(), ()>;
 +
-+    /// Device Driver operations.
++    /// Device Driver functions.
 +    pub trait DeviceDriver {
 +        /// Return a compatibility string for identifying the driver.
 +        fn compatible(&self) -> &str;
@@ -778,30 +771,58 @@ diff -uNr 05_safe_globals/src/interface.rs 06_drivers_gpio_uart/src/interface.rs
 diff -uNr 05_safe_globals/src/main.rs 06_drivers_gpio_uart/src/main.rs
 --- 05_safe_globals/src/main.rs
 +++ 06_drivers_gpio_uart/src/main.rs
-@@ -41,12 +41,23 @@
+@@ -41,16 +41,50 @@
 
- /// Entrypoint of the `kernel`.
- fn kernel_entry() -> ! {
+ /// Early init code.
+ ///
++/// Concerned with with initializing `BSP` and `arch` parts.
++///
+ /// # Safety
+ ///
+ /// - Only a single core must be active and running this function.
++/// - The init calls in this function must appear in the correct order.
+ unsafe fn kernel_init() -> ! {
 -    use interface::console::Statistics;
++    for i in bsp::device_drivers().iter() {
++        if let Err(()) = i.init() {
++            // This message will only be readable if, at the time of failure, the return value of
++            // `bsp::console()` is already in functioning state.
++            panic!("Error loading driver: {}", i.compatible())
++        }
++    }
++
++    bsp::post_driver_init();
++
++    // Transition from unsafe to safe.
++    kernel_main()
++}
++
++/// The main function running after the early init.
++fn kernel_main() -> ! {
 +    use interface::console::All;
-
--    println!("[0] Hello from pure Rust!");
-+    // Run the BSP's initialization code.
-+    bsp::init();
-
--    println!("[1] Chars written: {}", bsp::console().chars_written());
++
++    // UART should be functional now. Wait for user to hit Enter.
++    loop {
++        if bsp::console().read_char() == '
+' {
++            break;
++        }
++    }
++
 +    println!("[0] Booting on: {}", bsp::board_name());
 
--    println!("[2] Stopping here.");
--    arch::wait_forever()
+-    println!("[0] Hello from pure Rust!");
 +    println!("[1] Drivers loaded:");
 +    for (i, driver) in bsp::device_drivers().iter().enumerate() {
 +        println!("      {}. {}", i + 1, driver.compatible());
 +    }
-+
+
+-    println!("[1] Chars written: {}", bsp::console().chars_written());
 +    println!("[2] Chars written: {}", bsp::console().chars_written());
 +    println!("[3] Echoing input now");
-+
+
+-    println!("[2] Stopping here.");
+-    arch::wait_forever()
 +    loop {
 +        let c = bsp::console().read_char();
 +        bsp::console().write_char(c);

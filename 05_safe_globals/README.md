@@ -322,20 +322,10 @@ diff -uNr 04_zero_overhead_abstraction/src/main.rs 05_safe_globals/src/main.rs
  #![no_main]
  #![no_std]
 
-@@ -28,8 +29,7 @@
- // the first function to run.
- mod arch;
-
--// `_start()` then calls `runtime_init::init()`, which on completion, jumps to
--// `kernel_entry()`.
-+// `_start()` then calls `runtime_init::init()`, which on completion, jumps to `kernel_entry()`.
- mod runtime_init;
-
- // Conditionally includes the selected `BSP` code.
-@@ -41,8 +41,12 @@
-
- /// Entrypoint of the `kernel`.
- fn kernel_entry() -> ! {
+@@ -44,8 +45,12 @@
+ ///
+ /// - Only a single core must be active and running this function.
+ unsafe fn kernel_init() -> ! {
 +    use interface::console::Statistics;
 +
      println!("[0] Hello from pure Rust!");

@@ -46,18 +46,8 @@ pub fn device_drivers() -> [&'static dyn interface::driver::DeviceDriver; 2] {
     [&GPIO, &MINI_UART]
 }
 
-/// The BSP's main initialization function.
-///
-/// Called early on kernel start.
-pub fn init() {
-    for i in device_drivers().iter() {
-        if let Err(()) = i.init() {
-            // This message will only be readable if, at the time of failure, the return value of
-            // `bsp::console()` is already in functioning state.
-            panic!("Error loading driver: {}", i.compatible())
-        }
-    }
-
+/// BSP initialization code that runs after driver init.
+pub fn post_driver_init() {
     // Configure MiniUart's output pins.
     GPIO.map_mini_uart();
 }

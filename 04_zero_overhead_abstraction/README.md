@@ -125,10 +125,10 @@ diff -uNr 03_hacky_hello_world/src/main.rs 04_zero_overhead_abstraction/src/main
  #![feature(panic_info_message)]
  #![no_main]
  #![no_std]
-@@ -43,7 +41,8 @@
-
- /// Entrypoint of the `kernel`.
- fn kernel_entry() -> ! {
+@@ -46,7 +44,8 @@
+ ///
+ /// - Only a single core must be active and running this function.
+ unsafe fn kernel_init() -> ! {
 -    println!("Hello from Rust!");
 +    println!("[0] Hello from pure Rust!");
 
@@ -140,7 +140,7 @@ diff -uNr 03_hacky_hello_world/src/main.rs 04_zero_overhead_abstraction/src/main
 diff -uNr 03_hacky_hello_world/src/runtime_init.rs 04_zero_overhead_abstraction/src/runtime_init.rs
 --- 03_hacky_hello_world/src/runtime_init.rs
 +++ 04_zero_overhead_abstraction/src/runtime_init.rs
-@@ -12,8 +12,7 @@
+@@ -10,8 +10,7 @@
  /// # Safety
  ///
  /// - Only a single core must be active and running this function.

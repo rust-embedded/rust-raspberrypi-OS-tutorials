@@ -8,7 +8,7 @@ QEMU property and doesn't really use the RPi3's `UART`; Using real `UART` is
 enabled step-by-step in following tutorials.
 
 - `interface.rs` is introduced:
-	- Provides `Traits` for abstracting `kernel` from `BSP` code.
+	- Provides `Traits` for abstracting `kernel` from `BSP` and `arch` code.
 - Panic handler `print!()`s supplied error messages.
     - This is showcased in `main()`.
 
@@ -27,22 +27,6 @@ diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
  	LINKER_FILE = src/bsp/rpi3/link.ld
  	RUSTC_MISC_ARGS = -C target-cpu=cortex-a53
  endif
-
-diff -uNr 02_runtime_init/src/arch/aarch64.rs 03_hacky_hello_world/src/arch/aarch64.rs
---- 02_runtime_init/src/arch/aarch64.rs
-+++ 03_hacky_hello_world/src/arch/aarch64.rs
-@@ -6,9 +6,9 @@
-
- global_asm!(include_str!("aarch64/start.S"));
-
--////////////////////////////////////////////////////////////////////////////////////////////////////
-+//--------------------------------------------------------------------------------------------------
- // Implementation of the kernel's architecture abstraction code
--////////////////////////////////////////////////////////////////////////////////////////////////////
-+//--------------------------------------------------------------------------------------------------
-
- /// Pause execution on the calling CPU core.
- #[inline(always)]
 
 diff -uNr 02_runtime_init/src/bsp/rpi3.rs 03_hacky_hello_world/src/bsp/rpi3.rs
 --- 02_runtime_init/src/bsp/rpi3.rs
@@ -153,15 +137,7 @@ diff -uNr 02_runtime_init/src/main.rs 03_hacky_hello_world/src/main.rs
  #![no_main]
  #![no_std]
 
-@@ -16,15 +30,20 @@
- // the first function to run.
- mod arch;
-
--// `_start()` then calls `runtime_init::init()`, which on completion, jumps to `kernel_entry()`.
-+// `_start()` then calls `runtime_init::init()`, which on completion, jumps to
-+// `kernel_entry()`.
- mod runtime_init;
-
+@@ -22,7 +36,9 @@
  // Conditionally includes the selected `BSP` code.
  mod bsp;
 
@@ -169,8 +145,12 @@ diff -uNr 02_runtime_init/src/main.rs 03_hacky_hello_world/src/main.rs
  mod panic_wait;
 +mod print;
 
- /// Entrypoint of the `kernel`.
- fn kernel_entry() -> ! {
+ /// Early init code.
+ ///
+@@ -30,5 +46,7 @@
+ ///
+ /// - Only a single core must be active and running this function.
+ unsafe fn kernel_init() -> ! {
 -    panic!()
 +    println!("Hello from Rust!");
 +

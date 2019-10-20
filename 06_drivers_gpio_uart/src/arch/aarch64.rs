@@ -35,6 +35,13 @@ pub unsafe extern "C" fn _start() -> ! {
 
 pub use asm::nop;
 
+/// Spin for `n` cycles.
+pub fn spin_for_cycles(n: usize) {
+    for _ in 0..n {
+        asm::nop();
+    }
+}
+
 /// Pause execution on the calling CPU core.
 #[inline(always)]
 pub fn wait_forever() -> ! {

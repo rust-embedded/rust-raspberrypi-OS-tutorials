@@ -90,7 +90,7 @@ pub mod driver {
     /// Driver result type, e.g. for indicating successful driver init.
     pub type Result = core::result::Result<(), ()>;
 
-    /// Device Driver operations.
+    /// Device Driver functions.
     pub trait DeviceDriver {
         /// Return a compatibility string for identifying the driver.
         fn compatible(&self) -> &str;
