@@ -36,7 +36,6 @@ Project skeleton is set up; Code just halts all CPU cores executing the kernel c
 In the project folder, invoke QEMU and observe the CPU core spinning on `wfe`:
 ```console
 make qemu
-
 [...]
 IN: 
 0x00080000:  d503205f  wfe      
