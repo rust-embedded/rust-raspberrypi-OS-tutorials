@@ -39,6 +39,17 @@ you can check out implemntations in the [spin crate] or the [parking lot crate].
 [spin crate]: https://github.com/mvdnes/spin-rs
 [parking lot crate]: https://github.com/Amanieu/parking_lot
 
+### Give it a try
+
+```console
+make qemu
+
+[...]
+[0] Hello from pure Rust!
+[1] Chars written: 26
+[2] Stopping here.
+```
+
 ## Diff to previous
 ```diff
 
@@ -159,7 +170,8 @@ diff -uNr 04_zero_overhead_abstraction/src/bsp/rpi.rs 05_safe_globals/src/bsp/rp
 +            // Convert newline to carrige return + newline.
 +            if c == '
 ' {
-+                self.write_char('')
++                self.write_char('
+')
              }
 +
 +            self.write_char(c);
