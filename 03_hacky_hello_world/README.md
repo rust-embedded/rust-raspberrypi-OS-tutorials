@@ -18,7 +18,6 @@ QEMU is no longer run in assembly mode. It will from now on show the output of `
 
 ```console
 make qemu
-
 [...]
 Hello from Rust!
 Kernel panic: Stopping here.
