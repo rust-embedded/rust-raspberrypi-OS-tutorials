@@ -6,6 +6,8 @@
 
 **The tutorials are being rewritten [on the v2 branch](https://github.com/rust-embedded/rust-raspi3-OS-tutorials/tree/rewrite_for_v2), so please have a look from time to time. The master branch will only receive updates if something breaks.**
 
+The rewrite also supports both, the Raspberry Pi 3 and the **Raspberry Pi 4**!
+
 _Cheers,
 Andre_
 
