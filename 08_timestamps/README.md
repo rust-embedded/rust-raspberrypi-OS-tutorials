@@ -8,9 +8,7 @@ use it to annotate prints with timestamps; A `warn!()` macro is added.
 Check it out via chainboot (added in previous tutorial):
 ```console
 make chainboot
-
 [...]
-
 ### Listening on /dev/ttyUSB0
  __  __ _      _ _                 _
 |  \/  (_)_ _ (_) |   ___  __ _ __| |
@@ -239,7 +237,8 @@ diff -uNr 07_uart_chainloader/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 08_timest
 +            let mut ret = inner.DR.get() as u8 as char;
 +
 +            // Convert carrige return to newline.
-+            if ret == '' {
++            if ret == '
+' {
 +                ret = '
 '
 +            }
