@@ -15,10 +15,11 @@ Our chainloader is called `MiniLoad` and is inspired by [raspbootin].
 [raspbootin]: https://github.com/mrvn/raspbootin
 
 You can try it with this tutorial already:
-1. Copy `kernel8.img` to the SD card.
-2. Execute `make chainboot` or `BSP=rpi4 make chainboot`.
-3. Now plug in the USB Serial.
-4. Observe the loader fetching a kernel over `UART`:
+1. Depending on your target hardware:`make` or `BSP=rpi4 make`.
+2. Copy `kernel8.img` to the SD card.
+3. Execute `make chainboot` or `BSP=rpi4 make chainboot`.
+4. Now plug in the USB Serial.
+5. Observe the loader fetching a kernel over `UART`:
 
 ```console
 make chainboot
