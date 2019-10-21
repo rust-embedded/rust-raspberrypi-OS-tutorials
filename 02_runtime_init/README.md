@@ -2,7 +2,8 @@
 
 ## tl;dr
 
-We are calling into Rust code for the first time.
+We are calling into Rust code for the first time and zero the [bss](https://en.wikipedia.org/wiki/.bss) section.
+Check out `make qemu` again to see the additional code run.
 
 - More sections in linker script:
      - `.rodata`, `.data`
