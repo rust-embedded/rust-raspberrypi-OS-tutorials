@@ -2,7 +2,7 @@
 
 ## tl;dr
 
-Project skeleton is set up; Code just halts all CPU cores executing kernel code.
+Project skeleton is set up; Code just halts all CPU cores executing the kernel code.
 
 - Toolchain: `cargo xbuild` tools (`xrustc`, `xclippy`) and the
   `aarch64-unknown-none-softfloat` target are used for building `AArch64`
@@ -30,3 +30,15 @@ Project skeleton is set up; Code just halts all CPU cores executing kernel code.
     - Just waits infinitely for a cpu event.
 
 [inner attributes]: https://doc.rust-lang.org/reference/attributes.html
+
+### Give it a try
+
+In the project folder, invoke QEMU and observe the CPU core spinning on `wfe`:
+```console
+make qemu
+
+[...]
+IN: 
+0x00080000:  d503205f  wfe      
+0x00080004:  17ffffff  b        #0x80000
+```
