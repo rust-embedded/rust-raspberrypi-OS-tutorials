@@ -3,14 +3,26 @@
 ## tl;dr
 
 Introducing global `print!()` macros to enable "printf debugging" at the
-earliest; To keep tutorial length reasonable, printing function for now abuses a
-QEMU property and doesn't really use the RPi3's `UART`; Using real `UART` is
-enabled step-by-step in following tutorials.
+earliest; To keep tutorial length reasonable, printing functions for now "abuse" a
+QEMU property that lets us use the RPi's `UART` without setting it up properly;
+Using  the real hardware `UART` is enabled step-by-step in following tutorials.
 
 - `interface.rs` is introduced:
 	- Provides `Traits` for abstracting `kernel` from `BSP` and `arch` code.
 - Panic handler `print!()`s supplied error messages.
     - This is showcased in `main()`.
+
+### Give it a try
+
+QEMU is no longer run in assembly mode. It will from now on show the output of `UART0`.
+
+```console
+make qemu
+
+[...]
+Hello from Rust!
+Kernel panic: Stopping here.
+```
 
 ## Diff to previous
 ```diff
