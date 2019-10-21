@@ -6,8 +6,8 @@
 
 mod driver;
 
-#[cfg(feature = "bsp_rpi3")]
-mod rpi3;
+#[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
+mod rpi;
 
-#[cfg(feature = "bsp_rpi3")]
-pub use rpi3::*;
+#[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
+pub use rpi::*;

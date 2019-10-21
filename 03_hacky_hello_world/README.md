@@ -23,17 +23,17 @@ diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
  	QEMU_BINARY = qemu-system-aarch64
  	QEMU_MACHINE_TYPE = raspi3
 -	QEMU_MISC_ARGS = -d in_asm
-+	QEMU_MISC_ARGS = -serial null -serial stdio
- 	LINKER_FILE = src/bsp/rpi3/link.ld
++	QEMU_MISC_ARGS = -serial stdio
+ 	LINKER_FILE = src/bsp/rpi/link.ld
  	RUSTC_MISC_ARGS = -C target-cpu=cortex-a53
  endif
 
-diff -uNr 02_runtime_init/src/bsp/rpi3.rs 03_hacky_hello_world/src/bsp/rpi3.rs
---- 02_runtime_init/src/bsp/rpi3.rs
-+++ 03_hacky_hello_world/src/bsp/rpi3.rs
+diff -uNr 02_runtime_init/src/bsp/rpi.rs 03_hacky_hello_world/src/bsp/rpi.rs
+--- 02_runtime_init/src/bsp/rpi.rs
++++ 03_hacky_hello_world/src/bsp/rpi.rs
 @@ -4,4 +4,35 @@
 
- //! Board Support Package for the Raspberry Pi 3.
+ //! Board Support Package for the Raspberry Pi.
 
 -// Coming soon.
 +use crate::interface;
@@ -52,7 +52,7 @@ diff -uNr 02_runtime_init/src/bsp/rpi3.rs 03_hacky_hello_world/src/bsp/rpi3.rs
 +    fn write_str(&mut self, s: &str) -> fmt::Result {
 +        for c in s.chars() {
 +            unsafe {
-+                core::ptr::write_volatile(0x3F21_5040 as *mut u8, c as u8);
++                core::ptr::write_volatile(0x3F20_1000 as *mut u8, c as u8);
 +            }
 +        }
 +

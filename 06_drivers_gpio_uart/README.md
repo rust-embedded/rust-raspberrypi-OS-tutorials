@@ -9,8 +9,8 @@ console and use a real UART now. Like serious embedded hackers do!
 - A `DeviceDriver` trait is added for abstracting `BSP` driver implementations
   from kernel code.
 - Drivers are stored in `bsp/driver`, and can be reused between `BSP`s.
-    - Introducing the `GPIO` driver, which pinmuxes the RPi's Mini UART.
-    - Most importantly, the `MiniUart` driver: It implements the `Console`
+    - Introducing the `GPIO` driver, which pinmuxes the RPi's PL011 UART.
+    - Most importantly, the `PL011Uart` driver: It implements the `Console`
       traits and is from now on used as the system console output.
 - `BSP`s now contain a`memory_map.rs`. In the specific case, they contain the
   RPi's MMIO addresses which are used to instantiate compatible device drivers
@@ -38,12 +38,13 @@ sudo screen /dev/ttyUSB0 115200
 diff -uNr 05_safe_globals/Cargo.toml 06_drivers_gpio_uart/Cargo.toml
 --- 05_safe_globals/Cargo.toml
 +++ 06_drivers_gpio_uart/Cargo.toml
-@@ -10,10 +10,11 @@
+@@ -10,10 +10,12 @@
  # The features section is used to select the target board.
  [features]
  default = []
 -bsp_rpi3 = ["cortex-a"]
 +bsp_rpi3 = ["cortex-a", "register"]
++bsp_rpi4 = ["cortex-a", "register"]
 
  [dependencies]
  r0 = "0.2.*"
@@ -51,6 +52,40 @@ diff -uNr 05_safe_globals/Cargo.toml 06_drivers_gpio_uart/Cargo.toml
  # Optional dependencies
  cortex-a = { version = "2.*", optional = true }
 +register = { version = "0.3.*", optional = true }
+
+diff -uNr 05_safe_globals/Makefile 06_drivers_gpio_uart/Makefile
+--- 05_safe_globals/Makefile
++++ 06_drivers_gpio_uart/Makefile
+@@ -16,6 +16,14 @@
+ 	QEMU_MISC_ARGS = -serial stdio
+ 	LINKER_FILE = src/bsp/rpi/link.ld
+ 	RUSTC_MISC_ARGS = -C target-cpu=cortex-a53
++else ifeq ($(BSP),rpi4)
++	TARGET = aarch64-unknown-none-softfloat
++	OUTPUT = kernel8.img
++#	QEMU_BINARY = qemu-system-aarch64
++#	QEMU_MACHINE_TYPE =
++#	QEMU_MISC_ARGS = -serial stdio
++	LINKER_FILE = src/bsp/rpi/link.ld
++	RUSTC_MISC_ARGS = -C target-cpu=cortex-a72
+ endif
+
+ SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) $(wildcard **/*.ld)
+@@ -56,9 +64,14 @@
+ 	cargo xdoc --target=$(TARGET) --features bsp_$(BSP) --document-private-items
+ 	xdg-open target/$(TARGET)/doc/kernel/index.html
+
++ifeq ($(QEMU_MACHINE_TYPE),)
++$(info This board is not yet supported for QEMU.)
++qemu:
++else
+ qemu: all
+ 	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(CONTAINER_UTILS) \
+ 	$(DOCKER_EXEC_QEMU) $(QEMU_MISC_ARGS)
++endif
+
+ clippy:
+ 	cargo xclippy --target=$(TARGET) --features bsp_$(BSP)
 
 diff -uNr 05_safe_globals/src/arch/aarch64.rs 06_drivers_gpio_uart/src/arch/aarch64.rs
 --- 05_safe_globals/src/arch/aarch64.rs
@@ -72,9 +107,24 @@ diff -uNr 05_safe_globals/src/arch/aarch64.rs 06_drivers_gpio_uart/src/arch/aarc
  #[inline(always)]
  pub fn wait_forever() -> ! {
 
-diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2837_gpio.rs 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2837_gpio.rs
---- 05_safe_globals/src/bsp/driver/bcm/bcm2837_gpio.rs
-+++ 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2837_gpio.rs
+diff -uNr 05_safe_globals/src/arch.rs 06_drivers_gpio_uart/src/arch.rs
+--- 05_safe_globals/src/arch.rs
++++ 06_drivers_gpio_uart/src/arch.rs
+@@ -4,8 +4,8 @@
+
+ //! Conditional exporting of processor architecture code.
+
+-#[cfg(feature = "bsp_rpi3")]
++#[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
+ mod aarch64;
+
+-#[cfg(feature = "bsp_rpi3")]
++#[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
+ pub use aarch64::*;
+
+diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_gpio.rs 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_gpio.rs
+--- 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_gpio.rs
++++ 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_gpio.rs
 @@ -0,0 +1,158 @@
 +// SPDX-License-Identifier: MIT
 +//
@@ -99,7 +149,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2837_gpio.rs 06_drivers_gpio_uar
 +        FSEL15 OFFSET(15) NUMBITS(3) [
 +            Input = 0b000,
 +            Output = 0b001,
-+            AltFunc5 = 0b010  // Mini UART RX
++            AltFunc0 = 0b100  // PL011 UART RX
 +
 +        ],
 +
@@ -107,7 +157,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2837_gpio.rs 06_drivers_gpio_uar
 +        FSEL14 OFFSET(12) NUMBITS(3) [
 +            Input = 0b000,
 +            Output = 0b001,
-+            AltFunc5 = 0b010  // Mini UART TX
++            AltFunc0 = 0b100  // PL011 UART TX
 +        ]
 +    ],
 +
@@ -180,14 +230,14 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2837_gpio.rs 06_drivers_gpio_uar
 +        self.base_addr as *const _
 +    }
 +
-+    /// Map Mini UART as standard output.
++    /// Map PL011 UART as standard output.
 +    ///
 +    /// TX to pin 14
 +    /// RX to pin 15
-+    pub fn map_mini_uart(&mut self) {
++    pub fn map_pl011_uart(&mut self) {
 +        // Map to pins.
 +        self.GPFSEL1
-+            .modify(GPFSEL1::FSEL14::AltFunc5 + GPFSEL1::FSEL15::AltFunc5);
++            .modify(GPFSEL1::FSEL14::AltFunc0 + GPFSEL1::FSEL15::AltFunc0);
 +
 +        // Enable pins 14 and 15.
 +        self.GPPUD.set(0);
@@ -219,9 +269,9 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2837_gpio.rs 06_drivers_gpio_uar
 +    }
 +
 +    // Only visible to other BSP code.
-+    pub fn map_mini_uart(&self) {
++    pub fn map_pl011_uart(&self) {
 +        let mut r = &self.inner;
-+        r.lock(|inner| inner.map_mini_uart());
++        r.lock(|inner| inner.map_pl011_uart());
 +    }
 +}
 +
@@ -235,113 +285,138 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2837_gpio.rs 06_drivers_gpio_uar
 +    }
 +}
 
-diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs
---- 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs
-+++ 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs
-@@ -0,0 +1,283 @@
+diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
+--- 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
++++ 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
+@@ -0,0 +1,308 @@
 +// SPDX-License-Identifier: MIT
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
 +
-+//! Mini UART driver.
++//! PL011 UART driver.
 +
 +use crate::{arch, arch::sync::NullLock, interface};
 +use core::{fmt, ops};
 +use register::{mmio::*, register_bitfields};
 +
-+// Mini UART registers.
++// PL011 UART registers.
 +//
 +// Descriptions taken from
 +// https://github.com/raspberrypi/documentation/files/1888662/BCM2837-ARM-Peripherals.-.Revised.-.V2-1.pdf
 +register_bitfields! {
 +    u32,
 +
-+    /// Auxiliary enables
-+    AUX_ENABLES [
-+        /// If set the mini UART is enabled. The UART will immediately start receiving data,
-+        /// especially if the UART1_RX line is low.
++    /// Flag Register
++    FR [
++        /// Transmit FIFO empty. The meaning of this bit depends on the state of the FEN bit in the
++        /// Line Control Register, UARTLCR_ LCRH.
 +        ///
-+        /// If clear the mini UART is disabled. That also disables any mini UART register access
-+        MINI_UART_ENABLE OFFSET(0) NUMBITS(1) []
++        /// If the FIFO is disabled, this bit is set when the transmit holding register is empty. If
++        /// the FIFO is enabled, the TXFE bit is set when the transmit FIFO is empty. This bit does
++        /// not indicate if there is data in the transmit shift register.
++        TXFE OFFSET(7) NUMBITS(1) [],
++
++        /// Transmit FIFO full. The meaning of this bit depends on the state of the FEN bit in the
++        /// UARTLCR_ LCRH Register.
++        ///
++        /// If the FIFO is disabled, this bit is set when the transmit holding register is full. If
++        /// the FIFO is enabled, the TXFF bit is set when the transmit FIFO is full.
++        TXFF OFFSET(5) NUMBITS(1) [],
++
++        /// Receive FIFO empty. The meaning of this bit depends on the state of the FEN bit in the
++        /// UARTLCR_H Register.
++        ///
++        /// If the FIFO is disabled, this bit is set when the receive holding register is empty. If
++        /// the FIFO is enabled, the RXFE bit is set when the receive FIFO is empty.
++        RXFE OFFSET(4) NUMBITS(1) []
 +    ],
 +
-+    /// Mini Uart Interrupt Identify
-+    AUX_MU_IIR [
-+        /// Writing with bit 1 set will clear the receive FIFO
-+        /// Writing with bit 2 set will clear the transmit FIFO
-+        FIFO_CLEAR OFFSET(1) NUMBITS(2) [
-+            Rx = 0b01,
-+            Tx = 0b10,
-+            All = 0b11
-+        ]
++    /// Integer Baud rate divisor
++    IBRD [
++        /// Integer Baud rate divisor
++        IBRD OFFSET(0) NUMBITS(16) []
 +    ],
 +
-+    /// Mini Uart Line Control
-+    AUX_MU_LCR [
-+        /// Mode the UART works in
-+        DATA_SIZE OFFSET(0) NUMBITS(2) [
-+            SevenBit = 0b00,
++    /// Fractional Baud rate divisor
++    FBRD [
++        /// Fractional Baud rate divisor
++        FBRD OFFSET(0) NUMBITS(6) []
++    ],
++
++    /// Line Control register
++    LCRH [
++        /// Word length. These bits indicate the number of data bits transmitted or received in a
++        /// frame.
++        WLEN OFFSET(5) NUMBITS(2) [
++            FiveBit = 0b00,
++            SixBit = 0b01,
++            SevenBit = 0b10,
 +            EightBit = 0b11
++        ],
++
++        /// Enable FIFOs:
++        ///
++        /// 0 = FIFOs are disabled (character mode) that is, the FIFOs become 1-byte-deep holding
++        /// registers
++        ///
++        /// 1 = transmit and receive FIFO buffers are enabled (FIFO mode).
++        FEN  OFFSET(4) NUMBITS(1) [
++            FifosDisabled = 0,
++            FifosEnabled = 1
 +        ]
 +    ],
 +
-+    /// Mini Uart Line Status
-+    AUX_MU_LSR [
-+        /// This bit is set if the transmit FIFO is empty and the transmitter is idle. (Finished
-+        /// shifting out the last bit).
-+        TX_IDLE    OFFSET(6) NUMBITS(1) [],
-+
-+        /// This bit is set if the transmit FIFO can accept at least one byte.
-+        TX_EMPTY   OFFSET(5) NUMBITS(1) [],
-+
-+        /// This bit is set if the receive FIFO holds at least 1 symbol.
-+        DATA_READY OFFSET(0) NUMBITS(1) []
-+    ],
-+
-+    /// Mini Uart Extra Control
-+    AUX_MU_CNTL [
-+        /// If this bit is set the mini UART transmitter is enabled.
-+        /// If this bit is clear the mini UART transmitter is disabled.
-+        TX_EN OFFSET(1) NUMBITS(1) [
++    /// Control Register
++    CR [
++        /// Receive enable. If this bit is set to 1, the receive section of the UART is enabled.
++        /// Data reception occurs for UART signals. When the UART is disabled in the middle of
++        /// reception, it completes the current character before stopping.
++        RXE    OFFSET(9) NUMBITS(1) [
 +            Disabled = 0,
 +            Enabled = 1
 +        ],
 +
-+        /// If this bit is set the mini UART receiver is enabled.
-+        /// If this bit is clear the mini UART receiver is disabled.
-+        RX_EN OFFSET(0) NUMBITS(1) [
++        /// Transmit enable. If this bit is set to 1, the transmit section of the UART is enabled.
++        /// Data transmission occurs for UART signals. When the UART is disabled in the middle of
++        /// transmission, it completes the current character before stopping.
++        TXE    OFFSET(8) NUMBITS(1) [
++            Disabled = 0,
++            Enabled = 1
++        ],
++
++        /// UART enable
++        UARTEN OFFSET(0) NUMBITS(1) [
++            /// If the UART is disabled in the middle of transmission or reception, it completes the
++            /// current character before stopping.
 +            Disabled = 0,
 +            Enabled = 1
 +        ]
 +    ],
 +
-+    /// Mini Uart Baudrate
-+    AUX_MU_BAUD [
-+        /// Mini UART baudrate counter
-+        RATE OFFSET(0) NUMBITS(16) []
++    /// Interupt Clear Register
++    ICR [
++        /// Meta field for all pending interrupts
++        ALL OFFSET(0) NUMBITS(11) []
 +    ]
 +}
 +
 +#[allow(non_snake_case)]
 +#[repr(C)]
 +pub struct RegisterBlock {
-+    __reserved_0: u32,                                  // 0x00
-+    AUX_ENABLES: ReadWrite<u32, AUX_ENABLES::Register>, // 0x04
-+    __reserved_1: [u32; 14],                            // 0x08
-+    AUX_MU_IO: ReadWrite<u32>,                          // 0x40 - Mini Uart I/O Data
-+    AUX_MU_IER: WriteOnly<u32>,                         // 0x44 - Mini Uart Interrupt Enable
-+    AUX_MU_IIR: WriteOnly<u32, AUX_MU_IIR::Register>,   // 0x48
-+    AUX_MU_LCR: WriteOnly<u32, AUX_MU_LCR::Register>,   // 0x4C
-+    AUX_MU_MCR: WriteOnly<u32>,                         // 0x50
-+    AUX_MU_LSR: ReadOnly<u32, AUX_MU_LSR::Register>,    // 0x54
-+    __reserved_2: [u32; 2],                             // 0x58
-+    AUX_MU_CNTL: WriteOnly<u32, AUX_MU_CNTL::Register>, // 0x60
-+    __reserved_3: u32,                                  // 0x64
-+    AUX_MU_BAUD: WriteOnly<u32, AUX_MU_BAUD::Register>, // 0x68
++    DR: ReadWrite<u32>,                   // 0x00
++    __reserved_0: [u32; 5],               // 0x04
++    FR: ReadOnly<u32, FR::Register>,      // 0x18
++    __reserved_1: [u32; 2],               // 0x1c
++    IBRD: WriteOnly<u32, IBRD::Register>, // 0x24
++    FBRD: WriteOnly<u32, FBRD::Register>, // 0x28
++    LCRH: WriteOnly<u32, LCRH::Register>, // 0x2C
++    CR: WriteOnly<u32, CR::Register>,     // 0x30
++    __reserved_2: [u32; 4],               // 0x34
++    ICR: WriteOnly<u32, ICR::Register>,   // 0x44
 +}
 +
 +/// The driver's mutex protected part.
-+struct MiniUartInner {
++struct PL011UartInner {
 +    base_addr: usize,
 +    chars_written: usize,
 +}
@@ -350,13 +425,13 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 06_drivers_gpi
 +///
 +/// Allows writing
 +/// ```
-+/// self.MU_IER.read()
++/// self.DR.read()
 +/// ```
 +/// instead of something along the lines of
 +/// ```
-+/// unsafe { (*MiniUart::ptr()).MU_IER.read() }
++/// unsafe { (*PL011UartInner::ptr()).DR.read() }
 +/// ```
-+impl ops::Deref for MiniUartInner {
++impl ops::Deref for PL011UartInner {
 +    type Target = RegisterBlock;
 +
 +    fn deref(&self) -> &Self::Target {
@@ -364,9 +439,9 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 06_drivers_gpi
 +    }
 +}
 +
-+impl MiniUartInner {
-+    const fn new(base_addr: usize) -> MiniUartInner {
-+        MiniUartInner {
++impl PL011UartInner {
++    const fn new(base_addr: usize) -> PL011UartInner {
++        PL011UartInner {
 +            base_addr,
 +            chars_written: 0,
 +        }
@@ -381,7 +456,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 06_drivers_gpi
 +    fn write_char(&mut self, c: char) {
 +        // Wait until we can send.
 +        loop {
-+            if self.AUX_MU_LSR.is_set(AUX_MU_LSR::TX_EMPTY) {
++            if !self.FR.is_set(FR::TXFF) {
 +                break;
 +            }
 +
@@ -389,7 +464,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 06_drivers_gpi
 +        }
 +
 +        // Write the character to the buffer.
-+        self.AUX_MU_IO.set(c as u32);
++        self.DR.set(c as u32);
 +    }
 +}
 +
@@ -402,7 +477,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 06_drivers_gpi
 +/// See [`src/print.rs`].
 +///
 +/// [`src/print.rs`]: ../../print/index.html
-+impl fmt::Write for MiniUartInner {
++impl fmt::Write for PL011UartInner {
 +    fn write_str(&mut self, s: &str) -> fmt::Result {
 +        for c in s.chars() {
 +            // Convert newline to carrige return + newline.
@@ -425,17 +500,17 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 06_drivers_gpi
 +//--------------------------------------------------------------------------------------------------
 +
 +/// The driver's main struct.
-+pub struct MiniUart {
-+    inner: NullLock<MiniUartInner>,
++pub struct PL011Uart {
++    inner: NullLock<PL011UartInner>,
 +}
 +
-+impl MiniUart {
++impl PL011Uart {
 +    /// # Safety
 +    ///
 +    /// The user must ensure to provide the correct `base_addr`.
-+    pub const unsafe fn new(base_addr: usize) -> MiniUart {
-+        MiniUart {
-+            inner: NullLock::new(MiniUartInner::new(base_addr)),
++    pub const unsafe fn new(base_addr: usize) -> PL011Uart {
++        PL011Uart {
++            inner: NullLock::new(PL011UartInner::new(base_addr)),
 +        }
 +    }
 +}
@@ -445,37 +520,37 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 06_drivers_gpi
 +//--------------------------------------------------------------------------------------------------
 +use interface::sync::Mutex;
 +
-+impl interface::driver::DeviceDriver for MiniUart {
++impl interface::driver::DeviceDriver for PL011Uart {
 +    fn compatible(&self) -> &str {
-+        "MiniUart"
++        "PL011Uart"
 +    }
 +
-+    /// Set up baud rate and characteristics (115200 8N1).
++    /// Set up baud rate and characteristics
++    ///
++    /// Results in 8N1 and 115200 baud (if the clk has been previously set to 4 MHz by the
++    /// firmware).
 +    fn init(&self) -> interface::driver::Result {
 +        let mut r = &self.inner;
 +        r.lock(|inner| {
-+            // Enable register access to the MiniUart
-+            inner.AUX_ENABLES.modify(AUX_ENABLES::MINI_UART_ENABLE::SET);
-+            inner.AUX_MU_IER.set(0); // disable RX and TX interrupts
-+            inner.AUX_MU_CNTL.set(0); // disable send and receive
-+            inner.AUX_MU_LCR.write(AUX_MU_LCR::DATA_SIZE::EightBit);
-+            inner.AUX_MU_BAUD.write(AUX_MU_BAUD::RATE.val(270)); // 115200 baud
-+            inner.AUX_MU_MCR.set(0); // set "ready to send" high
++            // Turn it off temporarily.
++            inner.CR.set(0);
 +
-+            // Enable receive and send.
++            inner.ICR.write(ICR::ALL::CLEAR);
++            inner.IBRD.write(IBRD::IBRD.val(26)); // Results in 115200 baud for UART Clk of 48 MHz.
++            inner.FBRD.write(FBRD::FBRD.val(3));
 +            inner
-+                .AUX_MU_CNTL
-+                .write(AUX_MU_CNTL::RX_EN::Enabled + AUX_MU_CNTL::TX_EN::Enabled);
-+
-+            // Clear FIFOs before using the device.
-+            inner.AUX_MU_IIR.write(AUX_MU_IIR::FIFO_CLEAR::All);
++                .LCRH
++                .write(LCRH::WLEN::EightBit + LCRH::FEN::FifosEnabled); // 8N1 + Fifo on
++            inner
++                .CR
++                .write(CR::UARTEN::Enabled + CR::TXE::Enabled + CR::RXE::Enabled);
 +        });
 +
 +        Ok(())
 +    }
 +}
 +
-+impl interface::console::Write for MiniUart {
++impl interface::console::Write for PL011Uart {
 +    /// Passthrough of `args` to the `core::fmt::Write` implementation, but guarded by a Mutex to
 +    /// serialize access.
 +    fn write_char(&self, c: char) {
@@ -491,13 +566,13 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 06_drivers_gpi
 +    }
 +}
 +
-+impl interface::console::Read for MiniUart {
++impl interface::console::Read for PL011Uart {
 +    fn read_char(&self) -> char {
 +        let mut r = &self.inner;
 +        r.lock(|inner| {
 +            // Wait until buffer is filled.
 +            loop {
-+                if inner.AUX_MU_LSR.is_set(AUX_MU_LSR::DATA_READY) {
++                if !inner.FR.is_set(FR::RXFE) {
 +                    break;
 +                }
 +
@@ -505,7 +580,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 06_drivers_gpi
 +            }
 +
 +            // Read one character.
-+            let mut ret = inner.AUX_MU_IO.get() as u8 as char;
++            let mut ret = inner.DR.get() as u8 as char;
 +
 +            // Convert carrige return to newline.
 +            if ret == '' {
@@ -518,7 +593,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 06_drivers_gpi
 +    }
 +}
 +
-+impl interface::console::Statistics for MiniUart {
++impl interface::console::Statistics for PL011Uart {
 +    fn chars_written(&self) -> usize {
 +        let mut r = &self.inner;
 +        r.lock(|inner| inner.chars_written)
@@ -535,11 +610,11 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm.rs 06_drivers_gpio_uart/src/bsp/dri
 +
 +//! BCM driver top level.
 +
-+mod bcm2837_gpio;
-+mod bcm2xxx_mini_uart;
++mod bcm2xxx_gpio;
++mod bcm2xxx_pl011_uart;
 +
-+pub use bcm2837_gpio::GPIO;
-+pub use bcm2xxx_mini_uart::MiniUart;
++pub use bcm2xxx_gpio::GPIO;
++pub use bcm2xxx_pl011_uart::PL011Uart;
 
 diff -uNr 05_safe_globals/src/bsp/driver.rs 06_drivers_gpio_uart/src/bsp/driver.rs
 --- 05_safe_globals/src/bsp/driver.rs
@@ -551,16 +626,16 @@ diff -uNr 05_safe_globals/src/bsp/driver.rs 06_drivers_gpio_uart/src/bsp/driver.
 +
 +//! Drivers.
 +
-+#[cfg(feature = "bsp_rpi3")]
++#[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
 +mod bcm;
 +
-+#[cfg(feature = "bsp_rpi3")]
++#[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
 +pub use bcm::*;
 
-diff -uNr 05_safe_globals/src/bsp/rpi3/memory_map.rs 06_drivers_gpio_uart/src/bsp/rpi3/memory_map.rs
---- 05_safe_globals/src/bsp/rpi3/memory_map.rs
-+++ 06_drivers_gpio_uart/src/bsp/rpi3/memory_map.rs
-@@ -0,0 +1,13 @@
+diff -uNr 05_safe_globals/src/bsp/rpi/memory_map.rs 06_drivers_gpio_uart/src/bsp/rpi/memory_map.rs
+--- 05_safe_globals/src/bsp/rpi/memory_map.rs
++++ 06_drivers_gpio_uart/src/bsp/rpi/memory_map.rs
+@@ -0,0 +1,18 @@
 +// SPDX-License-Identifier: MIT
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
@@ -570,17 +645,22 @@ diff -uNr 05_safe_globals/src/bsp/rpi3/memory_map.rs 06_drivers_gpio_uart/src/bs
 +/// Physical devices.
 +#[rustfmt::skip]
 +pub mod mmio {
-+    pub const BASE:           usize =        0x3F00_0000;
-+    pub const GPIO_BASE:      usize = BASE + 0x0020_0000;
-+    pub const MINI_UART_BASE: usize = BASE + 0x0021_5000;
++    #[cfg(feature = "bsp_rpi3")]
++    pub const BASE:            usize =        0x3F00_0000;
++
++    #[cfg(feature = "bsp_rpi4")]
++    pub const BASE:            usize =        0xFE00_0000;
++
++    pub const GPIO_BASE:       usize = BASE + 0x0020_0000;
++    pub const PL011_UART_BASE: usize = BASE + 0x0020_1000;
 +}
 
-diff -uNr 05_safe_globals/src/bsp/rpi3.rs 06_drivers_gpio_uart/src/bsp/rpi3.rs
---- 05_safe_globals/src/bsp/rpi3.rs
-+++ 06_drivers_gpio_uart/src/bsp/rpi3.rs
-@@ -4,114 +4,47 @@
+diff -uNr 05_safe_globals/src/bsp/rpi.rs 06_drivers_gpio_uart/src/bsp/rpi.rs
+--- 05_safe_globals/src/bsp/rpi.rs
++++ 06_drivers_gpio_uart/src/bsp/rpi.rs
+@@ -4,114 +4,55 @@
 
- //! Board Support Package for the Raspberry Pi 3.
+ //! Board Support Package for the Raspberry Pi.
 
 -use crate::{arch::sync::NullLock, interface};
 -use core::fmt;
@@ -607,7 +687,7 @@ diff -uNr 05_safe_globals/src/bsp/rpi3.rs 06_drivers_gpio_uart/src/bsp/rpi3.rs
 -    /// Send a character.
 -    fn write_char(&mut self, c: char) {
 -        unsafe {
--            core::ptr::write_volatile(0x3F21_5040 as *mut u8, c as u8);
+-            core::ptr::write_volatile(0x3F20_1000 as *mut u8, c as u8);
 -        }
 -    }
 -}
@@ -657,8 +737,8 @@ diff -uNr 05_safe_globals/src/bsp/rpi3.rs 06_drivers_gpio_uart/src/bsp/rpi3.rs
 -    }
 -}
 +static GPIO: driver::GPIO = unsafe { driver::GPIO::new(memory_map::mmio::GPIO_BASE) };
-+static MINI_UART: driver::MiniUart =
-+    unsafe { driver::MiniUart::new(memory_map::mmio::MINI_UART_BASE) };
++static PL011_UART: driver::PL011Uart =
++    unsafe { driver::PL011Uart::new(memory_map::mmio::PL011_UART_BASE) };
 
  //--------------------------------------------------------------------------------------------------
 -// OS interface implementations
@@ -675,24 +755,26 @@ diff -uNr 05_safe_globals/src/bsp/rpi3.rs 06_drivers_gpio_uart/src/bsp/rpi3.rs
 -        // readability.
 -        let mut r = &self.inner;
 -        r.lock(|inner| fmt::Write::write_fmt(inner, args))
--    }
 +/// Board identification.
 +pub fn board_name() -> &'static str {
-+    "Raspberry Pi 3"
- }
-
--impl interface::console::Read for QEMUOutput {}
++    #[cfg(feature = "bsp_rpi3")]
++    {
++        "Raspberry Pi 3"
+     }
+-}
 -
+-impl interface::console::Read for QEMUOutput {}
+
 -impl interface::console::Statistics for QEMUOutput {
 -    fn chars_written(&self) -> usize {
 -        use interface::sync::Mutex;
 -
 -        let mut r = &self.inner;
 -        r.lock(|inner| inner.chars_written)
--    }
-+/// Return a reference to a `console::All` implementation.
-+pub fn console() -> &'static impl interface::console::All {
-+    &MINI_UART
++    #[cfg(feature = "bsp_rpi4")]
++    {
++        "Raspberry Pi 4"
+     }
  }
 
 -//--------------------------------------------------------------------------------------------------
@@ -704,36 +786,44 @@ diff -uNr 05_safe_globals/src/bsp/rpi3.rs 06_drivers_gpio_uart/src/bsp/rpi3.rs
 -//--------------------------------------------------------------------------------------------------
 -// Implementation of the kernel's BSP calls
 -//--------------------------------------------------------------------------------------------------
+-
+ /// Return a reference to a `console::All` implementation.
+ pub fn console() -> &'static impl interface::console::All {
+-    &QEMU_OUTPUT
++    &PL011_UART
++}
++
 +/// Return an array of references to all `DeviceDriver` compatible `BSP` drivers.
 +///
 +/// # Safety
 +///
 +/// The order of devices is the order in which `DeviceDriver::init()` is called.
 +pub fn device_drivers() -> [&'static dyn interface::driver::DeviceDriver; 2] {
-+    [&GPIO, &MINI_UART]
++    [&GPIO, &PL011_UART]
 +}
-
--/// Return a reference to a `console::All` implementation.
--pub fn console() -> &'static impl interface::console::All {
--    &QEMU_OUTPUT
++
 +/// BSP initialization code that runs after driver init.
 +pub fn post_driver_init() {
-+    // Configure MiniUart's output pins.
-+    GPIO.map_mini_uart();
++    // Configure PL011Uart's output pins.
++    GPIO.map_pl011_uart();
  }
 
 diff -uNr 05_safe_globals/src/bsp.rs 06_drivers_gpio_uart/src/bsp.rs
 --- 05_safe_globals/src/bsp.rs
 +++ 06_drivers_gpio_uart/src/bsp.rs
-@@ -4,6 +4,8 @@
+@@ -4,8 +4,10 @@
 
  //! Conditional exporting of Board Support Packages.
 
+-#[cfg(feature = "bsp_rpi3")]
 +mod driver;
 +
- #[cfg(feature = "bsp_rpi3")]
- mod rpi3;
++#[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
+ mod rpi;
 
+-#[cfg(feature = "bsp_rpi3")]
++#[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
+ pub use rpi::*;
 
 diff -uNr 05_safe_globals/src/interface.rs 06_drivers_gpio_uart/src/interface.rs
 --- 05_safe_globals/src/interface.rs

@@ -98,9 +98,9 @@ diff -uNr 03_hacky_hello_world/src/arch/aarch64.rs 04_zero_overhead_abstraction/
      }
  }
 
-diff -uNr 03_hacky_hello_world/src/bsp/rpi3.rs 04_zero_overhead_abstraction/src/bsp/rpi3.rs
---- 03_hacky_hello_world/src/bsp/rpi3.rs
-+++ 04_zero_overhead_abstraction/src/bsp/rpi3.rs
+diff -uNr 03_hacky_hello_world/src/bsp/rpi.rs 04_zero_overhead_abstraction/src/bsp/rpi.rs
+--- 03_hacky_hello_world/src/bsp/rpi.rs
++++ 04_zero_overhead_abstraction/src/bsp/rpi.rs
 @@ -7,6 +7,9 @@
  use crate::interface;
  use core::fmt;

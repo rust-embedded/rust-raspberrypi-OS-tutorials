@@ -4,8 +4,8 @@
 
 //! BCM driver top level.
 
-mod bcm2837_gpio;
-mod bcm2xxx_mini_uart;
+mod bcm2xxx_gpio;
+mod bcm2xxx_pl011_uart;
 
-pub use bcm2837_gpio::GPIO;
-pub use bcm2xxx_mini_uart::MiniUart;
+pub use bcm2xxx_gpio::GPIO;
+pub use bcm2xxx_pl011_uart::PL011Uart;

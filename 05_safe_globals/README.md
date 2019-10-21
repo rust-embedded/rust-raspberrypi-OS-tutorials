@@ -104,12 +104,12 @@ diff -uNr 04_zero_overhead_abstraction/src/arch/aarch64.rs 05_safe_globals/src/a
  use cortex_a::{asm, regs::*};
 
 
-diff -uNr 04_zero_overhead_abstraction/src/bsp/rpi3.rs 05_safe_globals/src/bsp/rpi3.rs
---- 04_zero_overhead_abstraction/src/bsp/rpi3.rs
-+++ 05_safe_globals/src/bsp/rpi3.rs
+diff -uNr 04_zero_overhead_abstraction/src/bsp/rpi.rs 05_safe_globals/src/bsp/rpi.rs
+--- 04_zero_overhead_abstraction/src/bsp/rpi.rs
++++ 05_safe_globals/src/bsp/rpi.rs
 @@ -4,38 +4,114 @@
 
- //! Board Support Package for the Raspberry Pi 3.
+ //! Board Support Package for the Raspberry Pi.
 
 -use crate::interface;
 +use crate::{arch::sync::NullLock, interface};
@@ -134,7 +134,7 @@ diff -uNr 04_zero_overhead_abstraction/src/bsp/rpi3.rs 05_safe_globals/src/bsp/r
 +    /// Send a character.
 +    fn write_char(&mut self, c: char) {
 +        unsafe {
-+            core::ptr::write_volatile(0x3F21_5040 as *mut u8, c as u8);
++            core::ptr::write_volatile(0x3F20_1000 as *mut u8, c as u8);
 +        }
 +    }
 +}
@@ -155,7 +155,7 @@ diff -uNr 04_zero_overhead_abstraction/src/bsp/rpi3.rs 05_safe_globals/src/bsp/r
      fn write_str(&mut self, s: &str) -> fmt::Result {
          for c in s.chars() {
 -            unsafe {
--                core::ptr::write_volatile(0x3F21_5040 as *mut u8, c as u8);
+-                core::ptr::write_volatile(0x3F20_1000 as *mut u8, c as u8);
 +            // Convert newline to carrige return + newline.
 +            if c == '
 ' {

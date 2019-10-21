@@ -52,21 +52,33 @@ IN:
 
 ## Diff to previous
 ```diff
-Binary files 06_drivers_gpio_uart/demo_payload.img and 07_uart_chainloader/demo_payload.img differ
+Binary files 06_drivers_gpio_uart/demo_payload_rpi3.img and 07_uart_chainloader/demo_payload_rpi3.img differ
+Binary files 06_drivers_gpio_uart/demo_payload_rpi4.img and 07_uart_chainloader/demo_payload_rpi4.img differ
 
 diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
 --- 06_drivers_gpio_uart/Makefile
 +++ 07_uart_chainloader/Makefile
-@@ -15,7 +15,7 @@
+@@ -15,7 +15,8 @@
  	QEMU_MACHINE_TYPE = raspi3
- 	QEMU_MISC_ARGS = -serial null -serial stdio
- 	LINKER_FILE = src/bsp/rpi3/link.ld
+ 	QEMU_MISC_ARGS = -serial stdio
+ 	LINKER_FILE = src/bsp/rpi/link.ld
 -	RUSTC_MISC_ARGS = -C target-cpu=cortex-a53
 +	RUSTC_MISC_ARGS = -C target-cpu=cortex-a53 -C relocation-model=pic
++	CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi3.img
+ else ifeq ($(BSP),rpi4)
+ 	TARGET = aarch64-unknown-none-softfloat
+ 	OUTPUT = kernel8.img
+@@ -23,7 +24,8 @@
+ #	QEMU_MACHINE_TYPE =
+ #	QEMU_MISC_ARGS = -serial stdio
+ 	LINKER_FILE = src/bsp/rpi/link.ld
+-	RUSTC_MISC_ARGS = -C target-cpu=cortex-a72
++	RUSTC_MISC_ARGS = -C target-cpu=cortex-a72 -C relocation-model=pic
++	CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi4.img
  endif
 
  SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) $(wildcard **/*.ld)
-@@ -39,9 +39,14 @@
+@@ -47,9 +49,14 @@
 
  DOCKER_CMD        = docker run -it --rm
  DOCKER_ARG_CURDIR = -v $(shell pwd):/work -w /work
@@ -83,21 +95,28 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
 
  all: clean $(OUTPUT)
 
-@@ -60,6 +65,15 @@
+@@ -67,12 +74,22 @@
+ ifeq ($(QEMU_MACHINE_TYPE),)
+ $(info This board is not yet supported for QEMU.)
+ qemu:
++qemuasm:
+ else
+ qemu: all
  	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(CONTAINER_UTILS) \
  	$(DOCKER_EXEC_QEMU) $(QEMU_MISC_ARGS)
-
++
 +qemuasm: all
 +	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(CONTAINER_UTILS) \
 +	$(DOCKER_EXEC_QEMU) -d in_asm
-+
+ endif
+
 +chainboot:
 +	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(DOCKER_ARG_TTY) \
 +	$(CONTAINER_UTILS) $(DOCKER_EXEC_RASPBOOT) $(DOCKER_EXEC_RASPBOOT_DEV) \
-+	demo_payload.img
++	$(CHAINBOOT_DEMO_PAYLOAD)
 +
  clippy:
- 	cargo xclippy --target=$(TARGET) --features $(BSP)
+ 	cargo xclippy --target=$(TARGET) --features bsp_$(BSP)
 
 
 diff -uNr 06_drivers_gpio_uart/src/arch/aarch64.rs 07_uart_chainloader/src/arch/aarch64.rs
@@ -113,59 +132,66 @@ diff -uNr 06_drivers_gpio_uart/src/arch/aarch64.rs 07_uart_chainloader/src/arch/
          // if not core0, infinitely wait for events
          wait_forever()
 
-diff -uNr 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 07_uart_chainloader/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs
---- 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs
-+++ 07_uart_chainloader/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs
-@@ -247,6 +247,15 @@
+diff -uNr 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 07_uart_chainloader/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
+--- 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
++++ 07_uart_chainloader/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
+@@ -272,6 +272,18 @@
          let mut r = &self.inner;
          r.lock(|inner| fmt::Write::write_fmt(inner, args))
      }
 +
 +    fn flush(&self) {
 +        let mut r = &self.inner;
++        // Spin until the TX FIFO empty flag is set.
 +        r.lock(|inner| loop {
-+            if inner.AUX_MU_LSR.is_set(AUX_MU_LSR::TX_IDLE) {
++            if inner.FR.is_set(FR::TXFE) {
 +                break;
 +            }
++
++            arch::nop();
 +        });
 +    }
  }
 
- impl interface::console::Read for MiniUart {
-@@ -263,14 +272,14 @@
+ impl interface::console::Read for PL011Uart {
+@@ -288,14 +300,19 @@
              }
 
              // Read one character.
--            let mut ret = inner.AUX_MU_IO.get() as u8 as char;
--
+-            let mut ret = inner.DR.get() as u8 as char;
++            inner.DR.get() as u8 as char
++        })
++    }
+
 -            // Convert carrige return to newline.
 -            if ret == '' {
 -                ret = '
 '
--            }
-+            inner.AUX_MU_IO.get() as u8 as char
-+        })
-+    }
-
--            ret
 +    fn clear(&self) {
 +        let mut r = &self.inner;
-+        r.lock(|inner| {
-+            inner.AUX_MU_IIR.write(AUX_MU_IIR::FIFO_CLEAR::All);
++        r.lock(|inner| loop {
++            // Read from the RX FIFO until the empty bit is '1'.
++            if !inner.FR.is_set(FR::RXFE) {
++                inner.DR.get();
++            } else {
++                break;
+             }
+-
+-            ret
          })
      }
  }
 
-diff -uNr 06_drivers_gpio_uart/src/bsp/rpi3/link.ld 07_uart_chainloader/src/bsp/rpi3/link.ld
---- 06_drivers_gpio_uart/src/bsp/rpi3/link.ld
-+++ 07_uart_chainloader/src/bsp/rpi3/link.ld
+diff -uNr 06_drivers_gpio_uart/src/bsp/rpi/link.ld 07_uart_chainloader/src/bsp/rpi/link.ld
+--- 06_drivers_gpio_uart/src/bsp/rpi/link.ld
++++ 07_uart_chainloader/src/bsp/rpi/link.ld
 @@ -5,9 +5,10 @@
 
  SECTIONS
  {
--    /* Set current address to the value from which the RPi3 starts execution */
+-    /* Set current address to the value from which the RPi starts execution */
 -    . = 0x80000;
-+    /* Set the link address to the top-most 40 KiB of DRAM */
++    /* Set the link address to the top-most 40 KiB of DRAM (assuming 1GiB) */
 +    . = 0x3F000000 - 0x10000;
 
 +    __binary_start = .;
@@ -188,9 +214,9 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/rpi3/link.ld 07_uart_chainloader/src/bsp/
      /DISCARD/ : { *(.comment*) }
  }
 
-diff -uNr 06_drivers_gpio_uart/src/bsp/rpi3.rs 07_uart_chainloader/src/bsp/rpi3.rs
---- 06_drivers_gpio_uart/src/bsp/rpi3.rs
-+++ 07_uart_chainloader/src/bsp/rpi3.rs
+diff -uNr 06_drivers_gpio_uart/src/bsp/rpi.rs 07_uart_chainloader/src/bsp/rpi.rs
+--- 06_drivers_gpio_uart/src/bsp/rpi.rs
++++ 07_uart_chainloader/src/bsp/rpi.rs
 @@ -12,6 +12,9 @@
  pub const BOOT_CORE_ID: u64 = 0;
  pub const BOOT_CORE_STACK_START: u64 = 0x80_000;
@@ -388,8 +414,8 @@ diff -uNr 06_drivers_gpio_uart/src/runtime_init.rs 07_uart_chainloader/src/runti
 +/// By indirecting through a trait object, we can make use of the property that vtables store
 +/// absolute addresses. So calling `init()` this way will kick execution to the relocated binary.
 +pub trait RunTimeInit {
-+    /// Equivalent to `crt0` or `c0` code in C/C++ world. Clears the `bss` section, then jumps to kernel
-+    /// init code.
++    /// Equivalent to `crt0` or `c0` code in C/C++ world. Clears the `bss` section, then jumps to
++    /// kernel init code.
 +    ///
 +    /// # Safety
 +    ///

@@ -28,7 +28,7 @@ make chainboot
 [    1.236282] Architectural timer resolution: 52 ns
 [    1.241023] Drivers loaded:
 [    1.243833]       1. GPIO
-[    1.246467]       2. MiniUart
+[    1.246467]       2. PL011Uart
 [W   1.249453] Spin duration smaller than architecturally supported, skipping
 [    1.256390] Spinning for 1 second
 [    2.259728] Spinning for 1 second
@@ -37,21 +37,33 @@ make chainboot
 
 ## Diff to previous
 ```diff
-Binary files 07_uart_chainloader/demo_payload.img and 08_timestamps/demo_payload.img differ
+Binary files 07_uart_chainloader/demo_payload_rpi3.img and 08_timestamps/demo_payload_rpi3.img differ
+Binary files 07_uart_chainloader/demo_payload_rpi4.img and 08_timestamps/demo_payload_rpi4.img differ
 
 diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
 --- 07_uart_chainloader/Makefile
 +++ 08_timestamps/Makefile
-@@ -15,7 +15,7 @@
+@@ -15,8 +15,7 @@
  	QEMU_MACHINE_TYPE = raspi3
- 	QEMU_MISC_ARGS = -serial null -serial stdio
- 	LINKER_FILE = src/bsp/rpi3/link.ld
+ 	QEMU_MISC_ARGS = -serial stdio
+ 	LINKER_FILE = src/bsp/rpi/link.ld
 -	RUSTC_MISC_ARGS = -C target-cpu=cortex-a53 -C relocation-model=pic
+-	CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi3.img
 +	RUSTC_MISC_ARGS = -C target-cpu=cortex-a53
+ else ifeq ($(BSP),rpi4)
+ 	TARGET = aarch64-unknown-none-softfloat
+ 	OUTPUT = kernel8.img
+@@ -24,8 +23,7 @@
+ #	QEMU_MACHINE_TYPE =
+ #	QEMU_MISC_ARGS = -serial stdio
+ 	LINKER_FILE = src/bsp/rpi/link.ld
+-	RUSTC_MISC_ARGS = -C target-cpu=cortex-a72 -C relocation-model=pic
+-	CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi4.img
++	RUSTC_MISC_ARGS = -C target-cpu=cortex-a72
  endif
 
  SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) $(wildcard **/*.ld)
-@@ -46,7 +46,7 @@
+@@ -56,7 +54,7 @@
  DOCKER_EXEC_RASPBOOT_DEV = /dev/ttyUSB0
  # DOCKER_EXEC_RASPBOOT_DEV = /dev/ttyACM0
 
@@ -60,23 +72,30 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
 
  all: clean $(OUTPUT)
 
-@@ -65,14 +65,10 @@
+@@ -74,21 +72,16 @@
+ ifeq ($(QEMU_MACHINE_TYPE),)
+ $(info This board is not yet supported for QEMU.)
+ qemu:
+-qemuasm:
+ else
+ qemu: all
  	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(CONTAINER_UTILS) \
  	$(DOCKER_EXEC_QEMU) $(QEMU_MISC_ARGS)
-
+-
 -qemuasm: all
 -	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(CONTAINER_UTILS) \
 -	$(DOCKER_EXEC_QEMU) -d in_asm
--
+ endif
+
 -chainboot:
 +chainboot: all
  	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(DOCKER_ARG_TTY) \
  	$(CONTAINER_UTILS) $(DOCKER_EXEC_RASPBOOT) $(DOCKER_EXEC_RASPBOOT_DEV) \
--	demo_payload.img
+-	$(CHAINBOOT_DEMO_PAYLOAD)
 +	$(OUTPUT)
 
  clippy:
- 	cargo xclippy --target=$(TARGET) --features $(BSP)
+ 	cargo xclippy --target=$(TARGET) --features bsp_$(BSP)
 
 diff -uNr 07_uart_chainloader/src/arch/aarch64/time.rs 08_timestamps/src/arch/aarch64/time.rs
 --- 07_uart_chainloader/src/arch/aarch64/time.rs
@@ -209,15 +228,15 @@ diff -uNr 07_uart_chainloader/src/arch/aarch64.rs 08_timestamps/src/arch/aarch64
  #[inline(always)]
  pub fn wait_forever() -> ! {
 
-diff -uNr 07_uart_chainloader/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 08_timestamps/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs
---- 07_uart_chainloader/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs
-+++ 08_timestamps/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs
-@@ -272,7 +272,14 @@
+diff -uNr 07_uart_chainloader/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 08_timestamps/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
+--- 07_uart_chainloader/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
++++ 08_timestamps/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
+@@ -300,7 +300,14 @@
              }
 
              // Read one character.
--            inner.AUX_MU_IO.get() as u8 as char
-+            let mut ret = inner.AUX_MU_IO.get() as u8 as char;
+-            inner.DR.get() as u8 as char
++            let mut ret = inner.DR.get() as u8 as char;
 +
 +            // Convert carrige return to newline.
 +            if ret == '' {
@@ -230,16 +249,16 @@ diff -uNr 07_uart_chainloader/src/bsp/driver/bcm/bcm2xxx_mini_uart.rs 08_timesta
      }
 
 
-diff -uNr 07_uart_chainloader/src/bsp/rpi3/link.ld 08_timestamps/src/bsp/rpi3/link.ld
---- 07_uart_chainloader/src/bsp/rpi3/link.ld
-+++ 08_timestamps/src/bsp/rpi3/link.ld
+diff -uNr 07_uart_chainloader/src/bsp/rpi/link.ld 08_timestamps/src/bsp/rpi/link.ld
+--- 07_uart_chainloader/src/bsp/rpi/link.ld
++++ 08_timestamps/src/bsp/rpi/link.ld
 @@ -5,10 +5,9 @@
 
  SECTIONS
  {
--    /* Set the link address to the top-most 40 KiB of DRAM */
+-    /* Set the link address to the top-most 40 KiB of DRAM (assuming 1GiB) */
 -    . = 0x3F000000 - 0x10000;
-+    /* Set current address to the value from which the RPi3 starts execution */
++    /* Set current address to the value from which the RPi starts execution */
 +    . = 0x80000;
 
 -    __binary_start = .;
@@ -262,9 +281,9 @@ diff -uNr 07_uart_chainloader/src/bsp/rpi3/link.ld 08_timestamps/src/bsp/rpi3/li
      /DISCARD/ : { *(.comment*) }
  }
 
-diff -uNr 07_uart_chainloader/src/bsp/rpi3.rs 08_timestamps/src/bsp/rpi3.rs
---- 07_uart_chainloader/src/bsp/rpi3.rs
-+++ 08_timestamps/src/bsp/rpi3.rs
+diff -uNr 07_uart_chainloader/src/bsp/rpi.rs 08_timestamps/src/bsp/rpi.rs
+--- 07_uart_chainloader/src/bsp/rpi.rs
++++ 08_timestamps/src/bsp/rpi.rs
 @@ -12,9 +12,6 @@
  pub const BOOT_CORE_ID: u64 = 0;
  pub const BOOT_CORE_STACK_START: u64 = 0x80_000;
@@ -539,8 +558,8 @@ diff -uNr 07_uart_chainloader/src/runtime_init.rs 08_timestamps/src/runtime_init
 -/// By indirecting through a trait object, we can make use of the property that vtables store
 -/// absolute addresses. So calling `init()` this way will kick execution to the relocated binary.
 -pub trait RunTimeInit {
--    /// Equivalent to `crt0` or `c0` code in C/C++ world. Clears the `bss` section, then jumps to kernel
--    /// init code.
+-    /// Equivalent to `crt0` or `c0` code in C/C++ world. Clears the `bss` section, then jumps to
+-    /// kernel init code.
 -    ///
 -    /// # Safety
 -    ///

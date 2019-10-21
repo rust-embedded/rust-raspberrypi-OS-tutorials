@@ -4,17 +4,17 @@
 
 # Default to the RPi3
 ifndef BSP
-	BSP = bsp_rpi3
+	BSP = rpi3
 endif
 
 # BSP-specific arguments
-ifeq ($(BSP),bsp_rpi3)
+ifeq ($(BSP),rpi3)
 	TARGET = aarch64-unknown-none-softfloat
 	OUTPUT = kernel8.img
 	QEMU_BINARY = qemu-system-aarch64
 	QEMU_MACHINE_TYPE = raspi3
 	QEMU_MISC_ARGS = -d in_asm
-	LINKER_FILE = src/bsp/rpi3/link.ld
+	LINKER_FILE = src/bsp/rpi/link.ld
 	RUSTC_MISC_ARGS = -C target-cpu=cortex-a53
 endif
 
@@ -22,7 +22,7 @@ SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) $(wildcard **/*.ld)
 
 XRUSTC_CMD = cargo xrustc \
 		--target=$(TARGET) \
-		--features $(BSP) \
+		--features bsp_$(BSP) \
 		--release \
 		-- \
 		-C link-arg=-T$(LINKER_FILE) \
@@ -53,7 +53,7 @@ $(OUTPUT): $(CARGO_OUTPUT)
 	$(OBJCOPY_CMD) $< $(OUTPUT)
 
 doc:
-	cargo xdoc --target=$(TARGET) --features $(BSP) --document-private-items
+	cargo xdoc --target=$(TARGET) --features bsp_$(BSP) --document-private-items
 	xdg-open target/$(TARGET)/doc/kernel/index.html
 
 qemu: all
@@ -61,7 +61,7 @@ qemu: all
 	$(DOCKER_EXEC_QEMU) $(QEMU_MISC_ARGS)
 
 clippy:
-	cargo xclippy --target=$(TARGET) --features $(BSP)
+	cargo xclippy --target=$(TARGET) --features bsp_$(BSP)
 
 clean:
 	cargo clean

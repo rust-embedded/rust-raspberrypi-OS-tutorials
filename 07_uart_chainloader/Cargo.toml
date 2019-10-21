@@ -11,6 +11,7 @@ sysroot_path = "../xbuild_sysroot"
 [features]
 default = []
 bsp_rpi3 = ["cortex-a", "register"]
+bsp_rpi4 = ["cortex-a", "register"]
 
 [dependencies]
 r0 = "0.2.*"

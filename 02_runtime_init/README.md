@@ -50,9 +50,9 @@ diff -uNr 01_wait_forever/src/arch/aarch64/start.S 02_runtime_init/src/arch/aarc
 +    b       1b              // We should never reach here. But just in case,
 +                            // park this core aswell
 
-diff -uNr 01_wait_forever/src/bsp/rpi3/link.ld 02_runtime_init/src/bsp/rpi3/link.ld
---- 01_wait_forever/src/bsp/rpi3/link.ld
-+++ 02_runtime_init/src/bsp/rpi3/link.ld
+diff -uNr 01_wait_forever/src/bsp/rpi/link.ld 02_runtime_init/src/bsp/rpi/link.ld
+--- 01_wait_forever/src/bsp/rpi/link.ld
++++ 02_runtime_init/src/bsp/rpi/link.ld
 @@ -13,5 +13,23 @@
          *(.text._start) *(.text*)
      }

@@ -13,8 +13,8 @@
 /// By indirecting through a trait object, we can make use of the property that vtables store
 /// absolute addresses. So calling `init()` this way will kick execution to the relocated binary.
 pub trait RunTimeInit {
-    /// Equivalent to `crt0` or `c0` code in C/C++ world. Clears the `bss` section, then jumps to kernel
-    /// init code.
+    /// Equivalent to `crt0` or `c0` code in C/C++ world. Clears the `bss` section, then jumps to
+    /// kernel init code.
     ///
     /// # Safety
     ///
