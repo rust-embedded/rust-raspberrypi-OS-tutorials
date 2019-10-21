@@ -6,6 +6,13 @@ Now that we enabled safe globals in the previous tutorial, the infrastructure is
 laid for adding the first real device drivers. We throw out the magic QEMU
 console and use a real UART now. Like serious embedded hackers do!
 
+- For the first time, we will be able to run the code on the real hardware.
+  - Therefore, building is now differentiated between the **RPi 3** and the **RPi4**.
+  - By default, all `Makefile` targets will build for the **RPi 3**.
+  - In order to build for the the **RPi4**, prepend `BSP=rpi4` to each target. For example:
+    - `BSP=rpi4 make`
+    - `BSP=rpi4 make doc`
+  - Unfortunately, QEMU does not yet support the **RPi4**, so `BSP=rpi4 make qemu` won't work.
 - A `DeviceDriver` trait is added for abstracting `BSP` driver implementations
   from kernel code.
 - Drivers are stored in `bsp/driver`, and can be reused between `BSP`s.
@@ -18,19 +25,54 @@ console and use a real UART now. Like serious embedded hackers do!
 
 ## Boot it from SD card
 
+Some steps for preparing the SD card differ between RPi3 and RPi4, so be careful.
+
+### Common for both
+
 1. Make a single `FAT32` partition named `boot`.
-2. Copy [bootcode.bin](https://github.com/raspberrypi/firmware/raw/master/boot/bootcode.bin), [fixup.dat](https://github.com/raspberrypi/firmware/raw/master/boot/fixup.dat) and [start.elf](https://github.com/raspberrypi/firmware/raw/master/boot/start.elf) from the [Raspberry Pi firmware repo](https://github.com/raspberrypi/firmware/tree/master/boot) onto the SD card.
-3. Copy our [kernel8.img](kernel8.img) onto the SD card.
-4. Insert the SD card into the RPi and connect the USB serial to your host PC.
+2. On the card, generate a file named `config.txt` with the following contents:
+
+```txt
+init_uart_clock=48000000
+```
+### Pi 3
+
+3. Copy the following files from the [Raspberry Pi firmware repo](https://github.com/raspberrypi/firmware/tree/master/boot)  onto the SD card:
+    - [bootcode.bin](https://github.com/raspberrypi/firmware/raw/master/boot/bootcode.bin)
+    - [fixup.dat](https://github.com/raspberrypi/firmware/raw/master/boot/fixup.dat)
+    - [start.elf](https://github.com/raspberrypi/firmware/raw/master/boot/start.elf) 
+4. Run `make` and copy the [kernel8.img](kernel8.img) onto the SD card.
+
+### Pi 4
+
+3. Copy the following files from the [Raspberry Pi firmware repo](https://github.com/raspberrypi/firmware/tree/master/boot)  onto the SD card:
+    - [fixup4.dat](https://github.com/raspberrypi/firmware/raw/master/boot/fixup4.dat)
+    - [start4.elf](https://github.com/raspberrypi/firmware/raw/master/boot/start.elf)
+    - [bcm2711-rpi-4-b.dtb](https://github.com/raspberrypi/firmware/raw/master/boot/bcm2711-rpi-4-b.dtb)
+4. Run `BSP=rpi4 make` and copy the [kernel8.img](kernel8.img) onto the SD card.
+
+### Common again
+
+5. Insert the SD card into the RPi and connect the USB serial to your host PC.
     - Wiring diagram at [top-level README](../README.md#usb-serial).
-5. Run `screen` (you might need to install it first):
+6. Run `screen` (you might need to install it first):
 
 ```console
 sudo screen /dev/ttyUSB0 115200
 ```
 
-6. Hit <kbd>Enter</kbd> to kick off the kernel boot process.
-7. Exit screen by pressing <kbd>ctrl-a</kbd> <kbd>ctrl-d</kbd> or disconnecting the USB serial.
+7. Hit <kbd>Enter</kbd> to kick off the kernel boot process. Observe the output:
+
+```console
+[0] Booting on: Raspberry Pi 3
+[1] Drivers loaded:
+      1. GPIO
+      2. PL011Uart
+[2] Chars written: 84
+[3] Echoing input now
+```
+
+8. Exit screen by pressing <kbd>ctrl-a</kbd> <kbd>ctrl-d</kbd> or disconnecting the USB serial.
 
 ## Diff to previous
 ```diff
@@ -483,7 +525,8 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gp
 +            // Convert newline to carrige return + newline.
 +            if c == '
 ' {
-+                self.write_char('')
++                self.write_char('
+')
 +            }
 +
 +            self.write_char(c);
@@ -583,7 +626,8 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gp
 +            let mut ret = inner.DR.get() as u8 as char;
 +
 +            // Convert carrige return to newline.
-+            if ret == '' {
++            if ret == '
+' {
 +                ret = '
 '
 +            }
@@ -707,7 +751,8 @@ diff -uNr 05_safe_globals/src/bsp/rpi.rs 06_drivers_gpio_uart/src/bsp/rpi.rs
 -            // Convert newline to carrige return + newline.
 -            if c == '
 ' {
--                self.write_char('')
+-                self.write_char('
+')
 -            }
 -
 -            self.write_char(c);
