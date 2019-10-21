@@ -1,4 +1,4 @@
-# Operating System development tutorials in Rust on the Raspberry Pi 3
+# Operating System development tutorials in Rust on the Raspberry Pi
 
 ## Notice
 
@@ -6,11 +6,14 @@
 code and minimal READMEs, and later write accompanying full-fledged tutorial
 text.**
 
+- The code written in these tutorials supports and runs on the **Raspberry Pi 3** and the **Raspberry Pi 4**.
+  - Tutorials 1 till 5 are groundwork code which only makes sense to on QEMU.
+  - Starting with [tutorial 6](06_drivers_gpio_uart), you can load and run the kernel on Raspberrys and observe output over UART.
+- For practical purposes, the kernel will be a classic [monolith].
+- For editing, I recommend [Visual Studio Code] with the [Rust Language Server] extension.
 - Check out the `make doc` command to browse the code with HTML goodness.
 - Note that the branch is subject to frequent force pushing. If updates happened
   since you last visited, make sure to clone a clean copy to be safe.
-- For editing, I recommend [Visual Studio Code] with the [Rust Language Server] extension.
-- For practical purposes, the kernel will be a classic [monolith].
 
 _Cheers,
 [Andre](https://github.com/andre-richter)_
@@ -35,11 +38,14 @@ cargo install cargo-xbuild cargo-binutils
 
 ## USB Serial
 
-I'd also recommend to get an [USB serial debug
-cable](https://www.adafruit.com/product/954). You connect it to the GPIO pins
-14/15.
+It is highly recommended to get a USB serial debug cable. It also powers the Raspberry once you
+connect it, so you don't need extra power over the dedicated power-USB. I use a bunch of
+[these](https://www.amazon.de/dp/B0757FQ5CX/ref=cm_sw_r_tw_dp_U_x_ozGRDbVTJAG4Q).
 
-[Tutorial 6](06_drivers_gpio_uart) is the first where you can use it. Earlier tutorials will work solely with `QEMU`.
+You connect it to the GPIO pins 14/15 as shown beyond.
+
+[Tutorial 6](06_drivers_gpio_uart) is the first where you can use it. Go to the README there
+for instructions on how to prepare the SD card to run your self-made kernels from it.
 
 ![UART wiring diagram](doc/wiring.png)
 
