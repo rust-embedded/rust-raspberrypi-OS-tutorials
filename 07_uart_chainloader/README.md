@@ -16,9 +16,33 @@ Our chainloader is called `MiniLoad` and is inspired by [raspbootin].
 
 You can try it with this tutorial already:
 1. Copy `kernel8.img` to the SD card.
-2. Execute `make chainboot`.
+2. Execute `make chainboot` or `BSP=rpi4 make chainboot`.
 3. Now plug in the USB Serial.
-4. Let the magic happen.
+4. Observe the loader fetching a kernel over `UART`:
+
+```console
+make chainboot
+[...]
+### Listening on /dev/ttyUSB0
+ __  __ _      _ _                 _ 
+|  \/  (_)_ _ (_) |   ___  __ _ __| |
+| |\/| | | ' \| | |__/ _ \/ _` / _` |
+|_|  |_|_|_||_|_|____\___/\__,_\__,_|
+
+           Raspberry Pi 3
+
+[ML] Requestibinary
+### sending kernel demo_payload_rpi4.img [7840 byte]
+### finished sending
+[ML] Loaded! Executing the payload now
+
+[0] Booting on: Raspberry Pi 3
+[1] Drivers loaded:
+      1. GPIO
+      2. PL011Uart
+[2] Chars written: 84
+[3] Echoing input now
+```
 
 In this tutorial, a version of the kernel from the previous tutorial is loaded
 for demo purposes. In subsequent tuts, it will be the working directory's
@@ -164,7 +188,8 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 07_uart_
 +    }
 
 -            // Convert carrige return to newline.
--            if ret == '' {
+-            if ret == '
+' {
 -                ret = '
 '
 +    fn clear(&self) {
