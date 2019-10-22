@@ -7,7 +7,7 @@ code and minimal READMEs, and later write accompanying full-fledged tutorial
 text.**
 
 - The code written in these tutorials supports and runs on the **Raspberry Pi 3** and the **Raspberry Pi 4**.
-  - Tutorials 1 till 5 are groundwork code which only makes sense to on QEMU.
+  - Tutorials 1 till 5 are groundwork code which only makes sense to run on QEMU.
   - Starting with [tutorial 6](06_drivers_gpio_uart), you can load and run the kernel on Raspberrys and observe output over UART.
 - For practical purposes, the kernel will be a classic [monolith].
 - For editing, I recommend [Visual Studio Code] with the [Rust Language Server] extension.
