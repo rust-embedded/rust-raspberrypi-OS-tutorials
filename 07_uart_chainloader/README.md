@@ -33,7 +33,7 @@ make chainboot
            Raspberry Pi 3
 
 [ML] Requestibinary
-### sending kernel demo_payload_rpi4.img [7840 byte]
+### sending kernel demo_payload_rpi3.img [7840 byte]
 ### finished sending
 [ML] Loaded! Executing the payload now
 
