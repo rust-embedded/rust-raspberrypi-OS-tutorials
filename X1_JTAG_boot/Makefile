@@ -33,7 +33,10 @@ UTILS_CONTAINER = andrerichter/raspi3-utils
 DOCKER_CMD = docker run -it --rm -v $(shell pwd):/work -w /work
 DOCKER_TTY = --privileged -v /dev:/dev
 QEMU_CMD = qemu-system-aarch64 -M raspi3 -kernel jtag_boot.img
-RASPBOOT_CMD = raspbootcom /dev/ttyUSB0 jtag_boot.img
+RASPBOOT_CMD = raspbootcom
+RASPBOOT_DEV = /dev/ttyUSB0
+# RASPBOOT_DEV = /dev/ttyACM0
+
 
 .PHONY: all qemu raspboot clippy clean objdump nm
 
@@ -50,7 +53,8 @@ qemu: all
 	$(DOCKER_CMD) $(UTILS_CONTAINER) $(QEMU_CMD) -serial null -serial stdio
 
 raspboot: all
-	$(DOCKER_CMD) $(DOCKER_TTY) $(UTILS_CONTAINER) $(RASPBOOT_CMD)
+	$(DOCKER_CMD) $(DOCKER_TTY) $(UTILS_CONTAINER) $(RASPBOOT_CMD) \
+	$(RASPBOOT_DEV) jtag_boot.img
 
 clippy:
 	cargo xclippy --target=$(TARGET)

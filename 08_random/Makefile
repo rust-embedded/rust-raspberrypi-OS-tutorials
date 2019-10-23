@@ -40,7 +40,9 @@ DOCKER_ARG_CURDIR = -v $(shell pwd):/work -w /work
 DOCKER_ARG_TTY    = --privileged -v /dev:/dev
 
 DOCKER_EXEC_QEMU     = qemu-system-aarch64 -M raspi3 -kernel kernel8.img
-DOCKER_EXEC_RASPBOOT = raspbootcom /dev/ttyUSB0
+DOCKER_EXEC_RASPBOOT     = raspbootcom
+DOCKER_EXEC_RASPBOOT_DEV = /dev/ttyUSB0
+# DOCKER_EXEC_RASPBOOT_DEV = /dev/ttyACM0
 
 .PHONY: all qemu raspboot clippy clean objdump nm
 
@@ -59,7 +61,8 @@ qemu: all
 
 raspboot: all
 	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(DOCKER_ARG_TTY) \
-	$(CONTAINER_UTILS) $(DOCKER_EXEC_RASPBOOT) kernel8.img
+	$(CONTAINER_UTILS) $(DOCKER_EXEC_RASPBOOT) $(DOCKER_EXEC_RASPBOOT_DEV) \
+	kernel8.img
 
 clippy:
 	cargo xclippy --target=$(TARGET)
