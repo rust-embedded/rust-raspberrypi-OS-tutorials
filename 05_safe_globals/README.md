@@ -167,9 +167,8 @@ diff -uNr 04_zero_overhead_abstraction/src/bsp/rpi.rs 05_safe_globals/src/bsp/rp
 -            unsafe {
 -                core::ptr::write_volatile(0x3F20_1000 as *mut u8, c as u8);
 +            // Convert newline to carrige return + newline.
-+            if c == '
-' {
-+                self.write_char('')
++            if c == '\n' {
++                self.write_char('\r')
              }
 +
 +            self.write_char(c);
@@ -346,4 +345,5 @@ diff -uNr 04_zero_overhead_abstraction/src/main.rs 05_safe_globals/src/main.rs
 +    println!("[2] Stopping here.");
      arch::wait_forever()
  }
+
 ```

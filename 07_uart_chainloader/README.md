@@ -120,11 +120,13 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
 
  all: clean $(OUTPUT)
 
-@@ -67,12 +74,22 @@
+@@ -67,12 +74,24 @@
  ifeq ($(QEMU_MACHINE_TYPE),)
- $(info This board is not yet supported for QEMU.)
  qemu:
+ 	@echo "This board is not yet supported for QEMU."
++
 +qemuasm:
++	@echo "This board is not yet supported for QEMU."
  else
  qemu: all
  	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(CONTAINER_UTILS) \
@@ -189,9 +191,8 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 07_uart_
 +    }
 
 -            // Convert carrige return to newline.
--            if ret == '' {
--                ret = '
-'
+-            if ret == '\r' {
+-                ret = '\n'
 +    fn clear(&self) {
 +        let mut r = &self.inner;
 +        r.lock(|inner| loop {
@@ -300,14 +301,13 @@ diff -uNr 06_drivers_gpio_uart/src/main.rs 07_uart_chainloader/src/main.rs
 
 -    // UART should be functional now. Wait for user to hit Enter.
 -    loop {
--        if bsp::console().read_char() == '
-' {
+-        if bsp::console().read_char() == '\n' {
 -            break;
 -        }
 +    println!(" __  __ _      _ _                 _ ");
-+    println!("|  \/  (_)_ _ (_) |   ___  __ _ __| |");
-+    println!("| |\/| | | ' \| | |__/ _ \/ _` / _` |");
-+    println!("|_|  |_|_|_||_|_|____\___/\__,_\__,_|");
++    println!("|  \\/  (_)_ _ (_) |   ___  __ _ __| |");
++    println!("| |\\/| | | ' \\| | |__/ _ \\/ _` / _` |");
++    println!("|_|  |_|_|_||_|_|____\\___/\\__,_\\__,_|");
 +    println!();
 +    println!("{:^37}", bsp::board_name());
 +    println!();
@@ -347,8 +347,7 @@ diff -uNr 06_drivers_gpio_uart/src/main.rs 07_uart_chainloader/src/main.rs
 
 -    println!("[2] Chars written: {}", bsp::console().chars_written());
 -    println!("[3] Echoing input now");
-+    println!("[ML] Loaded! Executing the payload now
-");
++    println!("[ML] Loaded! Executing the payload now\n");
 +    bsp::console().flush();
 
 -    loop {
@@ -469,4 +468,5 @@ diff -uNr 06_drivers_gpio_uart/src/runtime_init.rs 07_uart_chainloader/src/runti
 +pub fn get() -> &'static dyn RunTimeInit {
 +    &Traitor {}
  }
+
 ```

@@ -133,4 +133,5 @@ diff -uNr 01_wait_forever/src/runtime_init.rs 02_runtime_init/src/runtime_init.r
 +
 +    crate::kernel_init()
 +}
+
 ```

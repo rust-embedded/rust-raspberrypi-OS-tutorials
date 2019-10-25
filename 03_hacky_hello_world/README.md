@@ -217,8 +217,7 @@ diff -uNr 02_runtime_init/src/print.rs 03_hacky_hello_world/src/print.rs
 +/// Carbon copy from https://doc.rust-lang.org/src/std/macros.rs.html
 +#[macro_export]
 +macro_rules! println {
-+    () => ($crate::print!("
-"));
++    () => ($crate::print!("\n"));
 +    ($($arg:tt)*) => ({
 +        $crate::print::_print(format_args_nl!($($arg)*));
 +    })
@@ -229,4 +228,5 @@ diff -uNr 02_runtime_init/src/print.rs 03_hacky_hello_world/src/print.rs
 +
 +    bsp::console().write_fmt(args).unwrap();
 +}
+
 ```

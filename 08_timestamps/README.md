@@ -70,11 +70,13 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
 
  all: clean $(OUTPUT)
 
-@@ -74,21 +72,16 @@
+@@ -74,23 +72,16 @@
  ifeq ($(QEMU_MACHINE_TYPE),)
- $(info This board is not yet supported for QEMU.)
  qemu:
+ 	@echo "This board is not yet supported for QEMU."
+-
 -qemuasm:
+-	@echo "This board is not yet supported for QEMU."
  else
  qemu: all
  	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(CONTAINER_UTILS) \
@@ -237,9 +239,8 @@ diff -uNr 07_uart_chainloader/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 08_timest
 +            let mut ret = inner.DR.get() as u8 as char;
 +
 +            // Convert carrige return to newline.
-+            if ret == '' {
-+                ret = '
-'
++            if ret == '\r' {
++                ret = '\n'
 +            }
 +
 +            ret
@@ -343,9 +344,9 @@ diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
 -    use interface::console::All;
 -
 -    println!(" __  __ _      _ _                 _ ");
--    println!("|  \/  (_)_ _ (_) |   ___  __ _ __| |");
--    println!("| |\/| | | ' \| | |__/ _ \/ _` / _` |");
--    println!("|_|  |_|_|_||_|_|____\___/\__,_\__,_|");
+-    println!("|  \\/  (_)_ _ (_) |   ___  __ _ __| |");
+-    println!("| |\\/| | | ' \\| | |__/ _ \\/ _` / _` |");
+-    println!("|_|  |_|_|_||_|_|____\\___/\\__,_\\__,_|");
 -    println!();
 -    println!("{:^37}", bsp::board_name());
 -    println!();
@@ -389,8 +390,7 @@ diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
 +        println!("      {}. {}", i + 1, driver.compatible());
      }
 
--    println!("[ML] Loaded! Executing the payload now
-");
+-    println!("[ML] Loaded! Executing the payload now\n");
 -    bsp::console().flush();
 -
 -    // Use black magic to get a function pointer.
@@ -417,8 +417,7 @@ diff -uNr 07_uart_chainloader/src/print.rs 08_timestamps/src/print.rs
 -/// Carbon copy from https://doc.rust-lang.org/src/std/macros.rs.html
  #[macro_export]
  macro_rules! println {
-     () => ($crate::print!("
-"));
+     () => ($crate::print!("\n"));
 -    ($($arg:tt)*) => ({
 -        $crate::print::_print(format_args_nl!($($arg)*));
 +    ($string:expr) => ({
@@ -594,4 +593,5 @@ diff -uNr 07_uart_chainloader/src/runtime_init.rs 08_timestamps/src/runtime_init
 -    &Traitor {}
 +    crate::kernel_init()
  }
+
 ```

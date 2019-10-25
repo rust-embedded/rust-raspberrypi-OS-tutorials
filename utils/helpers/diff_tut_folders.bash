@@ -14,7 +14,8 @@ DIFF=$(
 	 $1 $2 \
 	| sed -r "s/[12][90][127][90]-.*//g" \
 	| sed -r "s/[[:space:]]*$//g" \
-	| sed -r "s/%/modulo/g"
+	| sed -r "s/%/modulo/g" \
+        | sed -r "s/diff -uNr -x README.md -x kernel -x kernel8.img -x Cargo.lock -x target/\ndiff -uNr/g"
      )
 
 HEADER="## Diff to previous"
@@ -23,8 +24,8 @@ ORIGINAL=$(
 	| sed -rn "/$HEADER/q;p"
 	)
 
-printf "$ORIGINAL" > "$2/README.md"
-printf "\n\n$HEADER\n" >> "$2/README.md"
+echo "$ORIGINAL" > "$2/README.md"
+printf "\n$HEADER\n" >> "$2/README.md"
 printf "\`\`\`diff\n" >> "$2/README.md"
-printf "${DIFF//'diff -uNr -x README.md -x kernel -x kernel8.img -x Cargo.lock -x target'/'\ndiff -uNr'}" >> "$2/README.md"
+echo "$DIFF" >> "$2/README.md"
 printf "\n\`\`\`\n" >> "$2/README.md"

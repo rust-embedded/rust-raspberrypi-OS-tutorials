@@ -118,8 +118,8 @@ diff -uNr 05_safe_globals/Makefile 06_drivers_gpio_uart/Makefile
  	xdg-open target/$(TARGET)/doc/kernel/index.html
 
 +ifeq ($(QEMU_MACHINE_TYPE),)
-+$(info This board is not yet supported for QEMU.)
 +qemu:
++	@echo "This board is not yet supported for QEMU."
 +else
  qemu: all
  	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(CONTAINER_UTILS) \
@@ -522,9 +522,8 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gp
 +    fn write_str(&mut self, s: &str) -> fmt::Result {
 +        for c in s.chars() {
 +            // Convert newline to carrige return + newline.
-+            if c == '
-' {
-+                self.write_char('')
++            if c == '\n' {
++                self.write_char('\r')
 +            }
 +
 +            self.write_char(c);
@@ -624,9 +623,8 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gp
 +            let mut ret = inner.DR.get() as u8 as char;
 +
 +            // Convert carrige return to newline.
-+            if ret == '' {
-+                ret = '
-'
++            if ret == '\r' {
++                ret = '\n'
 +            }
 +
 +            ret
@@ -746,9 +744,8 @@ diff -uNr 05_safe_globals/src/bsp/rpi.rs 06_drivers_gpio_uart/src/bsp/rpi.rs
 -    fn write_str(&mut self, s: &str) -> fmt::Result {
 -        for c in s.chars() {
 -            // Convert newline to carrige return + newline.
--            if c == '
-' {
--                self.write_char('')
+-            if c == '\n' {
+-                self.write_char('\r')
 -            }
 -
 -            self.write_char(c);
@@ -934,8 +931,7 @@ diff -uNr 05_safe_globals/src/main.rs 06_drivers_gpio_uart/src/main.rs
 +
 +    // UART should be functional now. Wait for user to hit Enter.
 +    loop {
-+        if bsp::console().read_char() == '
-' {
++        if bsp::console().read_char() == '\n' {
 +            break;
 +        }
 +    }
@@ -959,4 +955,5 @@ diff -uNr 05_safe_globals/src/main.rs 06_drivers_gpio_uart/src/main.rs
 +        bsp::console().write_char(c);
 +    }
  }
+
 ```

@@ -72,9 +72,11 @@ doc:
 	xdg-open target/$(TARGET)/doc/kernel/index.html
 
 ifeq ($(QEMU_MACHINE_TYPE),)
-$(info This board is not yet supported for QEMU.)
 qemu:
+	@echo "This board is not yet supported for QEMU."
+
 qemuasm:
+	@echo "This board is not yet supported for QEMU."
 else
 qemu: all
 	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(CONTAINER_UTILS) \
