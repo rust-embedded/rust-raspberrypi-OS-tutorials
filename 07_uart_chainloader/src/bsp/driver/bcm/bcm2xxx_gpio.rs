@@ -101,26 +101,6 @@ impl GPIOInner {
     fn ptr(&self) -> *const RegisterBlock {
         self.base_addr as *const _
     }
-
-    /// Map PL011 UART as standard output.
-    ///
-    /// TX to pin 14
-    /// RX to pin 15
-    pub fn map_pl011_uart(&mut self) {
-        // Map to pins.
-        self.GPFSEL1
-            .modify(GPFSEL1::FSEL14::AltFunc0 + GPFSEL1::FSEL15::AltFunc0);
-
-        // Enable pins 14 and 15.
-        self.GPPUD.set(0);
-        arch::spin_for_cycles(150);
-
-        self.GPPUDCLK0
-            .write(GPPUDCLK0::PUDCLK14::AssertClock + GPPUDCLK0::PUDCLK15::AssertClock);
-        arch::spin_for_cycles(150);
-
-        self.GPPUDCLK0.set(0);
-    }
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -140,10 +120,29 @@ impl GPIO {
         }
     }
 
-    // Only visible to other BSP code.
+    /// Map PL011 UART as standard output.
+    ///
+    /// TX to pin 14
+    /// RX to pin 15
     pub fn map_pl011_uart(&self) {
         let mut r = &self.inner;
-        r.lock(|inner| inner.map_pl011_uart());
+        r.lock(|inner| {
+            // Map to pins.
+            inner
+                .GPFSEL1
+                .modify(GPFSEL1::FSEL14::AltFunc0 + GPFSEL1::FSEL15::AltFunc0);
+
+            // Enable pins 14 and 15.
+            inner.GPPUD.set(0);
+            arch::spin_for_cycles(150);
+
+            inner
+                .GPPUDCLK0
+                .write(GPPUDCLK0::PUDCLK14::AssertClock + GPPUDCLK0::PUDCLK15::AssertClock);
+            arch::spin_for_cycles(150);
+
+            inner.GPPUDCLK0.set(0);
+        })
     }
 }
 

@@ -169,8 +169,7 @@ diff -uNr 04_zero_overhead_abstraction/src/bsp/rpi.rs 05_safe_globals/src/bsp/rp
 +            // Convert newline to carrige return + newline.
 +            if c == '
 ' {
-+                self.write_char('
-')
++                self.write_char('')
              }
 +
 +            self.write_char(c);

@@ -167,7 +167,7 @@ diff -uNr 05_safe_globals/src/arch.rs 06_drivers_gpio_uart/src/arch.rs
 diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_gpio.rs 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_gpio.rs
 --- 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_gpio.rs
 +++ 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_gpio.rs
-@@ -0,0 +1,158 @@
+@@ -0,0 +1,157 @@
 +// SPDX-License-Identifier: MIT
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
@@ -271,26 +271,6 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_gpio.rs 06_drivers_gpio_uar
 +    fn ptr(&self) -> *const RegisterBlock {
 +        self.base_addr as *const _
 +    }
-+
-+    /// Map PL011 UART as standard output.
-+    ///
-+    /// TX to pin 14
-+    /// RX to pin 15
-+    pub fn map_pl011_uart(&mut self) {
-+        // Map to pins.
-+        self.GPFSEL1
-+            .modify(GPFSEL1::FSEL14::AltFunc0 + GPFSEL1::FSEL15::AltFunc0);
-+
-+        // Enable pins 14 and 15.
-+        self.GPPUD.set(0);
-+        arch::spin_for_cycles(150);
-+
-+        self.GPPUDCLK0
-+            .write(GPPUDCLK0::PUDCLK14::AssertClock + GPPUDCLK0::PUDCLK15::AssertClock);
-+        arch::spin_for_cycles(150);
-+
-+        self.GPPUDCLK0.set(0);
-+    }
 +}
 +
 +//--------------------------------------------------------------------------------------------------
@@ -310,10 +290,29 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_gpio.rs 06_drivers_gpio_uar
 +        }
 +    }
 +
-+    // Only visible to other BSP code.
++    /// Map PL011 UART as standard output.
++    ///
++    /// TX to pin 14
++    /// RX to pin 15
 +    pub fn map_pl011_uart(&self) {
 +        let mut r = &self.inner;
-+        r.lock(|inner| inner.map_pl011_uart());
++        r.lock(|inner| {
++            // Map to pins.
++            inner
++                .GPFSEL1
++                .modify(GPFSEL1::FSEL14::AltFunc0 + GPFSEL1::FSEL15::AltFunc0);
++
++            // Enable pins 14 and 15.
++            inner.GPPUD.set(0);
++            arch::spin_for_cycles(150);
++
++            inner
++                .GPPUDCLK0
++                .write(GPPUDCLK0::PUDCLK14::AssertClock + GPPUDCLK0::PUDCLK15::AssertClock);
++            arch::spin_for_cycles(150);
++
++            inner.GPPUDCLK0.set(0);
++        })
 +    }
 +}
 +
@@ -525,8 +524,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gp
 +            // Convert newline to carrige return + newline.
 +            if c == '
 ' {
-+                self.write_char('
-')
++                self.write_char('')
 +            }
 +
 +            self.write_char(c);
@@ -626,8 +624,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gp
 +            let mut ret = inner.DR.get() as u8 as char;
 +
 +            // Convert carrige return to newline.
-+            if ret == '
-' {
++            if ret == '' {
 +                ret = '
 '
 +            }
@@ -751,8 +748,7 @@ diff -uNr 05_safe_globals/src/bsp/rpi.rs 06_drivers_gpio_uart/src/bsp/rpi.rs
 -            // Convert newline to carrige return + newline.
 -            if c == '
 ' {
--                self.write_char('
-')
+-                self.write_char('')
 -            }
 -
 -            self.write_char(c);

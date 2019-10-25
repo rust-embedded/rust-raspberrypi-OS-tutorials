@@ -189,8 +189,7 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 07_uart_
 +    }
 
 -            // Convert carrige return to newline.
--            if ret == '
-' {
+-            if ret == '' {
 -                ret = '
 '
 +    fn clear(&self) {

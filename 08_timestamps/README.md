@@ -237,8 +237,7 @@ diff -uNr 07_uart_chainloader/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 08_timest
 +            let mut ret = inner.DR.get() as u8 as char;
 +
 +            // Convert carrige return to newline.
-+            if ret == '
-' {
++            if ret == '' {
 +                ret = '
 '
 +            }
