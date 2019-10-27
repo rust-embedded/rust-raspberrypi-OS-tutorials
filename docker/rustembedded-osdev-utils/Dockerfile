@@ -12,8 +12,6 @@ RUN set -ex;                                      \
         build-essential                           \
         ca-certificates                           \
         git                                       \
-        libglib2.0-dev                            \
-        libpixman-1-dev                           \
         libtool                                   \
         pkg-config                                \
         wget                                      \
@@ -23,13 +21,16 @@ RUN set -ex;                                      \
         $tempPkgs                                 \
         # persistent packages
         gdb-multiarch                             \
+        libpixman-1-dev                           \
+        libglib2.0-dev                            \
         libusb-1.0.0-dev                          \
-        python                                    \
         locales                                   \
+        python                                    \
         ;                                         \
     # QEMU
-    git clone --depth 1 git://git.qemu.org/qemu.git;           \
+    git clone git://git.qemu.org/qemu.git;                     \
     cd qemu;                                                   \
+    git checkout tags/v4.1.0;                                  \
     ./configure --target-list=aarch64-softmmu --enable-modules \
         --enable-tcg-interpreter --enable-debug-tcg            \
         --python=/usr/bin/python2.7;                           \
