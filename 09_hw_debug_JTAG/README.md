@@ -265,6 +265,11 @@ runs, while keeping the debugger connected.
 4. In new terminal, `make openocd`.
 5. In new terminal, `make gdb` or make `make gdb-opt0`.
 
+## Additional resources
+
+- https://metebalci.com/blog/bare-metal-raspberry-pi-3b-jtag
+- https://www.suse.com/c/debugging-raspberry-pi-3-with-jtag
+
 ## Acknowledgments
 
 Thanks to [@naotaco](https://github.com/naotaco) for laying the groundwork for this tutorial.
