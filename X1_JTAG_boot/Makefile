@@ -1,69 +1,100 @@
-#
-# MIT License
-#
-# Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
-#
+## SPDX-License-Identifier: MIT
+##
+## Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
 
-TARGET = aarch64-unknown-none-softfloat
+# Default to the RPi3
+ifndef BSP
+	BSP = rpi3
+endif
 
-SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) link.ld
+# BSP-specific arguments
+ifeq ($(BSP),rpi3)
+	TARGET = aarch64-unknown-none-softfloat
+	OUTPUT = kernel8.img
+	QEMU_BINARY = qemu-system-aarch64
+	QEMU_MACHINE_TYPE = raspi3
+	QEMU_MISC_ARGS = -serial stdio
+	LINKER_FILE = src/bsp/rpi/link.ld
+	RUSTC_MISC_ARGS = -C target-cpu=cortex-a53
+else ifeq ($(BSP),rpi4)
+	TARGET = aarch64-unknown-none-softfloat
+	OUTPUT = kernel8.img
+#	QEMU_BINARY = qemu-system-aarch64
+#	QEMU_MACHINE_TYPE =
+#	QEMU_MISC_ARGS = -serial stdio
+	LINKER_FILE = src/bsp/rpi/link.ld
+	RUSTC_MISC_ARGS = -C target-cpu=cortex-a72
+endif
 
-OBJCOPY = cargo objcopy --
-OBJCOPY_PARAMS = --strip-all -O binary
+SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) $(wildcard **/*.ld)
 
-UTILS_CONTAINER = andrerichter/raspi3-utils
-DOCKER_CMD = docker run -it --rm -v $(shell pwd):/work -w /work
-DOCKER_TTY = --privileged -v /dev:/dev
-QEMU_CMD = qemu-system-aarch64 -M raspi3 -kernel jtag_boot.img
-RASPBOOT_CMD = raspbootcom
-RASPBOOT_DEV = /dev/ttyUSB0
-# RASPBOOT_DEV = /dev/ttyACM0
+XRUSTC_CMD = cargo xrustc \
+		--target=$(TARGET) \
+		--features bsp_$(BSP) \
+		--release \
+		-- \
+		-C link-arg=-T$(LINKER_FILE) \
+		$(RUSTC_MISC_ARGS)
 
+CARGO_OUTPUT = target/$(TARGET)/release/kernel
 
-.PHONY: all qemu raspboot clippy clean objdump nm
+OBJCOPY_CMD = cargo objcopy \
+		-- \
+		--strip-all \
+		-O binary
 
-all: clean jtag_boot.img
+CONTAINER_UTILS   = rustembedded/osdev-utils
 
-target/$(TARGET)/release/jtag_boot: $(SOURCES)
-	cargo xbuild --target=$(TARGET) --release
+DOCKER_CMD        = docker run -it --rm
+DOCKER_ARG_CURDIR = -v $(shell pwd):/work -w /work
+DOCKER_ARG_TTY    = --privileged -v /dev:/dev
 
-jtag_boot.img: target/$(TARGET)/release/jtag_boot
+DOCKER_EXEC_QEMU         = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE) -kernel $(OUTPUT)
+DOCKER_EXEC_RASPBOOT     = raspbootcom
+DOCKER_EXEC_RASPBOOT_DEV = /dev/ttyUSB0
+# DOCKER_EXEC_RASPBOOT_DEV = /dev/ttyACM0
+
+.PHONY: all doc qemu chainboot clippy clean readelf objdump nm
+
+all: clean $(OUTPUT)
+
+$(CARGO_OUTPUT): $(SOURCES)
+	# RUSTFLAGS="-D warnings -D missing_docs"
+	$(XRUSTC_CMD)
+
+$(OUTPUT): $(CARGO_OUTPUT)
 	cp $< .
-	$(OBJCOPY) $(OBJCOPY_PARAMS) $< jtag_boot.img
+	$(OBJCOPY_CMD) $< $(OUTPUT)
 
+doc:
+	cargo xdoc --target=$(TARGET) --features bsp_$(BSP) --document-private-items
+	xdg-open target/$(TARGET)/doc/kernel/index.html
+
+ifeq ($(QEMU_MACHINE_TYPE),)
+qemu:
+	@echo "This board is not yet supported for QEMU."
+else
 qemu: all
-	$(DOCKER_CMD) $(UTILS_CONTAINER) $(QEMU_CMD) -serial null -serial stdio
+	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(CONTAINER_UTILS) \
+	$(DOCKER_EXEC_QEMU) $(QEMU_MISC_ARGS)
+endif
 
-raspboot: all
-	$(DOCKER_CMD) $(DOCKER_TTY) $(UTILS_CONTAINER) $(RASPBOOT_CMD) \
-	$(RASPBOOT_DEV) jtag_boot.img
+chainboot: all
+	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(DOCKER_ARG_TTY) \
+	$(CONTAINER_UTILS) $(DOCKER_EXEC_RASPBOOT) $(DOCKER_EXEC_RASPBOOT_DEV) \
+	$(OUTPUT)
 
 clippy:
-	cargo xclippy --target=$(TARGET)
+	cargo xclippy --target=$(TARGET) --features bsp_$(BSP)
 
 clean:
 	cargo clean
 
+readelf:
+	readelf -a kernel
+
 objdump:
-	cargo objdump --target $(TARGET) -- -disassemble -print-imm-hex jtag_boot
+	cargo objdump --target $(TARGET) -- -disassemble -print-imm-hex kernel
 
 nm:
-	cargo nm --target $(TARGET) -- jtag_boot | sort
+	cargo nm --target $(TARGET) -- kernel | sort

@@ -1,2 +1,3 @@
 xbuild_sysroot
 **/target/*
+**/.gdb_history

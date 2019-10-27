@@ -1,65 +1,70 @@
-/*
- * MIT License
- *
- * Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- */
+// SPDX-License-Identifier: MIT
+//
+// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
 
-#![no_std]
+// Rust embedded logo for `make doc`.
+#![doc(html_logo_url = "https://git.io/JeGIp")]
+
+//! The `kernel`
+//!
+//! The `kernel` is composed by glueing together code from
+//!
+//!   - [Hardware-specific Board Support Packages] (`BSPs`).
+//!   - [Architecture-specific code].
+//!   - HW- and architecture-agnostic `kernel` code.
+//!
+//! using the [`kernel::interface`] traits.
+//!
+//! [Hardware-specific Board Support Packages]: bsp/index.html
+//! [Architecture-specific code]: arch/index.html
+//! [`kernel::interface`]: interface/index.html
+
+#![feature(format_args_nl)]
+#![feature(panic_info_message)]
+#![feature(trait_alias)]
 #![no_main]
+#![no_std]
 
-const MMIO_BASE: usize = 0x3F00_0000;
-const GPIO_BASE: usize = MMIO_BASE + 0x0020_0000;
-const MINI_UART_BASE: usize = MMIO_BASE + 0x0021_5000;
+// Conditionally includes the selected `architecture` code, which provides the `_start()` function,
+// the first function to run.
+mod arch;
 
-mod gpio;
-mod mini_uart;
+// `_start()` then calls `runtime_init::init()`, which on completion, jumps to `kernel_init()`.
+mod runtime_init;
 
-pub fn setup_jtag(gpio: &gpio::GPIO) {
-    gpio.GPFSEL2.modify(
-        gpio::GPFSEL2::FSEL27::ARM_TMS
-            + gpio::GPFSEL2::FSEL26::ARM_TDI
-            + gpio::GPFSEL2::FSEL25::ARM_TCK
-            + gpio::GPFSEL2::FSEL24::ARM_TDO
-            + gpio::GPFSEL2::FSEL23::ARM_RTCK
-            + gpio::GPFSEL2::FSEL22::ARM_TRST,
-    );
+// Conditionally includes the selected `BSP` code.
+mod bsp;
+
+mod interface;
+mod panic_wait;
+mod print;
+
+/// Early init code.
+///
+/// Concerned with with initializing `BSP` and `arch` parts.
+///
+/// # Safety
+///
+/// - Only a single core must be active and running this function.
+/// - The init calls in this function must appear in the correct order.
+unsafe fn kernel_init() -> ! {
+    for i in bsp::device_drivers().iter() {
+        if let Err(()) = i.init() {
+            // This message will only be readable if, at the time of failure, the return value of
+            // `bsp::console()` is already in functioning state.
+            panic!("Error loading driver: {}", i.compatible())
+        }
+    }
+
+    bsp::post_driver_init();
+
+    // Transition from unsafe to safe.
+    kernel_main()
 }
 
-fn kernel_entry() -> ! {
-    let gpio = gpio::GPIO::new(GPIO_BASE);
+/// The main function running after the early init.
+fn kernel_main() -> ! {
+    println!("Parking CPU core. Please connect over JTAG now.");
 
-    //------------------------------------------------------------
-    // Instantiate MiniUart
-    //------------------------------------------------------------
-    let mini_uart = mini_uart::MiniUart::new(MINI_UART_BASE);
-    mini_uart.init(&gpio);
-
-    //------------------------------------------------------------
-    // Configure JTAG pins
-    //------------------------------------------------------------
-    setup_jtag(&gpio);
-
-    mini_uart.puts("\n[i] JTAG is live. Please connect.\n");
-
-    loop {}
+    arch::wait_forever()
 }
-
-raspi3_boot::entry!(kernel_entry);
