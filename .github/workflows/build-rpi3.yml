@@ -1,0 +1,32 @@
+name: Build RPi3
+
+on:
+  push:
+    branches: 
+      - master
+  pull_request:
+    branches: 
+      - master
+  schedule:
+    - cron: '0 5 * * *'
+    
+jobs:
+  build:
+    name: Build RPi3 kernels
+    runs-on: ubuntu-18.04
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Ruby 2.x
+      uses: actions/setup-ruby@v1
+      with:
+        ruby-version: 2.x
+    - name: Set up Rust nightly
+      run: |
+          curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly --component rust-src llvm-tools-preview
+          source $HOME/.cargo/env
+          cargo install cargo-xbuild cargo-binutils
+    - name: Make all
+      run: |
+        ruby utils/make_all.rb
+
