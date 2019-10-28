@@ -7,17 +7,26 @@
 
 require_relative 'helpers/tutorial_folders.rb'
 
-def fmt_all
+def fmt_all(check = false)
     crates = tutorial_folders
+
+    args = if check != false
+               '-- --check'
+           else
+               ''
+           end
 
     crates.each do |x|
         x = File.dirname(x)
 
         Dir.chdir(x) do
-            puts "Formatting #{x}"
-            system('cargo fmt')
+            puts "Format #{x}"
+            system("cargo fmt #{args}")
         end
     end
 end
 
-fmt_all if $PROGRAM_NAME == __FILE__
+if $PROGRAM_NAME == __FILE__
+    # Any command line argument means --check
+    fmt_all(!ARGV[0].nil?)
+end
