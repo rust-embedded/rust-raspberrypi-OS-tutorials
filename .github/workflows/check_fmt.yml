@@ -1,0 +1,29 @@
+name: Check formatting
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    name: Check Rust code formatting
+    runs-on: ubuntu-18.04
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Ruby 2.x
+      uses: actions/setup-ruby@v1
+      with:
+        ruby-version: 2.x
+    - name: Set up Rust nightly
+      run: |
+          rustup self update
+          rustup toolchain install nightly
+          rustup default nightly
+    - name: Make all
+      run: |
+        ruby utils/fmt_all.rb --check
