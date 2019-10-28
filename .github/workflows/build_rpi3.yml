@@ -4,9 +4,17 @@ on:
   push:
     branches:
       - master
+    paths-ignore:
+      - 'utils/**'
+      - 'doc/**'
+      - 'docker/**'
   pull_request:
     branches:
       - master
+    paths-ignore:
+      - 'utils/**'
+      - 'doc/**'
+      - 'docker/**'
   schedule:
     - cron: '0 5 * * *'
 

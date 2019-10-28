@@ -4,9 +4,17 @@ on:
   push:
     branches:
       - master
+    paths-ignore:
+      - 'utils/**'
+      - 'doc/**'
+      - 'docker/**'
   pull_request:
     branches:
       - master
+    paths-ignore:
+      - 'utils/**'
+      - 'doc/**'
+      - 'docker/**'
 
 jobs:
   build:
@@ -22,7 +30,7 @@ jobs:
     - name: Set up Rust nightly
       run: |
           rustup self update
-          rustup toolchain install nightly
+          rustup toolchain install nightly --component rustfmt
           rustup default nightly
     - name: Make all
       run: |
