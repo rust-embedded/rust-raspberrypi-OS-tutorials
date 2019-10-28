@@ -280,7 +280,6 @@ Thanks to [@naotaco](https://github.com/naotaco) for laying the groundwork for t
 
 ## Diff to previous
 ```diff
-Binary files 08_timestamps/kernel_for_jtag and 09_hw_debug_JTAG/kernel_for_jtag differ
 
 diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
 --- 08_timestamps/Makefile
