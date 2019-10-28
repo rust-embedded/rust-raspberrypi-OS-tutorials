@@ -1,5 +1,17 @@
 # Tutorial 09 - Hardware Debugging using JTAG
 
+## tl;dr
+
+In the exact order as listed:
+
+1. `make jtagboot` and keep terminal open.
+2. Connect USB serial device.
+3. Connect `JTAG` debugger USB device.
+4. In new terminal, `make openocd` and keep terminal open.
+5. In new terminal, `make gdb` or make `make gdb-opt0`.
+
+## Introduction
+
 In the upcoming tutorials, we are going to touch sensitive areas of the RPi's SoC that can make our
 debugging life very hard. For example, changing the processor's `Privilege Level` or introducing
 `Virtual Memory`.
@@ -256,14 +268,6 @@ Hence, please ensure the following order of connecting the devices to your box:
 This way, Linux enumerates the devices accordingly. This has to be done only once. It is fine to
 disconnect and connect the serial multiple times, e.g. for kicking off different `make jtagboot`
 runs, while keeping the debugger connected.
-
-## In summary
-
-1. `make jtagboot` and keep terminal open.
-2. Connect USB serial device.
-3. Connect `JTAG` debugger USB device.
-4. In new terminal, `make openocd`.
-5. In new terminal, `make gdb` or make `make gdb-opt0`.
 
 ## Additional resources
 
