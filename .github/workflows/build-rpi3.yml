@@ -2,14 +2,14 @@ name: Build RPi3
 
 on:
   push:
-    branches: 
+    branches:
       - master
   pull_request:
-    branches: 
+    branches:
       - master
   schedule:
     - cron: '0 5 * * *'
-    
+
 jobs:
   build:
     name: Build RPi3 kernels
@@ -23,10 +23,10 @@ jobs:
         ruby-version: 2.x
     - name: Set up Rust nightly
       run: |
-          curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly --component rust-src llvm-tools-preview
-          source $HOME/.cargo/env
+          rustup self update
+          rustup toolchain install nightly --component rust-src llvm-tools-preview
+          rustup default nightly
           cargo install cargo-xbuild cargo-binutils
     - name: Make all
       run: |
         ruby utils/make_all.rb
-
