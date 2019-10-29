@@ -4,8 +4,8 @@
 
 //! Conditional exporting of processor architecture code.
 
-#[cfg(feature = "bsp_rpi3")]
+#[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
 mod aarch64;
 
-#[cfg(feature = "bsp_rpi3")]
+#[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
 pub use aarch64::*;

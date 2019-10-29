@@ -7,14 +7,14 @@
 
 require_relative 'helpers/tutorial_folders.rb'
 
-def make_all
+def make_all(bsp = 'rpi3')
     crates = tutorial_folders
 
     crates.each do |x|
         x = File.dirname(x)
         puts "\n\n" + x.to_s + "\n\n"
         Dir.chdir(x) do
-            unless system('make')
+            unless system("BSP=#{bsp} make")
                 puts "\n\nBuild failed!"
                 exit(1) # Exit with error code
             end
@@ -22,4 +22,4 @@ def make_all
     end
 end
 
-make_all if $PROGRAM_NAME == __FILE__
+make_all(ARGV[0]) if $PROGRAM_NAME == __FILE__

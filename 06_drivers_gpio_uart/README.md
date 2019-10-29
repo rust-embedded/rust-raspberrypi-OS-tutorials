@@ -80,11 +80,12 @@ sudo screen /dev/ttyUSB0 115200
 diff -uNr 05_safe_globals/Cargo.toml 06_drivers_gpio_uart/Cargo.toml
 --- 05_safe_globals/Cargo.toml
 +++ 06_drivers_gpio_uart/Cargo.toml
-@@ -10,10 +10,12 @@
+@@ -10,11 +10,12 @@
  # The features section is used to select the target board.
  [features]
  default = []
 -bsp_rpi3 = ["cortex-a"]
+-bsp_rpi4 = ["cortex-a"]
 +bsp_rpi3 = ["cortex-a", "register"]
 +bsp_rpi4 = ["cortex-a", "register"]
 
@@ -94,40 +95,6 @@ diff -uNr 05_safe_globals/Cargo.toml 06_drivers_gpio_uart/Cargo.toml
  # Optional dependencies
  cortex-a = { version = "2.*", optional = true }
 +register = { version = "0.3.*", optional = true }
-
-diff -uNr 05_safe_globals/Makefile 06_drivers_gpio_uart/Makefile
---- 05_safe_globals/Makefile
-+++ 06_drivers_gpio_uart/Makefile
-@@ -16,6 +16,14 @@
- 	QEMU_MISC_ARGS = -serial stdio
- 	LINKER_FILE = src/bsp/rpi/link.ld
- 	RUSTC_MISC_ARGS = -C target-cpu=cortex-a53
-+else ifeq ($(BSP),rpi4)
-+	TARGET = aarch64-unknown-none-softfloat
-+	OUTPUT = kernel8.img
-+#	QEMU_BINARY = qemu-system-aarch64
-+#	QEMU_MACHINE_TYPE =
-+#	QEMU_MISC_ARGS = -serial stdio
-+	LINKER_FILE = src/bsp/rpi/link.ld
-+	RUSTC_MISC_ARGS = -C target-cpu=cortex-a72
- endif
-
- SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) $(wildcard **/*.ld)
-@@ -56,9 +64,14 @@
- 	cargo xdoc --target=$(TARGET) --features bsp_$(BSP) --document-private-items
- 	xdg-open target/$(TARGET)/doc/kernel/index.html
-
-+ifeq ($(QEMU_MACHINE_TYPE),)
-+qemu:
-+	@echo "This board is not yet supported for QEMU."
-+else
- qemu: all
- 	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(CONTAINER_UTILS) \
- 	$(DOCKER_EXEC_QEMU) $(QEMU_MISC_ARGS)
-+endif
-
- clippy:
- 	cargo xclippy --target=$(TARGET) --features bsp_$(BSP)
 
 diff -uNr 05_safe_globals/src/arch/aarch64.rs 06_drivers_gpio_uart/src/arch/aarch64.rs
 --- 05_safe_globals/src/arch/aarch64.rs
@@ -148,21 +115,6 @@ diff -uNr 05_safe_globals/src/arch/aarch64.rs 06_drivers_gpio_uart/src/arch/aarc
  /// Pause execution on the calling CPU core.
  #[inline(always)]
  pub fn wait_forever() -> ! {
-
-diff -uNr 05_safe_globals/src/arch.rs 06_drivers_gpio_uart/src/arch.rs
---- 05_safe_globals/src/arch.rs
-+++ 06_drivers_gpio_uart/src/arch.rs
-@@ -4,8 +4,8 @@
-
- //! Conditional exporting of processor architecture code.
-
--#[cfg(feature = "bsp_rpi3")]
-+#[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
- mod aarch64;
-
--#[cfg(feature = "bsp_rpi3")]
-+#[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
- pub use aarch64::*;
 
 diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_gpio.rs 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_gpio.rs
 --- 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_gpio.rs
@@ -849,19 +801,15 @@ diff -uNr 05_safe_globals/src/bsp/rpi.rs 06_drivers_gpio_uart/src/bsp/rpi.rs
 diff -uNr 05_safe_globals/src/bsp.rs 06_drivers_gpio_uart/src/bsp.rs
 --- 05_safe_globals/src/bsp.rs
 +++ 06_drivers_gpio_uart/src/bsp.rs
-@@ -4,8 +4,10 @@
+@@ -4,6 +4,8 @@
 
  //! Conditional exporting of Board Support Packages.
 
--#[cfg(feature = "bsp_rpi3")]
 +mod driver;
 +
-+#[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
+ #[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
  mod rpi;
 
--#[cfg(feature = "bsp_rpi3")]
-+#[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
- pub use rpi::*;
 
 diff -uNr 05_safe_globals/src/interface.rs 06_drivers_gpio_uart/src/interface.rs
 --- 05_safe_globals/src/interface.rs

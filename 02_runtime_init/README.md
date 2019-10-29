@@ -22,8 +22,8 @@ Check out `make qemu` again to see the additional code run.
 diff -uNr 01_wait_forever/Cargo.toml 02_runtime_init/Cargo.toml
 --- 01_wait_forever/Cargo.toml
 +++ 02_runtime_init/Cargo.toml
-@@ -13,4 +13,4 @@
- bsp_rpi3 = []
+@@ -14,4 +14,4 @@
+ bsp_rpi4 = []
 
  [dependencies]
 -

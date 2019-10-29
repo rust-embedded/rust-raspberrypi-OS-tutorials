@@ -13,12 +13,14 @@ which provides zero-overhead abstractions and wraps the `unsafe` parts.
 diff -uNr 03_hacky_hello_world/Cargo.toml 04_zero_overhead_abstraction/Cargo.toml
 --- 03_hacky_hello_world/Cargo.toml
 +++ 04_zero_overhead_abstraction/Cargo.toml
-@@ -10,7 +10,10 @@
+@@ -10,8 +10,11 @@
  # The features section is used to select the target board.
  [features]
  default = []
 -bsp_rpi3 = []
+-bsp_rpi4 = []
 +bsp_rpi3 = ["cortex-a"]
++bsp_rpi4 = ["cortex-a"]
 
  [dependencies]
  r0 = "0.2.*"

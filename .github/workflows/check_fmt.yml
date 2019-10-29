@@ -32,6 +32,6 @@ jobs:
           rustup self update
           rustup toolchain install nightly --component rustfmt
           rustup default nightly
-    - name: Make all
+    - name: Run cargo fmt
       run: |
         ruby utils/fmt_all.rb --check

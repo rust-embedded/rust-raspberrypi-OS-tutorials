@@ -11,6 +11,7 @@ sysroot_path = "../xbuild_sysroot"
 [features]
 default = []
 bsp_rpi3 = []
+bsp_rpi4 = []
 
 [dependencies]
 r0 = "0.2.*"

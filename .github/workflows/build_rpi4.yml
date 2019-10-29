@@ -1,4 +1,4 @@
-name: BSP-RPi3
+name: BSP-RPi4
 
 on:
   push:
@@ -37,4 +37,4 @@ jobs:
           cargo install cargo-xbuild cargo-binutils
     - name: Make all
       run: |
-        ruby utils/make_all.rb rpi3
+        ruby utils/make_all.rb rpi4
