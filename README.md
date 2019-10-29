@@ -1,5 +1,7 @@
 # Operating System development tutorials in Rust on the Raspberry Pi
 
+![](https://github.com/rust-embedded/rust-raspi3-OS-tutorials/workflows/BSP-RPi3/badge.svg) ![](https://github.com/rust-embedded/rust-raspi3-OS-tutorials/workflows/BSP-RPi4/badge.svg)
+
 ## Notice
 
 **This is a work-in-progress rewrite, started on September 2019.**
