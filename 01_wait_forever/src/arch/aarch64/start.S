@@ -8,4 +8,4 @@
 
 _start:
 1:  wfe         // Wait for event
-    b       1b  // In case an event happend, jump back to 1
+    b       1b  // In case an event happened, jump back to 1

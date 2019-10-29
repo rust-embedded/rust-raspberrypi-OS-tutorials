@@ -37,12 +37,12 @@ diff -uNr 01_wait_forever/src/arch/aarch64/start.S 02_runtime_init/src/arch/aarc
 
  _start:
 -1:  wfe         // Wait for event
--    b       1b  // In case an event happend, jump back to 1
+-    b       1b  // In case an event happened, jump back to 1
 +    mrs     x1, mpidr_el1   // Read Multiprocessor Affinity Register
 +    and     x1, x1, #3      // Clear all bits except [1:0], which hold core id
 +    cbz     x1, 2f          // Jump to label 2 if we are core 0
 +1:  wfe                     // Wait for event
-+    b       1b              // In case an event happend, jump back to 1
++    b       1b              // In case an event happened, jump back to 1
 +2:                          // If we are here, we are core0
 +    ldr     x1, =_start     // Load address of function "_start()"
 +    mov     sp, x1          // Set start of stack to before our code, aka first

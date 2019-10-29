@@ -13,7 +13,7 @@ const NS_PER_S: u64 = 1_000_000_000;
 pub struct Timer;
 
 impl interface::time::Timer for Timer {
-    fn resoultion(&self) -> Duration {
+    fn resolution(&self) -> Duration {
         Duration::from_nanos(NS_PER_S / (CNTFRQ_EL0.get() as u64))
     }
 

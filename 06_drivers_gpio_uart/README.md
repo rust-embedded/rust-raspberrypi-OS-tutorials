@@ -434,7 +434,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gp
 +        ]
 +    ],
 +
-+    /// Interupt Clear Register
++    /// Interrupt Clear Register
 +    ICR [
 +        /// Meta field for all pending interrupts
 +        ALL OFFSET(0) NUMBITS(11) []

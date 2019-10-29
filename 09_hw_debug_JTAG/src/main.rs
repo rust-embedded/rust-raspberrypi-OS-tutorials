@@ -70,7 +70,7 @@ fn kernel_main() -> ! {
     println!("Booting on: {}", bsp::board_name());
     println!(
         "Architectural timer resolution: {} ns",
-        arch::timer().resoultion().as_nanos()
+        arch::timer().resolution().as_nanos()
     );
 
     println!("Drivers loaded:");

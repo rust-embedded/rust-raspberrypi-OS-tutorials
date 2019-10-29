@@ -116,7 +116,7 @@ diff -uNr 07_uart_chainloader/src/arch/aarch64/time.rs 08_timestamps/src/arch/aa
 +pub struct Timer;
 +
 +impl interface::time::Timer for Timer {
-+    fn resoultion(&self) -> Duration {
++    fn resolution(&self) -> Duration {
 +        Duration::from_nanos(NS_PER_S / (CNTFRQ_EL0.get() as u64))
 +    }
 +
@@ -309,7 +309,7 @@ diff -uNr 07_uart_chainloader/src/interface.rs 08_timestamps/src/interface.rs
 +    /// Timer functions.
 +    pub trait Timer {
 +        /// The timer's resolution.
-+        fn resoultion(&self) -> Duration;
++        fn resolution(&self) -> Duration;
 +
 +        /// The uptime since power-on of the device.
 +        ///
@@ -382,7 +382,7 @@ diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
 +    println!("Booting on: {}", bsp::board_name());
 +    println!(
 +        "Architectural timer resolution: {} ns",
-+        arch::timer().resoultion().as_nanos()
++        arch::timer().resolution().as_nanos()
 +    );
 +
 +    println!("Drivers loaded:");

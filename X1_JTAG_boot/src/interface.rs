@@ -124,7 +124,7 @@ pub mod time {
     /// Timer functions.
     pub trait Timer {
         /// The timer's resolution.
-        fn resoultion(&self) -> Duration;
+        fn resolution(&self) -> Duration;
 
         /// The uptime since power-on of the device.
         ///
