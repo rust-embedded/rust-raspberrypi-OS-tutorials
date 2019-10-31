@@ -156,7 +156,7 @@ diff -uNr 06_drivers_gpio_uart/src/arch/aarch64.rs 07_uart_chainloader/src/arch/
 -        crate::runtime_init::init()
 +        crate::relocate::relocate_self::<u64>()
      } else {
-         // if not core0, infinitely wait for events
+         // If not core0, infinitely wait for events.
          wait_forever()
 
 diff -uNr 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 07_uart_chainloader/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs

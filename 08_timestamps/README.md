@@ -200,7 +200,7 @@ diff -uNr 07_uart_chainloader/src/arch/aarch64.rs 08_timestamps/src/arch/aarch64
 -        crate::relocate::relocate_self::<u64>()
 +        crate::runtime_init::init()
      } else {
-         // if not core0, infinitely wait for events
+         // If not core0, infinitely wait for events.
          wait_forever()
 @@ -30,6 +31,12 @@
  }

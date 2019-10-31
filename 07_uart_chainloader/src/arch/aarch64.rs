@@ -24,7 +24,7 @@ pub unsafe extern "C" fn _start() -> ! {
         SP.set(bsp::BOOT_CORE_STACK_START);
         crate::relocate::relocate_self::<u64>()
     } else {
-        // if not core0, infinitely wait for events
+        // If not core0, infinitely wait for events.
         wait_forever()
     }
 }

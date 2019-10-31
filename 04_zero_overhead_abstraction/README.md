@@ -80,7 +80,7 @@ diff -uNr 03_hacky_hello_world/src/arch/aarch64.rs 04_zero_overhead_abstraction/
 +        SP.set(bsp::BOOT_CORE_STACK_START);
 +        crate::runtime_init::init()
 +    } else {
-+        // if not core0, infinitely wait for events
++        // If not core0, infinitely wait for events.
 +        wait_forever()
 +    }
 +}
