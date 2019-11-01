@@ -1,0 +1,406 @@
+# Tutorial 10 - Privilege Level
+
+## tl;dr
+
+In early boot code, we transition from the `Hypervisor` privilege level (`EL2` in AArch64) to the
+`Kernel` (`EL1`) privilege level.
+
+## Introduction
+
+Application-grade CPUs have so-called `privilege levels`, which have different purposes:
+
+| Typically used for | AArch64 | RISC-V | x86 |
+| ------------- | ------------- | ------------- | ------------- |
+| Userspace applications | EL0 | U/VU | Ring 3 |
+| OS Kernel | EL1 | S/VS | Ring 0 |
+| Hypervisor | EL2 | HS | Ring -1 |
+| Low-Level Firmware | EL3 | M | |
+
+`EL` in AArch64 stands for `Exception Level`. If you want more information regarding the other
+architectures, please have a look at the following links:
+- [x86 privilege rings](https://en.wikipedia.org/wiki/Protection_ring).
+- [RISC-V privilege modes](https://content.riscv.org/wp-content/uploads/2017/12/Tue0942-riscv-hypervisor-waterman.pdf).
+
+At this point, I strongly recommend that you glimpse over `Chapter 3` of the [Programmer’s Guide for
+ARMv8-A](http://infocenter.arm.com/help/topic/com.arm.doc.den0024a/DEN0024A_v8_architecture_PG.pdf)
+before you continue. It gives a concise overview about the topic.
+
+## Scope of this tutorial
+
+If you set up your SD Card exactly like mentioned in [tutorial 06], the Rpi will always start
+executing in `EL2`. Since we are writing a traditional `Kernel`, we have to transition into the more
+appropriate `EL1`.
+
+[tutorial 06]: https://github.com/rust-embedded/rust-raspi3-OS-tutorials/tree/master/06_drivers_gpio_uart#boot-it-from-sd-card
+
+## Checking for EL2 in the entrypoint
+
+First of all, we need to ensure that we actually execute in `EL2` before we can call respective code
+to transition to `EL1`:
+
+```rust
+pub unsafe extern "C" fn _start() -> ! {
+    const CORE_MASK: u64 = 0x3;
+
+    // Expect the boot core to start in EL2.
+    if (bsp::BOOT_CORE_ID == MPIDR_EL1.get() & CORE_MASK)
+        && (CurrentEL.get() == CurrentEL::EL::EL2.value)
+    {
+        el2_to_el1_transition()
+    } else {
+        // If not core0, infinitely wait for events.
+        wait_forever()
+    }
+}
+```
+
+If this is the case, we continue with preparing the `EL2` -> `EL1` transition in
+`el2_to_el1_transition()`.
+
+## Transition preparation
+
+Since `EL2` is more privileged than `EL1`, it has control over various processor features and can
+allow or disallow `EL1` code to use them. One such example is access to timer and counter registers.
+We are already using them since [tutorial 08](../08_timestamps/), so of course we want to keep them.
+Therefore we set the respective flags in the [Counter-timer Hypervisor Control register] and
+additionally set the virtual offset to zero so that we get the real physical value everytime:
+
+[Counter-timer Hypervisor Control register]: https://docs.rs/cortex-a/2.4.0/src/cortex_a/regs/cnthctl_el2.rs.html
+
+```rust
+// Enable timer counter registers for EL1.
+CNTHCTL_EL2.write(CNTHCTL_EL2::EL1PCEN::SET + CNTHCTL_EL2::EL1PCTEN::SET);
+
+// No offset for reading the counters.
+CNTVOFF_EL2.set(0);
+```
+
+Next, we configure the [Hypervisor Configuration Register] such that `EL1` should actually run in
+`AArch64` mode, and not in `AArch32`, which would also be possible.
+
+[Hypervisor Configuration Register]: https://docs.rs/cortex-a/2.4.0/src/cortex_a/regs/hcr_el2.rs.html
+
+```rust
+// Set EL1 execution state to AArch64.
+HCR_EL2.write(HCR_EL2::RW::EL1IsAarch64);
+```
+
+## Returning from an exception that never happened
+
+There is actually only one way to transition from a higher EL to a lower EL, which is by way of
+executing the [ERET] instruction.
+
+[ERET]: https://docs.rs/cortex-a/2.4.0/src/cortex_a/asm.rs.html#49-62
+
+This instruction will copy the contents of the [Saved Program Status Register - EL2] to `Current
+Program Status Register - EL1` and jump to the instruction address that is stored in the [Exception
+Link Register - EL2].
+
+This is basically the reverse of what is happening when an exception is taken. You'll learn about it
+in an upcoming tutorial.
+
+[Saved Program Status Register - EL2]: https://docs.rs/cortex-a/2.4.0/src/cortex_a/regs/spsr_el2.rs.html
+[Exception Link Register - EL2]: https://docs.rs/cortex-a/2.4.0/src/cortex_a/regs/elr_el2.rs.html
+
+```rust
+// Set up a simulated exception return.
+//
+// First, fake a saved program status, where all interrupts were masked and SP_EL1 was used as a
+// stack pointer.
+SPSR_EL2.write(
+    SPSR_EL2::D::Masked
+        + SPSR_EL2::A::Masked
+        + SPSR_EL2::I::Masked
+        + SPSR_EL2::F::Masked
+        + SPSR_EL2::M::EL1h,
+);
+
+// Second, let the link register point to init().
+ELR_EL2.set(crate::runtime_init::init as *const () as u64);
+```
+
+As you can see, we are populating `ELR_EL2` with the address of the [init()] function that we
+earlier used to call directly from the entrypoint.
+
+Finally, we set the stack pointer for `SP_EL1` and call `ERET`:
+
+[init()]: src/runtime_init.rs
+
+```rust
+// Set up SP_EL1 (stack pointer), which will be used by EL1 once we "return" to it.
+SP_EL1.set(bsp::BOOT_CORE_STACK_START);
+
+// Use `eret` to "return" to EL1. This will result in execution of `reset()` in EL1.
+asm::eret()
+```
+
+## Are we stackless?
+
+We just wrote a big inline rust function, `el2_to_el1_transition()`, that is executed in a context
+where we do not have a stack yet. We should double-check the generated machine code:
+
+```console
+make objdump
+[...]
+Disassembly of section .text:
+
+0000000000080000 _start:
+   80000: a8 00 38 d5                   mrs     x8, MPIDR_EL1
+   80004: 1f 05 40 f2                   tst     x8, #0x3
+   80008: 81 00 00 54                   b.ne    #0x10 <_start+0x18>
+   8000c: 48 42 38 d5                   mrs     x8, CurrentEL
+   80010: 1f 21 00 71                   cmp     w8, #0x8
+   80014: 60 00 00 54                   b.eq    #0xc <_start+0x20>
+   80018: 5f 20 03 d5                   wfe
+   8001c: ff ff ff 17                   b       #-0x4 <_start+0x18>
+   80020: e8 03 1f aa                   mov     x8, xzr
+   80024: 69 00 80 52                   mov     w9, #0x3
+   80028: 09 e1 1c d5                   msr     CNTHCTL_EL2, x9
+   8002c: 68 e0 1c d5                   msr     CNTVOFF_EL2, x8
+   80030: 08 00 00 90                   adrp    x8, #0x0
+   80034: 0a 00 b0 52                   mov     w10, #-0x80000000
+   80038: ab 78 80 52                   mov     w11, #0x3c5
+   8003c: 0c 01 a0 52                   mov     w12, #0x80000
+   80040: 0a 11 1c d5                   msr     HCR_EL2, x10
+   80044: 0b 40 1c d5                   msr     SPSR_EL2, x11
+   80048: 08 91 2f 91                   add     x8, x8, #0xbe4
+   8004c: 28 40 1c d5                   msr     ELR_EL2, x8
+   80050: 0c 41 1c d5                   msr     SP_EL1, x12
+   80054: e0 03 9f d6                   eret
+```
+
+Looks good! Thanks zero-overhead abstractions in the
+[cortex-a](https://github.com/rust-embedded/cortex-a) crate! :heart_eyes:
+
+## Testing
+
+In `main.rs`, we additionally inspect if the mask bits in `SPSR_EL2` made it to `EL1` as well:
+
+```console
+make chainbot
+[...]
+### Listening on /dev/ttyUSB0
+ __  __ _      _ _                 _
+|  \/  (_)_ _ (_) |   ___  __ _ __| |
+| |\/| | | ' \| | |__/ _ \/ _` / _` |
+|_|  |_|_|_||_|_|____\___/\__,_\__,_|
+
+           Raspberry Pi 3
+
+[ML] Requesting binary
+### sending kernel kernel8.img [16480 byte]
+### finished sending
+[ML] Loaded! Executing the payload now
+
+[    1.459973] Booting on: Raspberry Pi 3
+[    1.462256] Current privilege level: EL1
+[    1.466163] Exception handling state:
+[    1.469810]       Debug:  Masked
+[    1.473023]       SError: Masked
+[    1.476235]       IRQ:    Masked
+[    1.479447]       FIQ:    Masked
+[    1.482661] Architectural timer resolution: 52 ns
+[    1.487349] Drivers loaded:
+[    1.490127]       1. GPIO
+[    1.492731]       2. PL011Uart
+[    1.495770] Timer test, spinning for 1 second
+[    2.500114] Echoing input now
+```
+
+## Diff to previous
+```diff
+
+diff -uNr 09_hw_debug_JTAG/src/arch/aarch64/exception.rs 10_privilege_level/src/arch/aarch64/exception.rs
+--- 09_hw_debug_JTAG/src/arch/aarch64/exception.rs
++++ 10_privilege_level/src/arch/aarch64/exception.rs
+@@ -0,0 +1,44 @@
++// SPDX-License-Identifier: MIT
++//
++// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
++
++//! Exception handling.
++
++use cortex_a::regs::*;
++
++pub trait DaifField {
++    fn daif_field() -> register::Field<u32, DAIF::Register>;
++}
++
++pub struct Debug;
++pub struct SError;
++pub struct IRQ;
++pub struct FIQ;
++
++impl DaifField for Debug {
++    fn daif_field() -> register::Field<u32, DAIF::Register> {
++        DAIF::D
++    }
++}
++
++impl DaifField for SError {
++    fn daif_field() -> register::Field<u32, DAIF::Register> {
++        DAIF::A
++    }
++}
++
++impl DaifField for IRQ {
++    fn daif_field() -> register::Field<u32, DAIF::Register> {
++        DAIF::I
++    }
++}
++
++impl DaifField for FIQ {
++    fn daif_field() -> register::Field<u32, DAIF::Register> {
++        DAIF::F
++    }
++}
++
++pub fn is_masked<T: DaifField>() -> bool {
++    DAIF.is_set(T::daif_field())
++}
+
+diff -uNr 09_hw_debug_JTAG/src/arch/aarch64.rs 10_privilege_level/src/arch/aarch64.rs
+--- 09_hw_debug_JTAG/src/arch/aarch64.rs
++++ 10_privilege_level/src/arch/aarch64.rs
+@@ -4,6 +4,7 @@
+
+ //! AArch64.
+
++mod exception;
+ pub mod sync;
+ mod time;
+
+@@ -21,15 +22,51 @@
+ pub unsafe extern "C" fn _start() -> ! {
+     const CORE_MASK: u64 = 0x3;
+
+-    if bsp::BOOT_CORE_ID == MPIDR_EL1.get() & CORE_MASK {
+-        SP.set(bsp::BOOT_CORE_STACK_START);
+-        crate::runtime_init::init()
++    // Expect the boot core to start in EL2.
++    if (bsp::BOOT_CORE_ID == MPIDR_EL1.get() & CORE_MASK)
++        && (CurrentEL.get() == CurrentEL::EL::EL2.value)
++    {
++        el2_to_el1_transition()
+     } else {
+         // If not core0, infinitely wait for events.
+         wait_forever()
+     }
+ }
+
++/// Transition from EL2 to EL1.
++#[inline(always)]
++fn el2_to_el1_transition() -> ! {
++    // Enable timer counter registers for EL1.
++    CNTHCTL_EL2.write(CNTHCTL_EL2::EL1PCEN::SET + CNTHCTL_EL2::EL1PCTEN::SET);
++
++    // No offset for reading the counters.
++    CNTVOFF_EL2.set(0);
++
++    // Set EL1 execution state to AArch64.
++    HCR_EL2.write(HCR_EL2::RW::EL1IsAarch64);
++
++    // Set up a simulated exception return.
++    //
++    // First, fake a saved program status, where all interrupts were masked and SP_EL1 was used as a
++    // stack pointer.
++    SPSR_EL2.write(
++        SPSR_EL2::D::Masked
++            + SPSR_EL2::A::Masked
++            + SPSR_EL2::I::Masked
++            + SPSR_EL2::F::Masked
++            + SPSR_EL2::M::EL1h,
++    );
++
++    // Second, let the link register point to init().
++    ELR_EL2.set(crate::runtime_init::init as *const () as u64);
++
++    // Set up SP_EL1 (stack pointer), which will be used by EL1 once we "return" to it.
++    SP_EL1.set(bsp::BOOT_CORE_STACK_START);
++
++    // Use `eret` to "return" to EL1. This will result in execution of `reset()` in EL1.
++    asm::eret()
++}
++
+ //--------------------------------------------------------------------------------------------------
+ // Global instances
+ //--------------------------------------------------------------------------------------------------
+@@ -61,3 +98,36 @@
+         asm::wfe()
+     }
+ }
++
++/// Information about the HW state.
++pub mod state {
++    use cortex_a::regs::*;
++
++    /// The current privilege level.
++    pub fn current_privilege_level() -> &'static str {
++        let el = CurrentEL.read_as_enum(CurrentEL::EL);
++        match el {
++            Some(CurrentEL::EL::Value::EL2) => "EL2",
++            Some(CurrentEL::EL::Value::EL1) => "EL1",
++            _ => "Unknown",
++        }
++    }
++
++    #[rustfmt::skip]
++    pub fn print_exception_state() {
++        use super::{
++            exception,
++            exception::{Debug, SError, FIQ, IRQ},
++        };
++        use crate::println;
++
++        let to_mask_str = |x: bool| -> &'static str {
++            if x { "Masked" } else { "Unmasked" }
++        };
++
++        println!("      Debug:  {}", to_mask_str(exception::is_masked::<Debug>()));
++        println!("      SError: {}", to_mask_str(exception::is_masked::<SError>()));
++        println!("      IRQ:    {}", to_mask_str(exception::is_masked::<IRQ>()));
++        println!("      FIQ:    {}", to_mask_str(exception::is_masked::<FIQ>()));
++    }
++}
+
+diff -uNr 09_hw_debug_JTAG/src/main.rs 10_privilege_level/src/main.rs
+--- 09_hw_debug_JTAG/src/main.rs
++++ 10_privilege_level/src/main.rs
+@@ -65,9 +65,17 @@
+ /// The main function running after the early init.
+ fn kernel_main() -> ! {
+     use core::time::Duration;
+-    use interface::time::Timer;
++    use interface::{console::All, time::Timer};
+
+     println!("Booting on: {}", bsp::board_name());
++
++    println!(
++        "Current privilege level: {}",
++        arch::state::current_privilege_level()
++    );
++    println!("Exception handling state:");
++    arch::state::print_exception_state();
++
+     println!(
+         "Architectural timer resolution: {} ns",
+         arch::timer().resolution().as_nanos()
+@@ -78,11 +86,12 @@
+         println!("      {}. {}", i + 1, driver.compatible());
+     }
+
+-    // Test a failing timer case.
+-    arch::timer().spin_for(Duration::from_nanos(1));
++    println!("Timer test, spinning for 1 second");
++    arch::timer().spin_for(Duration::from_secs(1));
+
++    println!("Echoing input now");
+     loop {
+-        println!("Spinning for 1 second");
+-        arch::timer().spin_for(Duration::from_secs(1));
++        let c = bsp::console().read_char();
++        bsp::console().write_char(c);
+     }
+ }
+
+```
