@@ -21,3 +21,4 @@ clean_all
 make_all
 diff_all
 clean_all
+system('~/bin/misspell .')
