@@ -34,8 +34,13 @@ pub unsafe extern "C" fn _start() -> ! {
 }
 
 /// Transition from EL2 to EL1.
+///
+/// # Safety
+///
+/// - The HW state of EL1 must be prepared in a sound way.
+/// - Exception return from EL2 must must continue execution in EL1 with ´runtime_init::init()`.
 #[inline(always)]
-fn el2_to_el1_transition() -> ! {
+unsafe fn el2_to_el1_transition() -> ! {
     // Enable timer counter registers for EL1.
     CNTHCTL_EL2.write(CNTHCTL_EL2::EL1PCEN::SET + CNTHCTL_EL2::EL1PCTEN::SET);
 

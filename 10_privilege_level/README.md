@@ -270,7 +270,7 @@ diff -uNr 09_hw_debug_JTAG/src/arch/aarch64.rs 10_privilege_level/src/arch/aarch
  pub mod sync;
  mod time;
 
-@@ -21,15 +22,51 @@
+@@ -21,15 +22,56 @@
  pub unsafe extern "C" fn _start() -> ! {
      const CORE_MASK: u64 = 0x3;
 
@@ -289,8 +289,13 @@ diff -uNr 09_hw_debug_JTAG/src/arch/aarch64.rs 10_privilege_level/src/arch/aarch
  }
 
 +/// Transition from EL2 to EL1.
++///
++/// # Safety
++///
++/// - The HW state of EL1 must be prepared in a sound way.
++/// - Exception return from EL2 must must continue execution in EL1 with ´runtime_init::init()`.
 +#[inline(always)]
-+fn el2_to_el1_transition() -> ! {
++unsafe fn el2_to_el1_transition() -> ! {
 +    // Enable timer counter registers for EL1.
 +    CNTHCTL_EL2.write(CNTHCTL_EL2::EL1PCEN::SET + CNTHCTL_EL2::EL1PCTEN::SET);
 +
@@ -325,7 +330,7 @@ diff -uNr 09_hw_debug_JTAG/src/arch/aarch64.rs 10_privilege_level/src/arch/aarch
  //--------------------------------------------------------------------------------------------------
  // Global instances
  //--------------------------------------------------------------------------------------------------
-@@ -61,3 +98,36 @@
+@@ -61,3 +103,36 @@
          asm::wfe()
      }
  }
