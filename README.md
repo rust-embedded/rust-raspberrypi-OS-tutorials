@@ -9,8 +9,7 @@
 You can find the original version of the tutorials
 [here](https://github.com/rust-embedded/rust-raspi3-OS-tutorials/tree/original_version).
 They are worth checking out for some advanced features that are not yet
-rewritten, like _virtual memory_ or _exception handling_. They will be ported
-over soon, though (if time permits).
+rewritten, like _exception handling_. They will be ported over soon, though.
 
 Some info on the rewrite and in general:
 - I will first add
@@ -30,8 +29,8 @@ _Cheers,
 [Andre](https://github.com/andre-richter)_
 
 
- [Visual Studio Code]: https://code.visualstudio.com
- [Rust Language Server]: https://github.com/rust-lang/rls
+[Visual Studio Code]: https://code.visualstudio.com
+[Rust Language Server]: https://github.com/rust-lang/rls
 
 ## Introduction
 
