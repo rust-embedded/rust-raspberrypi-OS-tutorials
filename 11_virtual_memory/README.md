@@ -266,7 +266,7 @@ make chainbot
 diff -uNr 10_privilege_level/src/arch/aarch64/mmu.rs 11_virtual_memory/src/arch/aarch64/mmu.rs
 --- 10_privilege_level/src/arch/aarch64/mmu.rs
 +++ 11_virtual_memory/src/arch/aarch64/mmu.rs
-@@ -0,0 +1,292 @@
+@@ -0,0 +1,309 @@
 +// SPDX-License-Identifier: MIT
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
@@ -499,21 +499,12 @@ diff -uNr 10_privilege_level/src/arch/aarch64/mmu.rs 11_virtual_memory/src/arch/
 +    );
 +}
 +
-+/// Compile the page tables from the `BSP`-supplied `virt_mem_layout()`.
++/// Iterates over all static page table entries and fills them at once.
 +///
 +/// # Safety
 +///
-+/// - User must ensure that the hardware supports the paremeters being set here.
-+pub unsafe fn init() -> Result<(), &'static str> {
-+    // Fail early if translation granule is not supported. Both RPis support it, though.
-+    if !ID_AA64MMFR0_EL1.matches_all(ID_AA64MMFR0_EL1::TGran64::Supported) {
-+        return Err("MMU does not support 64 KiB translation granule");
-+    }
-+
-+    // Prepare the memory attribute indirection register.
-+    set_up_mair();
-+
-+    // Iterate over all page table entries and fill them at once.
++/// - Modifies a `static mut`. Ensure it only happens from here.
++unsafe fn populate_pt_entries() -> Result<(), &'static str> {
 +    for (l2_nr, l2_entry) in TABLES.lvl2.iter_mut().enumerate() {
 +        *l2_entry = TableDescriptor::new(TABLES.lvl3[l2_nr].base_addr_usize()).into();
 +
@@ -530,10 +521,11 @@ diff -uNr 10_privilege_level/src/arch/aarch64/mmu.rs 11_virtual_memory/src/arch/
 +        }
 +    }
 +
-+    // Set the "Translation Table Base Register".
-+    TTBR0_EL1.set_baddr(TABLES.lvl2.base_addr_u64());
++    Ok(())
++}
 +
-+    // Configure various settings of stage 1 of the EL1 translation regime.
++/// Configure various settings of stage 1 of the EL1 translation regime.
++fn configure_translation_control() {
 +    let ips = ID_AA64MMFR0_EL1.read(ID_AA64MMFR0_EL1::PARange);
 +    TCR_EL1.write(
 +        TCR_EL1::TBI0::Ignored
@@ -545,6 +537,31 @@ diff -uNr 10_privilege_level/src/arch/aarch64/mmu.rs 11_virtual_memory/src/arch/
 +            + TCR_EL1::EPD0::EnableTTBR0Walks
 +            + TCR_EL1::T0SZ.val(32), // TTBR0 spans 4 GiB total.
 +    );
++}
++
++/// Compile the page tables from the `BSP`-supplied `virt_mem_layout()`.
++///
++/// # Safety
++///
++/// - User must ensure that the hardware supports the paremeters being set here.
++pub unsafe fn init() -> Result<(), &'static str> {
++    // Fail early if translation granule is not supported. Both RPis support it, though.
++    if !ID_AA64MMFR0_EL1.matches_all(ID_AA64MMFR0_EL1::TGran64::Supported) {
++        return Err("MMU does not support 64 KiB translation granule");
++    }
++
++    // Prepare the memory attribute indirection register.
++    set_up_mair();
++
++    // Populate page tables.
++    if let Err(string) = populate_pt_entries() {
++        return Err(string);
++    }
++
++    // Set the "Translation Table Base Register".
++    TTBR0_EL1.set_baddr(TABLES.lvl2.base_addr_u64());
++
++    configure_translation_control();
 +
 +    // Switch the MMU on.
 +    //
