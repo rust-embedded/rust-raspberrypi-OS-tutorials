@@ -21,7 +21,10 @@ def fmt_all(check = false)
 
         Dir.chdir(x) do
             puts "Format #{x}"
-            system("cargo fmt #{args}")
+            unless system("cargo fmt #{args}")
+                puts "\n\nFmt check failed!"
+                exit(1) # Exit with error code
+            end
         end
     end
 end

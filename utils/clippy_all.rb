@@ -15,7 +15,10 @@ def clippy_all
 
         Dir.chdir(x) do
             puts "Clippy: #{x}"
-            system('make clippy')
+            unless system('make clippy')
+                puts "\n\nClippy failed!"
+                exit(1) # Exit with error code
+            end
         end
     end
 end
