@@ -37,10 +37,10 @@ _Cheers,
 The target audience is hobby OS developers who are new to ARM's 64 bit [ARMv8-A
 architecture](https://developer.arm.com/products/architecture/cpu-architecture/a-profile/docs).
 The tutorials will give a guided, step-by-step tour of how to write a
-[monolithic] Operating System `kernel` from scratch. They cover implementation
-of common Operating Systems tasks, like writing to the serial console, setting
-up virtual memory and exception handling. All while leveraging Rust's unique
-features to provide for safety and speed.
+[monolithic] Operating System `kernel` for an `embedded system` from scratch.
+They cover implementation of common Operating Systems tasks, like writing to
+the serial console, setting up virtual memory and exception handling. All while
+leveraging Rust's unique features to provide for safety and speed.
 
 [monolithic]: https://en.wikipedia.org/wiki/Monolithic_kernel
 
