@@ -213,6 +213,12 @@ diff -uNr 02_runtime_init/src/print.rs 03_hacky_hello_world/src/print.rs
 +use crate::{bsp, interface};
 +use core::fmt;
 +
++pub fn _print(args: fmt::Arguments) {
++    use interface::console::Write;
++
++    bsp::console().write_fmt(args).unwrap();
++}
++
 +/// Prints without a newline.
 +///
 +/// Carbon copy from https://doc.rust-lang.org/src/std/macros.rs.html
@@ -230,12 +236,6 @@ diff -uNr 02_runtime_init/src/print.rs 03_hacky_hello_world/src/print.rs
 +    ($($arg:tt)*) => ({
 +        $crate::print::_print(format_args_nl!($($arg)*));
 +    })
-+}
-+
-+pub fn _print(args: fmt::Arguments) {
-+    use interface::console::Write;
-+
-+    bsp::console().write_fmt(args).unwrap();
 +}
 
 ```

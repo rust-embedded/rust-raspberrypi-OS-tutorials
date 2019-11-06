@@ -231,7 +231,7 @@ diff -uNr 07_uart_chainloader/src/arch/aarch64.rs 08_timestamps/src/arch/aarch64
 diff -uNr 07_uart_chainloader/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 08_timestamps/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
 --- 07_uart_chainloader/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 08_timestamps/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -300,7 +300,14 @@
+@@ -305,7 +305,14 @@
              }
 
              // Read one character.
@@ -283,7 +283,7 @@ diff -uNr 07_uart_chainloader/src/bsp/rpi/link.ld 08_timestamps/src/bsp/rpi/link
 diff -uNr 07_uart_chainloader/src/bsp/rpi.rs 08_timestamps/src/bsp/rpi.rs
 --- 07_uart_chainloader/src/bsp/rpi.rs
 +++ 08_timestamps/src/bsp/rpi.rs
-@@ -12,9 +12,6 @@
+@@ -13,9 +13,6 @@
  pub const BOOT_CORE_ID: u64 = 0;
  pub const BOOT_CORE_STACK_START: u64 = 0x80_000;
 
@@ -337,7 +337,7 @@ diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
  mod runtime_init;
 
  // Conditionally includes the selected `BSP` code.
-@@ -68,50 +64,25 @@
+@@ -66,50 +62,25 @@
 
  /// The main function running after the early init.
  fn kernel_main() -> ! {
@@ -409,7 +409,7 @@ diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
 diff -uNr 07_uart_chainloader/src/print.rs 08_timestamps/src/print.rs
 --- 07_uart_chainloader/src/print.rs
 +++ 08_timestamps/src/print.rs
-@@ -16,13 +16,71 @@
+@@ -22,12 +22,70 @@
  }
 
  /// Prints with a newline.
@@ -484,7 +484,6 @@ diff -uNr 07_uart_chainloader/src/print.rs 08_timestamps/src/print.rs
 +        ));
      })
  }
-
 
 diff -uNr 07_uart_chainloader/src/relocate.rs 08_timestamps/src/relocate.rs
 --- 07_uart_chainloader/src/relocate.rs

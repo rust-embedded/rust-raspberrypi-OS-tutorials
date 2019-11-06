@@ -239,25 +239,24 @@ make chainbot
 ### finished sending
 [ML] Loaded! Executing the payload now
 
-[    5.732854] Booting on: Raspberry Pi 3
-[    5.792441] MMU online
-[    5.793306] Special memory regions:
-[    5.796778]       0x00080000 - 0x0008FFFF |  64 KiB | C   RO PX  | Kernel code and RO data
-[    5.805026]       0x1FFF0000 - 0x1FFFFFFF |  64 KiB | Dev RW PXN | Remapped Device MMIO
-[    5.813014]       0x3F000000 - 0x3FFFFFFF |  16 MiB | Dev RW PXN | Device MMIO
-[    5.820220] Current privilege level: EL1
-[    5.824127] Exception handling state:
-[    5.827774]       Debug:  Masked
-[    5.830986]       SError: Masked
-[    5.834199]       IRQ:    Masked
-[    5.837412]       FIQ:    Masked
-[    5.840624] Architectural timer resolution: 52 ns
-[    5.845312] Drivers loaded:
-[    5.848091]       1. GPIO
-[    5.850695]       2. PL011Uart
-[    5.853734] Timer test, spinning for 1 second
+[    5.791515] Booting on: Raspberry Pi 3
+[    5.793767] MMU online. Special regions:
+[    5.797674]       0x00080000 - 0x0008FFFF |  64 KiB | C   RO PX  | Kernel code and RO data
+[    5.805922]       0x1FFF0000 - 0x1FFFFFFF |  64 KiB | Dev RW PXN | Remapped Device MMIO
+[    5.813910]       0x3F000000 - 0x3FFFFFFF |  16 MiB | Dev RW PXN | Device MMIO
+[    5.821117] Current privilege level: EL1
+[    5.825024] Exception handling state:
+[    5.828670]       Debug:  Masked
+[    5.831883]       SError: Masked
+[    5.835095]       IRQ:    Masked
+[    5.838308]       FIQ:    Masked
+[    5.841520] Architectural timer resolution: 52 ns
+[    5.846209] Drivers loaded:
+[    5.848987]       1. GPIO
+[    5.851592]       2. PL011Uart
+[    5.854630] Timer test, spinning for 1 second
 [     !!!    ] Writing through the remapped UART at 0x1FFF_1000
-[    6.862236] Echoing input now
+[    6.863133] Echoing input now
 ```
 
 ## Diff to previous
@@ -547,7 +546,7 @@ diff -uNr 10_privilege_level/src/arch/aarch64/mmu.rs 11_virtual_memory/src/arch/
 +pub unsafe fn init() -> Result<(), &'static str> {
 +    // Fail early if translation granule is not supported. Both RPis support it, though.
 +    if !ID_AA64MMFR0_EL1.matches_all(ID_AA64MMFR0_EL1::TGran64::Supported) {
-+        return Err("MMU does not support 64 KiB translation granule");
++        return Err("64 KiB translation granule not supported");
 +    }
 +
 +    // Prepare the memory attribute indirection register.
@@ -730,10 +729,10 @@ diff -uNr 10_privilege_level/src/bsp/rpi.rs 11_virtual_memory/src/bsp/rpi.rs
  use super::driver;
 -use crate::interface;
 +use crate::{interface, memory::KernelVirtualLayout};
+ use core::fmt;
 
  pub const BOOT_CORE_ID: u64 = 0;
- pub const BOOT_CORE_STACK_START: u64 = 0x80_000;
-@@ -56,3 +57,13 @@
+@@ -69,3 +70,13 @@
      // Configure PL011Uart's output pins.
      GPIO.map_pl011_uart();
  }
@@ -781,38 +780,35 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_memory/src/main.rs
  mod panic_wait;
  mod print;
 
-@@ -48,6 +51,7 @@
+@@ -46,8 +49,16 @@
+ /// # Safety
+ ///
  /// - Only a single core must be active and running this function.
- /// - The init calls in this function must appear in the correct order.
+-/// - The init calls in this function must appear in the correct order.
++/// - The init calls in this function must appear in the correct order:
++///     - Virtual memory must be activated first.
++///       - Without it, any atomic operations, e.g. the yet-to-be-introduced spinlocks in the device
++///         drivers (which currently employ NullLocks instead of spinlocks), will fail to work on
++///         the RPi SoCs.
  unsafe fn kernel_init() -> ! {
-+    // Bring up device drivers first, so that eventual MMU errors can be printed.
-     for i in bsp::device_drivers().iter() {
-         if let Err(()) = i.init() {
-             // This message will only be readable if, at the time of failure, the return value of
-@@ -58,6 +62,13 @@
-
-     bsp::post_driver_init();
-
-+    println!("Booting on: {}", bsp::board_name());
-+
 +    if let Err(string) = arch::mmu::init() {
 +        panic!("MMU: {}", string);
 +    }
-+    println!("MMU online");
 +
-     // Transition from unsafe to safe.
-     kernel_main()
- }
-@@ -67,7 +78,7 @@
-     use core::time::Duration;
-     use interface::{console::All, time::Timer};
+     for i in bsp::device_drivers().iter() {
+         if let Err(()) = i.init() {
+             panic!("Error loading driver: {}", i.compatible())
+@@ -67,6 +78,9 @@
 
--    println!("Booting on: {}", bsp::board_name());
+     println!("Booting on: {}", bsp::board_name());
+
++    println!("MMU online. Special regions:");
 +    bsp::virt_mem_layout().print_layout();
-
++
      println!(
          "Current privilege level: {}",
-@@ -89,6 +100,13 @@
+         arch::state::current_privilege_level()
+@@ -87,6 +101,13 @@
      println!("Timer test, spinning for 1 second");
      arch::timer().spin_for(Duration::from_secs(1));
 
@@ -830,7 +826,7 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_memory/src/main.rs
 diff -uNr 10_privilege_level/src/memory.rs 11_virtual_memory/src/memory.rs
 --- 10_privilege_level/src/memory.rs
 +++ 11_virtual_memory/src/memory.rs
-@@ -0,0 +1,149 @@
+@@ -0,0 +1,147 @@
 +// SPDX-License-Identifier: MIT
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
@@ -972,8 +968,6 @@ diff -uNr 10_privilege_level/src/memory.rs 11_virtual_memory/src/memory.rs
 +    /// Print the memory layout.
 +    pub fn print_layout(&self) {
 +        use crate::println;
-+
-+        println!("Special memory regions:");
 +
 +        for i in self.inner.iter() {
 +            println!("{}", i);

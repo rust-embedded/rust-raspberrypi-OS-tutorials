@@ -49,25 +49,23 @@ mod print;
 /// # Safety
 ///
 /// - Only a single core must be active and running this function.
-/// - The init calls in this function must appear in the correct order.
+/// - The init calls in this function must appear in the correct order:
+///     - Virtual memory must be activated first.
+///       - Without it, any atomic operations, e.g. the yet-to-be-introduced spinlocks in the device
+///         drivers (which currently employ NullLocks instead of spinlocks), will fail to work on
+///         the RPi SoCs.
 unsafe fn kernel_init() -> ! {
-    // Bring up device drivers first, so that eventual MMU errors can be printed.
-    for i in bsp::device_drivers().iter() {
-        if let Err(()) = i.init() {
-            // This message will only be readable if, at the time of failure, the return value of
-            // `bsp::console()` is already in functioning state.
-            panic!("Error loading driver: {}", i.compatible())
-        }
-    }
-
-    bsp::post_driver_init();
-
-    println!("Booting on: {}", bsp::board_name());
-
     if let Err(string) = arch::mmu::init() {
         panic!("MMU: {}", string);
     }
-    println!("MMU online");
+
+    for i in bsp::device_drivers().iter() {
+        if let Err(()) = i.init() {
+            panic!("Error loading driver: {}", i.compatible())
+        }
+    }
+    bsp::post_driver_init();
+    // println! is usable from here on.
 
     // Transition from unsafe to safe.
     kernel_main()
@@ -78,6 +76,9 @@ fn kernel_main() -> ! {
     use core::time::Duration;
     use interface::{console::All, time::Timer};
 
+    println!("Booting on: {}", bsp::board_name());
+
+    println!("MMU online. Special regions:");
     bsp::virt_mem_layout().print_layout();
 
     println!(

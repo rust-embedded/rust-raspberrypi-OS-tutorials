@@ -8,6 +8,7 @@ mod memory_map;
 
 use super::driver;
 use crate::interface;
+use core::fmt;
 
 pub const BOOT_CORE_ID: u64 = 0;
 pub const BOOT_CORE_STACK_START: u64 = 0x80_000;
@@ -43,6 +44,18 @@ pub fn board_name() -> &'static str {
 /// Return a reference to a `console::All` implementation.
 pub fn console() -> &'static impl interface::console::All {
     &PL011_UART
+}
+
+/// In case of a panic, the panic handler uses this function to take a last shot at printing
+/// something before the system is halted.
+///
+/// # Safety
+///
+/// - Use only for printing during a panic.
+pub unsafe fn panic_console_out() -> impl fmt::Write {
+    let uart = driver::PanicUart::new(memory_map::mmio::PL011_UART_BASE);
+    uart.init();
+    uart
 }
 
 /// Return an array of references to all `DeviceDriver` compatible `BSP` drivers.

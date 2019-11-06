@@ -162,7 +162,7 @@ diff -uNr 06_drivers_gpio_uart/src/arch/aarch64.rs 07_uart_chainloader/src/arch/
 diff -uNr 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 07_uart_chainloader/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
 --- 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 07_uart_chainloader/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -272,6 +272,18 @@
+@@ -277,6 +277,18 @@
          let mut r = &self.inner;
          r.lock(|inner| fmt::Write::write_fmt(inner, args))
      }
@@ -181,7 +181,7 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 07_uart_
  }
 
  impl interface::console::Read for PL011Uart {
-@@ -288,14 +300,19 @@
+@@ -293,14 +305,19 @@
              }
 
              // Read one character.
@@ -243,7 +243,7 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/rpi/link.ld 07_uart_chainloader/src/bsp/r
 diff -uNr 06_drivers_gpio_uart/src/bsp/rpi.rs 07_uart_chainloader/src/bsp/rpi.rs
 --- 06_drivers_gpio_uart/src/bsp/rpi.rs
 +++ 07_uart_chainloader/src/bsp/rpi.rs
-@@ -12,6 +12,9 @@
+@@ -13,6 +13,9 @@
  pub const BOOT_CORE_ID: u64 = 0;
  pub const BOOT_CORE_STACK_START: u64 = 0x80_000;
 
@@ -295,7 +295,7 @@ diff -uNr 06_drivers_gpio_uart/src/main.rs 07_uart_chainloader/src/main.rs
  mod runtime_init;
 
  // Conditionally includes the selected `BSP` code.
-@@ -66,25 +70,48 @@
+@@ -64,25 +68,48 @@
  fn kernel_main() -> ! {
      use interface::console::All;
 

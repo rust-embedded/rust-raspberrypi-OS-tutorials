@@ -140,8 +140,6 @@ impl<const NUM_SPECIAL_RANGES: usize> KernelVirtualLayout<{ NUM_SPECIAL_RANGES }
     pub fn print_layout(&self) {
         use crate::println;
 
-        println!("Special memory regions:");
-
         for i in self.inner.iter() {
             println!("{}", i);
         }

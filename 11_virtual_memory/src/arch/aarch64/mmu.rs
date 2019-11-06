@@ -278,7 +278,7 @@ fn configure_translation_control() {
 pub unsafe fn init() -> Result<(), &'static str> {
     // Fail early if translation granule is not supported. Both RPis support it, though.
     if !ID_AA64MMFR0_EL1.matches_all(ID_AA64MMFR0_EL1::TGran64::Supported) {
-        return Err("MMU does not support 64 KiB translation granule");
+        return Err("64 KiB translation granule not supported");
     }
 
     // Prepare the memory attribute indirection register.

@@ -371,7 +371,7 @@ diff -uNr 09_hw_debug_JTAG/src/arch/aarch64.rs 10_privilege_level/src/arch/aarch
 diff -uNr 09_hw_debug_JTAG/src/main.rs 10_privilege_level/src/main.rs
 --- 09_hw_debug_JTAG/src/main.rs
 +++ 10_privilege_level/src/main.rs
-@@ -65,9 +65,17 @@
+@@ -63,9 +63,17 @@
  /// The main function running after the early init.
  fn kernel_main() -> ! {
      use core::time::Duration;
@@ -390,7 +390,7 @@ diff -uNr 09_hw_debug_JTAG/src/main.rs 10_privilege_level/src/main.rs
      println!(
          "Architectural timer resolution: {} ns",
          arch::timer().resolution().as_nanos()
-@@ -78,11 +86,12 @@
+@@ -76,11 +84,12 @@
          println!("      {}. {}", i + 1, driver.compatible());
      }
 

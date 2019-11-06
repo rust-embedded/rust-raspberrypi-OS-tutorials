@@ -22,6 +22,12 @@ console and use a real UART now. Like serious embedded hackers do!
 - `BSP`s now contain a`memory_map.rs`. In the specific case, they contain the
   RPi's MMIO addresses which are used to instantiate compatible device drivers
   from `bsp/driver`.
+- We also modify the `panic!` handler, so that it does not anymore rely on `println!`, which uses
+  the globally-shared instance of the `UART` that might be locked when an error is encountered (for
+  now this can't happen due to the `NullLock`, but with a real lock it becomes an issue).
+    - Instead, it creates a new UART driver instance, re-initializes the device and uses that one to
+      print. This increases the chances that the system is able to print a final important message
+      before it suspends itself.
 
 ## Boot it from SD card
 
@@ -40,7 +46,7 @@ init_uart_clock=48000000
 3. Copy the following files from the [Raspberry Pi firmware repo](https://github.com/raspberrypi/firmware/tree/master/boot)  onto the SD card:
     - [bootcode.bin](https://github.com/raspberrypi/firmware/raw/master/boot/bootcode.bin)
     - [fixup.dat](https://github.com/raspberrypi/firmware/raw/master/boot/fixup.dat)
-    - [start.elf](https://github.com/raspberrypi/firmware/raw/master/boot/start.elf) 
+    - [start.elf](https://github.com/raspberrypi/firmware/raw/master/boot/start.elf)
 4. Run `make` and copy the [kernel8.img](kernel8.img) onto the SD card.
 
 ### Pi 4
@@ -281,7 +287,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_gpio.rs 06_drivers_gpio_uar
 diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
 --- 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -0,0 +1,308 @@
+@@ -0,0 +1,313 @@
 +// SPDX-License-Identifier: MIT
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
@@ -409,7 +415,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gp
 +}
 +
 +/// The driver's mutex protected part.
-+struct PL011UartInner {
++pub struct PL011UartInner {
 +    base_addr: usize,
 +    chars_written: usize,
 +}
@@ -433,11 +439,28 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gp
 +}
 +
 +impl PL011UartInner {
-+    const fn new(base_addr: usize) -> PL011UartInner {
++    pub const unsafe fn new(base_addr: usize) -> PL011UartInner {
 +        PL011UartInner {
 +            base_addr,
 +            chars_written: 0,
 +        }
++    }
++
++    /// Set up baud rate and characteristics.
++    ///
++    /// Results in 8N1 and 115200 baud (if the clk has been previously set to 4 MHz by the
++    /// firmware).
++    pub fn init(&self) {
++        // Turn it off temporarily.
++        self.CR.set(0);
++
++        self.ICR.write(ICR::ALL::CLEAR);
++        self.IBRD.write(IBRD::IBRD.val(26)); // Results in 115200 baud for UART Clk of 48 MHz.
++        self.FBRD.write(FBRD::FBRD.val(3));
++        self.LCRH
++            .write(LCRH::WLEN::EightBit + LCRH::FEN::FifosEnabled); // 8N1 + Fifo on
++        self.CR
++            .write(CR::UARTEN::Enabled + CR::TXE::Enabled + CR::RXE::Enabled);
 +    }
 +
 +    /// Return a pointer to the register block.
@@ -488,6 +511,11 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gp
 +}
 +
 +//--------------------------------------------------------------------------------------------------
++// Export the inner struct so that BSPs can use it for the panic handler
++//--------------------------------------------------------------------------------------------------
++pub use PL011UartInner as PanicUart;
++
++//--------------------------------------------------------------------------------------------------
 +// BSP-public
 +//--------------------------------------------------------------------------------------------------
 +
@@ -517,26 +545,9 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gp
 +        "PL011Uart"
 +    }
 +
-+    /// Set up baud rate and characteristics
-+    ///
-+    /// Results in 8N1 and 115200 baud (if the clk has been previously set to 4 MHz by the
-+    /// firmware).
 +    fn init(&self) -> interface::driver::Result {
 +        let mut r = &self.inner;
-+        r.lock(|inner| {
-+            // Turn it off temporarily.
-+            inner.CR.set(0);
-+
-+            inner.ICR.write(ICR::ALL::CLEAR);
-+            inner.IBRD.write(IBRD::IBRD.val(26)); // Results in 115200 baud for UART Clk of 48 MHz.
-+            inner.FBRD.write(FBRD::FBRD.val(3));
-+            inner
-+                .LCRH
-+                .write(LCRH::WLEN::EightBit + LCRH::FEN::FifosEnabled); // 8N1 + Fifo on
-+            inner
-+                .CR
-+                .write(CR::UARTEN::Enabled + CR::TXE::Enabled + CR::RXE::Enabled);
-+        });
++        r.lock(|inner| inner.init());
 +
 +        Ok(())
 +    }
@@ -605,7 +616,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm.rs 06_drivers_gpio_uart/src/bsp/dri
 +mod bcm2xxx_pl011_uart;
 +
 +pub use bcm2xxx_gpio::GPIO;
-+pub use bcm2xxx_pl011_uart::PL011Uart;
++pub use bcm2xxx_pl011_uart::{PL011Uart, PanicUart};
 
 diff -uNr 05_safe_globals/src/bsp/driver.rs 06_drivers_gpio_uart/src/bsp/driver.rs
 --- 05_safe_globals/src/bsp/driver.rs
@@ -649,16 +660,16 @@ diff -uNr 05_safe_globals/src/bsp/rpi/memory_map.rs 06_drivers_gpio_uart/src/bsp
 diff -uNr 05_safe_globals/src/bsp/rpi.rs 06_drivers_gpio_uart/src/bsp/rpi.rs
 --- 05_safe_globals/src/bsp/rpi.rs
 +++ 06_drivers_gpio_uart/src/bsp/rpi.rs
-@@ -4,114 +4,55 @@
+@@ -4,114 +4,68 @@
 
  //! Board Support Package for the Raspberry Pi.
 
 -use crate::{arch::sync::NullLock, interface};
--use core::fmt;
 +mod memory_map;
 +
 +use super::driver;
 +use crate::interface;
+ use core::fmt;
 
  pub const BOOT_CORE_ID: u64 = 0;
  pub const BOOT_CORE_STACK_START: u64 = 0x80_000;
@@ -752,9 +763,9 @@ diff -uNr 05_safe_globals/src/bsp/rpi.rs 06_drivers_gpio_uart/src/bsp/rpi.rs
 +        "Raspberry Pi 3"
      }
 -}
--
--impl interface::console::Read for QEMUOutput {}
 
+-impl interface::console::Read for QEMUOutput {}
+-
 -impl interface::console::Statistics for QEMUOutput {
 -    fn chars_written(&self) -> usize {
 -        use interface::sync::Mutex;
@@ -770,19 +781,27 @@ diff -uNr 05_safe_globals/src/bsp/rpi.rs 06_drivers_gpio_uart/src/bsp/rpi.rs
 -//--------------------------------------------------------------------------------------------------
 -// Global instances
 -//--------------------------------------------------------------------------------------------------
--
++/// Return a reference to a `console::All` implementation.
++pub fn console() -> &'static impl interface::console::All {
++    &PL011_UART
++}
+
 -static QEMU_OUTPUT: QEMUOutput = QEMUOutput::new();
--
++/// In case of a panic, the panic handler uses this function to take a last shot at printing
++/// something before the system is halted.
++///
++/// # Safety
++///
++/// - Use only for printing during a panic.
++pub unsafe fn panic_console_out() -> impl fmt::Write {
++    let uart = driver::PanicUart::new(memory_map::mmio::PL011_UART_BASE);
++    uart.init();
++    uart
++}
+
 -//--------------------------------------------------------------------------------------------------
 -// Implementation of the kernel's BSP calls
 -//--------------------------------------------------------------------------------------------------
--
- /// Return a reference to a `console::All` implementation.
- pub fn console() -> &'static impl interface::console::All {
--    &QEMU_OUTPUT
-+    &PL011_UART
-+}
-+
 +/// Return an array of references to all `DeviceDriver` compatible `BSP` drivers.
 +///
 +/// # Safety
@@ -791,7 +810,10 @@ diff -uNr 05_safe_globals/src/bsp/rpi.rs 06_drivers_gpio_uart/src/bsp/rpi.rs
 +pub fn device_drivers() -> [&'static dyn interface::driver::DeviceDriver; 2] {
 +    [&GPIO, &PL011_UART]
 +}
-+
+
+-/// Return a reference to a `console::All` implementation.
+-pub fn console() -> &'static impl interface::console::All {
+-    &QEMU_OUTPUT
 +/// BSP initialization code that runs after driver init.
 +pub fn post_driver_init() {
 +    // Configure PL011Uart's output pins.
@@ -847,7 +869,7 @@ diff -uNr 05_safe_globals/src/interface.rs 06_drivers_gpio_uart/src/interface.rs
 diff -uNr 05_safe_globals/src/main.rs 06_drivers_gpio_uart/src/main.rs
 --- 05_safe_globals/src/main.rs
 +++ 06_drivers_gpio_uart/src/main.rs
-@@ -41,16 +41,50 @@
+@@ -41,16 +41,48 @@
 
  /// Early init code.
  ///
@@ -861,13 +883,11 @@ diff -uNr 05_safe_globals/src/main.rs 06_drivers_gpio_uart/src/main.rs
 -    use interface::console::Statistics;
 +    for i in bsp::device_drivers().iter() {
 +        if let Err(()) = i.init() {
-+            // This message will only be readable if, at the time of failure, the return value of
-+            // `bsp::console()` is already in functioning state.
 +            panic!("Error loading driver: {}", i.compatible())
 +        }
 +    }
-+
 +    bsp::post_driver_init();
++    // println! is usable from here on.
 +
 +    // Transition from unsafe to safe.
 +    kernel_main()
@@ -903,5 +923,45 @@ diff -uNr 05_safe_globals/src/main.rs 06_drivers_gpio_uart/src/main.rs
 +        bsp::console().write_char(c);
 +    }
  }
+
+diff -uNr 05_safe_globals/src/panic_wait.rs 06_drivers_gpio_uart/src/panic_wait.rs
+--- 05_safe_globals/src/panic_wait.rs
++++ 06_drivers_gpio_uart/src/panic_wait.rs
+@@ -4,15 +4,31 @@
+
+ //! A panic handler that infinitely waits.
+
+-use crate::{arch, println};
+-use core::panic::PanicInfo;
++use crate::{arch, bsp};
++use core::{fmt, panic::PanicInfo};
++
++fn _panic_print(args: fmt::Arguments) {
++    use fmt::Write;
++
++    unsafe { bsp::panic_console_out().write_fmt(args).unwrap() };
++}
++
++/// Prints with a newline - only use from the panic handler.
++///
++/// Carbon copy from https://doc.rust-lang.org/src/std/macros.rs.html
++#[macro_export]
++macro_rules! panic_println {
++    ($($arg:tt)*) => ({
++        _panic_print(format_args_nl!($($arg)*));
++    })
++}
+
+ #[panic_handler]
+ fn panic(info: &PanicInfo) -> ! {
+     if let Some(args) = info.message() {
+-        println!("Kernel panic: {}", args);
++        panic_println!("Kernel panic: {}", args);
+     } else {
+-        println!("Kernel panic!");
++        panic_println!("Kernel panic!");
+     }
+
+     arch::wait_forever()
 
 ```
