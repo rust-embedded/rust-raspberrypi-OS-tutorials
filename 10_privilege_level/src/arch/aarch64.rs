@@ -108,7 +108,7 @@ pub fn wait_forever() -> ! {
 pub mod state {
     use cortex_a::regs::*;
 
-    /// The current privilege level.
+    /// The processing element's current privilege level.
     pub fn current_privilege_level() -> &'static str {
         let el = CurrentEL.read_as_enum(CurrentEL::EL);
         match el {

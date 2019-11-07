@@ -55,7 +55,7 @@ make qemu
 diff -uNr 04_zero_overhead_abstraction/src/arch/aarch64/sync.rs 05_safe_globals/src/arch/aarch64/sync.rs
 --- 04_zero_overhead_abstraction/src/arch/aarch64/sync.rs
 +++ 05_safe_globals/src/arch/aarch64/sync.rs
-@@ -0,0 +1,44 @@
+@@ -0,0 +1,52 @@
 +// SPDX-License-Identifier: MIT
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
@@ -64,6 +64,10 @@ diff -uNr 04_zero_overhead_abstraction/src/arch/aarch64/sync.rs 05_safe_globals/
 +
 +use crate::interface;
 +use core::cell::UnsafeCell;
++
++//--------------------------------------------------------------------------------------------------
++// Arch-public
++//--------------------------------------------------------------------------------------------------
 +
 +/// A pseudo-lock for teaching purposes.
 +///
@@ -90,6 +94,10 @@ diff -uNr 04_zero_overhead_abstraction/src/arch/aarch64/sync.rs 05_safe_globals/
 +        }
 +    }
 +}
++
++//--------------------------------------------------------------------------------------------------
++// OS interface implementations
++//--------------------------------------------------------------------------------------------------
 +
 +impl<T> interface::sync::Mutex for &NullLock<T> {
 +    type Data = T;

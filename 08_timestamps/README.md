@@ -100,7 +100,7 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
 diff -uNr 07_uart_chainloader/src/arch/aarch64/time.rs 08_timestamps/src/arch/aarch64/time.rs
 --- 07_uart_chainloader/src/arch/aarch64/time.rs
 +++ 08_timestamps/src/arch/aarch64/time.rs
-@@ -0,0 +1,77 @@
+@@ -0,0 +1,85 @@
 +// SPDX-License-Identifier: MIT
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
@@ -113,7 +113,15 @@ diff -uNr 07_uart_chainloader/src/arch/aarch64/time.rs 08_timestamps/src/arch/aa
 +
 +const NS_PER_S: u64 = 1_000_000_000;
 +
++//--------------------------------------------------------------------------------------------------
++// Arch-public
++//--------------------------------------------------------------------------------------------------
++
 +pub struct Timer;
++
++//--------------------------------------------------------------------------------------------------
++// OS interface implementations
++//--------------------------------------------------------------------------------------------------
 +
 +impl interface::time::Timer for Timer {
 +    fn resolution(&self) -> Duration {

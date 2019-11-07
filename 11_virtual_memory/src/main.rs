@@ -55,7 +55,9 @@ mod print;
 ///         drivers (which currently employ NullLocks instead of spinlocks), will fail to work on
 ///         the RPi SoCs.
 unsafe fn kernel_init() -> ! {
-    if let Err(string) = arch::mmu::init() {
+    use interface::mm::MMU;
+
+    if let Err(string) = arch::mmu().init() {
         panic!("MMU: {}", string);
     }
 

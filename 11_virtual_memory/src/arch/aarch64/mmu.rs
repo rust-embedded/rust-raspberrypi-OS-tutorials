@@ -7,7 +7,7 @@
 //! Static page tables, compiled on boot; Everything 64 KiB granule.
 
 use crate::{
-    bsp,
+    bsp, interface,
     memory::{AccessPermissions, AttributeFields, MemAttributes},
 };
 use core::convert;
@@ -243,10 +243,7 @@ unsafe fn populate_pt_entries() -> Result<(), &'static str> {
             let virt_addr = (l2_nr << FIVETWELVE_MIB_SHIFT) + (l3_nr << SIXTYFOUR_KIB_SHIFT);
 
             let (output_addr, attribute_fields) =
-                match bsp::virt_mem_layout().get_virt_addr_properties(virt_addr) {
-                    Err(string) => return Err(string),
-                    Ok((a, b)) => (a, b),
-                };
+                bsp::virt_mem_layout().get_virt_addr_properties(virt_addr)?;
 
             *l3_entry = PageDescriptor::new(output_addr, attribute_fields).into();
         }
@@ -270,40 +267,50 @@ fn configure_translation_control() {
     );
 }
 
-/// Compile the page tables from the `BSP`-supplied `virt_mem_layout()`.
-///
-/// # Safety
-///
-/// - User must ensure that the hardware supports the paremeters being set here.
-pub unsafe fn init() -> Result<(), &'static str> {
-    // Fail early if translation granule is not supported. Both RPis support it, though.
-    if !ID_AA64MMFR0_EL1.matches_all(ID_AA64MMFR0_EL1::TGran64::Supported) {
-        return Err("64 KiB translation granule not supported");
+//--------------------------------------------------------------------------------------------------
+// Arch-public
+//--------------------------------------------------------------------------------------------------
+
+pub struct MMU;
+
+//--------------------------------------------------------------------------------------------------
+// OS interface implementations
+//--------------------------------------------------------------------------------------------------
+
+impl interface::mm::MMU for MMU {
+    /// Compile the page tables from the `BSP`-supplied `virt_mem_layout()`.
+    ///
+    /// # Safety
+    ///
+    /// - User must ensure that the hardware supports the paremeters being set here.
+    unsafe fn init(&self) -> Result<(), &'static str> {
+        // Fail early if translation granule is not supported. Both RPis support it, though.
+        if !ID_AA64MMFR0_EL1.matches_all(ID_AA64MMFR0_EL1::TGran64::Supported) {
+            return Err("64 KiB translation granule not supported");
+        }
+
+        // Prepare the memory attribute indirection register.
+        set_up_mair();
+
+        // Populate page tables.
+        populate_pt_entries()?;
+
+        // Set the "Translation Table Base Register".
+        TTBR0_EL1.set_baddr(TABLES.lvl2.base_addr_u64());
+
+        configure_translation_control();
+
+        // Switch the MMU on.
+        //
+        // First, force all previous changes to be seen before the MMU is enabled.
+        barrier::isb(barrier::SY);
+
+        // Enable the MMU and turn on data and instruction caching.
+        SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
+
+        // Force MMU init to complete before next instruction
+        barrier::isb(barrier::SY);
+
+        Ok(())
     }
-
-    // Prepare the memory attribute indirection register.
-    set_up_mair();
-
-    // Populate page tables.
-    if let Err(string) = populate_pt_entries() {
-        return Err(string);
-    }
-
-    // Set the "Translation Table Base Register".
-    TTBR0_EL1.set_baddr(TABLES.lvl2.base_addr_u64());
-
-    configure_translation_control();
-
-    // Switch the MMU on.
-    //
-    // First, force all previous changes to be seen before the MMU is enabled.
-    barrier::isb(barrier::SY);
-
-    // Enable the MMU and turn on data and instruction caching.
-    SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
-
-    // Force MMU init to complete before next instruction
-    barrier::isb(barrier::SY);
-
-    Ok(())
 }

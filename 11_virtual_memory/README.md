@@ -262,10 +262,23 @@ make chainbot
 ## Diff to previous
 ```diff
 
+diff -uNr 10_privilege_level/Makefile 11_virtual_memory/Makefile
+--- 10_privilege_level/Makefile
++++ 11_virtual_memory/Makefile
+@@ -17,7 +17,7 @@
+ 	OPENOCD_ARG = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi3.cfg
+ 	JTAG_BOOT_IMAGE = jtag_boot_rpi3.img
+ 	LINKER_FILE = src/bsp/rpi/link.ld
+-	RUSTC_MISC_ARGS = -C target-cpu=cortex-a53
++	RUSTC_MISC_ARGS = -C target-cpu=cortex-a53 -C llvm-args=-ffixed-x18
+ else ifeq ($(BSP),rpi4)
+ 	TARGET = aarch64-unknown-none-softfloat
+ 	OUTPUT = kernel8.img
+
 diff -uNr 10_privilege_level/src/arch/aarch64/mmu.rs 11_virtual_memory/src/arch/aarch64/mmu.rs
 --- 10_privilege_level/src/arch/aarch64/mmu.rs
 +++ 11_virtual_memory/src/arch/aarch64/mmu.rs
-@@ -0,0 +1,309 @@
+@@ -0,0 +1,316 @@
 +// SPDX-License-Identifier: MIT
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
@@ -275,7 +288,7 @@ diff -uNr 10_privilege_level/src/arch/aarch64/mmu.rs 11_virtual_memory/src/arch/
 +//! Static page tables, compiled on boot; Everything 64 KiB granule.
 +
 +use crate::{
-+    bsp,
++    bsp, interface,
 +    memory::{AccessPermissions, AttributeFields, MemAttributes},
 +};
 +use core::convert;
@@ -511,10 +524,7 @@ diff -uNr 10_privilege_level/src/arch/aarch64/mmu.rs 11_virtual_memory/src/arch/
 +            let virt_addr = (l2_nr << FIVETWELVE_MIB_SHIFT) + (l3_nr << SIXTYFOUR_KIB_SHIFT);
 +
 +            let (output_addr, attribute_fields) =
-+                match bsp::virt_mem_layout().get_virt_addr_properties(virt_addr) {
-+                    Err(string) => return Err(string),
-+                    Ok((a, b)) => (a, b),
-+                };
++                bsp::virt_mem_layout().get_virt_addr_properties(virt_addr)?;
 +
 +            *l3_entry = PageDescriptor::new(output_addr, attribute_fields).into();
 +        }
@@ -538,42 +548,52 @@ diff -uNr 10_privilege_level/src/arch/aarch64/mmu.rs 11_virtual_memory/src/arch/
 +    );
 +}
 +
-+/// Compile the page tables from the `BSP`-supplied `virt_mem_layout()`.
-+///
-+/// # Safety
-+///
-+/// - User must ensure that the hardware supports the paremeters being set here.
-+pub unsafe fn init() -> Result<(), &'static str> {
-+    // Fail early if translation granule is not supported. Both RPis support it, though.
-+    if !ID_AA64MMFR0_EL1.matches_all(ID_AA64MMFR0_EL1::TGran64::Supported) {
-+        return Err("64 KiB translation granule not supported");
++//--------------------------------------------------------------------------------------------------
++// Arch-public
++//--------------------------------------------------------------------------------------------------
++
++pub struct MMU;
++
++//--------------------------------------------------------------------------------------------------
++// OS interface implementations
++//--------------------------------------------------------------------------------------------------
++
++impl interface::mm::MMU for MMU {
++    /// Compile the page tables from the `BSP`-supplied `virt_mem_layout()`.
++    ///
++    /// # Safety
++    ///
++    /// - User must ensure that the hardware supports the paremeters being set here.
++    unsafe fn init(&self) -> Result<(), &'static str> {
++        // Fail early if translation granule is not supported. Both RPis support it, though.
++        if !ID_AA64MMFR0_EL1.matches_all(ID_AA64MMFR0_EL1::TGran64::Supported) {
++            return Err("64 KiB translation granule not supported");
++        }
++
++        // Prepare the memory attribute indirection register.
++        set_up_mair();
++
++        // Populate page tables.
++        populate_pt_entries()?;
++
++        // Set the "Translation Table Base Register".
++        TTBR0_EL1.set_baddr(TABLES.lvl2.base_addr_u64());
++
++        configure_translation_control();
++
++        // Switch the MMU on.
++        //
++        // First, force all previous changes to be seen before the MMU is enabled.
++        barrier::isb(barrier::SY);
++
++        // Enable the MMU and turn on data and instruction caching.
++        SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
++
++        // Force MMU init to complete before next instruction
++        barrier::isb(barrier::SY);
++
++        Ok(())
 +    }
-+
-+    // Prepare the memory attribute indirection register.
-+    set_up_mair();
-+
-+    // Populate page tables.
-+    if let Err(string) = populate_pt_entries() {
-+        return Err(string);
-+    }
-+
-+    // Set the "Translation Table Base Register".
-+    TTBR0_EL1.set_baddr(TABLES.lvl2.base_addr_u64());
-+
-+    configure_translation_control();
-+
-+    // Switch the MMU on.
-+    //
-+    // First, force all previous changes to be seen before the MMU is enabled.
-+    barrier::isb(barrier::SY);
-+
-+    // Enable the MMU and turn on data and instruction caching.
-+    SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
-+
-+    // Force MMU init to complete before next instruction
-+    barrier::isb(barrier::SY);
-+
-+    Ok(())
 +}
 
 diff -uNr 10_privilege_level/src/arch/aarch64.rs 11_virtual_memory/src/arch/aarch64.rs
@@ -583,10 +603,27 @@ diff -uNr 10_privilege_level/src/arch/aarch64.rs 11_virtual_memory/src/arch/aarc
  //! AArch64.
 
  mod exception;
-+pub mod mmu;
++mod mmu;
  pub mod sync;
  mod time;
 
+@@ -77,6 +78,7 @@
+ //--------------------------------------------------------------------------------------------------
+
+ static TIMER: time::Timer = time::Timer;
++static MMU: mmu::MMU = mmu::MMU;
+
+ //--------------------------------------------------------------------------------------------------
+ // Implementation of the kernel's architecture abstraction code
+@@ -136,3 +138,8 @@
+         println!("      FIQ:    {}", to_mask_str(exception::is_masked::<FIQ>()));
+     }
+ }
++
++/// Return a reference to an `interface::mm::MMU` implementation.
++pub fn mmu() -> &'static impl interface::mm::MMU {
++    &MMU
++}
 
 diff -uNr 10_privilege_level/src/bsp/rpi/link.ld 11_virtual_memory/src/bsp/rpi/link.ld
 --- 10_privilege_level/src/bsp/rpi/link.ld
@@ -637,7 +674,7 @@ diff -uNr 10_privilege_level/src/bsp/rpi/memory_map.rs 11_virtual_memory/src/bsp
 diff -uNr 10_privilege_level/src/bsp/rpi/virt_mem_layout.rs 11_virtual_memory/src/bsp/rpi/virt_mem_layout.rs
 --- 10_privilege_level/src/bsp/rpi/virt_mem_layout.rs
 +++ 11_virtual_memory/src/bsp/rpi/virt_mem_layout.rs
-@@ -0,0 +1,78 @@
+@@ -0,0 +1,82 @@
 +// SPDX-License-Identifier: MIT
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
@@ -650,6 +687,10 @@ diff -uNr 10_privilege_level/src/bsp/rpi/virt_mem_layout.rs 11_virtual_memory/sr
 +use super::memory_map;
 +use crate::memory::*;
 +use core::ops::RangeInclusive;
++
++//--------------------------------------------------------------------------------------------------
++// BSP-public
++//--------------------------------------------------------------------------------------------------
 +
 +pub const NUM_MEM_RANGES: usize = 3;
 +
@@ -760,6 +801,22 @@ diff -uNr 10_privilege_level/src/bsp.rs 11_virtual_memory/src/bsp.rs
  #[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
  mod rpi;
 
+diff -uNr 10_privilege_level/src/interface.rs 11_virtual_memory/src/interface.rs
+--- 10_privilege_level/src/interface.rs
++++ 11_virtual_memory/src/interface.rs
+@@ -127,3 +127,11 @@
+         fn spin_for(&self, duration: Duration);
+     }
+ }
++
++/// Memory Management interfaces.
++pub mod mm {
++    pub trait MMU {
++        /// Called by the kernel early during init.
++        unsafe fn init(&self) -> Result<(), &'static str>;
++    }
++}
+
 diff -uNr 10_privilege_level/src/main.rs 11_virtual_memory/src/main.rs
 --- 10_privilege_level/src/main.rs
 +++ 11_virtual_memory/src/main.rs
@@ -780,7 +837,7 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_memory/src/main.rs
  mod panic_wait;
  mod print;
 
-@@ -46,8 +49,16 @@
+@@ -46,8 +49,18 @@
  /// # Safety
  ///
  /// - Only a single core must be active and running this function.
@@ -791,14 +848,16 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_memory/src/main.rs
 +///         drivers (which currently employ NullLocks instead of spinlocks), will fail to work on
 +///         the RPi SoCs.
  unsafe fn kernel_init() -> ! {
-+    if let Err(string) = arch::mmu::init() {
++    use interface::mm::MMU;
++
++    if let Err(string) = arch::mmu().init() {
 +        panic!("MMU: {}", string);
 +    }
 +
      for i in bsp::device_drivers().iter() {
          if let Err(()) = i.init() {
              panic!("Error loading driver: {}", i.compatible())
-@@ -67,6 +78,9 @@
+@@ -67,6 +80,9 @@
 
      println!("Booting on: {}", bsp::board_name());
 
@@ -808,7 +867,7 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_memory/src/main.rs
      println!(
          "Current privilege level: {}",
          arch::state::current_privilege_level()
-@@ -87,6 +101,13 @@
+@@ -87,6 +103,13 @@
      println!("Timer test, spinning for 1 second");
      arch::timer().spin_for(Duration::from_secs(1));
 

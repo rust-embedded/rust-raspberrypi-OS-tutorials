@@ -5,7 +5,7 @@
 //! AArch64.
 
 mod exception;
-pub mod mmu;
+mod mmu;
 pub mod sync;
 mod time;
 
@@ -78,6 +78,7 @@ unsafe fn el2_to_el1_transition() -> ! {
 //--------------------------------------------------------------------------------------------------
 
 static TIMER: time::Timer = time::Timer;
+static MMU: mmu::MMU = mmu::MMU;
 
 //--------------------------------------------------------------------------------------------------
 // Implementation of the kernel's architecture abstraction code
@@ -109,7 +110,7 @@ pub fn wait_forever() -> ! {
 pub mod state {
     use cortex_a::regs::*;
 
-    /// The current privilege level.
+    /// The processing element's current privilege level.
     pub fn current_privilege_level() -> &'static str {
         let el = CurrentEL.read_as_enum(CurrentEL::EL);
         match el {
@@ -136,4 +137,9 @@ pub mod state {
         println!("      IRQ:    {}", to_mask_str(exception::is_masked::<IRQ>()));
         println!("      FIQ:    {}", to_mask_str(exception::is_masked::<FIQ>()));
     }
+}
+
+/// Return a reference to an `interface::mm::MMU` implementation.
+pub fn mmu() -> &'static impl interface::mm::MMU {
+    &MMU
 }

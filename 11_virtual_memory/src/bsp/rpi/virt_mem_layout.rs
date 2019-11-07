@@ -11,6 +11,10 @@ use super::memory_map;
 use crate::memory::*;
 use core::ops::RangeInclusive;
 
+//--------------------------------------------------------------------------------------------------
+// BSP-public
+//--------------------------------------------------------------------------------------------------
+
 pub const NUM_MEM_RANGES: usize = 3;
 
 pub static LAYOUT: KernelVirtualLayout<{ NUM_MEM_RANGES }> = KernelVirtualLayout::new(

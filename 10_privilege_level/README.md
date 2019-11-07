@@ -213,7 +213,7 @@ make chainbot
 diff -uNr 09_hw_debug_JTAG/src/arch/aarch64/exception.rs 10_privilege_level/src/arch/aarch64/exception.rs
 --- 09_hw_debug_JTAG/src/arch/aarch64/exception.rs
 +++ 10_privilege_level/src/arch/aarch64/exception.rs
-@@ -0,0 +1,44 @@
+@@ -0,0 +1,48 @@
 +// SPDX-License-Identifier: MIT
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
@@ -221,6 +221,10 @@ diff -uNr 09_hw_debug_JTAG/src/arch/aarch64/exception.rs 10_privilege_level/src/
 +//! Exception handling.
 +
 +use cortex_a::regs::*;
++
++//--------------------------------------------------------------------------------------------------
++// Arch-public
++//--------------------------------------------------------------------------------------------------
 +
 +pub trait DaifField {
 +    fn daif_field() -> register::Field<u32, DAIF::Register>;
@@ -339,7 +343,7 @@ diff -uNr 09_hw_debug_JTAG/src/arch/aarch64.rs 10_privilege_level/src/arch/aarch
 +pub mod state {
 +    use cortex_a::regs::*;
 +
-+    /// The current privilege level.
++    /// The processing element's current privilege level.
 +    pub fn current_privilege_level() -> &'static str {
 +        let el = CurrentEL.read_as_enum(CurrentEL::EL);
 +        match el {

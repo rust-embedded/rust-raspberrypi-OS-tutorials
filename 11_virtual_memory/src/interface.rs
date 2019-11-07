@@ -127,3 +127,11 @@ pub mod time {
         fn spin_for(&self, duration: Duration);
     }
 }
+
+/// Memory Management interfaces.
+pub mod mm {
+    pub trait MMU {
+        /// Called by the kernel early during init.
+        unsafe fn init(&self) -> Result<(), &'static str>;
+    }
+}
