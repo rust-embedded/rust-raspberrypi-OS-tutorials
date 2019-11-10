@@ -11,33 +11,40 @@ def checkin_years(file)
     checkin_years.split(/\n/).map!(&:to_i)
 end
 
-def copyrighted?(file, is_being_checked_in)
+def parse_checkin_years(file, is_being_checked_in)
     checkin_years = checkin_years(file)
-
     checkin_years << Time.now.year if is_being_checked_in
 
-    checkin_min = checkin_years.min
-    checkin_max = checkin_years.max
+    checkin_years.minmax
+end
 
-    copyright_lines = File.readlines(file).grep(/.*Copyright.*/)
-
+def min_max_seen?(copyright_lines, checkin_min, checkin_max)
     min_seen = false
     max_seen = false
     copyright_lines.each do |x|
-        x.scan(/\d\d\d\d/).each do |y|
-            y = y.to_i
-
+        x.scan(/\d\d\d\d/).map!(&:to_i).each do |y|
             min_seen = true if y == checkin_min
             max_seen = true if y == checkin_max
         end
     end
 
-    unless min_seen && max_seen
-        puts file + ': '
-        puts "\tHeader:   " + copyright_lines.inspect
-        puts "\tMin year: " + checkin_min.to_s
-        puts "\tMax year: " + checkin_max.to_s
+    [min_seen, max_seen]
+end
 
+def print_on_err(file, copyright_lines, checkin_min, checkin_max)
+    puts file + ': '
+    puts "\tHeader:   " + copyright_lines.inspect
+    puts "\tMin year: " + checkin_min.to_s
+    puts "\tMax year: " + checkin_max.to_s
+end
+
+def copyrighted?(file, is_being_checked_in)
+    checkin_min, checkin_max = parse_checkin_years(file, is_being_checked_in)
+    copyright_lines = File.readlines(file).grep(/.*Copyright.*/)
+    min_seen, max_seen = min_max_seen?(copyright_lines, checkin_min, checkin_max)
+
+    unless min_seen && max_seen
+        print_on_err(file, copyright_lines, checkin_min, checkin_max)
         return false
     end
 

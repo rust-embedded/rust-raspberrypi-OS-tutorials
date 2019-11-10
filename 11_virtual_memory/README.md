@@ -262,19 +262,6 @@ make chainbot
 ## Diff to previous
 ```diff
 
-diff -uNr 10_privilege_level/Makefile 11_virtual_memory/Makefile
---- 10_privilege_level/Makefile
-+++ 11_virtual_memory/Makefile
-@@ -17,7 +17,7 @@
- 	OPENOCD_ARG = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi3.cfg
- 	JTAG_BOOT_IMAGE = jtag_boot_rpi3.img
- 	LINKER_FILE = src/bsp/rpi/link.ld
--	RUSTC_MISC_ARGS = -C target-cpu=cortex-a53
-+	RUSTC_MISC_ARGS = -C target-cpu=cortex-a53 -C llvm-args=-ffixed-x18
- else ifeq ($(BSP),rpi4)
- 	TARGET = aarch64-unknown-none-softfloat
- 	OUTPUT = kernel8.img
-
 diff -uNr 10_privilege_level/src/arch/aarch64/mmu.rs 11_virtual_memory/src/arch/aarch64/mmu.rs
 --- 10_privilege_level/src/arch/aarch64/mmu.rs
 +++ 11_virtual_memory/src/arch/aarch64/mmu.rs

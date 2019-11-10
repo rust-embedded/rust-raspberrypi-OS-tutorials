@@ -20,20 +20,17 @@ def patched?
 end
 
 def check_old_copyrights
-    error = false
-
     sources = Dir.glob('**/*.{S,rs,rb}') + Dir.glob('**/Makefile')
 
     sources.delete_if do |x|
+        # if x is not in the index, treat this as an error
         !system("git ls-files --error-unmatch #{x}", %i[out err] => File::NULL)
     end
 
-    sources.sort.reverse_each do |f|
+    sources.sort.each do |f|
         puts "Checking for copyright: #{f}"
-        error = true unless copyrighted?(f, false)
+        exit(1) unless copyrighted?(f, false)
     end
-
-    exit(1) if error
 end
 
 def sanity_checks

@@ -15,7 +15,7 @@ def clean_all
         x = File.dirname(x)
         Dir.chdir(x) do
             puts "Cleaning #{x}"
-            system('rm -rf target') || exit(1)
+            FileUtils.rm_rf('target')
         end
     end
 

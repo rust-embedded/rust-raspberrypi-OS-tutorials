@@ -18,7 +18,6 @@ def fmt_all(check = false)
 
     crates.each do |x|
         x = File.dirname(x)
-
         Dir.chdir(x) do
             puts "Format #{x}"
             unless system("cargo fmt #{args}")
