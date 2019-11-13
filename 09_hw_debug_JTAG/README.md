@@ -302,15 +302,23 @@ diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
  	LINKER_FILE = src/bsp/rpi/link.ld
  	RUSTC_MISC_ARGS = -C target-cpu=cortex-a72
  endif
-@@ -48,6 +52,8 @@
+@@ -48,13 +52,15 @@
  DOCKER_CMD        = docker run -it --rm
  DOCKER_ARG_CURDIR = -v $(shell pwd):/work -w /work
  DOCKER_ARG_TTY    = --privileged -v /dev:/dev
 +DOCKER_ARG_JTAG   = -v $(shell pwd)/../X1_JTAG_boot:/jtag
 +DOCKER_ARG_NET    = --network host
 
- DOCKER_EXEC_QEMU         = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE) -kernel $(OUTPUT)
+ DOCKER_EXEC_QEMU         = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE) $(QEMU_MISC_ARGS) -kernel
  DOCKER_EXEC_RASPBOOT     = raspbootcom
+ DOCKER_EXEC_RASPBOOT_DEV = /dev/ttyUSB0
+ # DOCKER_EXEC_RASPBOOT_DEV = /dev/ttyACM0
+
+-.PHONY: all doc qemu chainboot clippy clean readelf objdump nm
++.PHONY: all doc qemu chainboot jtagboot openocd gdb gdb-opt0 clippy clean readelf objdump nm
+
+ all: clean $(OUTPUT)
+
 @@ -83,6 +89,28 @@
  	$(CONTAINER_UTILS) $(DOCKER_EXEC_RASPBOOT) $(DOCKER_EXEC_RASPBOOT_DEV) \
  	$(OUTPUT)
@@ -325,7 +333,7 @@ diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
 +	openocd $(OPENOCD_ARG)
 +
 +define gen_gdb
-+	RUSTFLAGS="-D warnings -D missing_docs" $(XRUSTC_CMD) $1
++	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(XRUSTC_CMD) $1
 +	cp $(CARGO_OUTPUT) kernel_for_jtag
 +	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(DOCKER_ARG_NET) $(CONTAINER_UTILS) \
 +	gdb-multiarch -q kernel_for_jtag

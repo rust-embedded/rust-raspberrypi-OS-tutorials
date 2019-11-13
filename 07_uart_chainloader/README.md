@@ -102,7 +102,7 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
 +	CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi4.img
  endif
 
- SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) $(wildcard **/*.ld)
+ RUSTFLAGS = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
 @@ -47,9 +49,14 @@
 
  DOCKER_CMD        = docker run -it --rm
@@ -111,7 +111,7 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
 +DOCKER_ARG_TTY    = --privileged -v /dev:/dev
 
 -.PHONY: all doc qemu clippy clean readelf objdump nm
-+DOCKER_EXEC_QEMU         = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE) -kernel $(OUTPUT)
++DOCKER_EXEC_QEMU         = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE) $(QEMU_MISC_ARGS) -kernel
 +DOCKER_EXEC_RASPBOOT     = raspbootcom
 +DOCKER_EXEC_RASPBOOT_DEV = /dev/ttyUSB0
 +# DOCKER_EXEC_RASPBOOT_DEV = /dev/ttyACM0
@@ -130,11 +130,11 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
  else
  qemu: all
  	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(CONTAINER_UTILS) \
- 	$(DOCKER_EXEC_QEMU) $(QEMU_MISC_ARGS)
+ 	$(DOCKER_EXEC_QEMU) $(OUTPUT)
 +
 +qemuasm: all
 +	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(CONTAINER_UTILS) \
-+	$(DOCKER_EXEC_QEMU) -d in_asm
++	$(DOCKER_EXEC_QEMU) $(OUTPUT) -d in_asm
  endif
 
 +chainboot:

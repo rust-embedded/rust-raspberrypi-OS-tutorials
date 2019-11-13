@@ -28,15 +28,15 @@ else ifeq ($(BSP),rpi4)
 	CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi4.img
 endif
 
+RUSTFLAGS = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
+RUSTFLAGS_PEDANTIC = $(RUSTFLAGS) -D warnings -D missing_docs
+
 SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) $(wildcard **/*.ld)
 
 XRUSTC_CMD = cargo xrustc \
 		--target=$(TARGET) \
 		--features bsp_$(BSP) \
-		--release \
-		-- \
-		-C link-arg=-T$(LINKER_FILE) \
-		$(RUSTC_MISC_ARGS)
+		--release
 
 CARGO_OUTPUT = target/$(TARGET)/release/kernel
 
@@ -51,7 +51,7 @@ DOCKER_CMD        = docker run -it --rm
 DOCKER_ARG_CURDIR = -v $(shell pwd):/work -w /work
 DOCKER_ARG_TTY    = --privileged -v /dev:/dev
 
-DOCKER_EXEC_QEMU         = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE) -kernel $(OUTPUT)
+DOCKER_EXEC_QEMU         = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE) $(QEMU_MISC_ARGS) -kernel
 DOCKER_EXEC_RASPBOOT     = raspbootcom
 DOCKER_EXEC_RASPBOOT_DEV = /dev/ttyUSB0
 # DOCKER_EXEC_RASPBOOT_DEV = /dev/ttyACM0
@@ -61,7 +61,7 @@ DOCKER_EXEC_RASPBOOT_DEV = /dev/ttyUSB0
 all: clean $(OUTPUT)
 
 $(CARGO_OUTPUT): $(SOURCES)
-	RUSTFLAGS="-D warnings -D missing_docs" $(XRUSTC_CMD)
+	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(XRUSTC_CMD)
 
 $(OUTPUT): $(CARGO_OUTPUT)
 	cp $< .
@@ -80,11 +80,11 @@ qemuasm:
 else
 qemu: all
 	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(CONTAINER_UTILS) \
-	$(DOCKER_EXEC_QEMU) $(QEMU_MISC_ARGS)
+	$(DOCKER_EXEC_QEMU) $(OUTPUT)
 
 qemuasm: all
 	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(CONTAINER_UTILS) \
-	$(DOCKER_EXEC_QEMU) -d in_asm
+	$(DOCKER_EXEC_QEMU) $(OUTPUT) -d in_asm
 endif
 
 chainboot:
@@ -96,7 +96,7 @@ clippy:
 	cargo xclippy --target=$(TARGET) --features bsp_$(BSP)
 
 clean:
-	cargo clean
+	rm -rf target
 
 readelf:
 	readelf -a kernel

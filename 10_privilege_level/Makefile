@@ -30,15 +30,15 @@ else ifeq ($(BSP),rpi4)
 	RUSTC_MISC_ARGS = -C target-cpu=cortex-a72
 endif
 
+RUSTFLAGS = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
+RUSTFLAGS_PEDANTIC = $(RUSTFLAGS) -D warnings -D missing_docs
+
 SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) $(wildcard **/*.ld)
 
 XRUSTC_CMD = cargo xrustc \
 		--target=$(TARGET) \
 		--features bsp_$(BSP) \
-		--release \
-		-- \
-		-C link-arg=-T$(LINKER_FILE) \
-		$(RUSTC_MISC_ARGS)
+		--release
 
 CARGO_OUTPUT = target/$(TARGET)/release/kernel
 
@@ -55,17 +55,17 @@ DOCKER_ARG_TTY    = --privileged -v /dev:/dev
 DOCKER_ARG_JTAG   = -v $(shell pwd)/../X1_JTAG_boot:/jtag
 DOCKER_ARG_NET    = --network host
 
-DOCKER_EXEC_QEMU         = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE) -kernel $(OUTPUT)
+DOCKER_EXEC_QEMU         = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE) $(QEMU_MISC_ARGS) -kernel
 DOCKER_EXEC_RASPBOOT     = raspbootcom
 DOCKER_EXEC_RASPBOOT_DEV = /dev/ttyUSB0
 # DOCKER_EXEC_RASPBOOT_DEV = /dev/ttyACM0
 
-.PHONY: all doc qemu chainboot clippy clean readelf objdump nm
+.PHONY: all doc qemu chainboot jtagboot openocd gdb gdb-opt0 clippy clean readelf objdump nm
 
 all: clean $(OUTPUT)
 
 $(CARGO_OUTPUT): $(SOURCES)
-	RUSTFLAGS="-D warnings -D missing_docs" $(XRUSTC_CMD)
+	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(XRUSTC_CMD)
 
 $(OUTPUT): $(CARGO_OUTPUT)
 	cp $< .
@@ -81,7 +81,7 @@ qemu:
 else
 qemu: all
 	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(CONTAINER_UTILS) \
-	$(DOCKER_EXEC_QEMU) $(QEMU_MISC_ARGS)
+	$(DOCKER_EXEC_QEMU) $(OUTPUT)
 endif
 
 chainboot: all
@@ -99,7 +99,7 @@ openocd:
 	openocd $(OPENOCD_ARG)
 
 define gen_gdb
-	RUSTFLAGS="-D warnings -D missing_docs" $(XRUSTC_CMD) $1
+	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(XRUSTC_CMD) $1
 	cp $(CARGO_OUTPUT) kernel_for_jtag
 	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(DOCKER_ARG_NET) $(CONTAINER_UTILS) \
 	gdb-multiarch -q kernel_for_jtag
@@ -115,7 +115,7 @@ clippy:
 	cargo xclippy --target=$(TARGET) --features bsp_$(BSP)
 
 clean:
-	cargo clean
+	rm -rf target
 
 readelf:
 	readelf -a kernel

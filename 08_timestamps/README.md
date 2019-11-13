@@ -60,7 +60,7 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
 +	RUSTC_MISC_ARGS = -C target-cpu=cortex-a72
  endif
 
- SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) $(wildcard **/*.ld)
+ RUSTFLAGS = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
 @@ -56,7 +54,7 @@
  DOCKER_EXEC_RASPBOOT_DEV = /dev/ttyUSB0
  # DOCKER_EXEC_RASPBOOT_DEV = /dev/ttyACM0
@@ -80,11 +80,11 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
  else
  qemu: all
  	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(CONTAINER_UTILS) \
- 	$(DOCKER_EXEC_QEMU) $(QEMU_MISC_ARGS)
+ 	$(DOCKER_EXEC_QEMU) $(OUTPUT)
 -
 -qemuasm: all
 -	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(CONTAINER_UTILS) \
--	$(DOCKER_EXEC_QEMU) -d in_asm
+-	$(DOCKER_EXEC_QEMU) $(OUTPUT) -d in_asm
  endif
 
 -chainboot:
