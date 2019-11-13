@@ -603,7 +603,7 @@ diff -uNr 10_privilege_level/src/arch/aarch64.rs 11_virtual_memory/src/arch/aarc
  //--------------------------------------------------------------------------------------------------
  // Implementation of the kernel's architecture abstraction code
 @@ -136,3 +138,8 @@
-         println!("      FIQ:    {}", to_mask_str(exception::is_masked::<FIQ>()));
+         info!("      FIQ:    {}", to_mask_str(exception::is_masked::<FIQ>()));
      }
  }
 +
@@ -846,16 +846,16 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_memory/src/main.rs
              panic!("Error loading driver: {}", i.compatible())
 @@ -67,6 +80,9 @@
 
-     println!("Booting on: {}", bsp::board_name());
+     info!("Booting on: {}", bsp::board_name());
 
-+    println!("MMU online. Special regions:");
++    info!("MMU online. Special regions:");
 +    bsp::virt_mem_layout().print_layout();
 +
-     println!(
+     info!(
          "Current privilege level: {}",
          arch::state::current_privilege_level()
 @@ -87,6 +103,13 @@
-     println!("Timer test, spinning for 1 second");
+     info!("Timer test, spinning for 1 second");
      arch::timer().spin_for(Duration::from_secs(1));
 
 +    let remapped_uart = unsafe { bsp::driver::PL011Uart::new(0x1FFF_1000) };
@@ -865,7 +865,7 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_memory/src/main.rs
 +    )
 +    .unwrap();
 +
-     println!("Echoing input now");
+     info!("Echoing input now");
      loop {
          let c = bsp::console().read_char();
 
@@ -1013,10 +1013,10 @@ diff -uNr 10_privilege_level/src/memory.rs 11_virtual_memory/src/memory.rs
 +
 +    /// Print the memory layout.
 +    pub fn print_layout(&self) {
-+        use crate::println;
++        use crate::info;
 +
 +        for i in self.inner.iter() {
-+            println!("{}", i);
++            info!("{}", i);
 +        }
 +    }
 +}

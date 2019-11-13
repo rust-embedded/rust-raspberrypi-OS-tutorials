@@ -78,29 +78,29 @@ fn kernel_main() -> ! {
     use core::time::Duration;
     use interface::{console::All, time::Timer};
 
-    println!("Booting on: {}", bsp::board_name());
+    info!("Booting on: {}", bsp::board_name());
 
-    println!("MMU online. Special regions:");
+    info!("MMU online. Special regions:");
     bsp::virt_mem_layout().print_layout();
 
-    println!(
+    info!(
         "Current privilege level: {}",
         arch::state::current_privilege_level()
     );
-    println!("Exception handling state:");
+    info!("Exception handling state:");
     arch::state::print_exception_state();
 
-    println!(
+    info!(
         "Architectural timer resolution: {} ns",
         arch::timer().resolution().as_nanos()
     );
 
-    println!("Drivers loaded:");
+    info!("Drivers loaded:");
     for (i, driver) in bsp::device_drivers().iter().enumerate() {
-        println!("      {}. {}", i + 1, driver.compatible());
+        info!("      {}. {}", i + 1, driver.compatible());
     }
 
-    println!("Timer test, spinning for 1 second");
+    info!("Timer test, spinning for 1 second");
     arch::timer().spin_for(Duration::from_secs(1));
 
     let remapped_uart = unsafe { bsp::driver::PL011Uart::new(0x1FFF_1000) };
@@ -110,7 +110,7 @@ fn kernel_main() -> ! {
     )
     .unwrap();
 
-    println!("Echoing input now");
+    info!("Echoing input now");
     loop {
         let c = bsp::console().read_char();
         bsp::console().write_char(c);

@@ -47,7 +47,7 @@ CONTAINER_UTILS   = rustembedded/osdev-utils
 
 DOCKER_CMD        = docker run -it --rm
 DOCKER_ARG_CURDIR = -v $(shell pwd):/work -w /work
-DOCKER_EXEC_QEMU  = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE) -kernel $(OUTPUT)
+DOCKER_EXEC_QEMU  = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE) $(QEMU_MISC_ARGS) -kernel
 
 .PHONY: all doc qemu clippy clean readelf objdump nm
 

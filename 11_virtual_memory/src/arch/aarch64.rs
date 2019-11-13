@@ -126,16 +126,16 @@ pub mod state {
             exception,
             exception::{Debug, SError, FIQ, IRQ},
         };
-        use crate::println;
+        use crate::info;
 
         let to_mask_str = |x: bool| -> &'static str {
             if x { "Masked" } else { "Unmasked" }
         };
 
-        println!("      Debug:  {}", to_mask_str(exception::is_masked::<Debug>()));
-        println!("      SError: {}", to_mask_str(exception::is_masked::<SError>()));
-        println!("      IRQ:    {}", to_mask_str(exception::is_masked::<IRQ>()));
-        println!("      FIQ:    {}", to_mask_str(exception::is_masked::<FIQ>()));
+        info!("      Debug:  {}", to_mask_str(exception::is_masked::<Debug>()));
+        info!("      SError: {}", to_mask_str(exception::is_masked::<SError>()));
+        info!("      IRQ:    {}", to_mask_str(exception::is_masked::<IRQ>()));
+        info!("      FIQ:    {}", to_mask_str(exception::is_masked::<FIQ>()));
     }
 }
 

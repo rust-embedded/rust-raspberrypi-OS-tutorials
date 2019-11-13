@@ -107,7 +107,7 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
 
  DOCKER_CMD        = docker run -it --rm
  DOCKER_ARG_CURDIR = -v $(shell pwd):/work -w /work
--DOCKER_EXEC_QEMU  = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE) -kernel $(OUTPUT)
+-DOCKER_EXEC_QEMU  = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE) $(QEMU_MISC_ARGS) -kernel
 +DOCKER_ARG_TTY    = --privileged -v /dev:/dev
 
 -.PHONY: all doc qemu clippy clean readelf objdump nm

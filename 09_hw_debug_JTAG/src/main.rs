@@ -65,22 +65,22 @@ fn kernel_main() -> ! {
     use core::time::Duration;
     use interface::time::Timer;
 
-    println!("Booting on: {}", bsp::board_name());
-    println!(
+    info!("Booting on: {}", bsp::board_name());
+    info!(
         "Architectural timer resolution: {} ns",
         arch::timer().resolution().as_nanos()
     );
 
-    println!("Drivers loaded:");
+    info!("Drivers loaded:");
     for (i, driver) in bsp::device_drivers().iter().enumerate() {
-        println!("      {}. {}", i + 1, driver.compatible());
+        info!("      {}. {}", i + 1, driver.compatible());
     }
 
     // Test a failing timer case.
     arch::timer().spin_for(Duration::from_nanos(1));
 
     loop {
-        println!("Spinning for 1 second");
+        info!("Spinning for 1 second");
         arch::timer().spin_for(Duration::from_secs(1));
     }
 }

@@ -387,15 +387,15 @@ diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
 -        for i in 0..size {
 -            *kernel_addr.offset(i as isize) = bsp::console().read_char() as u8;
 -        }
-+    println!("Booting on: {}", bsp::board_name());
-+    println!(
++    info!("Booting on: {}", bsp::board_name());
++    info!(
 +        "Architectural timer resolution: {} ns",
 +        arch::timer().resolution().as_nanos()
 +    );
 +
-+    println!("Drivers loaded:");
++    info!("Drivers loaded:");
 +    for (i, driver) in bsp::device_drivers().iter().enumerate() {
-+        println!("      {}. {}", i + 1, driver.compatible());
++        info!("      {}. {}", i + 1, driver.compatible());
      }
 
 -    println!("[ML] Loaded! Executing the payload now\n");
@@ -409,7 +409,7 @@ diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
 -    // Jump to loaded kernel!
 -    kernel()
 +    loop {
-+        println!("Spinning for 1 second");
++        info!("Spinning for 1 second");
 +        arch::timer().spin_for(Duration::from_secs(1));
 +    }
  }
@@ -417,17 +417,14 @@ diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
 diff -uNr 07_uart_chainloader/src/print.rs 08_timestamps/src/print.rs
 --- 07_uart_chainloader/src/print.rs
 +++ 08_timestamps/src/print.rs
-@@ -22,12 +22,70 @@
+@@ -31,3 +31,71 @@
+         $crate::print::_print(format_args_nl!($($arg)*));
+     })
  }
-
- /// Prints with a newline.
--///
--/// Carbon copy from https://doc.rust-lang.org/src/std/macros.rs.html
- #[macro_export]
- macro_rules! println {
-     () => ($crate::print!("\n"));
--    ($($arg:tt)*) => ({
--        $crate::print::_print(format_args_nl!($($arg)*));
++
++/// Prints am info, with newline.
++#[macro_export]
++macro_rules! info {
 +    ($string:expr) => ({
 +        #[allow(unused_imports)]
 +        use crate::interface::time::Timer;
@@ -490,8 +487,8 @@ diff -uNr 07_uart_chainloader/src/print.rs 08_timestamps/src/print.rs
 +            timestamp_subsec_us modulo 1_000,
 +            $($arg)*
 +        ));
-     })
- }
++    })
++}
 
 diff -uNr 07_uart_chainloader/src/relocate.rs 08_timestamps/src/relocate.rs
 --- 07_uart_chainloader/src/relocate.rs

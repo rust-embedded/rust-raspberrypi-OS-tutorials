@@ -22,9 +22,19 @@ macro_rules! print {
 }
 
 /// Prints with a newline.
+///
+/// Carbon copy from https://doc.rust-lang.org/src/std/macros.rs.html
 #[macro_export]
 macro_rules! println {
     () => ($crate::print!("\n"));
+    ($($arg:tt)*) => ({
+        $crate::print::_print(format_args_nl!($($arg)*));
+    })
+}
+
+/// Prints am info, with newline.
+#[macro_export]
+macro_rules! info {
     ($string:expr) => ({
         #[allow(unused_imports)]
         use crate::interface::time::Timer;

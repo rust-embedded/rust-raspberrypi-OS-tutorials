@@ -359,16 +359,16 @@ diff -uNr 09_hw_debug_JTAG/src/arch/aarch64.rs 10_privilege_level/src/arch/aarch
 +            exception,
 +            exception::{Debug, SError, FIQ, IRQ},
 +        };
-+        use crate::println;
++        use crate::info;
 +
 +        let to_mask_str = |x: bool| -> &'static str {
 +            if x { "Masked" } else { "Unmasked" }
 +        };
 +
-+        println!("      Debug:  {}", to_mask_str(exception::is_masked::<Debug>()));
-+        println!("      SError: {}", to_mask_str(exception::is_masked::<SError>()));
-+        println!("      IRQ:    {}", to_mask_str(exception::is_masked::<IRQ>()));
-+        println!("      FIQ:    {}", to_mask_str(exception::is_masked::<FIQ>()));
++        info!("      Debug:  {}", to_mask_str(exception::is_masked::<Debug>()));
++        info!("      SError: {}", to_mask_str(exception::is_masked::<SError>()));
++        info!("      IRQ:    {}", to_mask_str(exception::is_masked::<IRQ>()));
++        info!("      FIQ:    {}", to_mask_str(exception::is_masked::<FIQ>()));
 +    }
 +}
 
@@ -382,30 +382,30 @@ diff -uNr 09_hw_debug_JTAG/src/main.rs 10_privilege_level/src/main.rs
 -    use interface::time::Timer;
 +    use interface::{console::All, time::Timer};
 
-     println!("Booting on: {}", bsp::board_name());
+     info!("Booting on: {}", bsp::board_name());
 +
-+    println!(
++    info!(
 +        "Current privilege level: {}",
 +        arch::state::current_privilege_level()
 +    );
-+    println!("Exception handling state:");
++    info!("Exception handling state:");
 +    arch::state::print_exception_state();
 +
-     println!(
+     info!(
          "Architectural timer resolution: {} ns",
          arch::timer().resolution().as_nanos()
 @@ -76,11 +84,12 @@
-         println!("      {}. {}", i + 1, driver.compatible());
+         info!("      {}. {}", i + 1, driver.compatible());
      }
 
 -    // Test a failing timer case.
 -    arch::timer().spin_for(Duration::from_nanos(1));
-+    println!("Timer test, spinning for 1 second");
++    info!("Timer test, spinning for 1 second");
 +    arch::timer().spin_for(Duration::from_secs(1));
 
-+    println!("Echoing input now");
++    info!("Echoing input now");
      loop {
--        println!("Spinning for 1 second");
+-        info!("Spinning for 1 second");
 -        arch::timer().spin_for(Duration::from_secs(1));
 +        let c = bsp::console().read_char();
 +        bsp::console().write_char(c);

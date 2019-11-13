@@ -138,10 +138,10 @@ impl<const NUM_SPECIAL_RANGES: usize> KernelVirtualLayout<{ NUM_SPECIAL_RANGES }
 
     /// Print the memory layout.
     pub fn print_layout(&self) {
-        use crate::println;
+        use crate::info;
 
         for i in self.inner.iter() {
-            println!("{}", i);
+            info!("{}", i);
         }
     }
 }
