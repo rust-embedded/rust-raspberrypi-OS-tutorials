@@ -6,7 +6,7 @@
 
 use crate::{arch, arch::sync::NullLock, interface};
 use core::ops;
-use register::{mmio::ReadWrite, register_bitfields};
+use register::{mmio::ReadWrite, register_bitfields, register_structs};
 
 // GPIO registers.
 //
@@ -49,33 +49,21 @@ register_bitfields! {
     ]
 }
 
-#[allow(non_snake_case)]
-#[repr(C)]
-pub struct RegisterBlock {
-    pub GPFSEL0: ReadWrite<u32>,                        // 0x00
-    pub GPFSEL1: ReadWrite<u32, GPFSEL1::Register>,     // 0x04
-    pub GPFSEL2: ReadWrite<u32>,                        // 0x08
-    pub GPFSEL3: ReadWrite<u32>,                        // 0x0C
-    pub GPFSEL4: ReadWrite<u32>,                        // 0x10
-    pub GPFSEL5: ReadWrite<u32>,                        // 0x14
-    __reserved_0: u32,                                  // 0x18
-    GPSET0: ReadWrite<u32>,                             // 0x1C
-    GPSET1: ReadWrite<u32>,                             // 0x20
-    __reserved_1: u32,                                  //
-    GPCLR0: ReadWrite<u32>,                             // 0x28
-    __reserved_2: [u32; 2],                             //
-    GPLEV0: ReadWrite<u32>,                             // 0x34
-    GPLEV1: ReadWrite<u32>,                             // 0x38
-    __reserved_3: u32,                                  //
-    GPEDS0: ReadWrite<u32>,                             // 0x40
-    GPEDS1: ReadWrite<u32>,                             // 0x44
-    __reserved_4: [u32; 7],                             //
-    GPHEN0: ReadWrite<u32>,                             // 0x64
-    GPHEN1: ReadWrite<u32>,                             // 0x68
-    __reserved_5: [u32; 10],                            //
-    pub GPPUD: ReadWrite<u32>,                          // 0x94
-    pub GPPUDCLK0: ReadWrite<u32, GPPUDCLK0::Register>, // 0x98
-    pub GPPUDCLK1: ReadWrite<u32>,                      // 0x9C
+register_structs! {
+    #[allow(non_snake_case)]
+    RegisterBlock {
+        (0x00 => GPFSEL0: ReadWrite<u32>),
+        (0x04 => GPFSEL1: ReadWrite<u32, GPFSEL1::Register>),
+        (0x08 => GPFSEL2: ReadWrite<u32>),
+        (0x0C => GPFSEL3: ReadWrite<u32>),
+        (0x10 => GPFSEL4: ReadWrite<u32>),
+        (0x14 => GPFSEL5: ReadWrite<u32>),
+        (0x18 => _reserved1),
+        (0x94 => GPPUD: ReadWrite<u32>),
+        (0x98 => GPPUDCLK0: ReadWrite<u32, GPPUDCLK0::Register>),
+        (0x9C => GPPUDCLK1: ReadWrite<u32>),
+        (0xA0 => @END),
+    }
 }
 
 /// The driver's private data.

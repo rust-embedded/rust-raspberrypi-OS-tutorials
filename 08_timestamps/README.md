@@ -239,7 +239,7 @@ diff -uNr 07_uart_chainloader/src/arch/aarch64.rs 08_timestamps/src/arch/aarch64
 diff -uNr 07_uart_chainloader/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 08_timestamps/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
 --- 07_uart_chainloader/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 08_timestamps/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -305,7 +305,14 @@
+@@ -307,7 +307,14 @@
              }
 
              // Read one character.

@@ -99,8 +99,8 @@ diff -uNr 05_safe_globals/Cargo.toml 06_drivers_gpio_uart/Cargo.toml
  r0 = "0.2.*"
 
  # Optional dependencies
- cortex-a = { version = "2.*", optional = true }
-+register = { version = "0.3.*", optional = true }
+ cortex-a = { version = "2.8.x", optional = true }
++register = { version = "0.4.x", optional = true }
 
 diff -uNr 05_safe_globals/src/arch/aarch64.rs 06_drivers_gpio_uart/src/arch/aarch64.rs
 --- 05_safe_globals/src/arch/aarch64.rs
@@ -125,7 +125,7 @@ diff -uNr 05_safe_globals/src/arch/aarch64.rs 06_drivers_gpio_uart/src/arch/aarc
 diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_gpio.rs 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_gpio.rs
 --- 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_gpio.rs
 +++ 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_gpio.rs
-@@ -0,0 +1,157 @@
+@@ -0,0 +1,145 @@
 +// SPDX-License-Identifier: MIT
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
@@ -134,7 +134,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_gpio.rs 06_drivers_gpio_uar
 +
 +use crate::{arch, arch::sync::NullLock, interface};
 +use core::ops;
-+use register::{mmio::ReadWrite, register_bitfields};
++use register::{mmio::ReadWrite, register_bitfields, register_structs};
 +
 +// GPIO registers.
 +//
@@ -177,33 +177,21 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_gpio.rs 06_drivers_gpio_uar
 +    ]
 +}
 +
-+#[allow(non_snake_case)]
-+#[repr(C)]
-+pub struct RegisterBlock {
-+    pub GPFSEL0: ReadWrite<u32>,                        // 0x00
-+    pub GPFSEL1: ReadWrite<u32, GPFSEL1::Register>,     // 0x04
-+    pub GPFSEL2: ReadWrite<u32>,                        // 0x08
-+    pub GPFSEL3: ReadWrite<u32>,                        // 0x0C
-+    pub GPFSEL4: ReadWrite<u32>,                        // 0x10
-+    pub GPFSEL5: ReadWrite<u32>,                        // 0x14
-+    __reserved_0: u32,                                  // 0x18
-+    GPSET0: ReadWrite<u32>,                             // 0x1C
-+    GPSET1: ReadWrite<u32>,                             // 0x20
-+    __reserved_1: u32,                                  //
-+    GPCLR0: ReadWrite<u32>,                             // 0x28
-+    __reserved_2: [u32; 2],                             //
-+    GPLEV0: ReadWrite<u32>,                             // 0x34
-+    GPLEV1: ReadWrite<u32>,                             // 0x38
-+    __reserved_3: u32,                                  //
-+    GPEDS0: ReadWrite<u32>,                             // 0x40
-+    GPEDS1: ReadWrite<u32>,                             // 0x44
-+    __reserved_4: [u32; 7],                             //
-+    GPHEN0: ReadWrite<u32>,                             // 0x64
-+    GPHEN1: ReadWrite<u32>,                             // 0x68
-+    __reserved_5: [u32; 10],                            //
-+    pub GPPUD: ReadWrite<u32>,                          // 0x94
-+    pub GPPUDCLK0: ReadWrite<u32, GPPUDCLK0::Register>, // 0x98
-+    pub GPPUDCLK1: ReadWrite<u32>,                      // 0x9C
++register_structs! {
++    #[allow(non_snake_case)]
++    RegisterBlock {
++        (0x00 => GPFSEL0: ReadWrite<u32>),
++        (0x04 => GPFSEL1: ReadWrite<u32, GPFSEL1::Register>),
++        (0x08 => GPFSEL2: ReadWrite<u32>),
++        (0x0C => GPFSEL3: ReadWrite<u32>),
++        (0x10 => GPFSEL4: ReadWrite<u32>),
++        (0x14 => GPFSEL5: ReadWrite<u32>),
++        (0x18 => _reserved1),
++        (0x94 => GPPUD: ReadWrite<u32>),
++        (0x98 => GPPUDCLK0: ReadWrite<u32, GPPUDCLK0::Register>),
++        (0x9C => GPPUDCLK1: ReadWrite<u32>),
++        (0xA0 => @END),
++    }
 +}
 +
 +/// The driver's private data.
@@ -287,7 +275,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_gpio.rs 06_drivers_gpio_uar
 diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
 --- 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -0,0 +1,313 @@
+@@ -0,0 +1,315 @@
 +// SPDX-License-Identifier: MIT
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
@@ -296,7 +284,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gp
 +
 +use crate::{arch, arch::sync::NullLock, interface};
 +use core::{fmt, ops};
-+use register::{mmio::*, register_bitfields};
++use register::{mmio::*, register_bitfields, register_structs};
 +
 +// PL011 UART registers.
 +//
@@ -399,19 +387,21 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gp
 +    ]
 +}
 +
-+#[allow(non_snake_case)]
-+#[repr(C)]
-+pub struct RegisterBlock {
-+    DR: ReadWrite<u32>,                   // 0x00
-+    __reserved_0: [u32; 5],               // 0x04
-+    FR: ReadOnly<u32, FR::Register>,      // 0x18
-+    __reserved_1: [u32; 2],               // 0x1c
-+    IBRD: WriteOnly<u32, IBRD::Register>, // 0x24
-+    FBRD: WriteOnly<u32, FBRD::Register>, // 0x28
-+    LCRH: WriteOnly<u32, LCRH::Register>, // 0x2C
-+    CR: WriteOnly<u32, CR::Register>,     // 0x30
-+    __reserved_2: [u32; 4],               // 0x34
-+    ICR: WriteOnly<u32, ICR::Register>,   // 0x44
++register_structs! {
++    #[allow(non_snake_case)]
++    RegisterBlock {
++        (0x00 => DR: ReadWrite<u32>),
++        (0x04 => _reserved1),
++        (0x18 => FR: ReadOnly<u32, FR::Register>),
++        (0x1c => _reserved2),
++        (0x24 => IBRD: WriteOnly<u32, IBRD::Register>),
++        (0x28 => FBRD: WriteOnly<u32, FBRD::Register>),
++        (0x2c => LCRH: WriteOnly<u32, LCRH::Register>),
++        (0x30 => CR: WriteOnly<u32, CR::Register>),
++        (0x34 => _reserved3),
++        (0x44 => ICR: WriteOnly<u32, ICR::Register>),
++        (0x48 => @END),
++    }
 +}
 +
 +/// The driver's mutex protected part.

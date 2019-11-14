@@ -6,7 +6,7 @@
 
 use crate::{arch, arch::sync::NullLock, interface};
 use core::{fmt, ops};
-use register::{mmio::*, register_bitfields};
+use register::{mmio::*, register_bitfields, register_structs};
 
 // PL011 UART registers.
 //
@@ -109,19 +109,21 @@ register_bitfields! {
     ]
 }
 
-#[allow(non_snake_case)]
-#[repr(C)]
-pub struct RegisterBlock {
-    DR: ReadWrite<u32>,                   // 0x00
-    __reserved_0: [u32; 5],               // 0x04
-    FR: ReadOnly<u32, FR::Register>,      // 0x18
-    __reserved_1: [u32; 2],               // 0x1c
-    IBRD: WriteOnly<u32, IBRD::Register>, // 0x24
-    FBRD: WriteOnly<u32, FBRD::Register>, // 0x28
-    LCRH: WriteOnly<u32, LCRH::Register>, // 0x2C
-    CR: WriteOnly<u32, CR::Register>,     // 0x30
-    __reserved_2: [u32; 4],               // 0x34
-    ICR: WriteOnly<u32, ICR::Register>,   // 0x44
+register_structs! {
+    #[allow(non_snake_case)]
+    RegisterBlock {
+        (0x00 => DR: ReadWrite<u32>),
+        (0x04 => _reserved1),
+        (0x18 => FR: ReadOnly<u32, FR::Register>),
+        (0x1c => _reserved2),
+        (0x24 => IBRD: WriteOnly<u32, IBRD::Register>),
+        (0x28 => FBRD: WriteOnly<u32, FBRD::Register>),
+        (0x2c => LCRH: WriteOnly<u32, LCRH::Register>),
+        (0x30 => CR: WriteOnly<u32, CR::Register>),
+        (0x34 => _reserved3),
+        (0x44 => ICR: WriteOnly<u32, ICR::Register>),
+        (0x48 => @END),
+    }
 }
 
 /// The driver's mutex protected part.
