@@ -127,7 +127,7 @@ register_structs! {
 }
 
 /// The driver's mutex protected part.
-struct PL011UartInner {
+pub struct PL011UartInner {
     base_addr: usize,
     chars_written: usize,
 }
@@ -151,11 +151,28 @@ impl ops::Deref for PL011UartInner {
 }
 
 impl PL011UartInner {
-    const fn new(base_addr: usize) -> PL011UartInner {
+    pub const unsafe fn new(base_addr: usize) -> PL011UartInner {
         PL011UartInner {
             base_addr,
             chars_written: 0,
         }
+    }
+
+    /// Set up baud rate and characteristics.
+    ///
+    /// Results in 8N1 and 115200 baud (if the clk has been previously set to 4 MHz by the
+    /// firmware).
+    pub fn init(&self) {
+        // Turn it off temporarily.
+        self.CR.set(0);
+
+        self.ICR.write(ICR::ALL::CLEAR);
+        self.IBRD.write(IBRD::IBRD.val(26)); // Results in 115200 baud for UART Clk of 48 MHz.
+        self.FBRD.write(FBRD::FBRD.val(3));
+        self.LCRH
+            .write(LCRH::WLEN::EightBit + LCRH::FEN::FifosEnabled); // 8N1 + Fifo on
+        self.CR
+            .write(CR::UARTEN::Enabled + CR::TXE::Enabled + CR::RXE::Enabled);
     }
 
     /// Return a pointer to the register block.
@@ -165,12 +182,8 @@ impl PL011UartInner {
 
     /// Send a character.
     fn write_char(&mut self, c: char) {
-        // Wait until we can send.
-        loop {
-            if !self.FR.is_set(FR::TXFF) {
-                break;
-            }
-
+        // Spin while TX FIFO full is set, waiting for an empty slot.
+        while self.FR.matches_all(FR::TXFF::SET) {
             arch::nop();
         }
 
@@ -206,6 +219,11 @@ impl fmt::Write for PL011UartInner {
 }
 
 //--------------------------------------------------------------------------------------------------
+// Export the inner struct so that BSPs can use it for the panic handler
+//--------------------------------------------------------------------------------------------------
+pub use PL011UartInner as PanicUart;
+
+//--------------------------------------------------------------------------------------------------
 // BSP-public
 //--------------------------------------------------------------------------------------------------
 
@@ -235,26 +253,9 @@ impl interface::driver::DeviceDriver for PL011Uart {
         "PL011Uart"
     }
 
-    /// Set up baud rate and characteristics
-    ///
-    /// Results in 8N1 and 115200 baud (if the clk has been previously set to 4 MHz by the
-    /// firmware).
     fn init(&self) -> interface::driver::Result {
         let mut r = &self.inner;
-        r.lock(|inner| {
-            // Turn it off temporarily.
-            inner.CR.set(0);
-
-            inner.ICR.write(ICR::ALL::CLEAR);
-            inner.IBRD.write(IBRD::IBRD.val(26)); // Results in 115200 baud for UART Clk of 48 MHz.
-            inner.FBRD.write(FBRD::FBRD.val(3));
-            inner
-                .LCRH
-                .write(LCRH::WLEN::EightBit + LCRH::FEN::FifosEnabled); // 8N1 + Fifo on
-            inner
-                .CR
-                .write(CR::UARTEN::Enabled + CR::TXE::Enabled + CR::RXE::Enabled);
-        });
+        r.lock(|inner| inner.init());
 
         Ok(())
     }
@@ -277,13 +278,11 @@ impl interface::console::Write for PL011Uart {
 
     fn flush(&self) {
         let mut r = &self.inner;
-        // Spin until the TX FIFO empty flag is set.
-        r.lock(|inner| loop {
-            if inner.FR.is_set(FR::TXFE) {
-                break;
+        // Spin until TX FIFO empty is set.
+        r.lock(|inner| {
+            while !inner.FR.matches_all(FR::TXFE::SET) {
+                arch::nop();
             }
-
-            arch::nop();
         });
     }
 }
@@ -292,12 +291,8 @@ impl interface::console::Read for PL011Uart {
     fn read_char(&self) -> char {
         let mut r = &self.inner;
         r.lock(|inner| {
-            // Wait until buffer is filled.
-            loop {
-                if !inner.FR.is_set(FR::RXFE) {
-                    break;
-                }
-
+            // Spin while RX FIFO empty is set.
+            while inner.FR.matches_all(FR::RXFE::SET) {
                 arch::nop();
             }
 
@@ -315,12 +310,10 @@ impl interface::console::Read for PL011Uart {
 
     fn clear(&self) {
         let mut r = &self.inner;
-        r.lock(|inner| loop {
-            // Read from the RX FIFO until the empty bit is '1'.
-            if !inner.FR.is_set(FR::RXFE) {
+        r.lock(|inner| {
+            // Read from the RX FIFO until it is indicating empty.
+            while !inner.FR.matches_all(FR::RXFE::SET) {
                 inner.DR.get();
-            } else {
-                break;
             }
         })
     }

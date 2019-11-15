@@ -162,26 +162,24 @@ diff -uNr 06_drivers_gpio_uart/src/arch/aarch64.rs 07_uart_chainloader/src/arch/
 diff -uNr 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 07_uart_chainloader/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
 --- 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 07_uart_chainloader/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -279,6 +279,18 @@
+@@ -275,6 +275,16 @@
          let mut r = &self.inner;
          r.lock(|inner| fmt::Write::write_fmt(inner, args))
      }
 +
 +    fn flush(&self) {
 +        let mut r = &self.inner;
-+        // Spin until the TX FIFO empty flag is set.
-+        r.lock(|inner| loop {
-+            if inner.FR.is_set(FR::TXFE) {
-+                break;
++        // Spin until TX FIFO empty is set.
++        r.lock(|inner| {
++            while !inner.FR.matches_all(FR::TXFE::SET) {
++                arch::nop();
 +            }
-+
-+            arch::nop();
 +        });
 +    }
  }
 
  impl interface::console::Read for PL011Uart {
-@@ -295,14 +307,19 @@
+@@ -287,14 +297,17 @@
              }
 
              // Read one character.
@@ -195,12 +193,10 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 07_uart_
 -                ret = '\n'
 +    fn clear(&self) {
 +        let mut r = &self.inner;
-+        r.lock(|inner| loop {
-+            // Read from the RX FIFO until the empty bit is '1'.
-+            if !inner.FR.is_set(FR::RXFE) {
++        r.lock(|inner| {
++            // Read from the RX FIFO until it is indicating empty.
++            while !inner.FR.matches_all(FR::RXFE::SET) {
 +                inner.DR.get();
-+            } else {
-+                break;
              }
 -
 -            ret

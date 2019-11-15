@@ -275,7 +275,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_gpio.rs 06_drivers_gpio_uar
 diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
 --- 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -0,0 +1,315 @@
+@@ -0,0 +1,307 @@
 +// SPDX-License-Identifier: MIT
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
@@ -460,12 +460,8 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gp
 +
 +    /// Send a character.
 +    fn write_char(&mut self, c: char) {
-+        // Wait until we can send.
-+        loop {
-+            if !self.FR.is_set(FR::TXFF) {
-+                break;
-+            }
-+
++        // Spin while TX FIFO full is set, waiting for an empty slot.
++        while self.FR.matches_all(FR::TXFF::SET) {
 +            arch::nop();
 +        }
 +
@@ -563,12 +559,8 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gp
 +    fn read_char(&self) -> char {
 +        let mut r = &self.inner;
 +        r.lock(|inner| {
-+            // Wait until buffer is filled.
-+            loop {
-+                if !inner.FR.is_set(FR::RXFE) {
-+                    break;
-+                }
-+
++            // Spin while RX FIFO empty is set.
++            while inner.FR.matches_all(FR::RXFE::SET) {
 +                arch::nop();
 +            }
 +

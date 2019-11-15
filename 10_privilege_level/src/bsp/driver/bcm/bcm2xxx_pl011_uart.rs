@@ -182,12 +182,8 @@ impl PL011UartInner {
 
     /// Send a character.
     fn write_char(&mut self, c: char) {
-        // Wait until we can send.
-        loop {
-            if !self.FR.is_set(FR::TXFF) {
-                break;
-            }
-
+        // Spin while TX FIFO full is set, waiting for an empty slot.
+        while self.FR.matches_all(FR::TXFF::SET) {
             arch::nop();
         }
 
@@ -282,13 +278,11 @@ impl interface::console::Write for PL011Uart {
 
     fn flush(&self) {
         let mut r = &self.inner;
-        // Spin until the TX FIFO empty flag is set.
-        r.lock(|inner| loop {
-            if inner.FR.is_set(FR::TXFE) {
-                break;
+        // Spin until TX FIFO empty is set.
+        r.lock(|inner| {
+            while !inner.FR.matches_all(FR::TXFE::SET) {
+                arch::nop();
             }
-
-            arch::nop();
         });
     }
 }
@@ -297,12 +291,8 @@ impl interface::console::Read for PL011Uart {
     fn read_char(&self) -> char {
         let mut r = &self.inner;
         r.lock(|inner| {
-            // Wait until buffer is filled.
-            loop {
-                if !inner.FR.is_set(FR::RXFE) {
-                    break;
-                }
-
+            // Spin while RX FIFO empty is set.
+            while inner.FR.matches_all(FR::RXFE::SET) {
                 arch::nop();
             }
 
@@ -320,12 +310,10 @@ impl interface::console::Read for PL011Uart {
 
     fn clear(&self) {
         let mut r = &self.inner;
-        r.lock(|inner| loop {
-            // Read from the RX FIFO until the empty bit is '1'.
-            if !inner.FR.is_set(FR::RXFE) {
+        r.lock(|inner| {
+            // Read from the RX FIFO until it is indicating empty.
+            while !inner.FR.matches_all(FR::RXFE::SET) {
                 inner.DR.get();
-            } else {
-                break;
             }
         })
     }

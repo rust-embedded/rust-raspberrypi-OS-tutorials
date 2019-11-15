@@ -50,13 +50,11 @@ mod print;
 unsafe fn kernel_init() -> ! {
     for i in bsp::device_drivers().iter() {
         if let Err(()) = i.init() {
-            // This message will only be readable if, at the time of failure, the return value of
-            // `bsp::console()` is already in functioning state.
             panic!("Error loading driver: {}", i.compatible())
         }
     }
-
     bsp::post_driver_init();
+    // println! is usable from here on.
 
     // Transition from unsafe to safe.
     kernel_main()
@@ -64,7 +62,7 @@ unsafe fn kernel_init() -> ! {
 
 /// The main function running after the early init.
 fn kernel_main() -> ! {
-    println!("Parking CPU core. Please connect over JTAG now.");
+    info!("Parking CPU core. Please connect over JTAG now.");
 
     arch::wait_forever()
 }

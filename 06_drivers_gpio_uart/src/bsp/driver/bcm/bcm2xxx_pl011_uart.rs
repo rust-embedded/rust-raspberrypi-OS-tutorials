@@ -182,12 +182,8 @@ impl PL011UartInner {
 
     /// Send a character.
     fn write_char(&mut self, c: char) {
-        // Wait until we can send.
-        loop {
-            if !self.FR.is_set(FR::TXFF) {
-                break;
-            }
-
+        // Spin while TX FIFO full is set, waiting for an empty slot.
+        while self.FR.matches_all(FR::TXFF::SET) {
             arch::nop();
         }
 
@@ -285,12 +281,8 @@ impl interface::console::Read for PL011Uart {
     fn read_char(&self) -> char {
         let mut r = &self.inner;
         r.lock(|inner| {
-            // Wait until buffer is filled.
-            loop {
-                if !inner.FR.is_set(FR::RXFE) {
-                    break;
-                }
-
+            // Spin while RX FIFO empty is set.
+            while inner.FR.matches_all(FR::RXFE::SET) {
                 arch::nop();
             }
 

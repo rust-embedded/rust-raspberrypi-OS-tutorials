@@ -72,12 +72,8 @@ impl interface::time::Timer for Timer {
         // Kick off the counting.                       // Disable timer interrupt.
         CNTP_CTL_EL0.modify(CNTP_CTL_EL0::ENABLE::SET + CNTP_CTL_EL0::IMASK::SET);
 
-        loop {
-            // ISTATUS will be '1' when cval ticks have passed. Busy-check it.
-            if CNTP_CTL_EL0.is_set(CNTP_CTL_EL0::ISTATUS) {
-                break;
-            }
-        }
+        // ISTATUS will be '1' when cval ticks have passed. Busy-check it.
+        while !CNTP_CTL_EL0.matches_all(CNTP_CTL_EL0::ISTATUS::SET) {}
 
         // Disable counting again.
         CNTP_CTL_EL0.modify(CNTP_CTL_EL0::ENABLE::CLEAR);
