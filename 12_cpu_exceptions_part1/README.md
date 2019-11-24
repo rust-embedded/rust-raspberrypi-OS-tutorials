@@ -1,4 +1,4 @@
-# Tutorial 12 - Exceptions: Part 1
+# Tutorial 12 - CPU Exceptions: Part 1
 
 ## tl;dr
 
