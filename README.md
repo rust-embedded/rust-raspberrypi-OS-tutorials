@@ -4,17 +4,14 @@
 
 ## Notice
 
-**This is a work-in-progress rewrite, started on September 2019.**
-
-You can find the original version of the tutorials
+**This is a work-in-progress rewrite, started on September 2019.** You can find the original version of the tutorials
 [here](https://github.com/rust-embedded/rust-raspi3-OS-tutorials/tree/original_version).
-They are worth checking out for some advanced features that are not yet
-rewritten, like _exception handling_. They will be ported over soon, though.
 
-Some info on the rewrite and in general:
-- I will first add
-code and minimal READMEs, and later write accompanying full-fledged tutorial
-text.
+Some general info:
+- Tutorials that existed before the rewrite have a full-fledged tutorial
+  text, while most new tutorials will only contain a  short`tl;dr` section for now.
+  I plan to provide full-fledged text for all tutorials once the kernel has reached
+  a certain milestone.
 - The code written in these tutorials supports and runs on the **Raspberry Pi
   3** and the **Raspberry Pi 4**.
   - Tutorials 1 till 5 are groundwork code which only makes sense to run on
