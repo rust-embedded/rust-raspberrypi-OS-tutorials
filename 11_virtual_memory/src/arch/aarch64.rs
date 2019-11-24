@@ -106,6 +106,11 @@ pub fn wait_forever() -> ! {
     }
 }
 
+/// Return a reference to an `interface::mm::MMU` implementation.
+pub fn mmu() -> &'static impl interface::mm::MMU {
+    &MMU
+}
+
 /// Information about the HW state.
 pub mod state {
     use cortex_a::regs::*;
@@ -128,7 +133,7 @@ pub mod state {
         };
         use crate::info;
 
-        let to_mask_str = |x: bool| -> &'static str {
+        let to_mask_str = |x| -> _ {
             if x { "Masked" } else { "Unmasked" }
         };
 
@@ -137,9 +142,4 @@ pub mod state {
         info!("      IRQ:    {}", to_mask_str(exception::is_masked::<IRQ>()));
         info!("      FIQ:    {}", to_mask_str(exception::is_masked::<FIQ>()));
     }
-}
-
-/// Return a reference to an `interface::mm::MMU` implementation.
-pub fn mmu() -> &'static impl interface::mm::MMU {
-    &MMU
 }

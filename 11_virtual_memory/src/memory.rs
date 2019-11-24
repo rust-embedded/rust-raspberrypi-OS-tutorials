@@ -90,7 +90,7 @@ impl fmt::Display for RangeDescriptor {
 
         write!(
             f,
-            "      {:#010X} - {:#010X} | {: >3} {} | {: <3} {} {: <3} | {}",
+            "      {:#010x} - {:#010x} | {: >3} {} | {: <3} {} {: <3} | {}",
             start, end, size, unit, attr, acc_p, xn, self.name
         )
     }

@@ -241,9 +241,9 @@ make chainbot
 
 [    5.791515] Booting on: Raspberry Pi 3
 [    5.793767] MMU online. Special regions:
-[    5.797674]       0x00080000 - 0x0008FFFF |  64 KiB | C   RO PX  | Kernel code and RO data
-[    5.805922]       0x1FFF0000 - 0x1FFFFFFF |  64 KiB | Dev RW PXN | Remapped Device MMIO
-[    5.813910]       0x3F000000 - 0x3FFFFFFF |  16 MiB | Dev RW PXN | Device MMIO
+[    5.797674]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
+[    5.805922]       0x1fff0000 - 0x1fffffff |  64 KiB | Dev RW PXN | Remapped Device MMIO
+[    5.813910]       0x3f000000 - 0x3fffffff |  16 MiB | Dev RW PXN | Device MMIO
 [    5.821117] Current privilege level: EL1
 [    5.825024] Exception handling state:
 [    5.828670]       Debug:  Masked
@@ -602,15 +602,27 @@ diff -uNr 10_privilege_level/src/arch/aarch64.rs 11_virtual_memory/src/arch/aarc
 
  //--------------------------------------------------------------------------------------------------
  // Implementation of the kernel's architecture abstraction code
-@@ -136,3 +138,8 @@
-         info!("      FIQ:    {}", to_mask_str(exception::is_masked::<FIQ>()));
+@@ -104,6 +106,11 @@
      }
  }
-+
+
 +/// Return a reference to an `interface::mm::MMU` implementation.
 +pub fn mmu() -> &'static impl interface::mm::MMU {
 +    &MMU
 +}
++
+ /// Information about the HW state.
+ pub mod state {
+     use cortex_a::regs::*;
+@@ -126,7 +133,7 @@
+         };
+         use crate::info;
+
+-        let to_mask_str = |x: bool| -> &'static str {
++        let to_mask_str = |x| -> _ {
+             if x { "Masked" } else { "Unmasked" }
+         };
+
 
 diff -uNr 10_privilege_level/src/bsp/rpi/link.ld 11_virtual_memory/src/bsp/rpi/link.ld
 --- 10_privilege_level/src/bsp/rpi/link.ld
@@ -830,7 +842,7 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_memory/src/main.rs
  /// - Only a single core must be active and running this function.
 -/// - The init calls in this function must appear in the correct order.
 +/// - The init calls in this function must appear in the correct order:
-+///     - Virtual memory must be activated first.
++///     - Virtual memory must be activated before the device drivers.
 +///       - Without it, any atomic operations, e.g. the yet-to-be-introduced spinlocks in the device
 +///         drivers (which currently employ NullLocks instead of spinlocks), will fail to work on
 +///         the RPi SoCs.
@@ -965,7 +977,7 @@ diff -uNr 10_privilege_level/src/memory.rs 11_virtual_memory/src/memory.rs
 +
 +        write!(
 +            f,
-+            "      {:#010X} - {:#010X} | {: >3} {} | {: <3} {} {: <3} | {}",
++            "      {:#010x} - {:#010x} | {: >3} {} | {: <3} {} {: <3} | {}",
 +            start, end, size, unit, attr, acc_p, xn, self.name
 +        )
 +    }
