@@ -2,19 +2,19 @@
 # It is not intended for manual editing.
 [[package]]
 name = "cortex-a"
-version = "2.8.0"
+version = "2.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "register 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "register 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "kernel"
 version = "0.1.0"
 dependencies = [
- "cortex-a 2.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cortex-a 2.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "r0 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "register 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "register 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -24,7 +24,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "register"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "tock-registers 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -36,7 +36,7 @@ version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [metadata]
-"checksum cortex-a 2.8.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ad7ba44745549e86ee77de685cb4b675301ee3aac10dee37307f02adcbbef9b4"
+"checksum cortex-a 2.8.2 (registry+https://github.com/rust-lang/crates.io-index)" = "4aab2f5271d9bf17a52b34dd99993648132df3dacb79312a33332f2b6ae1d0fd"
 "checksum r0 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "e2a38df5b15c8d5c7e8654189744d8e396bddc18ad48041a500ce52d6948941f"
-"checksum register 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "274b546ad3fae94f529e36b1745b74a7b2f23dd34542260f721be1320761e7fc"
+"checksum register 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "7c92f7cc61c67d0f283777ce3c678789788d1b48e8f5e822a257513c16194955"
 "checksum tock-registers 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "50af9c49c55cfb4437dd78c1fada3be5d088cbe1bea641db8171283503606a70"

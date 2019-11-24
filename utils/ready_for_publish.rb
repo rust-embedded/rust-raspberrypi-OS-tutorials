@@ -19,6 +19,7 @@ clippy_all
 
 clean_all
 make_all
+system('cd X1_JTAG_boot && bash update.sh')
 diff_all
 clean_all
 system('~/bin/misspell .')
