@@ -265,7 +265,7 @@ make chainbot
 diff -uNr 10_privilege_level/src/arch/aarch64/mmu.rs 11_virtual_memory/src/arch/aarch64/mmu.rs
 --- 10_privilege_level/src/arch/aarch64/mmu.rs
 +++ 11_virtual_memory/src/arch/aarch64/mmu.rs
-@@ -0,0 +1,316 @@
+@@ -0,0 +1,300 @@
 +// SPDX-License-Identifier: MIT
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
@@ -347,18 +347,22 @@ diff -uNr 10_privilege_level/src/arch/aarch64/mmu.rs 11_virtual_memory/src/arch/
 +    ]
 +}
 +
-+// Two newtypes for added type safety, so that you cannot accidentally place a TableDescriptor into
-+// a PageDescriptor slot in `struct PageTables`, and vice versa.
-+#[derive(Copy, Clone)]
-+#[repr(transparent)]
-+struct RawTableDescriptor(u64);
-+
-+#[derive(Copy, Clone)]
-+#[repr(transparent)]
-+struct RawPageDescriptor(u64);
-+
 +const SIXTYFOUR_KIB_SHIFT: usize = 16; //  log2(64 * 1024)
 +const FIVETWELVE_MIB_SHIFT: usize = 29; // log2(512 * 1024 * 1024)
++
++/// A table descriptor for 64 KiB aperture.
++///
++/// The output points to the next table.
++#[derive(Copy, Clone)]
++#[repr(transparent)]
++struct TableDescriptor(u64);
++
++/// A page descriptor with 64 KiB aperture.
++///
++/// The output points to physical memory.
++#[derive(Copy, Clone)]
++#[repr(transparent)]
++struct PageDescriptor(u64);
 +
 +/// Big monolithic struct for storing the page tables. Individual levels must be 64 KiB aligned,
 +/// hence the "reverse" order of appearance.
@@ -366,9 +370,9 @@ diff -uNr 10_privilege_level/src/arch/aarch64/mmu.rs 11_virtual_memory/src/arch/
 +#[repr(align(65536))]
 +struct PageTables<const N: usize> {
 +    // Page descriptors, covering 64 KiB windows per entry.
-+    lvl3: [[RawPageDescriptor; 8192]; N],
++    lvl3: [[PageDescriptor; 8192]; N],
 +    // Table descriptors, covering 512 MiB windows.
-+    lvl2: [RawTableDescriptor; N],
++    lvl2: [TableDescriptor; N],
 +}
 +
 +/// Usually evaluates to 1 GiB for RPi3 and 4 GiB for RPi 4.
@@ -378,8 +382,8 @@ diff -uNr 10_privilege_level/src/arch/aarch64/mmu.rs 11_virtual_memory/src/arch/
 +///
 +/// Supposed to land in `.bss`. Therefore, ensure that they boil down to all "0" entries.
 +static mut TABLES: PageTables<{ ENTRIES_512_MIB }> = PageTables {
-+    lvl3: [[RawPageDescriptor(0); 8192]; ENTRIES_512_MIB],
-+    lvl2: [RawTableDescriptor(0); ENTRIES_512_MIB],
++    lvl3: [[PageDescriptor(0); 8192]; ENTRIES_512_MIB],
++    lvl2: [TableDescriptor(0); ENTRIES_512_MIB],
 +};
 +
 +trait BaseAddr {
@@ -397,24 +401,15 @@ diff -uNr 10_privilege_level/src/arch/aarch64/mmu.rs 11_virtual_memory/src/arch/
 +    }
 +}
 +
-+/// A descriptor pointing to the next page table.
-+struct TableDescriptor(register::FieldValue<u64, STAGE1_TABLE_DESCRIPTOR::Register>);
-+
-+impl TableDescriptor {
-+    fn new(next_lvl_table_addr: usize) -> TableDescriptor {
++impl convert::From<usize> for TableDescriptor {
++    fn from(next_lvl_table_addr: usize) -> Self {
 +        let shifted = next_lvl_table_addr >> SIXTYFOUR_KIB_SHIFT;
++        let val = (STAGE1_TABLE_DESCRIPTOR::VALID::True
++            + STAGE1_TABLE_DESCRIPTOR::TYPE::Table
++            + STAGE1_TABLE_DESCRIPTOR::NEXT_LEVEL_TABLE_ADDR_64KiB.val(shifted as u64))
++        .value;
 +
-+        TableDescriptor(
-+            STAGE1_TABLE_DESCRIPTOR::VALID::True
-+                + STAGE1_TABLE_DESCRIPTOR::TYPE::Table
-+                + STAGE1_TABLE_DESCRIPTOR::NEXT_LEVEL_TABLE_ADDR_64KiB.val(shifted as u64),
-+        )
-+    }
-+}
-+
-+impl convert::From<TableDescriptor> for RawTableDescriptor {
-+    fn from(desc: TableDescriptor) -> Self {
-+        RawTableDescriptor(desc.0.value)
++        TableDescriptor(val)
 +    }
 +}
 +
@@ -452,28 +447,17 @@ diff -uNr 10_privilege_level/src/arch/aarch64/mmu.rs 11_virtual_memory/src/arch/
 +    }
 +}
 +
-+/// A page descriptor with 64 KiB aperture.
-+///
-+/// The output points to physical memory.
-+struct PageDescriptor(register::FieldValue<u64, STAGE1_PAGE_DESCRIPTOR::Register>);
-+
 +impl PageDescriptor {
 +    fn new(output_addr: usize, attribute_fields: AttributeFields) -> PageDescriptor {
 +        let shifted = output_addr >> SIXTYFOUR_KIB_SHIFT;
++        let val = (STAGE1_PAGE_DESCRIPTOR::VALID::True
++            + STAGE1_PAGE_DESCRIPTOR::AF::True
++            + attribute_fields.into()
++            + STAGE1_PAGE_DESCRIPTOR::TYPE::Table
++            + STAGE1_PAGE_DESCRIPTOR::OUTPUT_ADDR_64KiB.val(shifted as u64))
++        .value;
 +
-+        PageDescriptor(
-+            STAGE1_PAGE_DESCRIPTOR::VALID::True
-+                + STAGE1_PAGE_DESCRIPTOR::AF::True
-+                + attribute_fields.into()
-+                + STAGE1_PAGE_DESCRIPTOR::TYPE::Table
-+                + STAGE1_PAGE_DESCRIPTOR::OUTPUT_ADDR_64KiB.val(shifted as u64),
-+        )
-+    }
-+}
-+
-+impl convert::From<PageDescriptor> for RawPageDescriptor {
-+    fn from(desc: PageDescriptor) -> Self {
-+        RawPageDescriptor(desc.0.value)
++        PageDescriptor(val)
 +    }
 +}
 +
@@ -505,7 +489,7 @@ diff -uNr 10_privilege_level/src/arch/aarch64/mmu.rs 11_virtual_memory/src/arch/
 +/// - Modifies a `static mut`. Ensure it only happens from here.
 +unsafe fn populate_pt_entries() -> Result<(), &'static str> {
 +    for (l2_nr, l2_entry) in TABLES.lvl2.iter_mut().enumerate() {
-+        *l2_entry = TableDescriptor::new(TABLES.lvl3[l2_nr].base_addr_usize()).into();
++        *l2_entry = TABLES.lvl3[l2_nr].base_addr_usize().into();
 +
 +        for (l3_nr, l3_entry) in TABLES.lvl3[l2_nr].iter_mut().enumerate() {
 +            let virt_addr = (l2_nr << FIVETWELVE_MIB_SHIFT) + (l3_nr << SIXTYFOUR_KIB_SHIFT);
@@ -513,7 +497,7 @@ diff -uNr 10_privilege_level/src/arch/aarch64/mmu.rs 11_virtual_memory/src/arch/
 +            let (output_addr, attribute_fields) =
 +                bsp::virt_mem_layout().get_virt_addr_properties(virt_addr)?;
 +
-+            *l3_entry = PageDescriptor::new(output_addr, attribute_fields).into();
++            *l3_entry = PageDescriptor::new(output_addr, attribute_fields);
 +        }
 +    }
 +

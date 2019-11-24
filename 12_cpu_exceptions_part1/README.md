@@ -459,9 +459,9 @@ General purpose register:
 ## Diff to previous
 ```diff
 
-diff -uNr 11_virtual_memory/src/arch/aarch64/exception.rs 12_exceptions_part1/src/arch/aarch64/exception.rs
+diff -uNr 11_virtual_memory/src/arch/aarch64/exception.rs 12_cpu_exceptions_part1/src/arch/aarch64/exception.rs
 --- 11_virtual_memory/src/arch/aarch64/exception.rs
-+++ 12_exceptions_part1/src/arch/aarch64/exception.rs
++++ 12_cpu_exceptions_part1/src/arch/aarch64/exception.rs
 @@ -4,12 +4,248 @@
 
  //! Exception handling.
@@ -713,9 +713,9 @@ diff -uNr 11_virtual_memory/src/arch/aarch64/exception.rs 12_exceptions_part1/sr
      fn daif_field() -> register::Field<u32, DAIF::Register>;
  }
 
-diff -uNr 11_virtual_memory/src/arch/aarch64/exception.S 12_exceptions_part1/src/arch/aarch64/exception.S
+diff -uNr 11_virtual_memory/src/arch/aarch64/exception.S 12_cpu_exceptions_part1/src/arch/aarch64/exception.S
 --- 11_virtual_memory/src/arch/aarch64/exception.S
-+++ 12_exceptions_part1/src/arch/aarch64/exception.S
++++ 12_cpu_exceptions_part1/src/arch/aarch64/exception.S
 @@ -0,0 +1,135 @@
 +// SPDX-License-Identifier: MIT
 +//
@@ -853,9 +853,9 @@ diff -uNr 11_virtual_memory/src/arch/aarch64/exception.S 12_exceptions_part1/src
 +
 +    eret
 
-diff -uNr 11_virtual_memory/src/arch/aarch64.rs 12_exceptions_part1/src/arch/aarch64.rs
+diff -uNr 11_virtual_memory/src/arch/aarch64.rs 12_cpu_exceptions_part1/src/arch/aarch64.rs
 --- 11_virtual_memory/src/arch/aarch64.rs
-+++ 12_exceptions_part1/src/arch/aarch64.rs
++++ 12_cpu_exceptions_part1/src/arch/aarch64.rs
 @@ -106,6 +106,15 @@
      }
  }
@@ -873,9 +873,9 @@ diff -uNr 11_virtual_memory/src/arch/aarch64.rs 12_exceptions_part1/src/arch/aar
  pub fn mmu() -> &'static impl interface::mm::MMU {
      &MMU
 
-diff -uNr 11_virtual_memory/src/bsp.rs 12_exceptions_part1/src/bsp.rs
+diff -uNr 11_virtual_memory/src/bsp.rs 12_cpu_exceptions_part1/src/bsp.rs
 --- 11_virtual_memory/src/bsp.rs
-+++ 12_exceptions_part1/src/bsp.rs
++++ 12_cpu_exceptions_part1/src/bsp.rs
 @@ -4,7 +4,7 @@
 
  //! Conditional exporting of Board Support Packages.
@@ -886,9 +886,9 @@ diff -uNr 11_virtual_memory/src/bsp.rs 12_exceptions_part1/src/bsp.rs
  #[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
  mod rpi;
 
-diff -uNr 11_virtual_memory/src/main.rs 12_exceptions_part1/src/main.rs
+diff -uNr 11_virtual_memory/src/main.rs 12_cpu_exceptions_part1/src/main.rs
 --- 11_virtual_memory/src/main.rs
-+++ 12_exceptions_part1/src/main.rs
++++ 12_cpu_exceptions_part1/src/main.rs
 @@ -22,6 +22,7 @@
  #![allow(incomplete_features)]
  #![feature(const_generics)]
