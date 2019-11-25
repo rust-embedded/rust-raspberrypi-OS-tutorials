@@ -56,7 +56,7 @@ diff -uNr 04_zero_overhead_abstraction/src/arch/aarch64/sync.rs 05_safe_globals/
 --- 04_zero_overhead_abstraction/src/arch/aarch64/sync.rs
 +++ 05_safe_globals/src/arch/aarch64/sync.rs
 @@ -0,0 +1,52 @@
-+// SPDX-License-Identifier: MIT
++// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
 +

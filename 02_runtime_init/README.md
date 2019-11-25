@@ -108,7 +108,7 @@ diff -uNr 01_wait_forever/src/runtime_init.rs 02_runtime_init/src/runtime_init.r
 --- 01_wait_forever/src/runtime_init.rs
 +++ 02_runtime_init/src/runtime_init.rs
 @@ -0,0 +1,25 @@
-+// SPDX-License-Identifier: MIT
++// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
 +

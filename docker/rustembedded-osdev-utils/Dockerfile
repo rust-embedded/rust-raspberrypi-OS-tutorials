@@ -1,4 +1,4 @@
-## SPDX-License-Identifier: MIT
+## SPDX-License-Identifier: MIT OR Apache-2.0
 ##
 ## Copyright (c) 2017-2019 Andre Richter <andre.o.richter@gmail.com>
 ## Copyright (c) 2019 Nao Taco <naotaco@gmail.com>
