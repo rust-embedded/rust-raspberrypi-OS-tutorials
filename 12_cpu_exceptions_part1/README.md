@@ -474,7 +474,7 @@ diff -uNr 11_virtual_memory/src/arch/aarch64/exception.rs 12_cpu_exceptions_part
 +// Assembly counterpart to this file.
 +global_asm!(include_str!("exception.S"));
 +
-+/// Wrapper struct for memory copy of SPSR_EL1
++/// Wrapper struct for memory copy of SPSR_EL1.
 +#[repr(transparent)]
 +struct SpsrEL1(InMemoryRegister<u32, SPSR_EL1::Register>);
 +
@@ -491,7 +491,7 @@ diff -uNr 11_virtual_memory/src/arch/aarch64/exception.rs 12_cpu_exceptions_part
 +    spsr_el1: SpsrEL1,
 +}
 +
-+/// Wrapper struct for pretty printing ESR_EL1
++/// Wrapper struct for pretty printing ESR_EL1.
 +struct EsrEL1;
 +
 +//--------------------------------------------------------------------------------------------------
@@ -537,7 +537,7 @@ diff -uNr 11_virtual_memory/src/arch/aarch64/exception.rs 12_cpu_exceptions_part
 +/// Asynchronous exception taken from the current EL, using SP of the current EL.
 +#[no_mangle]
 +unsafe extern "C" fn current_elx_synchronous(e: &mut ExceptionContext) {
-+    let far_el1 = FAR_EL1.extract().get();
++    let far_el1 = FAR_EL1.get();
 +
 +    // This catches the demo case for this tutorial. If the fault address happens to be 8 GiB,
 +    // advance the exception link register for one instruction, so that execution can continue.
@@ -697,7 +697,7 @@ diff -uNr 11_virtual_memory/src/arch/aarch64/exception.rs 12_cpu_exceptions_part
 +/// - The vector table and the symbol `__exception_vector_table_start` from the linker script must
 +///   adhere to the alignment and size constraints demanded by the AArch64 spec.
 +pub unsafe fn set_vbar_el1() {
-+    // Provided by exception_vec_table.S.
++    // Provided by exception.S.
 +    extern "C" {
 +        static mut __exception_vector_start: u64;
 +    }

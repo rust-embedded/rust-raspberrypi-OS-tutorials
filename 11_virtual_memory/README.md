@@ -87,15 +87,19 @@ is hardcoded here (`64 KiB` page descriptors).
 The actual page tables are stored in a global instance of the `PageTables` struct:
 
 ```rust
-// Two newtypes for added type safety, so that you cannot accidentally place a TableDescriptor into
-// a PageDescriptor slot in `struct PageTables`, and vice versa.
+/// A table descriptor for 64 KiB aperture.
+///
+/// The output points to the next table.
 #[derive(Copy, Clone)]
 #[repr(transparent)]
-struct RawTableDescriptor(u64);
+struct TableDescriptor(u64);
 
+/// A page descriptor with 64 KiB aperture.
+///
+/// The output points to physical memory.
 #[derive(Copy, Clone)]
 #[repr(transparent)]
-struct RawPageDescriptor(u64);
+struct PageDescriptor(u64);
 
 /// Big monolithic struct for storing the page tables. Individual levels must be 64 KiB aligned,
 /// hence the "reverse" order of appearance.
@@ -103,9 +107,9 @@ struct RawPageDescriptor(u64);
 #[repr(align(65536))]
 struct PageTables<const N: usize> {
     // Page descriptors, covering 64 KiB windows per entry.
-    lvl3: [[RawPageDescriptor; 8192]; N],
+    lvl3: [[PageDescriptor; 8192]; N],
     // Table descriptors, covering 512 MiB windows.
-    lvl2: [RawTableDescriptor; N],
+    lvl2: [TableDescriptor; N],
 }
 
 /// Usually evaluates to 1 GiB for RPi3 and 4 GiB for RPi 4.
@@ -115,8 +119,8 @@ const ENTRIES_512_MIB: usize = bsp::addr_space_size() >> FIVETWELVE_MIB_SHIFT;
 ///
 /// Supposed to land in `.bss`. Therefore, ensure that they boil down to all "0" entries.
 static mut TABLES: PageTables<{ ENTRIES_512_MIB }> = PageTables {
-    lvl3: [[RawPageDescriptor(0); 8192]; ENTRIES_512_MIB],
-    lvl2: [RawTableDescriptor(0); ENTRIES_512_MIB],
+    lvl3: [[PageDescriptor(0); 8192]; ENTRIES_512_MIB],
+    lvl2: [TableDescriptor(0); ENTRIES_512_MIB],
 };
 ```
 
@@ -135,11 +139,11 @@ memory and device memory (which is not cached).
 fn set_up_mair() {
     // Define the memory types being mapped.
     MAIR_EL1.write(
-        // Attribute 1 - Cacheable normal DRAM
+        // Attribute 1 - Cacheable normal DRAM.
         MAIR_EL1::Attr1_HIGH::Memory_OuterWriteBack_NonTransient_ReadAlloc_WriteAlloc
             + MAIR_EL1::Attr1_LOW_MEMORY::InnerWriteBack_NonTransient_ReadAlloc_WriteAlloc
 
-            // Attribute 0 - Device
+            // Attribute 0 - Device.
             + MAIR_EL1::Attr0_HIGH::Device
             + MAIR_EL1::Attr0_LOW_DEVICE::Device_nGnRE,
     );
@@ -303,7 +307,7 @@ diff -uNr 10_privilege_level/src/arch/aarch64/mmu.rs 11_virtual_memory/src/arch/
 +// A level 3 page descriptor, as per AArch64 Reference Manual Figure D4-17.
 +register_bitfields! {u64,
 +    STAGE1_PAGE_DESCRIPTOR [
-+        /// Privileged execute-never
++        /// Privileged execute-never.
 +        PXN      OFFSET(53) NUMBITS(1) [
 +            False = 0,
 +            True = 1
@@ -312,19 +316,19 @@ diff -uNr 10_privilege_level/src/arch/aarch64/mmu.rs 11_virtual_memory/src/arch/
 +        /// Physical address of the next page table (lvl2) or the page descriptor (lvl3).
 +        OUTPUT_ADDR_64KiB OFFSET(16) NUMBITS(32) [], // [47:16]
 +
-+        /// Access flag
++        /// Access flag.
 +        AF       OFFSET(10) NUMBITS(1) [
 +            False = 0,
 +            True = 1
 +        ],
 +
-+        /// Shareability field
++        /// Shareability field.
 +        SH       OFFSET(8) NUMBITS(2) [
 +            OuterShareable = 0b10,
 +            InnerShareable = 0b11
 +        ],
 +
-+        /// Access Permissions
++        /// Access Permissions.
 +        AP       OFFSET(6) NUMBITS(2) [
 +            RW_EL1 = 0b00,
 +            RW_EL1_EL0 = 0b01,
@@ -332,7 +336,7 @@ diff -uNr 10_privilege_level/src/arch/aarch64/mmu.rs 11_virtual_memory/src/arch/
 +            RO_EL1_EL0 = 0b11
 +        ],
 +
-+        /// Memory attributes index into the MAIR_EL1 register
++        /// Memory attributes index into the MAIR_EL1 register.
 +        AttrIndx OFFSET(2) NUMBITS(3) [],
 +
 +        TYPE     OFFSET(1) NUMBITS(1) [
@@ -418,7 +422,7 @@ diff -uNr 10_privilege_level/src/arch/aarch64/mmu.rs 11_virtual_memory/src/arch/
 +    for register::FieldValue<u64, STAGE1_PAGE_DESCRIPTOR::Register>
 +{
 +    fn from(attribute_fields: AttributeFields) -> Self {
-+        // Memory attributes
++        // Memory attributes.
 +        let mut desc = match attribute_fields.mem_attributes {
 +            MemAttributes::CacheableDRAM => {
 +                STAGE1_PAGE_DESCRIPTOR::SH::InnerShareable
@@ -430,13 +434,13 @@ diff -uNr 10_privilege_level/src/arch/aarch64/mmu.rs 11_virtual_memory/src/arch/
 +            }
 +        };
 +
-+        // Access Permissions
++        // Access Permissions.
 +        desc += match attribute_fields.acc_perms {
 +            AccessPermissions::ReadOnly => STAGE1_PAGE_DESCRIPTOR::AP::RO_EL1,
 +            AccessPermissions::ReadWrite => STAGE1_PAGE_DESCRIPTOR::AP::RW_EL1,
 +        };
 +
-+        // Execute Never
++        // Execute Never.
 +        desc += if attribute_fields.execute_never {
 +            STAGE1_PAGE_DESCRIPTOR::PXN::True
 +        } else {
@@ -472,11 +476,11 @@ diff -uNr 10_privilege_level/src/arch/aarch64/mmu.rs 11_virtual_memory/src/arch/
 +fn set_up_mair() {
 +    // Define the memory types being mapped.
 +    MAIR_EL1.write(
-+        // Attribute 1 - Cacheable normal DRAM
++        // Attribute 1 - Cacheable normal DRAM.
 +        MAIR_EL1::Attr1_HIGH::Memory_OuterWriteBack_NonTransient_ReadAlloc_WriteAlloc
 +            + MAIR_EL1::Attr1_LOW_MEMORY::InnerWriteBack_NonTransient_ReadAlloc_WriteAlloc
 +
-+            // Attribute 0 - Device
++            // Attribute 0 - Device.
 +            + MAIR_EL1::Attr0_HIGH::Device
 +            + MAIR_EL1::Attr0_LOW_DEVICE::Device_nGnRE,
 +    );
@@ -560,7 +564,7 @@ diff -uNr 10_privilege_level/src/arch/aarch64/mmu.rs 11_virtual_memory/src/arch/
 +        // Enable the MMU and turn on data and instruction caching.
 +        SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
 +
-+        // Force MMU init to complete before next instruction
++        // Force MMU init to complete before next instruction.
 +        barrier::isb(barrier::SY);
 +
 +        Ok(())

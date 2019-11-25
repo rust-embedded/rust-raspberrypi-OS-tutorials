@@ -35,7 +35,7 @@ register_bitfields! {u64,
 // A level 3 page descriptor, as per AArch64 Reference Manual Figure D4-17.
 register_bitfields! {u64,
     STAGE1_PAGE_DESCRIPTOR [
-        /// Privileged execute-never
+        /// Privileged execute-never.
         PXN      OFFSET(53) NUMBITS(1) [
             False = 0,
             True = 1
@@ -44,19 +44,19 @@ register_bitfields! {u64,
         /// Physical address of the next page table (lvl2) or the page descriptor (lvl3).
         OUTPUT_ADDR_64KiB OFFSET(16) NUMBITS(32) [], // [47:16]
 
-        /// Access flag
+        /// Access flag.
         AF       OFFSET(10) NUMBITS(1) [
             False = 0,
             True = 1
         ],
 
-        /// Shareability field
+        /// Shareability field.
         SH       OFFSET(8) NUMBITS(2) [
             OuterShareable = 0b10,
             InnerShareable = 0b11
         ],
 
-        /// Access Permissions
+        /// Access Permissions.
         AP       OFFSET(6) NUMBITS(2) [
             RW_EL1 = 0b00,
             RW_EL1_EL0 = 0b01,
@@ -64,7 +64,7 @@ register_bitfields! {u64,
             RO_EL1_EL0 = 0b11
         ],
 
-        /// Memory attributes index into the MAIR_EL1 register
+        /// Memory attributes index into the MAIR_EL1 register.
         AttrIndx OFFSET(2) NUMBITS(3) [],
 
         TYPE     OFFSET(1) NUMBITS(1) [
@@ -150,7 +150,7 @@ impl convert::From<AttributeFields>
     for register::FieldValue<u64, STAGE1_PAGE_DESCRIPTOR::Register>
 {
     fn from(attribute_fields: AttributeFields) -> Self {
-        // Memory attributes
+        // Memory attributes.
         let mut desc = match attribute_fields.mem_attributes {
             MemAttributes::CacheableDRAM => {
                 STAGE1_PAGE_DESCRIPTOR::SH::InnerShareable
@@ -162,13 +162,13 @@ impl convert::From<AttributeFields>
             }
         };
 
-        // Access Permissions
+        // Access Permissions.
         desc += match attribute_fields.acc_perms {
             AccessPermissions::ReadOnly => STAGE1_PAGE_DESCRIPTOR::AP::RO_EL1,
             AccessPermissions::ReadWrite => STAGE1_PAGE_DESCRIPTOR::AP::RW_EL1,
         };
 
-        // Execute Never
+        // Execute Never.
         desc += if attribute_fields.execute_never {
             STAGE1_PAGE_DESCRIPTOR::PXN::True
         } else {
@@ -204,11 +204,11 @@ mod mair {
 fn set_up_mair() {
     // Define the memory types being mapped.
     MAIR_EL1.write(
-        // Attribute 1 - Cacheable normal DRAM
+        // Attribute 1 - Cacheable normal DRAM.
         MAIR_EL1::Attr1_HIGH::Memory_OuterWriteBack_NonTransient_ReadAlloc_WriteAlloc
             + MAIR_EL1::Attr1_LOW_MEMORY::InnerWriteBack_NonTransient_ReadAlloc_WriteAlloc
 
-            // Attribute 0 - Device
+            // Attribute 0 - Device.
             + MAIR_EL1::Attr0_HIGH::Device
             + MAIR_EL1::Attr0_LOW_DEVICE::Device_nGnRE,
     );
@@ -292,7 +292,7 @@ impl interface::mm::MMU for MMU {
         // Enable the MMU and turn on data and instruction caching.
         SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
 
-        // Force MMU init to complete before next instruction
+        // Force MMU init to complete before next instruction.
         barrier::isb(barrier::SY);
 
         Ok(())
