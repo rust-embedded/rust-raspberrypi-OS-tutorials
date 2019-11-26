@@ -126,7 +126,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_gpio.rs 06_drivers_gpio_uar
 --- 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_gpio.rs
 +++ 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_gpio.rs
 @@ -0,0 +1,145 @@
-+// SPDX-License-Identifier: MIT
++// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
 +
@@ -276,7 +276,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gp
 --- 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
 @@ -0,0 +1,307 @@
-+// SPDX-License-Identifier: MIT
++// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
 +
@@ -588,7 +588,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm.rs 06_drivers_gpio_uart/src/bsp/dri
 --- 05_safe_globals/src/bsp/driver/bcm.rs
 +++ 06_drivers_gpio_uart/src/bsp/driver/bcm.rs
 @@ -0,0 +1,11 @@
-+// SPDX-License-Identifier: MIT
++// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
 +
@@ -604,7 +604,7 @@ diff -uNr 05_safe_globals/src/bsp/driver.rs 06_drivers_gpio_uart/src/bsp/driver.
 --- 05_safe_globals/src/bsp/driver.rs
 +++ 06_drivers_gpio_uart/src/bsp/driver.rs
 @@ -0,0 +1,11 @@
-+// SPDX-License-Identifier: MIT
++// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
 +
@@ -620,7 +620,7 @@ diff -uNr 05_safe_globals/src/bsp/rpi/memory_map.rs 06_drivers_gpio_uart/src/bsp
 --- 05_safe_globals/src/bsp/rpi/memory_map.rs
 +++ 06_drivers_gpio_uart/src/bsp/rpi/memory_map.rs
 @@ -0,0 +1,18 @@
-+// SPDX-License-Identifier: MIT
++// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
 +

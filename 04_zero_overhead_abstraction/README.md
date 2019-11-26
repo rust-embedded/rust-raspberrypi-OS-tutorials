@@ -32,7 +32,7 @@ diff -uNr 03_hacky_hello_world/src/arch/aarch64/start.S 04_zero_overhead_abstrac
 --- 03_hacky_hello_world/src/arch/aarch64/start.S
 +++ 04_zero_overhead_abstraction/src/arch/aarch64/start.S
 @@ -1,21 +0,0 @@
--// SPDX-License-Identifier: MIT
+-// SPDX-License-Identifier: MIT OR Apache-2.0
 -//
 -// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
 -

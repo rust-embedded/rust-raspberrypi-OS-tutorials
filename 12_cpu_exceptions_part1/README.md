@@ -717,7 +717,7 @@ diff -uNr 11_virtual_memory/src/arch/aarch64/exception.S 12_cpu_exceptions_part1
 --- 11_virtual_memory/src/arch/aarch64/exception.S
 +++ 12_cpu_exceptions_part1/src/arch/aarch64/exception.S
 @@ -0,0 +1,135 @@
-+// SPDX-License-Identifier: MIT
++// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
 +

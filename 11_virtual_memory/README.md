@@ -270,7 +270,7 @@ diff -uNr 10_privilege_level/src/arch/aarch64/mmu.rs 11_virtual_memory/src/arch/
 --- 10_privilege_level/src/arch/aarch64/mmu.rs
 +++ 11_virtual_memory/src/arch/aarch64/mmu.rs
 @@ -0,0 +1,300 @@
-+// SPDX-License-Identifier: MIT
++// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
 +
@@ -662,7 +662,7 @@ diff -uNr 10_privilege_level/src/bsp/rpi/virt_mem_layout.rs 11_virtual_memory/sr
 --- 10_privilege_level/src/bsp/rpi/virt_mem_layout.rs
 +++ 11_virtual_memory/src/bsp/rpi/virt_mem_layout.rs
 @@ -0,0 +1,82 @@
-+// SPDX-License-Identifier: MIT
++// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
 +
@@ -873,7 +873,7 @@ diff -uNr 10_privilege_level/src/memory.rs 11_virtual_memory/src/memory.rs
 --- 10_privilege_level/src/memory.rs
 +++ 11_virtual_memory/src/memory.rs
 @@ -0,0 +1,147 @@
-+// SPDX-License-Identifier: MIT
++// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
 +

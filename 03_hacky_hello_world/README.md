@@ -93,7 +93,7 @@ diff -uNr 02_runtime_init/src/interface.rs 03_hacky_hello_world/src/interface.rs
 --- 02_runtime_init/src/interface.rs
 +++ 03_hacky_hello_world/src/interface.rs
 @@ -0,0 +1,36 @@
-+// SPDX-License-Identifier: MIT
++// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
 +
@@ -204,7 +204,7 @@ diff -uNr 02_runtime_init/src/print.rs 03_hacky_hello_world/src/print.rs
 --- 02_runtime_init/src/print.rs
 +++ 03_hacky_hello_world/src/print.rs
 @@ -0,0 +1,33 @@
-+// SPDX-License-Identifier: MIT
++// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
 +

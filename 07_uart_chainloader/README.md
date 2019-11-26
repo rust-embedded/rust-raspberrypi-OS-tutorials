@@ -361,7 +361,7 @@ diff -uNr 06_drivers_gpio_uart/src/relocate.rs 07_uart_chainloader/src/relocate.
 --- 06_drivers_gpio_uart/src/relocate.rs
 +++ 07_uart_chainloader/src/relocate.rs
 @@ -0,0 +1,46 @@
-+// SPDX-License-Identifier: MIT
++// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
 +
