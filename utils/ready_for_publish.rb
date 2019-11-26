@@ -14,6 +14,7 @@ require_relative 'diff_all'
 
 clean_all
 fmt_all
+system('rubocop -l utils')
 sanity_checks
 clippy_all
 
