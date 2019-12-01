@@ -34,7 +34,7 @@ diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
  	QEMU_BINARY = qemu-system-aarch64
  	QEMU_MACHINE_TYPE = raspi3
 -	QEMU_MISC_ARGS = -d in_asm
-+	QEMU_MISC_ARGS = -serial stdio
++	QEMU_MISC_ARGS = -serial stdio -display none
  	LINKER_FILE = src/bsp/rpi/link.ld
  	RUSTC_MISC_ARGS = -C target-cpu=cortex-a53
  else ifeq ($(BSP),rpi4)
@@ -43,7 +43,7 @@ diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
  #	QEMU_BINARY = qemu-system-aarch64
  #	QEMU_MACHINE_TYPE =
 -#	QEMU_MISC_ARGS = -d in_asm
-+#	QEMU_MISC_ARGS = -serial stdio
++#	QEMU_MISC_ARGS = -serial stdio -display none
  	LINKER_FILE = src/bsp/rpi/link.ld
  	RUSTC_MISC_ARGS = -C target-cpu=cortex-a72
  endif

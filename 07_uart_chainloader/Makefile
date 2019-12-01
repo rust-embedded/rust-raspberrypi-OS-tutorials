@@ -13,7 +13,7 @@ ifeq ($(BSP),rpi3)
 	OUTPUT = kernel8.img
 	QEMU_BINARY = qemu-system-aarch64
 	QEMU_MACHINE_TYPE = raspi3
-	QEMU_MISC_ARGS = -serial stdio
+	QEMU_MISC_ARGS = -serial stdio -display none
 	LINKER_FILE = src/bsp/rpi/link.ld
 	RUSTC_MISC_ARGS = -C target-cpu=cortex-a53 -C relocation-model=pic
 	CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi3.img
@@ -22,7 +22,7 @@ else ifeq ($(BSP),rpi4)
 	OUTPUT = kernel8.img
 #	QEMU_BINARY = qemu-system-aarch64
 #	QEMU_MACHINE_TYPE =
-#	QEMU_MISC_ARGS = -serial stdio
+#	QEMU_MISC_ARGS = -serial stdio -display none
 	LINKER_FILE = src/bsp/rpi/link.ld
 	RUSTC_MISC_ARGS = -C target-cpu=cortex-a72 -C relocation-model=pic
 	CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi4.img

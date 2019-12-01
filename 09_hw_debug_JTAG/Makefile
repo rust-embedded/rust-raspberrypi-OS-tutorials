@@ -13,7 +13,7 @@ ifeq ($(BSP),rpi3)
 	OUTPUT = kernel8.img
 	QEMU_BINARY = qemu-system-aarch64
 	QEMU_MACHINE_TYPE = raspi3
-	QEMU_MISC_ARGS = -serial stdio
+	QEMU_MISC_ARGS = -serial stdio -display none
 	OPENOCD_ARG = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi3.cfg
 	JTAG_BOOT_IMAGE = jtag_boot_rpi3.img
 	LINKER_FILE = src/bsp/rpi/link.ld
@@ -23,7 +23,7 @@ else ifeq ($(BSP),rpi4)
 	OUTPUT = kernel8.img
 #	QEMU_BINARY = qemu-system-aarch64
 #	QEMU_MACHINE_TYPE =
-#	QEMU_MISC_ARGS = -serial stdio
+#	QEMU_MISC_ARGS = -serial stdio -display none
 	OPENOCD_ARG = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi4.cfg
 	JTAG_BOOT_IMAGE = jtag_boot_rpi4.img
 	LINKER_FILE = src/bsp/rpi/link.ld

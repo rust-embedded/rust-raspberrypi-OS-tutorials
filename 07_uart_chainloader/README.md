@@ -85,7 +85,7 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
 +++ 07_uart_chainloader/Makefile
 @@ -15,7 +15,8 @@
  	QEMU_MACHINE_TYPE = raspi3
- 	QEMU_MISC_ARGS = -serial stdio
+ 	QEMU_MISC_ARGS = -serial stdio -display none
  	LINKER_FILE = src/bsp/rpi/link.ld
 -	RUSTC_MISC_ARGS = -C target-cpu=cortex-a53
 +	RUSTC_MISC_ARGS = -C target-cpu=cortex-a53 -C relocation-model=pic
@@ -95,7 +95,7 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
  	OUTPUT = kernel8.img
 @@ -23,7 +24,8 @@
  #	QEMU_MACHINE_TYPE =
- #	QEMU_MISC_ARGS = -serial stdio
+ #	QEMU_MISC_ARGS = -serial stdio -display none
  	LINKER_FILE = src/bsp/rpi/link.ld
 -	RUSTC_MISC_ARGS = -C target-cpu=cortex-a72
 +	RUSTC_MISC_ARGS = -C target-cpu=cortex-a72 -C relocation-model=pic

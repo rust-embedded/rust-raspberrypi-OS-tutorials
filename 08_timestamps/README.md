@@ -43,7 +43,7 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
 +++ 08_timestamps/Makefile
 @@ -15,8 +15,7 @@
  	QEMU_MACHINE_TYPE = raspi3
- 	QEMU_MISC_ARGS = -serial stdio
+ 	QEMU_MISC_ARGS = -serial stdio -display none
  	LINKER_FILE = src/bsp/rpi/link.ld
 -	RUSTC_MISC_ARGS = -C target-cpu=cortex-a53 -C relocation-model=pic
 -	CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi3.img
@@ -53,7 +53,7 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
  	OUTPUT = kernel8.img
 @@ -24,8 +23,7 @@
  #	QEMU_MACHINE_TYPE =
- #	QEMU_MISC_ARGS = -serial stdio
+ #	QEMU_MISC_ARGS = -serial stdio -display none
  	LINKER_FILE = src/bsp/rpi/link.ld
 -	RUSTC_MISC_ARGS = -C target-cpu=cortex-a72 -C relocation-model=pic
 -	CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi4.img

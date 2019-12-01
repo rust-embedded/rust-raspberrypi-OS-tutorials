@@ -287,7 +287,7 @@ diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
 @@ -14,6 +14,8 @@
  	QEMU_BINARY = qemu-system-aarch64
  	QEMU_MACHINE_TYPE = raspi3
- 	QEMU_MISC_ARGS = -serial stdio
+ 	QEMU_MISC_ARGS = -serial stdio -display none
 +	OPENOCD_ARG = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi3.cfg
 +	JTAG_BOOT_IMAGE = jtag_boot_rpi3.img
  	LINKER_FILE = src/bsp/rpi/link.ld
@@ -296,7 +296,7 @@ diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
 @@ -22,6 +24,8 @@
  #	QEMU_BINARY = qemu-system-aarch64
  #	QEMU_MACHINE_TYPE =
- #	QEMU_MISC_ARGS = -serial stdio
+ #	QEMU_MISC_ARGS = -serial stdio -display none
 +	OPENOCD_ARG = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi4.cfg
 +	JTAG_BOOT_IMAGE = jtag_boot_rpi4.img
  	LINKER_FILE = src/bsp/rpi/link.ld

@@ -166,8 +166,8 @@ Context save and restore is one of the few places in system software where it is
 to use some hand-crafted assembly. Introducing `exception.S`:
 
 ```asm
-/// Call the function provided by parameter `\handler` after saving exception context, providing the
-/// same as the first parameter.
+/// Call the function provided by parameter `\handler` after saving exception context. Provide the
+/// context as the first parameter to '\handler'.
 .macro CALL_WITH_CONTEXT handler
     // Make room on the stack for the exception context.
     sub    sp,  sp,  #16 * 17
@@ -230,7 +230,6 @@ Next, we craft the exception vector table:
 .align 11
 
 // Export a symbol for the Rust code to use.
-.global __exception_vector_start
 __exception_vector_start:
 
 // Current exception level with SP_EL0.
