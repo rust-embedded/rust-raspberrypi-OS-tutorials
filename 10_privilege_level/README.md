@@ -145,28 +145,28 @@ make objdump
 Disassembly of section .text:
 
 0000000000080000 _start:
-   80000: a8 00 38 d5                   mrs     x8, MPIDR_EL1
-   80004: 1f 05 40 f2                   tst     x8, #0x3
-   80008: 81 00 00 54                   b.ne    #0x10 <_start+0x18>
-   8000c: 48 42 38 d5                   mrs     x8, CurrentEL
-   80010: 1f 21 00 71                   cmp     w8, #0x8
-   80014: 60 00 00 54                   b.eq    #0xc <_start+0x20>
-   80018: 5f 20 03 d5                   wfe
-   8001c: ff ff ff 17                   b       #-0x4 <_start+0x18>
-   80020: e8 03 1f aa                   mov     x8, xzr
-   80024: 69 00 80 52                   mov     w9, #0x3
-   80028: 09 e1 1c d5                   msr     CNTHCTL_EL2, x9
-   8002c: 68 e0 1c d5                   msr     CNTVOFF_EL2, x8
-   80030: 08 00 00 90                   adrp    x8, #0x0
-   80034: 0a 00 b0 52                   mov     w10, #-0x80000000
-   80038: ab 78 80 52                   mov     w11, #0x3c5
-   8003c: 0c 01 a0 52                   mov     w12, #0x80000
-   80040: 0a 11 1c d5                   msr     HCR_EL2, x10
-   80044: 0b 40 1c d5                   msr     SPSR_EL2, x11
-   80048: 08 91 2f 91                   add     x8, x8, #0xbe4
-   8004c: 28 40 1c d5                   msr     ELR_EL2, x8
-   80050: 0c 41 1c d5                   msr     SP_EL1, x12
-   80054: e0 03 9f d6                   eret
+   80000:       mrs     x8, MPIDR_EL1
+   80004:       tst     x8, #0x3
+   80008:       b.ne    #0x10 <_start+0x18>
+   8000c:       mrs     x8, CurrentEL
+   80010:       cmp     w8, #0x8
+   80014:       b.eq    #0xc <_start+0x20>
+   80018:       wfe
+   8001c:       b       #-0x4 <_start+0x18>
+   80020:       mov     x8, xzr
+   80024:       mov     w9, #0x3
+   80028:       msr     CNTHCTL_EL2, x9
+   8002c:       msr     CNTVOFF_EL2, x8
+   80030:       adrp    x8, #0x0
+   80034:       mov     w10, #-0x80000000
+   80038:       mov     w11, #0x3c5
+   8003c:       mov     w12, #0x80000
+   80040:       msr     HCR_EL2, x10
+   80044:       msr     SPSR_EL2, x11
+   80048:       add     x8, x8, #0xdd0
+   8004c:       msr     ELR_EL2, x8
+   80050:       msr     SP_EL1, x12
+   80054:       eret
 ```
 
 Looks good! Thanks zero-overhead abstractions in the

@@ -2,8 +2,8 @@
 //
 // Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
 
-/// Call the function provided by parameter `\handler` after saving exception context, providing the
-/// same as the first parameter.
+/// Call the function provided by parameter `\handler` after saving exception context. Provide the
+/// context as the first parameter to '\handler'.
 .macro CALL_WITH_CONTEXT handler
     // Make room on the stack for the exception context.
     sub    sp,  sp,  #16 * 17
@@ -56,7 +56,6 @@
 .align 11
 
 // Export a symbol for the Rust code to use.
-.global __exception_vector_start
 __exception_vector_start:
 
 // Current exception level with SP_EL0.
@@ -106,7 +105,6 @@ __exception_vector_start:
 //--------------------------------------------------------------------------------------------------
 // Helper functions
 //--------------------------------------------------------------------------------------------------
-.global __exception_restore_context
 __exception_restore_context:
     ldr    w19,      [sp, #16 * 16]
     ldp    lr,  x20, [sp, #16 * 15]

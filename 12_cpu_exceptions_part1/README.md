@@ -716,13 +716,13 @@ diff -uNr 11_virtual_memory/src/arch/aarch64/exception.rs 12_cpu_exceptions_part
 diff -uNr 11_virtual_memory/src/arch/aarch64/exception.S 12_cpu_exceptions_part1/src/arch/aarch64/exception.S
 --- 11_virtual_memory/src/arch/aarch64/exception.S
 +++ 12_cpu_exceptions_part1/src/arch/aarch64/exception.S
-@@ -0,0 +1,135 @@
+@@ -0,0 +1,133 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
 +
-+/// Call the function provided by parameter `\handler` after saving exception context, providing the
-+/// same as the first parameter.
++/// Call the function provided by parameter `\handler` after saving exception context. Provide the
++/// context as the first parameter to '\handler'.
 +.macro CALL_WITH_CONTEXT handler
 +    // Make room on the stack for the exception context.
 +    sub    sp,  sp,  #16 * 17
@@ -775,7 +775,6 @@ diff -uNr 11_virtual_memory/src/arch/aarch64/exception.S 12_cpu_exceptions_part1
 +.align 11
 +
 +// Export a symbol for the Rust code to use.
-+.global __exception_vector_start
 +__exception_vector_start:
 +
 +// Current exception level with SP_EL0.
@@ -825,7 +824,6 @@ diff -uNr 11_virtual_memory/src/arch/aarch64/exception.S 12_cpu_exceptions_part1
 +//--------------------------------------------------------------------------------------------------
 +// Helper functions
 +//--------------------------------------------------------------------------------------------------
-+.global __exception_restore_context
 +__exception_restore_context:
 +    ldr    w19,      [sp, #16 * 16]
 +    ldp    lr,  x20, [sp, #16 * 15]

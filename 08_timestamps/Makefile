@@ -93,7 +93,7 @@ readelf:
 	readelf -a kernel
 
 objdump:
-	cargo objdump --target $(TARGET) -- -disassemble -print-imm-hex kernel
+	cargo objdump --target $(TARGET) -- -disassemble -no-show-raw-insn -print-imm-hex kernel
 
 nm:
-	cargo nm --target $(TARGET) -- kernel | sort
+	cargo nm --target $(TARGET) -- -print-size kernel | sort
