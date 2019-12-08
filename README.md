@@ -2,7 +2,7 @@
 
 ![](https://github.com/rust-embedded/rust-raspi3-OS-tutorials/workflows/BSP-RPi3/badge.svg) ![](https://github.com/rust-embedded/rust-raspi3-OS-tutorials/workflows/BSP-RPi4/badge.svg)
 
-## Notice
+## ⚠️ Info
 
 **This is a work-in-progress rewrite, started on September 2019.** You can find the original version of the tutorials
 [here](https://github.com/rust-embedded/rust-raspi3-OS-tutorials/tree/original_version).
@@ -29,7 +29,7 @@ _Cheers,
 [Visual Studio Code]: https://code.visualstudio.com
 [Rust Language Server]: https://github.com/rust-lang/rls
 
-## Introduction
+## ℹ️ Introduction
 
 The target audience is hobby OS developers who are new to ARM's 64 bit [ARMv8-A
 architecture](https://developer.arm.com/products/architecture/cpu-architecture/a-profile/docs).
@@ -47,7 +47,7 @@ and/or boards.
 
 I would really love if someone takes a shot at a **RISC-V** implementation.
 
-## Ease of use
+## ✔️ Ease of use
 
 This repo tries to put a focus on user friendliness. Therefore, I made some
 efforts to eliminate the biggest painpoint in embedded development: Toolchain
@@ -68,7 +68,7 @@ The setup consists of the following components:
 If you want to know more about docker and peek at the the containers used in
 these tutorials, please refer to the repository's docker folder.
 
-## Prerequisites
+## 🛠 Prerequisites
 
 Before you can start, you'll need a suitable Rust toolchain.
 
@@ -82,7 +82,7 @@ curl https://sh.rustup.rs -sSf  \
 cargo install cargo-xbuild cargo-binutils
 ```
 
-## USB Serial
+## 💻 USB Serial Output
 
 It is highly recommended to get a USB serial debug cable. It also powers the
 Raspberry once you connect it, so you don't need extra power over the dedicated
@@ -97,7 +97,7 @@ self-made kernels from it.
 
 ![UART wiring diagram](doc/wiring.png)
 
-## Acknowledgements
+## 🙌 Acknowledgements
 
 The original version of the tutorials started out as a fork of [Zoltan
 Baldaszti](https://github.com/bztsrc)'s awesome [tutorials on bare metal
