@@ -602,15 +602,6 @@ diff -uNr 10_privilege_level/src/arch/aarch64.rs 11_virtual_memory/src/arch/aarc
  /// Information about the HW state.
  pub mod state {
      use cortex_a::regs::*;
-@@ -126,7 +133,7 @@
-         };
-         use crate::info;
-
--        let to_mask_str = |x: bool| -> &'static str {
-+        let to_mask_str = |x| -> _ {
-             if x { "Masked" } else { "Unmasked" }
-         };
-
 
 diff -uNr 10_privilege_level/src/bsp/rpi/link.ld 11_virtual_memory/src/bsp/rpi/link.ld
 --- 10_privilege_level/src/bsp/rpi/link.ld
@@ -759,8 +750,8 @@ diff -uNr 10_privilege_level/src/bsp/rpi.rs 11_virtual_memory/src/bsp/rpi.rs
 +use crate::{interface, memory::KernelVirtualLayout};
  use core::fmt;
 
- pub const BOOT_CORE_ID: u64 = 0;
-@@ -69,3 +70,13 @@
+ /// Used by `arch` code to find the early boot core.
+@@ -72,3 +73,13 @@
      // Configure PL011Uart's output pins.
      GPIO.map_pl011_uart();
  }
@@ -791,13 +782,14 @@ diff -uNr 10_privilege_level/src/bsp.rs 11_virtual_memory/src/bsp.rs
 diff -uNr 10_privilege_level/src/interface.rs 11_virtual_memory/src/interface.rs
 --- 10_privilege_level/src/interface.rs
 +++ 11_virtual_memory/src/interface.rs
-@@ -127,3 +127,11 @@
+@@ -131,3 +131,12 @@
          fn spin_for(&self, duration: Duration);
      }
  }
 +
 +/// Memory Management interfaces.
 +pub mod mm {
++    /// MMU functions.
 +    pub trait MMU {
 +        /// Called by the kernel early during init.
 +        unsafe fn init(&self) -> Result<(), &'static str>;

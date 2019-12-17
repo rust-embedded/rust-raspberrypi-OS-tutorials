@@ -29,7 +29,8 @@ pub mod console {
 
     /// Console read functions.
     pub trait Read {
-        fn read_char(&mut self) -> char {
+        /// Read a single character.
+        fn read_char(&self) -> char {
             ' '
         }
     }

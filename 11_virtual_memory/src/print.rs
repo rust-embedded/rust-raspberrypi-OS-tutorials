@@ -7,6 +7,7 @@
 use crate::{bsp, interface};
 use core::fmt;
 
+#[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
     use interface::console::Write;
 
@@ -32,7 +33,7 @@ macro_rules! println {
     })
 }
 
-/// Prints am info, with newline.
+/// Prints an info, with newline.
 #[macro_export]
 macro_rules! info {
     ($string:expr) => ({

@@ -642,7 +642,7 @@ diff -uNr 05_safe_globals/src/bsp/rpi/memory_map.rs 06_drivers_gpio_uart/src/bsp
 diff -uNr 05_safe_globals/src/bsp/rpi.rs 06_drivers_gpio_uart/src/bsp/rpi.rs
 --- 05_safe_globals/src/bsp/rpi.rs
 +++ 06_drivers_gpio_uart/src/bsp/rpi.rs
-@@ -4,114 +4,68 @@
+@@ -4,7 +4,10 @@
 
  //! Board Support Package for the Raspberry Pi.
 
@@ -653,7 +653,9 @@ diff -uNr 05_safe_globals/src/bsp/rpi.rs 06_drivers_gpio_uart/src/bsp/rpi.rs
 +use crate::interface;
  use core::fmt;
 
- pub const BOOT_CORE_ID: u64 = 0;
+ /// Used by `arch` code to find the early boot core.
+@@ -13,108 +16,59 @@
+ /// The early boot core's stack address.
  pub const BOOT_CORE_STACK_START: u64 = 0x80_000;
 
 -/// A mystical, magical device for generating QEMU output out of the void.
@@ -818,15 +820,17 @@ diff -uNr 05_safe_globals/src/bsp.rs 06_drivers_gpio_uart/src/bsp.rs
 diff -uNr 05_safe_globals/src/interface.rs 06_drivers_gpio_uart/src/interface.rs
 --- 05_safe_globals/src/interface.rs
 +++ 06_drivers_gpio_uart/src/interface.rs
-@@ -24,6 +24,7 @@
+@@ -24,6 +24,9 @@
 
      /// Console write functions.
      pub trait Write {
++        /// Write a single character.
 +        fn write_char(&self, c: char);
++
+         /// Write a Rust format string.
          fn write_fmt(&self, args: fmt::Arguments) -> fmt::Result;
      }
-
-@@ -83,3 +84,20 @@
+@@ -85,3 +88,20 @@
          fn lock<R>(&mut self, f: impl FnOnce(&mut Self::Data) -> R) -> R;
      }
  }

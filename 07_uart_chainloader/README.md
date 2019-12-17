@@ -239,8 +239,8 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/rpi/link.ld 07_uart_chainloader/src/bsp/r
 diff -uNr 06_drivers_gpio_uart/src/bsp/rpi.rs 07_uart_chainloader/src/bsp/rpi.rs
 --- 06_drivers_gpio_uart/src/bsp/rpi.rs
 +++ 07_uart_chainloader/src/bsp/rpi.rs
-@@ -13,6 +13,9 @@
- pub const BOOT_CORE_ID: u64 = 0;
+@@ -16,6 +16,9 @@
+ /// The early boot core's stack address.
  pub const BOOT_CORE_STACK_START: u64 = 0x80_000;
 
 +/// The address on which the RPi3 firmware loads every binary by default.
@@ -253,9 +253,9 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/rpi.rs 07_uart_chainloader/src/bsp/rpi.rs
 diff -uNr 06_drivers_gpio_uart/src/interface.rs 07_uart_chainloader/src/interface.rs
 --- 06_drivers_gpio_uart/src/interface.rs
 +++ 07_uart_chainloader/src/interface.rs
-@@ -26,6 +26,10 @@
-     pub trait Write {
-         fn write_char(&self, c: char);
+@@ -29,6 +29,10 @@
+
+         /// Write a Rust format string.
          fn write_fmt(&self, args: fmt::Arguments) -> fmt::Result;
 +
 +        /// Block execution until the last character has been physically put on the TX wire
@@ -264,7 +264,7 @@ diff -uNr 06_drivers_gpio_uart/src/interface.rs 07_uart_chainloader/src/interfac
      }
 
      /// Console read functions.
-@@ -33,6 +37,9 @@
+@@ -37,6 +41,9 @@
          fn read_char(&self) -> char {
              ' '
          }

@@ -30,6 +30,7 @@ unsafe impl<T: ?Sized + Send> Send for NullLock<T> {}
 unsafe impl<T: ?Sized + Send> Sync for NullLock<T> {}
 
 impl<T> NullLock<T> {
+    /// Wraps `data` into a new `NullLock`.
     pub const fn new(data: T) -> NullLock<T> {
         NullLock {
             data: UnsafeCell::new(data),

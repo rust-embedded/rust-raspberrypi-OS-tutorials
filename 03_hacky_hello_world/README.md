@@ -92,7 +92,7 @@ diff -uNr 02_runtime_init/src/bsp/rpi.rs 03_hacky_hello_world/src/bsp/rpi.rs
 diff -uNr 02_runtime_init/src/interface.rs 03_hacky_hello_world/src/interface.rs
 --- 02_runtime_init/src/interface.rs
 +++ 03_hacky_hello_world/src/interface.rs
-@@ -0,0 +1,36 @@
+@@ -0,0 +1,37 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
@@ -124,7 +124,8 @@ diff -uNr 02_runtime_init/src/interface.rs 03_hacky_hello_world/src/interface.rs
 +
 +    /// Console read functions.
 +    pub trait Read {
-+        fn read_char(&mut self) -> char {
++        /// Read a single character.
++        fn read_char(&self) -> char {
 +            ' '
 +        }
 +    }
@@ -203,7 +204,7 @@ diff -uNr 02_runtime_init/src/panic_wait.rs 03_hacky_hello_world/src/panic_wait.
 diff -uNr 02_runtime_init/src/print.rs 03_hacky_hello_world/src/print.rs
 --- 02_runtime_init/src/print.rs
 +++ 03_hacky_hello_world/src/print.rs
-@@ -0,0 +1,33 @@
+@@ -0,0 +1,34 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
@@ -213,6 +214,7 @@ diff -uNr 02_runtime_init/src/print.rs 03_hacky_hello_world/src/print.rs
 +use crate::{bsp, interface};
 +use core::fmt;
 +
++#[doc(hidden)]
 +pub fn _print(args: fmt::Arguments) {
 +    use interface::console::Write;
 +

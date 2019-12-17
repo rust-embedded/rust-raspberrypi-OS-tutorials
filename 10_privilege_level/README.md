@@ -334,7 +334,7 @@ diff -uNr 09_hw_debug_JTAG/src/arch/aarch64.rs 10_privilege_level/src/arch/aarch
  //--------------------------------------------------------------------------------------------------
  // Global instances
  //--------------------------------------------------------------------------------------------------
-@@ -61,3 +103,36 @@
+@@ -61,3 +103,37 @@
          asm::wfe()
      }
  }
@@ -353,6 +353,7 @@ diff -uNr 09_hw_debug_JTAG/src/arch/aarch64.rs 10_privilege_level/src/arch/aarch
 +        }
 +    }
 +
++    /// Print the AArch64 exceptions status.
 +    #[rustfmt::skip]
 +    pub fn print_exception_state() {
 +        use super::{
@@ -361,7 +362,7 @@ diff -uNr 09_hw_debug_JTAG/src/arch/aarch64.rs 10_privilege_level/src/arch/aarch
 +        };
 +        use crate::info;
 +
-+        let to_mask_str = |x: bool| -> &'static str {
++        let to_mask_str = |x| -> _ {
 +            if x { "Masked" } else { "Unmasked" }
 +        };
 +

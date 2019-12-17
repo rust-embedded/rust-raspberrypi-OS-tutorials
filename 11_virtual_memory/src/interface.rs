@@ -24,7 +24,10 @@ pub mod console {
 
     /// Console write functions.
     pub trait Write {
+        /// Write a single character.
         fn write_char(&self, c: char);
+
+        /// Write a Rust format string.
         fn write_fmt(&self, args: fmt::Arguments) -> fmt::Result;
 
         /// Block execution until the last character has been physically put on the TX wire
@@ -34,6 +37,7 @@ pub mod console {
 
     /// Console read functions.
     pub trait Read {
+        /// Read a single character.
         fn read_char(&self) -> char {
             ' '
         }
@@ -130,6 +134,7 @@ pub mod time {
 
 /// Memory Management interfaces.
 pub mod mm {
+    /// MMU functions.
     pub trait MMU {
         /// Called by the kernel early during init.
         unsafe fn init(&self) -> Result<(), &'static str>;

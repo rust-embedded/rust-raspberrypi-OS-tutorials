@@ -103,11 +103,14 @@ diff -uNr 03_hacky_hello_world/src/arch/aarch64.rs 04_zero_overhead_abstraction/
 diff -uNr 03_hacky_hello_world/src/bsp/rpi.rs 04_zero_overhead_abstraction/src/bsp/rpi.rs
 --- 03_hacky_hello_world/src/bsp/rpi.rs
 +++ 04_zero_overhead_abstraction/src/bsp/rpi.rs
-@@ -7,6 +7,9 @@
+@@ -7,6 +7,12 @@
  use crate::interface;
  use core::fmt;
 
++/// Used by `arch` code to find the early boot core.
 +pub const BOOT_CORE_ID: u64 = 0;
++
++/// The early boot core's stack address.
 +pub const BOOT_CORE_STACK_START: u64 = 0x80_000;
 +
  /// A mystical, magical device for generating QEMU output out of the void.

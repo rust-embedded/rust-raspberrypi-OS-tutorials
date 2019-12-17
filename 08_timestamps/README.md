@@ -287,8 +287,8 @@ diff -uNr 07_uart_chainloader/src/bsp/rpi/link.ld 08_timestamps/src/bsp/rpi/link
 diff -uNr 07_uart_chainloader/src/bsp/rpi.rs 08_timestamps/src/bsp/rpi.rs
 --- 07_uart_chainloader/src/bsp/rpi.rs
 +++ 08_timestamps/src/bsp/rpi.rs
-@@ -13,9 +13,6 @@
- pub const BOOT_CORE_ID: u64 = 0;
+@@ -16,9 +16,6 @@
+ /// The early boot core's stack address.
  pub const BOOT_CORE_STACK_START: u64 = 0x80_000;
 
 -/// The address on which the RPi3 firmware loads every binary by default.
@@ -301,7 +301,7 @@ diff -uNr 07_uart_chainloader/src/bsp/rpi.rs 08_timestamps/src/bsp/rpi.rs
 diff -uNr 07_uart_chainloader/src/interface.rs 08_timestamps/src/interface.rs
 --- 07_uart_chainloader/src/interface.rs
 +++ 08_timestamps/src/interface.rs
-@@ -108,3 +108,22 @@
+@@ -112,3 +112,22 @@
          }
      }
  }
@@ -413,12 +413,12 @@ diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
 diff -uNr 07_uart_chainloader/src/print.rs 08_timestamps/src/print.rs
 --- 07_uart_chainloader/src/print.rs
 +++ 08_timestamps/src/print.rs
-@@ -31,3 +31,71 @@
+@@ -32,3 +32,71 @@
          $crate::print::_print(format_args_nl!($($arg)*));
      })
  }
 +
-+/// Prints am info, with newline.
++/// Prints an info, with newline.
 +#[macro_export]
 +macro_rules! info {
 +    ($string:expr) => ({

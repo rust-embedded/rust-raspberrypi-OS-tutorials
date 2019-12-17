@@ -24,12 +24,16 @@ pub mod console {
 
     /// Console write functions.
     pub trait Write {
+        /// Write a single character.
         fn write_char(&self, c: char);
+
+        /// Write a Rust format string.
         fn write_fmt(&self, args: fmt::Arguments) -> fmt::Result;
     }
 
     /// Console read functions.
     pub trait Read {
+        /// Read a single character.
         fn read_char(&self) -> char {
             ' '
         }

@@ -55,7 +55,7 @@ make qemu
 diff -uNr 04_zero_overhead_abstraction/src/arch/aarch64/sync.rs 05_safe_globals/src/arch/aarch64/sync.rs
 --- 04_zero_overhead_abstraction/src/arch/aarch64/sync.rs
 +++ 05_safe_globals/src/arch/aarch64/sync.rs
-@@ -0,0 +1,52 @@
+@@ -0,0 +1,53 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
@@ -88,6 +88,7 @@ diff -uNr 04_zero_overhead_abstraction/src/arch/aarch64/sync.rs 05_safe_globals/
 +unsafe impl<T: ?Sized + Send> Sync for NullLock<T> {}
 +
 +impl<T> NullLock<T> {
++    /// Wraps `data` into a new `NullLock`.
 +    pub const fn new(data: T) -> NullLock<T> {
 +        NullLock {
 +            data: UnsafeCell::new(data),
@@ -125,7 +126,7 @@ diff -uNr 04_zero_overhead_abstraction/src/arch/aarch64.rs 05_safe_globals/src/a
 diff -uNr 04_zero_overhead_abstraction/src/bsp/rpi.rs 05_safe_globals/src/bsp/rpi.rs
 --- 04_zero_overhead_abstraction/src/bsp/rpi.rs
 +++ 05_safe_globals/src/bsp/rpi.rs
-@@ -4,38 +4,114 @@
+@@ -4,7 +4,7 @@
 
  //! Board Support Package for the Raspberry Pi.
 
@@ -133,7 +134,8 @@ diff -uNr 04_zero_overhead_abstraction/src/bsp/rpi.rs 05_safe_globals/src/bsp/rp
 +use crate::{arch::sync::NullLock, interface};
  use core::fmt;
 
- pub const BOOT_CORE_ID: u64 = 0;
+ /// Used by `arch` code to find the early boot core.
+@@ -14,31 +14,107 @@
  pub const BOOT_CORE_STACK_START: u64 = 0x80_000;
 
  /// A mystical, magical device for generating QEMU output out of the void.
@@ -254,7 +256,7 @@ diff -uNr 04_zero_overhead_abstraction/src/bsp/rpi.rs 05_safe_globals/src/bsp/rp
 diff -uNr 04_zero_overhead_abstraction/src/interface.rs 05_safe_globals/src/interface.rs
 --- 04_zero_overhead_abstraction/src/interface.rs
 +++ 05_safe_globals/src/interface.rs
-@@ -20,17 +20,66 @@
+@@ -20,12 +20,13 @@
 
  /// System console operations.
  pub mod console {
@@ -267,13 +269,13 @@ diff -uNr 04_zero_overhead_abstraction/src/interface.rs 05_safe_globals/src/inte
 -    /// intention.
 -    pub use core::fmt::Write;
 +    pub trait Write {
++        /// Write a Rust format string.
 +        fn write_fmt(&self, args: fmt::Arguments) -> fmt::Result;
 +    }
 
      /// Console read functions.
      pub trait Read {
--        fn read_char(&mut self) -> char {
-+        fn read_char(&self) -> char {
+@@ -34,4 +35,53 @@
              ' '
          }
      }

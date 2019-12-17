@@ -7,6 +7,7 @@
 use crate::{bsp, interface};
 use core::fmt;
 
+#[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
     use interface::console::Write;
 

@@ -125,6 +125,7 @@ pub mod state {
         }
     }
 
+    /// Print the AArch64 exceptions status.
     #[rustfmt::skip]
     pub fn print_exception_state() {
         use super::{

@@ -10,7 +10,10 @@ use super::driver;
 use crate::interface;
 use core::fmt;
 
+/// Used by `arch` code to find the early boot core.
 pub const BOOT_CORE_ID: u64 = 0;
+
+/// The early boot core's stack address.
 pub const BOOT_CORE_STACK_START: u64 = 0x80_000;
 
 //--------------------------------------------------------------------------------------------------

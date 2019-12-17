@@ -118,6 +118,7 @@ pub mod state {
         }
     }
 
+    /// Print the AArch64 exceptions status.
     #[rustfmt::skip]
     pub fn print_exception_state() {
         use super::{
@@ -126,7 +127,7 @@ pub mod state {
         };
         use crate::info;
 
-        let to_mask_str = |x: bool| -> &'static str {
+        let to_mask_str = |x| -> _ {
             if x { "Masked" } else { "Unmasked" }
         };
 
