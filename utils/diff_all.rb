@@ -9,7 +9,7 @@ require 'fileutils'
 require_relative 'helpers/tutorial_folders.rb'
 
 def diff_all
-    crates = tutorial_folders
+    crates = tutorial_folders(false)
 
     (0..(crates.length - 2)).each do |i|
         old = File.dirname(crates[i])

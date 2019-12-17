@@ -7,11 +7,16 @@
 
 require 'fileutils'
 
-def tutorial_folders
+WITH_EXTRA = '[X0-9]'
+NO_EXTRA = '[0-9]'
+
+def tutorial_folders(with_extra = true)
     crates = Dir['**/Cargo.toml']
 
     crates.delete_if do |x|
-        !/[0-9][0-9]/.match?(x[0..1])
+        s = with_extra ? WITH_EXTRA : NO_EXTRA
+
+        !/[#{s}][0-9]/.match?(x[0..1])
     end
 
     crates.sort!
