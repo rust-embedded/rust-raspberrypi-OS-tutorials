@@ -601,7 +601,7 @@ diff -uNr 10_privilege_level/src/arch/aarch64.rs 11_virtual_memory/src/arch/aarc
 +
  /// Information about the HW state.
  pub mod state {
-     use cortex_a::regs::*;
+     use crate::arch::PrivilegeLevel;
 
 diff -uNr 10_privilege_level/src/bsp/rpi/link.ld 11_virtual_memory/src/bsp/rpi/link.ld
 --- 10_privilege_level/src/bsp/rpi/link.ld
@@ -843,10 +843,10 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_memory/src/main.rs
 +    info!("MMU online. Special regions:");
 +    bsp::virt_mem_layout().print_layout();
 +
-     info!(
-         "Current privilege level: {}",
-         arch::state::current_privilege_level()
-@@ -87,6 +103,13 @@
+     let (_, privilege_level) = arch::state::current_privilege_level();
+     info!("Current privilege level: {}", privilege_level);
+
+@@ -86,6 +102,13 @@
      info!("Timer test, spinning for 1 second");
      arch::timer().spin_for(Duration::from_secs(1));
 

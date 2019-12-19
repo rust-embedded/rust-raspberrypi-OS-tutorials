@@ -122,15 +122,17 @@ pub fn mmu() -> &'static impl interface::mm::MMU {
 
 /// Information about the HW state.
 pub mod state {
+    use crate::arch::PrivilegeLevel;
     use cortex_a::regs::*;
 
     /// The processing element's current privilege level.
-    pub fn current_privilege_level() -> &'static str {
+    pub fn current_privilege_level() -> (PrivilegeLevel, &'static str) {
         let el = CurrentEL.read_as_enum(CurrentEL::EL);
         match el {
-            Some(CurrentEL::EL::Value::EL2) => "EL2",
-            Some(CurrentEL::EL::Value::EL1) => "EL1",
-            _ => "Unknown",
+            Some(CurrentEL::EL::Value::EL2) => (PrivilegeLevel::Hypervisor, "EL2"),
+            Some(CurrentEL::EL::Value::EL1) => (PrivilegeLevel::Kernel, "EL1"),
+            Some(CurrentEL::EL::Value::EL0) => (PrivilegeLevel::User, "EL0"),
+            _ => (PrivilegeLevel::Unknown, "Unknown"),
         }
     }
 

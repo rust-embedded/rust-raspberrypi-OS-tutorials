@@ -394,7 +394,6 @@ make chainboot
 [    5.780890] Booting on: Raspberry Pi 3
 [    5.783142] MMU online. Special regions:
 [    5.787050]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
-[    5.795298]       0x1fff0000 - 0x1fffffff |  64 KiB | Dev RW PXN | Remapped Device MMIO
 [    5.803285]       0x3f000000 - 0x3fffffff |  16 MiB | Dev RW PXN | Device MMIO
 [    5.810492] Current privilege level: EL1
 [    5.814399] Exception handling state:
@@ -870,6 +869,39 @@ diff -uNr 11_virtual_memory/src/arch/aarch64.rs 12_cpu_exceptions_part1/src/arch
  pub fn mmu() -> &'static impl interface::mm::MMU {
      &MMU
 
+diff -uNr 11_virtual_memory/src/bsp/rpi/virt_mem_layout.rs 12_cpu_exceptions_part1/src/bsp/rpi/virt_mem_layout.rs
+--- 11_virtual_memory/src/bsp/rpi/virt_mem_layout.rs
++++ 12_cpu_exceptions_part1/src/bsp/rpi/virt_mem_layout.rs
+@@ -15,7 +15,7 @@
+ // BSP-public
+ //--------------------------------------------------------------------------------------------------
+
+-pub const NUM_MEM_RANGES: usize = 3;
++pub const NUM_MEM_RANGES: usize = 2;
+
+ pub static LAYOUT: KernelVirtualLayout<{ NUM_MEM_RANGES }> = KernelVirtualLayout::new(
+     memory_map::END_INCLUSIVE,
+@@ -54,19 +54,6 @@
+             },
+         },
+         RangeDescriptor {
+-            name: "Remapped Device MMIO",
+-            virtual_range: || {
+-                // The last 64 KiB slot in the first 512 MiB
+-                RangeInclusive::new(0x1FFF_0000, 0x1FFF_FFFF)
+-            },
+-            translation: Translation::Offset(memory_map::mmio::BASE + 0x20_0000),
+-            attribute_fields: AttributeFields {
+-                mem_attributes: MemAttributes::Device,
+-                acc_perms: AccessPermissions::ReadWrite,
+-                execute_never: true,
+-            },
+-        },
+-        RangeDescriptor {
+             name: "Device MMIO",
+             virtual_range: || {
+                 RangeInclusive::new(memory_map::mmio::BASE, memory_map::mmio::END_INCLUSIVE)
+
 diff -uNr 11_virtual_memory/src/bsp.rs 12_cpu_exceptions_part1/src/bsp.rs
 --- 11_virtual_memory/src/bsp.rs
 +++ 12_cpu_exceptions_part1/src/bsp.rs
@@ -903,7 +935,7 @@ diff -uNr 11_virtual_memory/src/main.rs 12_cpu_exceptions_part1/src/main.rs
      if let Err(string) = arch::mmu().init() {
          panic!("MMU: {}", string);
      }
-@@ -103,13 +106,28 @@
+@@ -102,13 +105,28 @@
      info!("Timer test, spinning for 1 second");
      arch::timer().spin_for(Duration::from_secs(1));
 
@@ -938,5 +970,17 @@ diff -uNr 11_virtual_memory/src/main.rs 12_cpu_exceptions_part1/src/main.rs
      info!("Echoing input now");
      loop {
          let c = bsp::console().read_char();
+
+diff -uNr 11_virtual_memory/src/memory.rs 12_cpu_exceptions_part1/src/memory.rs
+--- 11_virtual_memory/src/memory.rs
++++ 12_cpu_exceptions_part1/src/memory.rs
+@@ -6,6 +6,7 @@
+
+ use core::{fmt, ops::RangeInclusive};
+
++#[allow(dead_code)]
+ #[derive(Copy, Clone)]
+ pub enum Translation {
+     Identity,
 
 ```

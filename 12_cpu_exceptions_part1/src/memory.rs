@@ -6,6 +6,7 @@
 
 use core::{fmt, ops::RangeInclusive};
 
+#[allow(dead_code)]
 #[derive(Copy, Clone)]
 pub enum Translation {
     Identity,

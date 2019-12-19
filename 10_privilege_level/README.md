@@ -334,22 +334,24 @@ diff -uNr 09_hw_debug_JTAG/src/arch/aarch64.rs 10_privilege_level/src/arch/aarch
  //--------------------------------------------------------------------------------------------------
  // Global instances
  //--------------------------------------------------------------------------------------------------
-@@ -61,3 +103,37 @@
+@@ -61,3 +103,39 @@
          asm::wfe()
      }
  }
 +
 +/// Information about the HW state.
 +pub mod state {
++    use crate::arch::PrivilegeLevel;
 +    use cortex_a::regs::*;
 +
 +    /// The processing element's current privilege level.
-+    pub fn current_privilege_level() -> &'static str {
++    pub fn current_privilege_level() -> (PrivilegeLevel, &'static str) {
 +        let el = CurrentEL.read_as_enum(CurrentEL::EL);
 +        match el {
-+            Some(CurrentEL::EL::Value::EL2) => "EL2",
-+            Some(CurrentEL::EL::Value::EL1) => "EL1",
-+            _ => "Unknown",
++            Some(CurrentEL::EL::Value::EL2) => (PrivilegeLevel::Hypervisor, "EL2"),
++            Some(CurrentEL::EL::Value::EL1) => (PrivilegeLevel::Kernel, "EL1"),
++            Some(CurrentEL::EL::Value::EL0) => (PrivilegeLevel::User, "EL0"),
++            _ => (PrivilegeLevel::Unknown, "Unknown"),
 +        }
 +    }
 +
@@ -373,10 +375,28 @@ diff -uNr 09_hw_debug_JTAG/src/arch/aarch64.rs 10_privilege_level/src/arch/aarch
 +    }
 +}
 
+diff -uNr 09_hw_debug_JTAG/src/arch.rs 10_privilege_level/src/arch.rs
+--- 09_hw_debug_JTAG/src/arch.rs
++++ 10_privilege_level/src/arch.rs
+@@ -9,3 +9,13 @@
+
+ #[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
+ pub use aarch64::*;
++
++/// Architectural privilege level.
++#[allow(missing_docs)]
++#[derive(PartialEq)]
++pub enum PrivilegeLevel {
++    User,
++    Kernel,
++    Hypervisor,
++    Unknown,
++}
+
 diff -uNr 09_hw_debug_JTAG/src/main.rs 10_privilege_level/src/main.rs
 --- 09_hw_debug_JTAG/src/main.rs
 +++ 10_privilege_level/src/main.rs
-@@ -63,9 +63,17 @@
+@@ -63,9 +63,16 @@
  /// The main function running after the early init.
  fn kernel_main() -> ! {
      use core::time::Duration;
@@ -385,17 +405,16 @@ diff -uNr 09_hw_debug_JTAG/src/main.rs 10_privilege_level/src/main.rs
 
      info!("Booting on: {}", bsp::board_name());
 +
-+    info!(
-+        "Current privilege level: {}",
-+        arch::state::current_privilege_level()
-+    );
++    let (_, privilege_level) = arch::state::current_privilege_level();
++    info!("Current privilege level: {}", privilege_level);
++
 +    info!("Exception handling state:");
 +    arch::state::print_exception_state();
 +
      info!(
          "Architectural timer resolution: {} ns",
          arch::timer().resolution().as_nanos()
-@@ -76,11 +84,12 @@
+@@ -76,11 +83,12 @@
          info!("      {}. {}", i + 1, driver.compatible());
      }
 

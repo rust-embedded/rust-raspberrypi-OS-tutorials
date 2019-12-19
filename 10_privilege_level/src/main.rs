@@ -67,10 +67,9 @@ fn kernel_main() -> ! {
 
     info!("Booting on: {}", bsp::board_name());
 
-    info!(
-        "Current privilege level: {}",
-        arch::state::current_privilege_level()
-    );
+    let (_, privilege_level) = arch::state::current_privilege_level();
+    info!("Current privilege level: {}", privilege_level);
+
     info!("Exception handling state:");
     arch::state::print_exception_state();
 
