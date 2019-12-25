@@ -162,7 +162,7 @@ diff -uNr 06_drivers_gpio_uart/src/arch/aarch64.rs 07_uart_chainloader/src/arch/
 diff -uNr 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 07_uart_chainloader/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
 --- 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 07_uart_chainloader/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -275,6 +275,16 @@
+@@ -277,6 +277,16 @@
          let mut r = &self.inner;
          r.lock(|inner| fmt::Write::write_fmt(inner, args))
      }
@@ -179,27 +179,34 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 07_uart_
  }
 
  impl interface::console::Read for PL011Uart {
-@@ -287,14 +297,17 @@
+@@ -288,18 +298,21 @@
+                 arch::nop();
              }
 
-             // Read one character.
+-            // Read one character.
 -            let mut ret = inner.DR.get() as u8 as char;
-+            inner.DR.get() as u8 as char
-+        })
-+    }
-
+-
 -            // Convert carrige return to newline.
 -            if ret == '\r' {
 -                ret = '\n'
+-            }
+-
+             // Update statistics.
+             inner.chars_read += 1;
+
+-            ret
++            // Read one character.
++            inner.DR.get() as u8 as char
++        })
++    }
++
 +    fn clear(&self) {
 +        let mut r = &self.inner;
 +        r.lock(|inner| {
 +            // Read from the RX FIFO until it is indicating empty.
 +            while !inner.FR.matches_all(FR::RXFE::SET) {
 +                inner.DR.get();
-             }
--
--            ret
++            }
          })
      }
  }

@@ -275,7 +275,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_gpio.rs 06_drivers_gpio_uar
 diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
 --- 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -0,0 +1,307 @@
+@@ -0,0 +1,317 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
@@ -408,6 +408,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gp
 +pub struct PL011UartInner {
 +    base_addr: usize,
 +    chars_written: usize,
++    chars_read: usize,
 +}
 +
 +/// Deref to RegisterBlock.
@@ -433,6 +434,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gp
 +        PL011UartInner {
 +            base_addr,
 +            chars_written: 0,
++            chars_read: 0,
 +        }
 +    }
 +
@@ -572,6 +574,9 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gp
 +                ret = '\n'
 +            }
 +
++            // Update statistics.
++            inner.chars_read += 1;
++
 +            ret
 +        })
 +    }
@@ -581,6 +586,11 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gp
 +    fn chars_written(&self) -> usize {
 +        let mut r = &self.inner;
 +        r.lock(|inner| inner.chars_written)
++    }
++
++    fn chars_read(&self) -> usize {
++        let mut r = &self.inner;
++        r.lock(|inner| inner.chars_read)
 +    }
 +}
 

@@ -130,6 +130,7 @@ register_structs! {
 pub struct PL011UartInner {
     base_addr: usize,
     chars_written: usize,
+    chars_read: usize,
 }
 
 /// Deref to RegisterBlock.
@@ -155,6 +156,7 @@ impl PL011UartInner {
         PL011UartInner {
             base_addr,
             chars_written: 0,
+            chars_read: 0,
         }
     }
 
@@ -296,6 +298,9 @@ impl interface::console::Read for PL011Uart {
                 arch::nop();
             }
 
+            // Update statistics.
+            inner.chars_read += 1;
+
             // Read one character.
             inner.DR.get() as u8 as char
         })
@@ -316,5 +321,10 @@ impl interface::console::Statistics for PL011Uart {
     fn chars_written(&self) -> usize {
         let mut r = &self.inner;
         r.lock(|inner| inner.chars_written)
+    }
+
+    fn chars_read(&self) -> usize {
+        let mut r = &self.inner;
+        r.lock(|inner| inner.chars_read)
     }
 }

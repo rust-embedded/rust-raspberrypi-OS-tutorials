@@ -235,11 +235,11 @@ diff -uNr 07_uart_chainloader/src/arch/aarch64.rs 08_timestamps/src/arch/aarch64
 diff -uNr 07_uart_chainloader/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 08_timestamps/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
 --- 07_uart_chainloader/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 08_timestamps/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -297,7 +297,14 @@
+@@ -298,11 +298,18 @@
+                 arch::nop();
              }
 
-             // Read one character.
--            inner.DR.get() as u8 as char
++            // Read one character.
 +            let mut ret = inner.DR.get() as u8 as char;
 +
 +            // Convert carrige return to newline.
@@ -247,6 +247,11 @@ diff -uNr 07_uart_chainloader/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 08_timest
 +                ret = '\n'
 +            }
 +
+             // Update statistics.
+             inner.chars_read += 1;
+
+-            // Read one character.
+-            inner.DR.get() as u8 as char
 +            ret
          })
      }
