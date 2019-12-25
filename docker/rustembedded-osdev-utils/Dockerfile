@@ -4,6 +4,11 @@
 ## Copyright (c) 2019 Nao Taco <naotaco@gmail.com>
 FROM ubuntu:19.10
 
+ARG VCS_REF
+
+LABEL org.label-schema.vcs-ref=$VCS_REF \
+      org.label-schema.vcs-url="https://github.com/rust-embedded/rust-raspi3-OS-tutorials"
+
 LABEL maintainer="The resources team <resources@teams.rust-embedded.org>, Andre Richter <andre.o.richter@gmail.com>"
 
 RUN set -ex;                                      \
