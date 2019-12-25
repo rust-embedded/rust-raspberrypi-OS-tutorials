@@ -2,7 +2,7 @@
 ##
 ## Copyright (c) 2017-2019 Andre Richter <andre.o.richter@gmail.com>
 ## Copyright (c) 2019 Nao Taco <naotaco@gmail.com>
-FROM ubuntu:18.04
+FROM ubuntu:19.10
 
 LABEL maintainer="The resources team <resources@teams.rust-embedded.org>, Andre Richter <andre.o.richter@gmail.com>"
 
@@ -10,7 +10,6 @@ RUN set -ex;                                      \
     tempPkgs='                                    \
         automake                                  \
         build-essential                           \
-        ca-certificates                           \
         git                                       \
         libtool                                   \
         pkg-config                                \
@@ -20,17 +19,19 @@ RUN set -ex;                                      \
     apt-get install -q -y --no-install-recommends \
         $tempPkgs                                 \
         # persistent packages
+        ca-certificates                           \
         gdb-multiarch                             \
         libpixman-1-dev                           \
         libglib2.0-dev                            \
         libusb-1.0.0-dev                          \
         locales                                   \
         python                                    \
+        ruby                                      \
         ;                                         \
     # QEMU
     git clone git://git.qemu.org/qemu.git;                     \
     cd qemu;                                                   \
-    git checkout tags/v4.1.0;                                  \
+    git checkout tags/v4.2.0;                                  \
     ./configure --target-list=aarch64-softmmu --enable-modules \
         --enable-tcg-interpreter --enable-debug-tcg            \
         --python=/usr/bin/python2.7;                           \
