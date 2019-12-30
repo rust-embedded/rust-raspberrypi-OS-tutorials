@@ -31,7 +31,7 @@
 // the first function to run.
 mod arch;
 
-// `_start()` then calls `runtime_init::init()`, which on completion, jumps to `kernel_init()`.
+// `_start()` then calls `runtime_init()`, which on completion, jumps to `kernel_init()`.
 mod runtime_init;
 
 // Conditionally includes the selected `BSP` code.

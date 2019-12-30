@@ -50,7 +50,7 @@ diff -uNr 03_hacky_hello_world/src/arch/aarch64/start.S 04_zero_overhead_abstrac
 -    ldr     x1, =_start     // Load address of function "_start()"
 -    mov     sp, x1          // Set start of stack to before our code, aka first
 -                            // address before "_start()"
--    bl      init            // Jump to the "init()" kernel function
+-    bl      runtime_init    // Jump to the "runtime_init()" kernel function
 -    b       1b              // We should never reach here. But just in case,
 -                            // park this core aswell
 
@@ -78,7 +78,7 @@ diff -uNr 03_hacky_hello_world/src/arch/aarch64.rs 04_zero_overhead_abstraction/
 +
 +    if bsp::BOOT_CORE_ID == MPIDR_EL1.get() & CORE_MASK {
 +        SP.set(bsp::BOOT_CORE_STACK_START);
-+        crate::runtime_init::init()
++        crate::runtime_init::runtime_init()
 +    } else {
 +        // If not core0, infinitely wait for events.
 +        wait_forever()
@@ -150,8 +150,8 @@ diff -uNr 03_hacky_hello_world/src/runtime_init.rs 04_zero_overhead_abstraction/
  ///
  /// - Only a single core must be active and running this function.
 -#[no_mangle]
--pub unsafe extern "C" fn init() -> ! {
-+pub unsafe fn init() -> ! {
+-pub unsafe extern "C" fn runtime_init() -> ! {
++pub unsafe fn runtime_init() -> ! {
      extern "C" {
          // Boundaries of the .bss section, provided by the linker script.
          static mut __bss_start: u64;

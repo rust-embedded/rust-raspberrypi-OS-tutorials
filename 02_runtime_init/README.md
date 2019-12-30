@@ -10,8 +10,8 @@ Check out `make qemu` again to see the additional code run.
      - `.bss`
 - `_start()`:
      - Halt core if core != `core0`.
-     - `core0` jumps to `init()` Rust function.
-- `init()` in `runtime.rs`
+     - `core0` jumps to `runtime_init()` Rust function.
+- `runtime_init()` in `runtime_init.rs`
      - Zeros the `.bss` section.
      - Calls `kernel_init()`, which calls `panic!()`, which eventually halts
        `core0` as well.
@@ -47,7 +47,7 @@ diff -uNr 01_wait_forever/src/arch/aarch64/start.S 02_runtime_init/src/arch/aarc
 +    ldr     x1, =_start     // Load address of function "_start()"
 +    mov     sp, x1          // Set start of stack to before our code, aka first
 +                            // address before "_start()"
-+    bl      init            // Jump to the "init()" kernel function
++    bl      runtime_init    // Jump to the "runtime_init()" kernel function
 +    b       1b              // We should never reach here. But just in case,
 +                            // park this core aswell
 
@@ -86,7 +86,7 @@ diff -uNr 01_wait_forever/src/main.rs 02_runtime_init/src/main.rs
  // the first function to run.
  mod arch;
 
-+// `_start()` then calls `runtime_init::init()`, which on completion, jumps to `kernel_init()`.
++// `_start()` then calls `runtime_init()`, which on completion, jumps to `kernel_init()`.
 +mod runtime_init;
 +
  // Conditionally includes the selected `BSP` code.
@@ -121,7 +121,7 @@ diff -uNr 01_wait_forever/src/runtime_init.rs 02_runtime_init/src/runtime_init.r
 +///
 +/// - Only a single core must be active and running this function.
 +#[no_mangle]
-+pub unsafe extern "C" fn init() -> ! {
++pub unsafe extern "C" fn runtime_init() -> ! {
 +    extern "C" {
 +        // Boundaries of the .bss section, provided by the linker script.
 +        static mut __bss_start: u64;

@@ -16,6 +16,6 @@ _start:
     ldr     x1, =_start     // Load address of function "_start()"
     mov     sp, x1          // Set start of stack to before our code, aka first
                             // address before "_start()"
-    bl      init            // Jump to the "init()" kernel function
+    bl      runtime_init    // Jump to the "runtime_init()" kernel function
     b       1b              // We should never reach here. But just in case,
                             // park this core aswell

@@ -202,7 +202,7 @@ diff -uNr 07_uart_chainloader/src/arch/aarch64.rs 08_timestamps/src/arch/aarch64
      if bsp::BOOT_CORE_ID == MPIDR_EL1.get() & CORE_MASK {
          SP.set(bsp::BOOT_CORE_STACK_START);
 -        crate::relocate::relocate_self::<u64>()
-+        crate::runtime_init::init()
++        crate::runtime_init::runtime_init()
      } else {
          // If not core0, infinitely wait for events.
          wait_forever()
@@ -340,9 +340,9 @@ diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
 -// `_start()` then calls `relocate::relocate_self()`.
 -mod relocate;
 -
--// `relocate::relocate_self()` calls `runtime_init::init()`, which on completion, jumps to
+-// `relocate::relocate_self()` calls `runtime_init()`, which on completion, jumps to
 -// `kernel_init()`.
-+// `_start()` then calls `runtime_init::init()`, which on completion, jumps to `kernel_init()`.
++// `_start()` then calls `runtime_init()`, which on completion, jumps to `kernel_init()`.
  mod runtime_init;
 
  // Conditionally includes the selected `BSP` code.
@@ -539,7 +539,7 @@ diff -uNr 07_uart_chainloader/src/relocate.rs 08_timestamps/src/relocate.rs
 -    // Call `init()` through a trait object, causing the jump to use an absolute address to reach
 -    // the relocated binary. An elaborate explanation can be found in the runtime_init.rs source
 -    // comments.
--    crate::runtime_init::get().init()
+-    crate::runtime_init::get().runtime_init()
 -}
 
 diff -uNr 07_uart_chainloader/src/runtime_init.rs 08_timestamps/src/runtime_init.rs
@@ -566,7 +566,7 @@ diff -uNr 07_uart_chainloader/src/runtime_init.rs 08_timestamps/src/runtime_init
 -    /// # Safety
 -    ///
 -    /// - Only a single core must be active and running this function.
--    unsafe fn init(&self) -> ! {
+-    unsafe fn runtime_init(&self) -> ! {
 -        extern "C" {
 -            // Boundaries of the .bss section, provided by the linker script.
 -            static mut __bss_start: u64;
@@ -580,7 +580,7 @@ diff -uNr 07_uart_chainloader/src/runtime_init.rs 08_timestamps/src/runtime_init
 +/// # Safety
 +///
 +/// - Only a single core must be active and running this function.
-+pub unsafe fn init() -> ! {
++pub unsafe fn runtime_init() -> ! {
 +    extern "C" {
 +        // Boundaries of the .bss section, provided by the linker script.
 +        static mut __bss_start: u64;

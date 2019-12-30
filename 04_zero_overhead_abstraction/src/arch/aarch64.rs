@@ -20,7 +20,7 @@ pub unsafe extern "C" fn _start() -> ! {
 
     if bsp::BOOT_CORE_ID == MPIDR_EL1.get() & CORE_MASK {
         SP.set(bsp::BOOT_CORE_STACK_START);
-        crate::runtime_init::init()
+        crate::runtime_init::runtime_init()
     } else {
         // If not core0, infinitely wait for events.
         wait_forever()

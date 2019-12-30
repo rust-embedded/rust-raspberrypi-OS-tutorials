@@ -10,7 +10,7 @@
 /// # Safety
 ///
 /// - Only a single core must be active and running this function.
-pub unsafe fn init() -> ! {
+pub unsafe fn runtime_init() -> ! {
     extern "C" {
         // Boundaries of the .bss section, provided by the linker script.
         static mut __bss_start: u64;

@@ -19,7 +19,7 @@ pub trait RunTimeInit {
     /// # Safety
     ///
     /// - Only a single core must be active and running this function.
-    unsafe fn init(&self) -> ! {
+    unsafe fn runtime_init(&self) -> ! {
         extern "C" {
             // Boundaries of the .bss section, provided by the linker script.
             static mut __bss_start: u64;

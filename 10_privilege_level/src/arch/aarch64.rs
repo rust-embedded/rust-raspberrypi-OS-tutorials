@@ -63,7 +63,7 @@ unsafe fn el2_to_el1_transition() -> ! {
     );
 
     // Second, let the link register point to init().
-    ELR_EL2.set(crate::runtime_init::init as *const () as u64);
+    ELR_EL2.set(crate::runtime_init::runtime_init as *const () as u64);
 
     // Set up SP_EL1 (stack pointer), which will be used by EL1 once we "return" to it.
     SP_EL1.set(bsp::BOOT_CORE_STACK_START);

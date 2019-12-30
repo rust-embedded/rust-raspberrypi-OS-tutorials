@@ -32,7 +32,7 @@ mod arch;
 // `_start()` then calls `relocate::relocate_self()`.
 mod relocate;
 
-// `relocate::relocate_self()` calls `runtime_init::init()`, which on completion, jumps to
+// `relocate::relocate_self()` calls `runtime_init()`, which on completion, jumps to
 // `kernel_init()`.
 mod runtime_init;
 

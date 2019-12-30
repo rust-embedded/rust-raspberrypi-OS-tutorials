@@ -11,7 +11,7 @@
 ///
 /// - Only a single core must be active and running this function.
 #[no_mangle]
-pub unsafe extern "C" fn init() -> ! {
+pub unsafe extern "C" fn runtime_init() -> ! {
     extern "C" {
         // Boundaries of the .bss section, provided by the linker script.
         static mut __bss_start: u64;

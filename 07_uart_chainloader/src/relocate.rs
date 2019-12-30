@@ -42,5 +42,5 @@ pub unsafe fn relocate_self<T>() -> ! {
     // Call `init()` through a trait object, causing the jump to use an absolute address to reach
     // the relocated binary. An elaborate explanation can be found in the runtime_init.rs source
     // comments.
-    crate::runtime_init::get().init()
+    crate::runtime_init::get().runtime_init()
 }
