@@ -29,7 +29,7 @@
     + [Test Harness](#test-harness)
     + [No Test Harness](#no-test-harness)
     + [Overriding Panic Behavior](#overriding-panic-behavior)
-    + [Console Tests](#console-tests)
+  * [Console Tests](#console-tests)
 - [Test it](#test-it)
 - [Diff to previous](#diff-to-previous)
 
@@ -46,8 +46,8 @@ modeled after Rust's [native testing framework]. This tutorial extends our kerne
 testing facilities:
   - Classic `Unit Tests`.
   - [Integration Tests] (self-contained tests stored in the `$CRATE/tests/` directory).
-  - `Integration Tests` acting on external stimuli - aka `console` input. Sending strings/characters
-    to the console and expecting specific answers in return.
+  - `Console Tests`. These are integration tests acting on external stimuli - aka `console` input.
+    Sending strings/characters to the console and expecting specific answers in return.
 
 [native testing framework]: https://doc.rust-lang.org/book/ch11-00-testing.html
 
@@ -622,7 +622,7 @@ The `_panic_exit()` version that makes `QEMU` return `0` (indicating test succes
 `mod panic_exit_success;`. The counterpart would be `mod panic_exit_failure;`. We provide both in
 the `tests` folder, so each integration test can import the one that it needs.
 
-#### Console Tests
+### Console Tests
 
 As the kernel or OS grows, it will be more and more interesting to test user/kernel interaction
 through the serial console. That is, sending strings/characters to the console and expecting
