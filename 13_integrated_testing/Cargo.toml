@@ -1,0 +1,52 @@
+[package]
+name = "kernel"
+version = "0.1.0"
+authors = ["Andre Richter <andre.o.richter@gmail.com>"]
+edition = "2018"
+
+[package.metadata.cargo-xbuild]
+sysroot_path = "../xbuild_sysroot"
+
+# The features section is used to select the target board.
+[features]
+default = []
+bsp_rpi3 = ["cortex-a", "register"]
+bsp_rpi4 = ["cortex-a", "register"]
+
+[dependencies]
+r0 = "0.2.*"
+qemu-exit = "0.1.x"
+test-types = { path = "test-types" }
+
+# Optional dependencies
+cortex-a = { version = "2.8.x", optional = true }
+register = { version = "0.4.x", optional = true }
+
+# Temporary workaround for register-rs.
+patches = { path = "patches" }
+
+##--------------------------------------------------------------------------------------------------
+## Testing
+##--------------------------------------------------------------------------------------------------
+
+[dev-dependencies]
+test-macros = { path = "test-macros" }
+
+# Unit tests are done in the library part of the kernel.
+[lib]
+name = "libkernel"
+test = true
+
+# Disable unit tests for the kernel binary.
+[[bin]]
+name = "kernel"
+test = false
+
+# List of tests without harness.
+[[test]]
+name = "00_interface_sanity_console"
+harness = false
+
+[[test]]
+name = "02_arch_exception_handling"
+harness = false
