@@ -13,6 +13,6 @@ staged_files = `git --no-pager diff --name-only --cached`.split(/\n/)
 staged_files.each do |f|
     if f.include?('Makefile') || source_files_exts.include?(File.extname(f))
         puts "Checking for copyright range: #{f}"
-        exit 1 unless copyrighted?(f, true)
+        exit 1 unless copyrighted?(f)
     end
 end

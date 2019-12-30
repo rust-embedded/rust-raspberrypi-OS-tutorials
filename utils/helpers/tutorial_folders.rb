@@ -11,7 +11,7 @@ WITH_EXTRA = '[X0-9]'
 NO_EXTRA = '[0-9]'
 
 def tutorial_folders(with_extra = true)
-    crates = Dir['**/Cargo.toml']
+    crates = Dir['*/Cargo.toml']
 
     crates.delete_if do |x|
         s = with_extra ? WITH_EXTRA : NO_EXTRA

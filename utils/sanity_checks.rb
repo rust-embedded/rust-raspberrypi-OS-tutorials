@@ -29,7 +29,7 @@ def check_old_copyrights
 
     sources.sort.each do |f|
         puts "Checking for copyright: #{f}"
-        exit(1) unless copyrighted?(f, false)
+        exit(1) unless copyrighted?(f)
     end
 end
 
