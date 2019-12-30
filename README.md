@@ -18,7 +18,7 @@ _Cheers,
 [ARMv8-A architecture]: https://developer.arm.com/products/architecture/cpu-architecture/a-profile/docs
 [monolithic]: https://en.wikipedia.org/wiki/Monolithic_kernel
 
-## Organization
+## 📑 Organization
 
 - Each new tutorial extends the previous one.
 - Each tutorial `README` will have a short `tl;dr` section giving a brief
