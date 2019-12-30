@@ -10,6 +10,26 @@ In the exact order as listed:
 4. In new terminal, `make openocd` and keep terminal open.
 5. In new terminal, `make gdb` or make `make gdb-opt0`.
 
+![JTAG live demo](../doc/jtag_demo.gif)
+
+## Table of Contents
+
+- [Introduction](#introduction)
+- [Outline](#outline)
+- [Software Setup](#software-setup)
+- [Hardware Setup](#hardware-setup)
+  * [Wiring](#wiring)
+- [Getting ready to connect](#getting-ready-to-connect)
+- [OpenOCD](#openocd)
+- [GDB](#gdb)
+  * [Remarks](#remarks)
+    + [Optimization](#optimization)
+    + [GDB control](#gdb-control)
+- [Notes on USB connection constraints](#notes-on-usb-connection-constraints)
+- [Additional resources](#additional-resources)
+- [Acknowledgments](#acknowledgments)
+- [Diff to previous](#diff-to-previous)
+
 ## Introduction
 
 In the upcoming tutorials, we are going to touch sensitive areas of the RPi's SoC that can make our
@@ -23,8 +43,6 @@ simulate down to the very last bit.
 
 So lets introduce `JTAG` debugging. Once set up, it will allow us to single-step through our kernel
 on the real HW. How cool is that?!
-
-![JTAG live demo](../doc/jtag_demo.gif)
 
 ## Outline
 

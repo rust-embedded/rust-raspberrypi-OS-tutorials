@@ -39,7 +39,7 @@ you can check out implemntations in the [spin crate] or the [parking lot crate].
 [spin crate]: https://github.com/mvdnes/spin-rs
 [parking lot crate]: https://github.com/Amanieu/parking_lot
 
-### Give it a try
+### Test it
 
 ```console
 make qemu

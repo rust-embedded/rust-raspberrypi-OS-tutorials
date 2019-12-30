@@ -25,7 +25,7 @@ You can try it with this tutorial already:
 make chainboot
 [...]
 ### Listening on /dev/ttyUSB0
- __  __ _      _ _                 _ 
+ __  __ _      _ _                 _
 |  \/  (_)_ _ (_) |   ___  __ _ __| |
 | |\/| | | ' \| | |__/ _ \/ _` / _` |
 |_|  |_|_|_||_|_|____\___/\__,_\__,_|
@@ -49,7 +49,7 @@ In this tutorial, a version of the kernel from the previous tutorial is loaded
 for demo purposes. In subsequent tuts, it will be the working directory's
 kernel.
 
-### Observing the jump
+## Test it
 
 The `Makefile` in this tutorial has an additional target, `qemuasm`, that lets
 you nicely observe the jump from the loaded address (`0x80_XXX`) to the

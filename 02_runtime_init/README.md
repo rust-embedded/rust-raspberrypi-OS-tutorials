@@ -2,7 +2,7 @@
 
 ## tl;dr
 
-We are calling into Rust code for the first time and zero the [bss](https://en.wikipedia.org/wiki/.bss) section.
+We are calling into Rust code for the first time and zero the [bss] section.
 Check out `make qemu` again to see the additional code run.
 
 - More sections in linker script:
@@ -15,6 +15,8 @@ Check out `make qemu` again to see the additional code run.
      - Zeros the `.bss` section.
      - Calls `kernel_init()`, which calls `panic!()`, which eventually halts
        `core0` as well.
+
+[bss]: https://en.wikipedia.org/wiki/.bss
 
 ## Diff to previous
 ```diff

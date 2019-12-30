@@ -2,8 +2,19 @@
 
 ## tl;dr
 
-In early boot code, we transition from the `Hypervisor` privilege level (`EL2` in AArch64) to the
-`Kernel` (`EL1`) privilege level.
+In early boot code, we transition from the `Hypervisor` privilege level (`EL2`
+in AArch64) to the `Kernel` (`EL1`) privilege level.
+
+## Table of Contents
+
+- [Introduction](#introduction)
+- [Scope of this tutorial](#scope-of-this-tutorial)
+- [Checking for EL2 in the entrypoint](#checking-for-el2-in-the-entrypoint)
+- [Transition preparation](#transition-preparation)
+- [Returning from an exception that never happened](#returning-from-an-exception-that-never-happened)
+- [Are we stackless?](#are-we-stackless)
+- [Test it](#test-it)
+- [Diff to previous](#diff-to-previous)
 
 ## Introduction
 
@@ -172,7 +183,7 @@ Disassembly of section .text:
 Looks good! Thanks zero-overhead abstractions in the
 [cortex-a](https://github.com/rust-embedded/cortex-a) crate! :heart_eyes:
 
-## Testing
+## Test it
 
 In `main.rs`, we additionally inspect if the mask bits in `SPSR_EL2` made it to `EL1` as well:
 

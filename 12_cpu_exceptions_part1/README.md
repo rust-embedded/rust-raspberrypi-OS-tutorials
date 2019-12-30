@@ -9,6 +9,21 @@ development and runtime.
 For demo purposes, MMU `page faults` are used to demonstrate (i) returning from an exception and
 (ii) the default `panic!` behavior.
 
+## Table of Contents
+
+- [Introduction](#introduction)
+- [Exception Types](#exception-types)
+- [Exception entry](#exception-entry)
+  * [Exception Vectors](#exception-vectors)
+- [Handler Code and Offsets](#handler-code-and-offsets)
+- [Rust and Assembly Implementation](#rust-and-assembly-implementation)
+  * [Context Save and Restore](#context-save-and-restore)
+  * [Exception Vector Table](#exception-vector-table)
+  * [Implementing handlers](#implementing-handlers)
+- [Causing an Exception - Testing the Code](#causing-an-exception---testing-the-code)
+- [Test it](#test-it)
+- [Diff to previous](#diff-to-previous)
+
 ## Introduction
 
 Now that we are executing in `EL1`, and have activated the `MMU`, time is due for implementing `CPU

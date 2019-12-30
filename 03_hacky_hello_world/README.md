@@ -12,9 +12,10 @@ Using  the real hardware `UART` is enabled step-by-step in following tutorials.
 - Panic handler `print!()`s supplied error messages.
     - This is showcased in `main()`.
 
-### Give it a try
+### Test it
 
-QEMU is no longer run in assembly mode. It will from now on show the output of `UART0`.
+QEMU is no longer running in assembly mode. It will from now on show the output
+of the `console`.
 
 ```console
 make qemu

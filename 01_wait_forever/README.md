@@ -31,13 +31,13 @@ Project skeleton is set up; Code just halts all CPU cores executing the kernel c
 
 [inner attributes]: https://doc.rust-lang.org/reference/attributes.html
 
-### Give it a try
+### Test it
 
 In the project folder, invoke QEMU and observe the CPU core spinning on `wfe`:
 ```console
 make qemu
 [...]
-IN: 
-0x00080000:  d503205f  wfe      
+IN:
+0x00080000:  d503205f  wfe
 0x00080004:  17ffffff  b        #0x80000
 ```

@@ -5,6 +5,8 @@
 We add abstractions for the architectural timer, implement it for `aarch64` and
 use it to annotate prints with timestamps; A `warn!()` macro is added.
 
+## Test it
+
 Check it out via chainboot (added in previous tutorial):
 ```console
 make chainboot

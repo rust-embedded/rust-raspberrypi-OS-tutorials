@@ -5,6 +5,20 @@
 The `MMU` is turned on; A simple scheme is used: static `64 KiB` page tables; For educational
 purposes, we write to a remapped `UART`.
 
+## Table of Contents
+
+- [Introduction](#introduction)
+- [MMU and paging theory](#mmu-and-paging-theory)
+- [Approach](#approach)
+  * [BSP: `bsp/rpi/virt_mem_layout.rs`](#bsp-bsprpivirt_mem_layoutrs)
+  * [Arch: `arch/aarch64/mmu.rs`](#arch-archaarch64mmurs)
+  * [`link.ld`](#linkld)
+- [Address translation examples](#address-translation-examples)
+  * [Address translation using a 64 KiB page descriptor](#address-translation-using-a-64-kib-page-descriptor)
+- [Zero-cost abstraction](#zero-cost-abstraction)
+- [Test it](#test-it)
+- [Diff to previous](#diff-to-previous)
+
 ## Introduction
 
 Virtual memory is an immensely complex, but important and powerful topic. In this tutorial, we start
