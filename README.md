@@ -20,6 +20,7 @@ _Cheers,
 
 ## 📑 Organization
 
+- Each tutorial contains a stand-alone, bootable `kernel` binary.
 - Each new tutorial extends the previous one.
 - Each tutorial `README` will have a short `tl;dr` section giving a brief
   overview of the additions, and show the source code `diff` to the previous
@@ -46,7 +47,7 @@ _Cheers,
 [Visual Studio Code]: https://code.visualstudio.com
 [Rust Language Server]: https://github.com/rust-lang/rls
 
-## ✔️ Ease of use
+## 🚀 Ease of use
 
 This series tries to put a strong focus on user friendliness. Therefore, I made
 efforts to eliminate the biggest painpoint in embedded development: Toolchain
@@ -83,18 +84,23 @@ source $HOME/.cargo/env
 cargo install cargo-xbuild cargo-binutils
 ```
 
-## 💻 USB Serial Output
+## 📟 USB Serial Output
 
-It is highly recommended to get a USB serial debug cable. It also powers the
-Raspberry once you connect it, so you don't need extra power over the dedicated
-power-USB. I use a bunch of
-[these](https://www.amazon.de/dp/B0757FQ5CX/ref=cm_sw_r_tw_dp_U_x_ozGRDbVTJAG4Q).
+Since the kernel developed in the tutorials runs on the real hardware, it is
+highly recommended to get a USB serial debug cable to make the experience.
+The cable also powers the Raspberry once you connect it, so you don't need extra
+power over the dedicated power-USB.
 
-You connect it to the GPIO pins 14/15 as shown beyond.
-
-[Tutorial 6](06_drivers_gpio_uart) is the first where you can use it. Go to the
-README there for instructions on how to prepare the SD card to run your
-self-made kernels from it.
+- I use a bunch of [these serial cables](https://www.amazon.de/dp/B0757FQ5CX/ref=cm_sw_r_tw_dp_U_x_ozGRDbVTJAG4Q).
+- You connect it to the GPIO pins `14/15` as shown below.
+- [Tutorial 6](06_drivers_gpio_uart) is the first where you can use it.
+  Check it out for instructions on how to prepare the SD card to boot your
+  self-made kernel from it.
+- Starting with [tutorial 7](07_uart_chainloader), booting kernels on your
+  Raspberry is getting _really_ comfortable. In this tutorial, a so-called
+  `chainloader` is developed, which will be last file you need to manually
+  copy on the SD card for a while. It will enable you to load the tutorial
+  kernels during boot on demand over `UART`. 
 
 ![UART wiring diagram](doc/wiring.png)
 
