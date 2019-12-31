@@ -98,7 +98,7 @@ power over the dedicated power-USB.
   self-made kernel from it.
 - Starting with [tutorial 7](07_uart_chainloader), booting kernels on your
   Raspberry is getting _really_ comfortable. In this tutorial, a so-called
-  `chainloader` is developed, which will be last file you need to manually
+  `chainloader` is developed, which will be the last file you need to manually
   copy on the SD card for a while. It will enable you to load the tutorial
   kernels during boot on demand over `UART`. 
 
