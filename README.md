@@ -1,6 +1,6 @@
 # Operating System development tutorials in Rust on the Raspberry Pi
 
-![](https://github.com/rust-embedded/rust-raspi3-OS-tutorials/workflows/BSP-RPi3/badge.svg) ![](https://github.com/rust-embedded/rust-raspi3-OS-tutorials/workflows/BSP-RPi4/badge.svg)
+![](https://github.com/rust-embedded/rust-raspi3-OS-tutorials/workflows/BSP-RPi3/badge.svg) ![](https://github.com/rust-embedded/rust-raspi3-OS-tutorials/workflows/BSP-RPi4/badge.svg) ![](https://github.com/rust-embedded/rust-raspi3-OS-tutorials/workflows/Unit-Tests/badge.svg) ![](https://github.com/rust-embedded/rust-raspi3-OS-tutorials/workflows/Integration-Tests/badge.svg)
 
 ## ℹ️ Introduction
 
@@ -100,7 +100,7 @@ power over the dedicated power-USB.
   Raspberry is getting _really_ comfortable. In this tutorial, a so-called
   `chainloader` is developed, which will be the last file you need to manually
   copy on the SD card for a while. It will enable you to load the tutorial
-  kernels during boot on demand over `UART`. 
+  kernels during boot on demand over `UART`.
 
 ![UART wiring diagram](doc/wiring.png)
 
