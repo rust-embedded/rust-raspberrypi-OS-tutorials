@@ -341,7 +341,7 @@ The file `kernel_test_runner.sh` does not exist by default. We generate it on de
 `make test` target:
 
 ```Makefile
-define kernel_test_runner
+define KERNEL_TEST_RUNNER
 	#!/usr/bin/env bash
 
 	$(OBJCOPY_CMD) $$1 $$1.img
@@ -350,9 +350,10 @@ define kernel_test_runner
 	ruby tests/runner.rb $(DOCKER_EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
 endef
 
+export KERNEL_TEST_RUNNER
 test: $(SOURCES)
 	@mkdir -p target
-	$(file > target/kernel_test_runner.sh,$(kernel_test_runner))
+	@echo "$$KERNEL_TEST_RUNNER" > target/kernel_test_runner.sh
 	@chmod +x target/kernel_test_runner.sh
 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(XTEST_CMD) $(TEST_ARG)
 endif

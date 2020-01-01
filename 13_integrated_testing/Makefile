@@ -1,6 +1,6 @@
 ## SPDX-License-Identifier: MIT OR Apache-2.0
 ##
-## Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
+## Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 
 # Default to the RPi3
 ifndef BSP
@@ -98,7 +98,7 @@ qemu: all
 	$(DOCKER_EXEC_QEMU) $(QEMU_RELEASE_ARGS) \
 	-kernel $(OUTPUT)
 
-define kernel_test_runner
+define KERNEL_TEST_RUNNER
 	#!/usr/bin/env bash
 
 	$(OBJCOPY_CMD) $$1 $$1.img
@@ -107,9 +107,10 @@ define kernel_test_runner
 	ruby tests/runner.rb $(DOCKER_EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
 endef
 
+export KERNEL_TEST_RUNNER
 test: $(SOURCES)
 	@mkdir -p target
-	$(file > target/kernel_test_runner.sh,$(kernel_test_runner))
+	@echo "$$KERNEL_TEST_RUNNER" > target/kernel_test_runner.sh
 	@chmod +x target/kernel_test_runner.sh
 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(XTEST_CMD) $(TEST_ARG)
 endif
