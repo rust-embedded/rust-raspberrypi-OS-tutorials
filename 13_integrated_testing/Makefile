@@ -34,7 +34,11 @@ endif
 
 # Testing-specific arguments
 ifdef TEST
-	TEST_ARG = --test $(TEST)
+	ifeq ($(TEST),unit)
+		TEST_ARG = --lib
+	else
+		TEST_ARG = --test $(TEST)
+	endif
 endif
 
 QEMU_MISSING_STRING = "This board is not yet supported for QEMU."

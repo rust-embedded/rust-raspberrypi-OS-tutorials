@@ -681,10 +681,11 @@ unsafe fn kernel_init() -> ! {
 
 ## Test it
 
-Believe it or not, that is all. There is two ways you can run tests:
+Believe it or not, that is all. There are three ways you can run tests:
 
   1. `make test` will run all tests back-to-back.
-  2. `TEST=TEST_NAME make test` will run a specficic integration test.
+  2. `TEST=unit make test` will run `libkernel`'s unit tests.
+  3. `TEST=TEST_NAME make test` will run a specficic integration test.
       - For example, `TEST=01_interface_sanity_timer make test`
 
 ```console
@@ -809,6 +810,14 @@ diff -uNr 12_cpu_exceptions_part1/Cargo.toml 13_integrated_testing/Cargo.toml
 diff -uNr 12_cpu_exceptions_part1/Makefile 13_integrated_testing/Makefile
 --- 12_cpu_exceptions_part1/Makefile
 +++ 13_integrated_testing/Makefile
+@@ -1,6 +1,6 @@
+ ## SPDX-License-Identifier: MIT OR Apache-2.0
+ ##
+-## Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
++## Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
+
+ # Default to the RPi3
+ ifndef BSP
 @@ -13,7 +13,8 @@
  	OUTPUT = kernel8.img
  	QEMU_BINARY = qemu-system-aarch64
@@ -819,7 +828,7 @@ diff -uNr 12_cpu_exceptions_part1/Makefile 13_integrated_testing/Makefile
  	OPENOCD_ARG = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi3.cfg
  	JTAG_BOOT_IMAGE = jtag_boot_rpi3.img
  	LINKER_FILE = src/bsp/rpi/link.ld
-@@ -23,23 +24,33 @@
+@@ -23,23 +24,37 @@
  	OUTPUT = kernel8.img
  #	QEMU_BINARY = qemu-system-aarch64
  #	QEMU_MACHINE_TYPE =
@@ -834,7 +843,11 @@ diff -uNr 12_cpu_exceptions_part1/Makefile 13_integrated_testing/Makefile
 
 +# Testing-specific arguments
 +ifdef TEST
-+	TEST_ARG = --test $(TEST)
++	ifeq ($(TEST),unit)
++		TEST_ARG = --lib
++	else
++		TEST_ARG = --test $(TEST)
++	endif
 +endif
 +
 +QEMU_MISSING_STRING = "This board is not yet supported for QEMU."
@@ -856,7 +869,7 @@ diff -uNr 12_cpu_exceptions_part1/Makefile 13_integrated_testing/Makefile
  CARGO_OUTPUT = target/$(TARGET)/release/kernel
 
  OBJCOPY_CMD = cargo objcopy \
-@@ -55,12 +66,12 @@
+@@ -55,12 +70,12 @@
  DOCKER_ARG_JTAG   = -v $(shell pwd)/../X1_JTAG_boot:/jtag
  DOCKER_ARG_NET    = --network host
 
@@ -871,7 +884,7 @@ diff -uNr 12_cpu_exceptions_part1/Makefile 13_integrated_testing/Makefile
 
  all: clean $(OUTPUT)
 
-@@ -73,15 +84,34 @@
+@@ -73,15 +88,35 @@
 
  doc:
  	cargo xdoc --target=$(TARGET) --features bsp_$(BSP) --document-private-items
@@ -892,7 +905,7 @@ diff -uNr 12_cpu_exceptions_part1/Makefile 13_integrated_testing/Makefile
 +	$(DOCKER_EXEC_QEMU) $(QEMU_RELEASE_ARGS) \
 +	-kernel $(OUTPUT)
 +
-+define kernel_test_runner
++define KERNEL_TEST_RUNNER
 +	#!/usr/bin/env bash
 +
 +	$(OBJCOPY_CMD) $$1 $$1.img
@@ -901,9 +914,10 @@ diff -uNr 12_cpu_exceptions_part1/Makefile 13_integrated_testing/Makefile
 +	ruby tests/runner.rb $(DOCKER_EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
 +endef
 +
++export KERNEL_TEST_RUNNER
 +test: $(SOURCES)
 +	@mkdir -p target
-+	$(file > target/kernel_test_runner.sh,$(kernel_test_runner))
++	@echo "$$KERNEL_TEST_RUNNER" > target/kernel_test_runner.sh
 +	@chmod +x target/kernel_test_runner.sh
 +	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(XTEST_CMD) $(TEST_ARG)
  endif
