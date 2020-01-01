@@ -32,7 +32,8 @@ jobs:
     - name: Set up Rust nightly
       run: |
           rustup self update
-          rustup toolchain install `cat rust-toolchain | tr '\n' ' '` --component rust-src llvm-tools-preview
+          rustup toolchain install nightly --component rust-src llvm-tools-preview
+          rustup default nightly
           cargo install cargo-xbuild cargo-binutils
     - name: Make all
       run: |

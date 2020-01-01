@@ -30,7 +30,8 @@ jobs:
     - name: Set up Rust nightly
       run: |
           rustup self update
-          rustup toolchain install `cat rust-toolchain | tr '\n' ' '` --component rustfmt clippy rust-src
+          rustup toolchain install nightly --component rustfmt clippy rust-src
+          rustup default nightly
           cargo install cargo-xbuild
     - name: Run cargo fmt
       run: |
