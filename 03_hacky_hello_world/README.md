@@ -96,7 +96,7 @@ diff -uNr 02_runtime_init/src/interface.rs 03_hacky_hello_world/src/interface.rs
 @@ -0,0 +1,37 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Trait definitions for coupling `kernel` and `BSP` code.
 +//!
@@ -208,7 +208,7 @@ diff -uNr 02_runtime_init/src/print.rs 03_hacky_hello_world/src/print.rs
 @@ -0,0 +1,34 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Printing facilities.
 +

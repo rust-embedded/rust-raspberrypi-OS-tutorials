@@ -227,7 +227,7 @@ diff -uNr 09_hw_debug_JTAG/src/arch/aarch64/exception.rs 10_privilege_level/src/
 @@ -0,0 +1,48 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Exception handling.
 +

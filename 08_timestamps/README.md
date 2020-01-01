@@ -105,7 +105,7 @@ diff -uNr 07_uart_chainloader/src/arch/aarch64/time.rs 08_timestamps/src/arch/aa
 @@ -0,0 +1,81 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Timer primitives.
 +
@@ -499,7 +499,7 @@ diff -uNr 07_uart_chainloader/src/relocate.rs 08_timestamps/src/relocate.rs
 @@ -1,46 +0,0 @@
 -// SPDX-License-Identifier: MIT OR Apache-2.0
 -//
--// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
+-// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 -
 -//! Relocation code.
 -

@@ -286,7 +286,7 @@ diff -uNr 10_privilege_level/src/arch/aarch64/mmu.rs 11_virtual_memory/src/arch/
 @@ -0,0 +1,300 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Memory Management Unit.
 +//!
@@ -669,7 +669,7 @@ diff -uNr 10_privilege_level/src/bsp/rpi/virt_mem_layout.rs 11_virtual_memory/sr
 @@ -0,0 +1,82 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! The virtual memory layout.
 +//!
@@ -881,7 +881,7 @@ diff -uNr 10_privilege_level/src/memory.rs 11_virtual_memory/src/memory.rs
 @@ -0,0 +1,147 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Memory Management.
 +

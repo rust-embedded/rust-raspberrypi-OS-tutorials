@@ -732,7 +732,7 @@ diff -uNr 11_virtual_memory/src/arch/aarch64/exception.S 12_cpu_exceptions_part1
 @@ -0,0 +1,133 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2019 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 +
 +/// Call the function provided by parameter `\handler` after saving exception context. Provide the
 +/// context as the first parameter to '\handler'.
