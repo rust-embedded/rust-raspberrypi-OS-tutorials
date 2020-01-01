@@ -64,7 +64,8 @@ OBJCOPY_CMD = cargo objcopy \
 
 CONTAINER_UTILS   = rustembedded/osdev-utils
 
-DOCKER_CMD        = docker run -it --rm
+DOCKER_CMD_TEST   = docker run -i --rm
+DOCKER_CMD_USER   = $(DOCKER_CMD_TEST) -t
 DOCKER_ARG_CURDIR = -v $(shell pwd):/work -w /work
 DOCKER_ARG_TTY    = --privileged -v /dev:/dev
 DOCKER_ARG_JTAG   = -v $(shell pwd)/../X1_JTAG_boot:/jtag
@@ -98,7 +99,7 @@ test:
 	@echo $(QEMU_MISSING_STRING)
 else
 qemu: all
-	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(CONTAINER_UTILS) \
+	$(DOCKER_CMD_USER) $(DOCKER_ARG_CURDIR) $(CONTAINER_UTILS) \
 	$(DOCKER_EXEC_QEMU) $(QEMU_RELEASE_ARGS) \
 	-kernel $(OUTPUT)
 
@@ -107,7 +108,7 @@ define KERNEL_TEST_RUNNER
 
 	$(OBJCOPY_CMD) $$1 $$1.img
 	TEST_BINARY=$$(echo $$1.img | sed -e 's/.*target/target/g')
-	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(CONTAINER_UTILS) \
+	$(DOCKER_CMD_TEST) $(DOCKER_ARG_CURDIR) $(CONTAINER_UTILS) \
 	ruby tests/runner.rb $(DOCKER_EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
 endef
 
@@ -120,23 +121,23 @@ test: $(SOURCES)
 endif
 
 chainboot: all
-	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(DOCKER_ARG_TTY) \
+	$(DOCKER_CMD_USER) $(DOCKER_ARG_CURDIR) $(DOCKER_ARG_TTY) \
 	$(CONTAINER_UTILS) $(DOCKER_EXEC_RASPBOOT) $(DOCKER_EXEC_RASPBOOT_DEV) \
 	$(OUTPUT)
 
 jtagboot:
-	$(DOCKER_CMD) $(DOCKER_ARG_TTY) $(DOCKER_ARG_JTAG) $(CONTAINER_UTILS) \
+	$(DOCKER_CMD_USER) $(DOCKER_ARG_TTY) $(DOCKER_ARG_JTAG) $(CONTAINER_UTILS) \
 	$(DOCKER_EXEC_RASPBOOT) $(DOCKER_EXEC_RASPBOOT_DEV) \
 	/jtag/$(JTAG_BOOT_IMAGE)
 
 openocd:
-	$(DOCKER_CMD) $(DOCKER_ARG_TTY) $(DOCKER_ARG_NET) $(CONTAINER_UTILS) \
+	$(DOCKER_CMD_USER) $(DOCKER_ARG_TTY) $(DOCKER_ARG_NET) $(CONTAINER_UTILS) \
 	openocd $(OPENOCD_ARG)
 
 define gen_gdb
 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(XRUSTC_CMD) $1
 	cp $(CARGO_OUTPUT) kernel_for_jtag
-	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(DOCKER_ARG_NET) $(CONTAINER_UTILS) \
+	$(DOCKER_CMD_USER) $(DOCKER_ARG_CURDIR) $(DOCKER_ARG_NET) $(CONTAINER_UTILS) \
 	gdb-multiarch -q kernel_for_jtag
 endef
 
