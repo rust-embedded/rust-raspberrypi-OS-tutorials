@@ -84,7 +84,6 @@ fn kernel_main() -> ! {
         info!("      {}. {}", i + 1, driver.compatible());
     }
 
-    // Will never reach here in this tutorial.
     info!("Echoing input now");
     loop {
         let c = bsp::console().read_char();
