@@ -26,9 +26,9 @@ macro_rules! panic_println {
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     if let Some(args) = info.message() {
-        panic_println!("Kernel panic: {}", args);
+        panic_println!("\nKernel panic: {}", args);
     } else {
-        panic_println!("Kernel panic!");
+        panic_println!("\nKernel panic!");
     }
 
     arch::wait_forever()

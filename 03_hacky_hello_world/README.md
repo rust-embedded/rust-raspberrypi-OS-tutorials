@@ -194,9 +194,9 @@ diff -uNr 02_runtime_init/src/panic_wait.rs 03_hacky_hello_world/src/panic_wait.
 -    crate::arch::wait_forever()
 +fn panic(info: &PanicInfo) -> ! {
 +    if let Some(args) = info.message() {
-+        println!("Kernel panic: {}", args);
++        println!("\nKernel panic: {}", args);
 +    } else {
-+        println!("Kernel panic!");
++        println!("\nKernel panic!");
 +    }
 +
 +    arch::wait_forever()

@@ -10,9 +10,9 @@ use core::panic::PanicInfo;
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     if let Some(args) = info.message() {
-        println!("Kernel panic: {}", args);
+        println!("\nKernel panic: {}", args);
     } else {
-        println!("Kernel panic!");
+        println!("\nKernel panic!");
     }
 
     arch::wait_forever()

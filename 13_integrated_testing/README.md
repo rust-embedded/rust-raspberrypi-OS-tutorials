@@ -1371,7 +1371,7 @@ diff -uNr 12_cpu_exceptions_part1/src/panic_wait.rs 13_integrated_testing/src/pa
  fn panic(info: &PanicInfo) -> ! {
      if let Some(args) = info.message() {
 @@ -31,5 +48,16 @@
-         panic_println!("Kernel panic!");
+         panic_println!("\nKernel panic!");
      }
 
 -    arch::wait_forever()
@@ -1691,7 +1691,7 @@ diff -uNr 12_cpu_exceptions_part1/tests/panic_exit_success/mod.rs 13_integrated_
 diff -uNr 12_cpu_exceptions_part1/tests/runner.rb 13_integrated_testing/tests/runner.rb
 --- 12_cpu_exceptions_part1/tests/runner.rb
 +++ 13_integrated_testing/tests/runner.rb
-@@ -0,0 +1,137 @@
+@@ -0,0 +1,139 @@
 +#!/usr/bin/env ruby
 +# frozen_string_literal: true
 +
@@ -1699,6 +1699,7 @@ diff -uNr 12_cpu_exceptions_part1/tests/runner.rb 13_integrated_testing/tests/ru
 +#
 +# Copyright (c) 2019-2020 Andre Richter <andre.o.richter@gmail.com>
 +
++require 'English'
 +require 'pty'
 +
 +# Test base class.
@@ -1803,7 +1804,8 @@ diff -uNr 12_cpu_exceptions_part1/tests/runner.rb 13_integrated_testing/tests/ru
 +            begin
 +                @output << io.read_nonblock(1024)
 +            rescue EOFError
-+                error = false
++                io.close
++                error = $CHILD_STATUS.to_i != 0
 +                break
 +            end
 +        end

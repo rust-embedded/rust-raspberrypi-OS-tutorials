@@ -951,11 +951,11 @@ diff -uNr 05_safe_globals/src/panic_wait.rs 06_drivers_gpio_uart/src/panic_wait.
  #[panic_handler]
  fn panic(info: &PanicInfo) -> ! {
      if let Some(args) = info.message() {
--        println!("Kernel panic: {}", args);
-+        panic_println!("Kernel panic: {}", args);
+-        println!("\nKernel panic: {}", args);
++        panic_println!("\nKernel panic: {}", args);
      } else {
--        println!("Kernel panic!");
-+        panic_println!("Kernel panic!");
+-        println!("\nKernel panic!");
++        panic_println!("\nKernel panic!");
      }
 
      arch::wait_forever()
