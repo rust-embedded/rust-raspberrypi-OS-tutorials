@@ -1287,7 +1287,7 @@ diff -uNr 12_cpu_exceptions_part1/src/main.rs 13_integrated_testing/src/main.rs
 
      info!("Booting on: {}", bsp::board_name());
 
-@@ -102,30 +84,6 @@
+@@ -102,31 +84,6 @@
          info!("      {}. {}", i + 1, driver.compatible());
      }
 
@@ -1315,9 +1315,10 @@ diff -uNr 12_cpu_exceptions_part1/src/main.rs 13_integrated_testing/src/main.rs
 -    big_addr = 9 * 1024 * 1024 * 1024;
 -    unsafe { core::ptr::read_volatile(big_addr as *mut u64) };
 -
-     // Will never reach here in this tutorial.
+-    // Will never reach here in this tutorial.
      info!("Echoing input now");
      loop {
+         let c = bsp::console().read_char();
 
 diff -uNr 12_cpu_exceptions_part1/src/memory.rs 13_integrated_testing/src/memory.rs
 --- 12_cpu_exceptions_part1/src/memory.rs

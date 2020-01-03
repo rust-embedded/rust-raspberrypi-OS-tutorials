@@ -56,7 +56,7 @@ diff -uNr 01_wait_forever/src/arch/aarch64/start.S 02_runtime_init/src/arch/aarc
 diff -uNr 01_wait_forever/src/bsp/rpi/link.ld 02_runtime_init/src/bsp/rpi/link.ld
 --- 01_wait_forever/src/bsp/rpi/link.ld
 +++ 02_runtime_init/src/bsp/rpi/link.ld
-@@ -13,5 +13,23 @@
+@@ -13,5 +13,24 @@
          *(.text._start) *(.text*)
      }
 
@@ -70,11 +70,12 @@ diff -uNr 01_wait_forever/src/bsp/rpi/link.ld 02_runtime_init/src/bsp/rpi/link.l
 +        *(.data*)
 +    }
 +
-+    /* Align to 8 byte boundary */
++    /* Section is zeroed in u64 chunks, align start and end to 8 bytes */
 +    .bss ALIGN(8):
 +    {
 +        __bss_start = .;
 +        *(.bss*);
++        . = ALIGN(8);
 +        __bss_end = .;
 +    }
 +

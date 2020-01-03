@@ -275,7 +275,7 @@ diff -uNr 07_uart_chainloader/src/bsp/rpi/link.ld 08_timestamps/src/bsp/rpi/link
      .text :
      {
          *(.text._start) *(.text*)
-@@ -32,14 +31,5 @@
+@@ -33,14 +32,5 @@
          __bss_end = .;
      }
 

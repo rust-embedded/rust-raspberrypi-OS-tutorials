@@ -23,11 +23,12 @@ SECTIONS
         *(.data*)
     }
 
-    /* Align to 8 byte boundary */
+    /* Section is zeroed in u64 chunks, align start and end to 8 bytes */
     .bss ALIGN(8):
     {
         __bss_start = .;
         *(.bss*);
+        . = ALIGN(8);
         __bss_end = .;
     }
 

@@ -227,7 +227,7 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/rpi/link.ld 07_uart_chainloader/src/bsp/r
      .text :
      {
          *(.text._start) *(.text*)
-@@ -31,5 +32,14 @@
+@@ -32,5 +33,14 @@
          __bss_end = .;
      }
 
