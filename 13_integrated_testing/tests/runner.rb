@@ -5,6 +5,7 @@
 #
 # Copyright (c) 2019-2020 Andre Richter <andre.o.richter@gmail.com>
 
+require 'English'
 require 'pty'
 
 # Test base class.
@@ -109,7 +110,8 @@ class RawTest < Test
             begin
                 @output << io.read_nonblock(1024)
             rescue EOFError
-                error = false
+                io.close
+                error = $CHILD_STATUS.to_i != 0
                 break
             end
         end

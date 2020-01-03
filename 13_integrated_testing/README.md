@@ -389,7 +389,8 @@ def exec
         begin
             @output << io.read_nonblock(1024)
         rescue EOFError
-            error = false
+            io.close
+            error = $CHILD_STATUS.to_i != 0
             break
         end
     end
