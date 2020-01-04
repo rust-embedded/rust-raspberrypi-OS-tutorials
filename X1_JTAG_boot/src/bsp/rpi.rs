@@ -29,6 +29,7 @@ static PL011_UART: driver::PL011Uart =
 //--------------------------------------------------------------------------------------------------
 
 /// Board identification.
+#[allow(dead_code)]
 pub fn board_name() -> &'static str {
     #[cfg(feature = "bsp_rpi3")]
     {
@@ -73,6 +74,7 @@ pub fn post_driver_init() {
     GPIO.map_pl011_uart();
 }
 
+#[allow(dead_code)]
 pub fn jtag() -> &'static impl interface::driver::JTAGOps {
     &GPIO
 }

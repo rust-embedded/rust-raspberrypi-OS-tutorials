@@ -23,18 +23,18 @@ pub static LAYOUT: KernelVirtualLayout<{ NUM_MEM_RANGES }> = KernelVirtualLayout
         RangeDescriptor {
             name: "Kernel code and RO data",
             virtual_range: || {
-                // Using the linker script, we ensure that the RO area is consecutive and 4 KiB
+                // Using the linker script, we ensure that the RO area is consecutive and 64 KiB
                 // aligned, and we export the boundaries via symbols:
                 //
                 // [__ro_start, __ro_end)
                 extern "C" {
                     // The inclusive start of the read-only area, aka the address of the first
                     // byte of the area.
-                    static __ro_start: u64;
+                    static __ro_start: usize;
 
                     // The exclusive end of the read-only area, aka the address of the first
                     // byte _after_ the RO area.
-                    static __ro_end: u64;
+                    static __ro_end: usize;
                 }
 
                 unsafe {

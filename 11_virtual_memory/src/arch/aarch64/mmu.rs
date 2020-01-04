@@ -262,11 +262,6 @@ pub struct MMU;
 //--------------------------------------------------------------------------------------------------
 
 impl interface::mm::MMU for MMU {
-    /// Compile the page tables from the `BSP`-supplied `virt_mem_layout()`.
-    ///
-    /// # Safety
-    ///
-    /// - User must ensure that the hardware supports the paremeters being set here.
     unsafe fn init(&self) -> Result<(), &'static str> {
         // Fail early if translation granule is not supported. Both RPis support it, though.
         if !ID_AA64MMFR0_EL1.matches_all(ID_AA64MMFR0_EL1::TGran64::Supported) {

@@ -136,7 +136,12 @@ pub mod time {
 pub mod mm {
     /// MMU functions.
     pub trait MMU {
-        /// Called by the kernel early during init.
+        /// Called by the kernel during early init. Supposed to take the page tables from the
+        /// `BSP`-supplied `virt_mem_layout()` and install/activate them for the respective MMU.
+        ///
+        /// # Safety
+        ///
+        /// - Changes the HW's global state.
         unsafe fn init(&self) -> Result<(), &'static str>;
     }
 }

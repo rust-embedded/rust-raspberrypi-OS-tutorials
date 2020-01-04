@@ -283,7 +283,7 @@ make chainbot
 diff -uNr 10_privilege_level/src/arch/aarch64/mmu.rs 11_virtual_memory/src/arch/aarch64/mmu.rs
 --- 10_privilege_level/src/arch/aarch64/mmu.rs
 +++ 11_virtual_memory/src/arch/aarch64/mmu.rs
-@@ -0,0 +1,300 @@
+@@ -0,0 +1,295 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
@@ -548,11 +548,6 @@ diff -uNr 10_privilege_level/src/arch/aarch64/mmu.rs 11_virtual_memory/src/arch/
 +//--------------------------------------------------------------------------------------------------
 +
 +impl interface::mm::MMU for MMU {
-+    /// Compile the page tables from the `BSP`-supplied `virt_mem_layout()`.
-+    ///
-+    /// # Safety
-+    ///
-+    /// - User must ensure that the hardware supports the paremeters being set here.
 +    unsafe fn init(&self) -> Result<(), &'static str> {
 +        // Fail early if translation granule is not supported. Both RPis support it, though.
 +        if !ID_AA64MMFR0_EL1.matches_all(ID_AA64MMFR0_EL1::TGran64::Supported) {
@@ -692,18 +687,18 @@ diff -uNr 10_privilege_level/src/bsp/rpi/virt_mem_layout.rs 11_virtual_memory/sr
 +        RangeDescriptor {
 +            name: "Kernel code and RO data",
 +            virtual_range: || {
-+                // Using the linker script, we ensure that the RO area is consecutive and 4 KiB
++                // Using the linker script, we ensure that the RO area is consecutive and 64 KiB
 +                // aligned, and we export the boundaries via symbols:
 +                //
 +                // [__ro_start, __ro_end)
 +                extern "C" {
 +                    // The inclusive start of the read-only area, aka the address of the first
 +                    // byte of the area.
-+                    static __ro_start: u64;
++                    static __ro_start: usize;
 +
 +                    // The exclusive end of the read-only area, aka the address of the first
 +                    // byte _after_ the RO area.
-+                    static __ro_end: u64;
++                    static __ro_end: usize;
 +                }
 +
 +                unsafe {
@@ -796,7 +791,7 @@ diff -uNr 10_privilege_level/src/bsp.rs 11_virtual_memory/src/bsp.rs
 diff -uNr 10_privilege_level/src/interface.rs 11_virtual_memory/src/interface.rs
 --- 10_privilege_level/src/interface.rs
 +++ 11_virtual_memory/src/interface.rs
-@@ -131,3 +131,12 @@
+@@ -131,3 +131,17 @@
          fn spin_for(&self, duration: Duration);
      }
  }
@@ -805,7 +800,12 @@ diff -uNr 10_privilege_level/src/interface.rs 11_virtual_memory/src/interface.rs
 +pub mod mm {
 +    /// MMU functions.
 +    pub trait MMU {
-+        /// Called by the kernel early during init.
++        /// Called by the kernel during early init. Supposed to take the page tables from the
++        /// `BSP`-supplied `virt_mem_layout()` and install/activate them for the respective MMU.
++        ///
++        /// # Safety
++        ///
++        /// - Changes the HW's global state.
 +        unsafe fn init(&self) -> Result<(), &'static str>;
 +    }
 +}
