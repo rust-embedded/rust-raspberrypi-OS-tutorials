@@ -3,14 +3,4 @@
 [[package]]
 name = "kernel"
 version = "0.1.0"
-dependencies = [
- "r0 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
-]
 
-[[package]]
-name = "r0"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[metadata]
-"checksum r0 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "e2a38df5b15c8d5c7e8654189744d8e396bddc18ad48041a500ce52d6948941f"

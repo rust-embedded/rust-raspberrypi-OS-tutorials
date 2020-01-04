@@ -40,6 +40,7 @@ mod runtime_init;
 mod bsp;
 
 mod interface;
+mod memory;
 mod panic_wait;
 mod print;
 

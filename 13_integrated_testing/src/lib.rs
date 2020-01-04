@@ -15,6 +15,7 @@
 #![feature(global_asm)]
 #![feature(linkage)]
 #![feature(panic_info_message)]
+#![feature(slice_ptr_range)]
 #![feature(trait_alias)]
 #![no_std]
 // Testing

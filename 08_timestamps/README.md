@@ -348,7 +348,7 @@ diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
  mod runtime_init;
 
  // Conditionally includes the selected `BSP` code.
-@@ -66,50 +62,25 @@
+@@ -67,50 +63,25 @@
 
  /// The main function running after the early init.
  fn kernel_main() -> ! {
@@ -547,9 +547,9 @@ diff -uNr 07_uart_chainloader/src/relocate.rs 08_timestamps/src/relocate.rs
 diff -uNr 07_uart_chainloader/src/runtime_init.rs 08_timestamps/src/runtime_init.rs
 --- 07_uart_chainloader/src/runtime_init.rs
 +++ 08_timestamps/src/runtime_init.rs
-@@ -4,39 +4,21 @@
-
- //! Rust runtime initialization code.
+@@ -36,32 +36,14 @@
+     memory::zero_volatile(bss_range());
+ }
 
 -/// We are outsmarting the compiler here by using a trait as a layer of indirection. Because we are
 -/// generating PIC code, a static dispatch to `init()` would generate a relative jump from the
@@ -569,31 +569,19 @@ diff -uNr 07_uart_chainloader/src/runtime_init.rs 08_timestamps/src/runtime_init
 -    ///
 -    /// - Only a single core must be active and running this function.
 -    unsafe fn runtime_init(&self) -> ! {
--        extern "C" {
--            // Boundaries of the .bss section, provided by the linker script.
--            static mut __bss_start: u64;
--            static mut __bss_end: u64;
--        }
--
--        // Zero out the .bss section.
--        r0::zero_bss(&mut __bss_start, &mut __bss_end);
+-        zero_bss();
 -
 -        crate::kernel_init()
+-    }
+-}
+-
+-struct Traitor;
+-impl RunTimeInit for Traitor {}
 +/// # Safety
 +///
 +/// - Only a single core must be active and running this function.
 +pub unsafe fn runtime_init() -> ! {
-+    extern "C" {
-+        // Boundaries of the .bss section, provided by the linker script.
-+        static mut __bss_start: u64;
-+        static mut __bss_end: u64;
-     }
--}
-
--struct Traitor;
--impl RunTimeInit for Traitor {}
-+    // Zero out the .bss section.
-+    r0::zero_bss(&mut __bss_start, &mut __bss_end);
++    zero_bss();
 
 -/// Give the callee a `RunTimeInit` trait object.
 -pub fn get() -> &'static dyn RunTimeInit {

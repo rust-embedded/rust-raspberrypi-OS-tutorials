@@ -822,15 +822,7 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_memory/src/main.rs
  #![feature(format_args_nl)]
  #![feature(panic_info_message)]
  #![feature(trait_alias)]
-@@ -36,6 +38,7 @@
- mod bsp;
-
- mod interface;
-+mod memory;
- mod panic_wait;
- mod print;
-
-@@ -46,8 +49,18 @@
+@@ -47,8 +49,18 @@
  /// # Safety
  ///
  /// - Only a single core must be active and running this function.
@@ -850,7 +842,7 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_memory/src/main.rs
      for i in bsp::device_drivers().iter() {
          if let Err(()) = i.init() {
              panic!("Error loading driver: {}", i.compatible())
-@@ -67,6 +80,9 @@
+@@ -68,6 +80,9 @@
 
      info!("Booting on: {}", bsp::board_name());
 
@@ -860,7 +852,7 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_memory/src/main.rs
      let (_, privilege_level) = arch::state::current_privilege_level();
      info!("Current privilege level: {}", privilege_level);
 
-@@ -86,6 +102,13 @@
+@@ -87,6 +102,13 @@
      info!("Timer test, spinning for 1 second");
      arch::timer().spin_for(Duration::from_secs(1));
 
@@ -878,15 +870,24 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_memory/src/main.rs
 diff -uNr 10_privilege_level/src/memory.rs 11_virtual_memory/src/memory.rs
 --- 10_privilege_level/src/memory.rs
 +++ 11_virtual_memory/src/memory.rs
-@@ -0,0 +1,147 @@
-+// SPDX-License-Identifier: MIT OR Apache-2.0
-+//
-+// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
+@@ -4,7 +4,10 @@
+
+ //! Memory Management.
+
+-use core::ops::Range;
++use core::{
++    fmt,
++    ops::{Range, RangeInclusive},
++};
+
+ /// Zero out a memory region.
+ ///
+@@ -23,3 +26,144 @@
+         ptr = ptr.offset(1);
+     }
+ }
 +
-+//! Memory Management.
-+
-+use core::{fmt, ops::RangeInclusive};
-+
++#[allow(dead_code)]
 +#[derive(Copy, Clone)]
 +pub enum Translation {
 +    Identity,

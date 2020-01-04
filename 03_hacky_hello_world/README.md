@@ -159,17 +159,18 @@ diff -uNr 02_runtime_init/src/main.rs 03_hacky_hello_world/src/main.rs
  #![no_main]
  #![no_std]
 
-@@ -22,7 +36,9 @@
+@@ -22,8 +36,10 @@
  // Conditionally includes the selected `BSP` code.
  mod bsp;
 
 +mod interface;
+ mod memory;
  mod panic_wait;
 +mod print;
 
  /// Early init code.
  ///
-@@ -30,5 +46,7 @@
+@@ -31,5 +47,7 @@
  ///
  /// - Only a single core must be active and running this function.
  unsafe fn kernel_init() -> ! {

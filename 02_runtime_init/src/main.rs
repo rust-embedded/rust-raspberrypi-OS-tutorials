@@ -22,6 +22,7 @@ mod runtime_init;
 // Conditionally includes the selected `BSP` code.
 mod bsp;
 
+mod memory;
 mod panic_wait;
 
 /// Early init code.

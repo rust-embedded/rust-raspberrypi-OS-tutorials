@@ -4,6 +4,38 @@
 
 //! Rust runtime initialization code.
 
+use crate::memory;
+use core::ops::Range;
+
+/// Return the range spanning the .bss section.
+///
+/// # Safety
+///
+/// - The symbol-provided addresses must be valid.
+/// - The symbol-provided addresses must be usize aligned.
+unsafe fn bss_range() -> Range<*mut usize> {
+    extern "C" {
+        // Boundaries of the .bss section, provided by linker script symbols.
+        static mut __bss_start: usize;
+        static mut __bss_end: usize;
+    }
+
+    Range {
+        start: &mut __bss_start,
+        end: &mut __bss_end,
+    }
+}
+
+/// Zero out the .bss section.
+///
+/// # Safety
+///
+/// - Must only be called pre `kernel_init()`.
+#[inline(always)]
+unsafe fn zero_bss() {
+    memory::zero_volatile(bss_range());
+}
+
 /// We are outsmarting the compiler here by using a trait as a layer of indirection. Because we are
 /// generating PIC code, a static dispatch to `init()` would generate a relative jump from the
 /// callee to `init()`. However, when calling `init()`, code just finished copying the binary to the
@@ -20,14 +52,7 @@ pub trait RunTimeInit {
     ///
     /// - Only a single core must be active and running this function.
     unsafe fn runtime_init(&self) -> ! {
-        extern "C" {
-            // Boundaries of the .bss section, provided by the linker script.
-            static mut __bss_start: u64;
-            static mut __bss_end: u64;
-        }
-
-        // Zero out the .bss section.
-        r0::zero_bss(&mut __bss_start, &mut __bss_end);
+        zero_bss();
 
         crate::kernel_init()
     }

@@ -298,7 +298,7 @@ diff -uNr 06_drivers_gpio_uart/src/main.rs 07_uart_chainloader/src/main.rs
  mod runtime_init;
 
  // Conditionally includes the selected `BSP` code.
-@@ -64,25 +68,48 @@
+@@ -65,25 +69,48 @@
  fn kernel_main() -> ! {
      use interface::console::All;
 
@@ -418,9 +418,9 @@ diff -uNr 06_drivers_gpio_uart/src/relocate.rs 07_uart_chainloader/src/relocate.
 diff -uNr 06_drivers_gpio_uart/src/runtime_init.rs 07_uart_chainloader/src/runtime_init.rs
 --- 06_drivers_gpio_uart/src/runtime_init.rs
 +++ 07_uart_chainloader/src/runtime_init.rs
-@@ -4,21 +4,39 @@
-
- //! Rust runtime initialization code.
+@@ -36,14 +36,32 @@
+     memory::zero_volatile(bss_range());
+ }
 
 -/// Equivalent to `crt0` or `c0` code in C/C++ world. Clears the `bss` section, then jumps to kernel
 -/// init code.
@@ -434,10 +434,7 @@ diff -uNr 06_drivers_gpio_uart/src/runtime_init.rs 07_uart_chainloader/src/runti
 -///
 -/// - Only a single core must be active and running this function.
 -pub unsafe fn runtime_init() -> ! {
--    extern "C" {
--        // Boundaries of the .bss section, provided by the linker script.
--        static mut __bss_start: u64;
--        static mut __bss_end: u64;
+-    zero_bss();
 +/// By indirecting through a trait object, we can make use of the property that vtables store
 +/// absolute addresses. So calling `init()` this way will kick execution to the relocated binary.
 +pub trait RunTimeInit {
@@ -448,21 +445,12 @@ diff -uNr 06_drivers_gpio_uart/src/runtime_init.rs 07_uart_chainloader/src/runti
 +    ///
 +    /// - Only a single core must be active and running this function.
 +    unsafe fn runtime_init(&self) -> ! {
-+        extern "C" {
-+            // Boundaries of the .bss section, provided by the linker script.
-+            static mut __bss_start: u64;
-+            static mut __bss_end: u64;
-+        }
-+
-+        // Zero out the .bss section.
-+        r0::zero_bss(&mut __bss_start, &mut __bss_end);
++        zero_bss();
 +
 +        crate::kernel_init()
-     }
++    }
 +}
-
--    // Zero out the .bss section.
--    r0::zero_bss(&mut __bss_start, &mut __bss_end);
++
 +struct Traitor;
 +impl RunTimeInit for Traitor {}
 

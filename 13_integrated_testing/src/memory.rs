@@ -4,7 +4,28 @@
 
 //! Memory Management.
 
-use core::{fmt, ops::RangeInclusive};
+use core::{
+    fmt,
+    ops::{Range, RangeInclusive},
+};
+
+/// Zero out a memory region.
+///
+/// # Safety
+///
+/// - `range.start` and `range.end` must be valid.
+/// - `range.start` and `range.end` must be `T` aligned.
+pub unsafe fn zero_volatile<T>(range: Range<*mut T>)
+where
+    T: From<u8>,
+{
+    let mut ptr = range.start;
+
+    while ptr < range.end {
+        core::ptr::write_volatile(ptr, T::from(0));
+        ptr = ptr.offset(1);
+    }
+}
 
 #[derive(Copy, Clone)]
 pub enum Translation {
@@ -148,5 +169,26 @@ impl<const NUM_SPECIAL_RANGES: usize> KernelVirtualLayout<{ NUM_SPECIAL_RANGES }
     #[cfg(test)]
     pub fn inner(&self) -> &[RangeDescriptor; NUM_SPECIAL_RANGES] {
         &self.inner
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// Testing
+//--------------------------------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use test_macros::kernel_test;
+
+    /// Check `zero_volatile()`.
+    #[kernel_test]
+    fn zero_volatile_works() {
+        let mut x: [usize; 3] = [10, 11, 12];
+        let x_range = x.as_mut_ptr_range();
+
+        unsafe { zero_volatile(x_range) };
+
+        assert_eq!(x, [0, 0, 0]);
     }
 }

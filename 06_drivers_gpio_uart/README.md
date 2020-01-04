@@ -86,7 +86,7 @@ sudo screen /dev/ttyUSB0 115200
 diff -uNr 05_safe_globals/Cargo.toml 06_drivers_gpio_uart/Cargo.toml
 --- 05_safe_globals/Cargo.toml
 +++ 06_drivers_gpio_uart/Cargo.toml
-@@ -10,11 +10,12 @@
+@@ -10,10 +10,11 @@
  # The features section is used to select the target board.
  [features]
  default = []
@@ -96,7 +96,6 @@ diff -uNr 05_safe_globals/Cargo.toml 06_drivers_gpio_uart/Cargo.toml
 +bsp_rpi4 = ["cortex-a", "register"]
 
  [dependencies]
- r0 = "0.2.*"
 
  # Optional dependencies
  cortex-a = { version = "2.8.x", optional = true }
@@ -865,7 +864,7 @@ diff -uNr 05_safe_globals/src/interface.rs 06_drivers_gpio_uart/src/interface.rs
 diff -uNr 05_safe_globals/src/main.rs 06_drivers_gpio_uart/src/main.rs
 --- 05_safe_globals/src/main.rs
 +++ 06_drivers_gpio_uart/src/main.rs
-@@ -41,16 +41,48 @@
+@@ -42,16 +42,48 @@
 
  /// Early init code.
  ///

@@ -41,7 +41,6 @@ dependencies = [
  "cortex-a 2.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "patches 0.1.0",
  "qemu-exit 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "r0 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "register 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "test-macros 0.1.0",
  "test-types 0.1.0",
@@ -79,11 +78,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "proc-macro2 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
-
-[[package]]
-name = "r0"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "register"
@@ -175,7 +169,6 @@ dependencies = [
 "checksum proc-macro2 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)" = "9c9e470a8dc4aeae2dee2f335e8f533e2d4b347e1434e5671afc49b054592f27"
 "checksum qemu-exit 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "6eef8966dfa42074458b801f4ca70c0a070a84a500022584cc11d7a3c1fdb105"
 "checksum quote 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "053a8c8bcc71fcce321828dc897a98ab9760bef03a4fc36693c231e5b3216cfe"
-"checksum r0 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "e2a38df5b15c8d5c7e8654189744d8e396bddc18ad48041a500ce52d6948941f"
 "checksum register 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "a51f149d257caa7d9aed1f870d573ba5e2429576e6fed0693341f23078c98e55"
 "checksum rustc_version 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "138e3e0acb6c9fb258b19b67cb8abd63c00679d2851805ea151465464fe9030a"
 "checksum semver 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)" = "1d7eb9ef2c18661902cc47e535f9bc51b78acd254da71d375c2f6720d9a40403"

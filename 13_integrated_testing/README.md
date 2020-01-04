@@ -698,11 +698,13 @@ RUSTFLAGS="-C link-arg=-Tsrc/bsp/rpi/link.ld -C target-cpu=cortex-a53 -D warning
     Finished release [optimized] target(s) in 0.74s
      Running target/aarch64-unknown-none-softfloat/release/deps/libkernel-a8441de115ec3a67
          -------------------------------------------------------------------
-         🦀 Running 2 tests
+         🦀 Running 4 tests
          -------------------------------------------------------------------
 
            1. test_runner_executes_in_kernel_mode.......................[ok]
-           2. virt_mem_layout_has_no_overlaps...........................[ok]
+           2. bss_section_is_sane.......................................[ok]
+           3. virt_mem_layout_has_no_overlaps...........................[ok]
+           4. zero_volatile_works.......................................[ok]
 
          -------------------------------------------------------------------
          ✔️  Success: libkernel
@@ -768,10 +770,10 @@ diff -uNr 12_cpu_exceptions_part1/.cargo/config 13_integrated_testing/.cargo/con
 diff -uNr 12_cpu_exceptions_part1/Cargo.toml 13_integrated_testing/Cargo.toml
 --- 12_cpu_exceptions_part1/Cargo.toml
 +++ 13_integrated_testing/Cargo.toml
-@@ -15,7 +15,38 @@
+@@ -14,7 +14,38 @@
+ bsp_rpi4 = ["cortex-a", "register"]
 
  [dependencies]
- r0 = "0.2.*"
 +qemu-exit = "0.1.x"
 +test-types = { path = "test-types" }
 
@@ -1156,7 +1158,7 @@ diff -uNr 12_cpu_exceptions_part1/src/bsp.rs 13_integrated_testing/src/bsp.rs
 diff -uNr 12_cpu_exceptions_part1/src/lib.rs 13_integrated_testing/src/lib.rs
 --- 12_cpu_exceptions_part1/src/lib.rs
 +++ 13_integrated_testing/src/lib.rs
-@@ -0,0 +1,69 @@
+@@ -0,0 +1,70 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
@@ -1174,6 +1176,7 @@ diff -uNr 12_cpu_exceptions_part1/src/lib.rs 13_integrated_testing/src/lib.rs
 +#![feature(global_asm)]
 +#![feature(linkage)]
 +#![feature(panic_info_message)]
++#![feature(slice_ptr_range)]
 +#![feature(trait_alias)]
 +#![no_std]
 +// Testing
@@ -1324,15 +1327,15 @@ diff -uNr 12_cpu_exceptions_part1/src/main.rs 13_integrated_testing/src/main.rs
 diff -uNr 12_cpu_exceptions_part1/src/memory.rs 13_integrated_testing/src/memory.rs
 --- 12_cpu_exceptions_part1/src/memory.rs
 +++ 13_integrated_testing/src/memory.rs
-@@ -6,7 +6,6 @@
-
- use core::{fmt, ops::RangeInclusive};
+@@ -27,7 +27,6 @@
+     }
+ }
 
 -#[allow(dead_code)]
  #[derive(Copy, Clone)]
  pub enum Translation {
      Identity,
-@@ -145,4 +144,9 @@
+@@ -166,4 +165,30 @@
              info!("{}", i);
          }
      }
@@ -1340,6 +1343,27 @@ diff -uNr 12_cpu_exceptions_part1/src/memory.rs 13_integrated_testing/src/memory
 +    #[cfg(test)]
 +    pub fn inner(&self) -> &[RangeDescriptor; NUM_SPECIAL_RANGES] {
 +        &self.inner
++    }
++}
++
++//--------------------------------------------------------------------------------------------------
++// Testing
++//--------------------------------------------------------------------------------------------------
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use test_macros::kernel_test;
++
++    /// Check `zero_volatile()`.
++    #[kernel_test]
++    fn zero_volatile_works() {
++        let mut x: [usize; 3] = [10, 11, 12];
++        let x_range = x.as_mut_ptr_range();
++
++        unsafe { zero_volatile(x_range) };
++
++        assert_eq!(x, [0, 0, 0]);
 +    }
  }
 
@@ -1392,22 +1416,41 @@ diff -uNr 12_cpu_exceptions_part1/src/panic_wait.rs 13_integrated_testing/src/pa
 diff -uNr 12_cpu_exceptions_part1/src/runtime_init.rs 13_integrated_testing/src/runtime_init.rs
 --- 12_cpu_exceptions_part1/src/runtime_init.rs
 +++ 13_integrated_testing/src/runtime_init.rs
-@@ -15,10 +15,15 @@
-         // Boundaries of the .bss section, provided by the linker script.
-         static mut __bss_start: u64;
-         static mut __bss_end: u64;
-+
-+    }
-+
+@@ -43,7 +43,34 @@
+ ///
+ /// - Only a single core must be active and running this function.
+ pub unsafe fn runtime_init() -> ! {
 +    extern "Rust" {
 +        fn kernel_init() -> !;
-     }
-
-     // Zero out the .bss section.
-     r0::zero_bss(&mut __bss_start, &mut __bss_end);
++    }
++
+     zero_bss();
 
 -    crate::kernel_init()
 +    kernel_init()
++}
++
++//--------------------------------------------------------------------------------------------------
++// Testing
++//--------------------------------------------------------------------------------------------------
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use test_macros::kernel_test;
++
++    /// Check `bss` section layout.
++    #[kernel_test]
++    fn bss_section_is_sane() {
++        use core::mem;
++
++        let start = unsafe { bss_range().start } as *const _ as usize;
++        let end = unsafe { bss_range().end } as *const _ as usize;
++
++        assert_eq!(start modulo mem::size_of::<usize>(), 0);
++        assert_eq!(end modulo mem::size_of::<usize>(), 0);
++        assert!(end >= start);
++    }
  }
 
 diff -uNr 12_cpu_exceptions_part1/test-macros/Cargo.toml 13_integrated_testing/test-macros/Cargo.toml

@@ -13,7 +13,7 @@ which provides zero-overhead abstractions and wraps the `unsafe` parts.
 diff -uNr 03_hacky_hello_world/Cargo.toml 04_zero_overhead_abstraction/Cargo.toml
 --- 03_hacky_hello_world/Cargo.toml
 +++ 04_zero_overhead_abstraction/Cargo.toml
-@@ -10,8 +10,11 @@
+@@ -10,7 +10,10 @@
  # The features section is used to select the target board.
  [features]
  default = []
@@ -23,7 +23,6 @@ diff -uNr 03_hacky_hello_world/Cargo.toml 04_zero_overhead_abstraction/Cargo.tom
 +bsp_rpi4 = ["cortex-a"]
 
  [dependencies]
- r0 = "0.2.*"
 +
 +# Optional dependencies
 +cortex-a = { version = "2.8.x", optional = true }
@@ -130,7 +129,7 @@ diff -uNr 03_hacky_hello_world/src/main.rs 04_zero_overhead_abstraction/src/main
  #![feature(panic_info_message)]
  #![no_main]
  #![no_std]
-@@ -46,7 +44,8 @@
+@@ -47,7 +45,8 @@
  ///
  /// - Only a single core must be active and running this function.
  unsafe fn kernel_init() -> ! {
@@ -145,15 +144,15 @@ diff -uNr 03_hacky_hello_world/src/main.rs 04_zero_overhead_abstraction/src/main
 diff -uNr 03_hacky_hello_world/src/runtime_init.rs 04_zero_overhead_abstraction/src/runtime_init.rs
 --- 03_hacky_hello_world/src/runtime_init.rs
 +++ 04_zero_overhead_abstraction/src/runtime_init.rs
-@@ -10,8 +10,7 @@
+@@ -42,8 +42,7 @@
  /// # Safety
  ///
  /// - Only a single core must be active and running this function.
 -#[no_mangle]
 -pub unsafe extern "C" fn runtime_init() -> ! {
 +pub unsafe fn runtime_init() -> ! {
-     extern "C" {
-         // Boundaries of the .bss section, provided by the linker script.
-         static mut __bss_start: u64;
+     zero_bss();
+
+     crate::kernel_init()
 
 ```

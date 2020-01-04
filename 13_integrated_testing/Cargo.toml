@@ -14,7 +14,6 @@ bsp_rpi3 = ["cortex-a", "register"]
 bsp_rpi4 = ["cortex-a", "register"]
 
 [dependencies]
-r0 = "0.2.*"
 qemu-exit = "0.1.x"
 test-types = { path = "test-types" }
 

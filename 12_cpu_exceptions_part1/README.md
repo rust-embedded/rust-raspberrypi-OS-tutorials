@@ -986,16 +986,4 @@ diff -uNr 11_virtual_memory/src/main.rs 12_cpu_exceptions_part1/src/main.rs
      loop {
          let c = bsp::console().read_char();
 
-diff -uNr 11_virtual_memory/src/memory.rs 12_cpu_exceptions_part1/src/memory.rs
---- 11_virtual_memory/src/memory.rs
-+++ 12_cpu_exceptions_part1/src/memory.rs
-@@ -6,6 +6,7 @@
-
- use core::{fmt, ops::RangeInclusive};
-
-+#[allow(dead_code)]
- #[derive(Copy, Clone)]
- pub enum Translation {
-     Identity,
-
 ```
