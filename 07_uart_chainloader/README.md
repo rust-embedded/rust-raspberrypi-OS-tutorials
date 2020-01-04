@@ -298,7 +298,7 @@ diff -uNr 06_drivers_gpio_uart/src/main.rs 07_uart_chainloader/src/main.rs
  mod runtime_init;
 
  // Conditionally includes the selected `BSP` code.
-@@ -65,25 +69,48 @@
+@@ -65,25 +69,49 @@
  fn kernel_main() -> ! {
      use interface::console::All;
 
@@ -338,7 +338,8 @@ diff -uNr 06_drivers_gpio_uart/src/main.rs 07_uart_chainloader/src/main.rs
 +    size |= u32::from(bsp::console().read_char() as u8) << 24;
 +
 +    // Trust it's not too big.
-+    print!("OK");
++    bsp::console().write_char('O');
++    bsp::console().write_char('K');
 +
 +    let kernel_addr: *mut u8 = bsp::BOARD_DEFAULT_LOAD_ADDRESS as *mut u8;
 +    unsafe {

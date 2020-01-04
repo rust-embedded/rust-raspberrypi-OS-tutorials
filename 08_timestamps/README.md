@@ -348,7 +348,7 @@ diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
  mod runtime_init;
 
  // Conditionally includes the selected `BSP` code.
-@@ -67,50 +63,25 @@
+@@ -67,51 +63,25 @@
 
  /// The main function running after the early init.
  fn kernel_main() -> ! {
@@ -382,7 +382,8 @@ diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
 -    size |= u32::from(bsp::console().read_char() as u8) << 24;
 -
 -    // Trust it's not too big.
--    print!("OK");
+-    bsp::console().write_char('O');
+-    bsp::console().write_char('K');
 -
 -    let kernel_addr: *mut u8 = bsp::BOARD_DEFAULT_LOAD_ADDRESS as *mut u8;
 -    unsafe {
