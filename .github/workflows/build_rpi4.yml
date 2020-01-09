@@ -35,6 +35,10 @@ jobs:
           rustup toolchain install nightly --component rust-src llvm-tools-preview
           rustup default nightly
           cargo install cargo-xbuild cargo-binutils
-    - name: Make all
+    - name: Set up Ruby
       run: |
-        ruby utils/make_all.rb rpi4
+        gem install bundler
+        bundle install --retry 3 --with development
+    - name: Make
+      run: |
+        bundle exec ruby utils/devtool.rb make rpi4
