@@ -143,7 +143,7 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
 +	$(CHAINBOOT_DEMO_PAYLOAD)
 +
  clippy:
- 	cargo xclippy --target=$(TARGET) --features bsp_$(BSP)
+ 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" cargo xclippy --target=$(TARGET) --features bsp_$(BSP)
 
 
 diff -uNr 06_drivers_gpio_uart/src/arch/aarch64.rs 07_uart_chainloader/src/arch/aarch64.rs

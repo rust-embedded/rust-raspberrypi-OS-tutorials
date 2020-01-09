@@ -93,7 +93,7 @@ chainboot:
 	$(CHAINBOOT_DEMO_PAYLOAD)
 
 clippy:
-	cargo xclippy --target=$(TARGET) --features bsp_$(BSP)
+	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" cargo xclippy --target=$(TARGET) --features bsp_$(BSP)
 
 clean:
 	rm -rf target

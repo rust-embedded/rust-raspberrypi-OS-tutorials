@@ -112,7 +112,7 @@ gdb-opt0: clean $(SOURCES)
 	$(call gen_gdb,-C debuginfo=2 -C opt-level=0)
 
 clippy:
-	cargo xclippy --target=$(TARGET) --features bsp_$(BSP)
+	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" cargo xclippy --target=$(TARGET) --features bsp_$(BSP)
 
 clean:
 	rm -rf target

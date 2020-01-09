@@ -364,6 +364,6 @@ diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
 +	$(call gen_gdb,-C debuginfo=2 -C opt-level=0)
 +
  clippy:
- 	cargo xclippy --target=$(TARGET) --features bsp_$(BSP)
+ 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" cargo xclippy --target=$(TARGET) --features bsp_$(BSP)
 
 ```

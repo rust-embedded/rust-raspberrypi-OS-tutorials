@@ -97,7 +97,7 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
 +	$(OUTPUT)
 
  clippy:
- 	cargo xclippy --target=$(TARGET) --features bsp_$(BSP)
+ 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" cargo xclippy --target=$(TARGET) --features bsp_$(BSP)
 
 diff -uNr 07_uart_chainloader/src/arch/aarch64/time.rs 08_timestamps/src/arch/aarch64/time.rs
 --- 07_uart_chainloader/src/arch/aarch64/time.rs
