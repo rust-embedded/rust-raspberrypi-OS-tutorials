@@ -707,7 +707,7 @@ RUSTFLAGS="-C link-arg=-Tsrc/bsp/rpi/link.ld -C target-cpu=cortex-a53 -D warning
            4. zero_volatile_works.......................................[ok]
 
          -------------------------------------------------------------------
-         ✔️  Success: libkernel
+         ✅ Success: libkernel
          -------------------------------------------------------------------
 
 
@@ -721,7 +721,7 @@ RUSTFLAGS="-C link-arg=-Tsrc/bsp/rpi/link.ld -C target-cpu=cortex-a53 -D warning
            3. Receive statistics........................................[ok]
 
          -------------------------------------------------------------------
-         ✔️  Success: 00_interface_sanity_console
+         ✅ Success: 00_interface_sanity_console
          -------------------------------------------------------------------
 
 
@@ -735,7 +735,7 @@ RUSTFLAGS="-C link-arg=-Tsrc/bsp/rpi/link.ld -C target-cpu=cortex-a53 -D warning
            3. spin_accuracy_check_1_second..............................[ok]
 
          -------------------------------------------------------------------
-         ✔️  Success: 01_interface_sanity_timer
+         ✅ Success: 01_interface_sanity_timer
          -------------------------------------------------------------------
 
 
@@ -753,7 +753,7 @@ RUSTFLAGS="-C link-arg=-Tsrc/bsp/rpi/link.ld -C target-cpu=cortex-a53 -D warning
          [...]
 
          -------------------------------------------------------------------
-         ✔️  Success: 02_arch_exception_handling
+         ✅ Success: 02_arch_exception_handling
          -------------------------------------------------------------------
 ```
 
@@ -1791,11 +1791,11 @@ diff -uNr 12_cpu_exceptions_part1/tests/runner.rb 13_integrated_testing/tests/ru
 +
 +    def print_error(error)
 +        puts
-+        print_border("#{INDENT}❌  Failure: #{error}: #{@test_name}")
++        print_border("#{INDENT}❌ Failure: #{error}: #{@test_name}")
 +    end
 +
 +    def print_success
-+        print_border("#{INDENT}✔️  Success: #{@test_name}")
++        print_border("#{INDENT}✅ Success: #{@test_name}")
 +    end
 +
 +    def print_output

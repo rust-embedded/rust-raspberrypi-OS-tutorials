@@ -21,11 +21,11 @@ class Test
 
     def print_error(error)
         puts
-        print_border("#{INDENT}❌  Failure: #{error}: #{@test_name}")
+        print_border("#{INDENT}❌ Failure: #{error}: #{@test_name}")
     end
 
     def print_success
-        print_border("#{INDENT}✔️  Success: #{@test_name}")
+        print_border("#{INDENT}✅ Success: #{@test_name}")
     end
 
     def print_output
