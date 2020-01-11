@@ -274,7 +274,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_gpio.rs 06_drivers_gpio_uar
 diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
 --- 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -0,0 +1,317 @@
+@@ -0,0 +1,312 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
@@ -468,6 +468,8 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gp
 +
 +        // Write the character to the buffer.
 +        self.DR.set(c as u32);
++
++        self.chars_written += 1;
 +    }
 +}
 +
@@ -483,15 +485,8 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gp
 +impl fmt::Write for PL011UartInner {
 +    fn write_str(&mut self, s: &str) -> fmt::Result {
 +        for c in s.chars() {
-+            // Convert newline to carrige return + newline.
-+            if c == '\n' {
-+                self.write_char('\r')
-+            }
-+
 +            self.write_char(c);
 +        }
-+
-+        self.chars_written += s.len();
 +
 +        Ok(())
 +    }

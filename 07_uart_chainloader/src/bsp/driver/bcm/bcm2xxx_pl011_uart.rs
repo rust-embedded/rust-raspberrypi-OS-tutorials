@@ -191,6 +191,8 @@ impl PL011UartInner {
 
         // Write the character to the buffer.
         self.DR.set(c as u32);
+
+        self.chars_written += 1;
     }
 }
 
@@ -206,15 +208,8 @@ impl PL011UartInner {
 impl fmt::Write for PL011UartInner {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         for c in s.chars() {
-            // Convert newline to carrige return + newline.
-            if c == '\n' {
-                self.write_char('\r')
-            }
-
             self.write_char(c);
         }
-
-        self.chars_written += s.len();
 
         Ok(())
     }
