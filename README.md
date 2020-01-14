@@ -2,6 +2,10 @@
 
 ![](https://github.com/rust-embedded/rust-raspi3-OS-tutorials/workflows/BSP-RPi3/badge.svg) ![](https://github.com/rust-embedded/rust-raspi3-OS-tutorials/workflows/BSP-RPi4/badge.svg) ![](https://github.com/rust-embedded/rust-raspi3-OS-tutorials/workflows/Unit-Tests/badge.svg) ![](https://github.com/rust-embedded/rust-raspi3-OS-tutorials/workflows/Integration-Tests/badge.svg) ![](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue)
 
+<br/>
+
+<img src="doc/header.jpg" height="390"> <img src="doc/minipush_demo_frontpage.gif" height="390">
+
 ## ℹ️ Introduction
 
 This is a tutorial series for hobby OS developers who are new to ARM's 64 bit
