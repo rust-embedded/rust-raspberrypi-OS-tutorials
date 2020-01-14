@@ -7,29 +7,34 @@ ifndef BSP
 	BSP = rpi3
 endif
 
+# Default to /dev/ttyUSB0
+ifndef DEV_SERIAL
+	DEV_SERIAL = /dev/ttyUSB0
+endif
+
 # BSP-specific arguments
 ifeq ($(BSP),rpi3)
-	TARGET = aarch64-unknown-none-softfloat
-	OUTPUT = kernel8.img
-	QEMU_BINARY = qemu-system-aarch64
+	TARGET            = aarch64-unknown-none-softfloat
+	OUTPUT            = kernel8.img
+	QEMU_BINARY       = qemu-system-aarch64
 	QEMU_MACHINE_TYPE = raspi3
 	QEMU_RELEASE_ARGS = -serial stdio -display none
-	QEMU_TEST_ARGS = $(QEMU_RELEASE_ARGS) -semihosting
-	OPENOCD_ARG = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi3.cfg
-	JTAG_BOOT_IMAGE = jtag_boot_rpi3.img
-	LINKER_FILE = src/bsp/rpi/link.ld
-	RUSTC_MISC_ARGS = -C target-cpu=cortex-a53
+	QEMU_TEST_ARGS    = $(QEMU_RELEASE_ARGS) -semihosting
+	OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi3.cfg
+	JTAG_BOOT_IMAGE   = jtag_boot_rpi3.img
+	LINKER_FILE       = src/bsp/rpi/link.ld
+	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
 else ifeq ($(BSP),rpi4)
-	TARGET = aarch64-unknown-none-softfloat
-	OUTPUT = kernel8.img
-#	QEMU_BINARY = qemu-system-aarch64
-#	QEMU_MACHINE_TYPE =
-#	QEMU_RELEASE_ARGS = -serial stdio -display none
-#	QEMU_TEST_ARGS = $(QEMU_RELEASE_ARGS) -semihosting
-	OPENOCD_ARG = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi4.cfg
-	JTAG_BOOT_IMAGE = jtag_boot_rpi4.img
-	LINKER_FILE = src/bsp/rpi/link.ld
-	RUSTC_MISC_ARGS = -C target-cpu=cortex-a72
+	TARGET            = aarch64-unknown-none-softfloat
+	OUTPUT            = kernel8.img
+	# QEMU_BINARY       = qemu-system-aarch64
+	# QEMU_MACHINE_TYPE =
+	# QEMU_RELEASE_ARGS = -serial stdio -display none
+	# QEMU_TEST_ARGS    = $(QEMU_RELEASE_ARGS) -semihosting
+	OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi4.cfg
+	JTAG_BOOT_IMAGE   = jtag_boot_rpi4.img
+	LINKER_FILE       = src/bsp/rpi/link.ld
+	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
 endif
 
 # Testing-specific arguments
@@ -43,38 +48,34 @@ endif
 
 QEMU_MISSING_STRING = "This board is not yet supported for QEMU."
 
-RUSTFLAGS = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
+RUSTFLAGS          = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
 RUSTFLAGS_PEDANTIC = $(RUSTFLAGS) -D warnings -D missing_docs
 
 SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) $(wildcard **/*.ld)
 
 X_CMD_ARGS = --target=$(TARGET) \
-		--features bsp_$(BSP) \
-		--release
-
+	--features bsp_$(BSP)   \
+	--release
 XRUSTC_CMD = cargo xrustc $(X_CMD_ARGS)
-XTEST_CMD = cargo xtest $(X_CMD_ARGS)
+XTEST_CMD  = cargo xtest $(X_CMD_ARGS)
 
 CARGO_OUTPUT = target/$(TARGET)/release/kernel
 
 OBJCOPY_CMD = cargo objcopy \
-		-- \
-		--strip-all \
-		-O binary
+	--                  \
+	--strip-all         \
+	-O binary
 
-CONTAINER_UTILS   = rustembedded/osdev-utils
-
-DOCKER_CMD_TEST   = docker run -i --rm
-DOCKER_CMD_USER   = $(DOCKER_CMD_TEST) -t
-DOCKER_ARG_CURDIR = -v $(shell pwd):/work -w /work
-DOCKER_ARG_TTY    = --privileged -v /dev:/dev
-DOCKER_ARG_JTAG   = -v $(shell pwd)/../X1_JTAG_boot:/jtag
-DOCKER_ARG_NET    = --network host
-
-DOCKER_EXEC_QEMU         = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
-DOCKER_EXEC_RASPBOOT     = raspbootcom
-DOCKER_EXEC_RASPBOOT_DEV = /dev/ttyUSB0
-# DOCKER_EXEC_RASPBOOT_DEV = /dev/ttyACM0
+DOCKER_IMAGE         = rustembedded/osdev-utils
+DOCKER_CMD_TEST      = docker run -i --rm
+DOCKER_CMD_USER      = $(DOCKER_CMD_TEST) -t
+DOCKER_ARG_DIR_TUT   = -v $(shell pwd):/work -w /work
+DOCKER_ARG_DIR_UTILS = -v $(shell pwd)/../utils:/utils
+DOCKER_ARG_DIR_JTAG  = -v $(shell pwd)/../X1_JTAG_boot:/jtag
+DOCKER_ARG_TTY       = --privileged -v /dev:/dev
+DOCKER_ARG_NET       = --network host
+DOCKER_EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
+DOCKER_EXEC_MINIPUSH = ruby /utils/minipush.rb
 
 .PHONY: all doc qemu chainboot jtagboot openocd gdb gdb-opt0 clippy clean readelf objdump nm test
 
@@ -99,17 +100,17 @@ test:
 	@echo $(QEMU_MISSING_STRING)
 else
 qemu: all
-	$(DOCKER_CMD_USER) $(DOCKER_ARG_CURDIR) $(CONTAINER_UTILS) \
-	$(DOCKER_EXEC_QEMU) $(QEMU_RELEASE_ARGS) \
-	-kernel $(OUTPUT)
+	@$(DOCKER_CMD_USER) $(DOCKER_ARG_DIR_TUT) $(DOCKER_IMAGE) \
+		$(DOCKER_EXEC_QEMU) $(QEMU_RELEASE_ARGS)          \
+		-kernel $(OUTPUT)
 
 define KERNEL_TEST_RUNNER
 	#!/usr/bin/env bash
 
 	$(OBJCOPY_CMD) $$1 $$1.img
 	TEST_BINARY=$$(echo $$1.img | sed -e 's/.*target/target/g')
-	$(DOCKER_CMD_TEST) $(DOCKER_ARG_CURDIR) $(CONTAINER_UTILS) \
-	ruby tests/runner.rb $(DOCKER_EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
+	$(DOCKER_CMD_TEST) $(DOCKER_ARG_DIR_TUT) $(DOCKER_IMAGE) \
+		ruby tests/runner.rb $(DOCKER_EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
 endef
 
 export KERNEL_TEST_RUNNER
@@ -121,24 +122,24 @@ test: $(SOURCES)
 endif
 
 chainboot: all
-	$(DOCKER_CMD_USER) $(DOCKER_ARG_CURDIR) $(DOCKER_ARG_TTY) \
-	$(CONTAINER_UTILS) $(DOCKER_EXEC_RASPBOOT) $(DOCKER_EXEC_RASPBOOT_DEV) \
-	$(OUTPUT)
+	@$(DOCKER_CMD_USER) $(DOCKER_ARG_DIR_TUT) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_ARG_TTY) \
+		$(DOCKER_IMAGE) $(DOCKER_EXEC_MINIPUSH) $(DEV_SERIAL)                       \
+		$(OUTPUT)
 
 jtagboot:
-	$(DOCKER_CMD_USER) $(DOCKER_ARG_TTY) $(DOCKER_ARG_JTAG) $(CONTAINER_UTILS) \
-	$(DOCKER_EXEC_RASPBOOT) $(DOCKER_EXEC_RASPBOOT_DEV) \
-	/jtag/$(JTAG_BOOT_IMAGE)
+	@$(DOCKER_CMD_USER) $(DOCKER_ARG_DIR_JTAG) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_ARG_TTY) \
+		$(DOCKER_IMAGE) $(DOCKER_EXEC_MINIPUSH) $(DEV_SERIAL)                        \
+		/jtag/$(JTAG_BOOT_IMAGE)
 
 openocd:
-	$(DOCKER_CMD_USER) $(DOCKER_ARG_TTY) $(DOCKER_ARG_NET) $(CONTAINER_UTILS) \
-	openocd $(OPENOCD_ARG)
+	@$(DOCKER_CMD_USER) $(DOCKER_ARG_TTY) $(DOCKER_ARG_NET) $(DOCKER_IMAGE) \
+		openocd $(OPENOCD_ARG)
 
 define gen_gdb
-	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(XRUSTC_CMD) $1
+	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC) $1"  $(XRUSTC_CMD)
 	cp $(CARGO_OUTPUT) kernel_for_jtag
-	$(DOCKER_CMD_USER) $(DOCKER_ARG_CURDIR) $(DOCKER_ARG_NET) $(CONTAINER_UTILS) \
-	gdb-multiarch -q kernel_for_jtag
+	@$(DOCKER_CMD_USER) $(DOCKER_ARG_DIR_TUT) $(DOCKER_ARG_NET) $(DOCKER_IMAGE) \
+		gdb-multiarch -q kernel_for_jtag
 endef
 
 gdb: clean $(SOURCES)

@@ -7,32 +7,39 @@ FROM ubuntu:19.10
 ARG VCS_REF
 
 LABEL org.label-schema.vcs-ref=$VCS_REF \
-      org.label-schema.vcs-url="https://github.com/rust-embedded/rust-raspi3-OS-tutorials"
+    org.label-schema.vcs-url="https://github.com/rust-embedded/rust-raspi3-OS-tutorials"
 
 LABEL maintainer="The resources team <resources@teams.rust-embedded.org>, Andre Richter <andre.o.richter@gmail.com>"
 
-RUN set -ex;                                      \
-    tempPkgs='                                    \
-        automake                                  \
-        build-essential                           \
-        git                                       \
-        libtool                                   \
-        pkg-config                                \
-        wget                                      \
-    ';                                            \
-    apt-get update;                               \
-    apt-get install -q -y --no-install-recommends \
-        $tempPkgs                                 \
+# Ruby gems
+COPY Gemfile .
+
+RUN set -ex;                                        \
+    tempPkgs='                                      \
+        automake                                    \
+        build-essential                             \
+        git                                         \
+        libtool                                     \
+        pkg-config                                  \
+        wget                                        \
+    ';                                              \
+    apt-get update;                                 \
+    apt-get install -q -y --no-install-recommends   \
+        $tempPkgs                                   \
         # persistent packages
-        ca-certificates                           \
-        gdb-multiarch                             \
-        libpixman-1-dev                           \
-        libglib2.0-dev                            \
-        libusb-1.0.0-dev                          \
-        locales                                   \
-        python                                    \
-        ruby                                      \
-        ;                                         \
+        ca-certificates                             \
+        gdb-multiarch                               \
+        libpixman-1-dev                             \
+        libglib2.0-dev                              \
+        libusb-1.0.0-dev                            \
+        locales                                     \
+        python                                      \
+        ruby                                        \
+        ruby-dev                                    \
+    ;                                               \
+    # Ruby dependencies
+    gem install bundler;                            \
+    bundle install --retry 3 --without development; \
     # QEMU
     git clone git://git.qemu.org/qemu.git;                     \
     cd qemu;                                                   \
@@ -44,13 +51,6 @@ RUN set -ex;                                      \
     make install;                                              \
     cd ..;                                                     \
     rm -rf qemu;                                               \
-    # Raspbootcom
-    git clone --depth 1 https://github.com/andre-richter/raspbootin.git; \
-    cd raspbootin/raspbootcom;                                           \
-    make;                                                                \
-    cp raspbootcom /usr/bin;                                             \
-    cd ../..;                                                            \
-    rm -rf raspbootin;                                                   \
     # Openocd
     git clone --depth 1 https://git.code.sf.net/p/openocd/code openocd; \
     cd openocd;                                                         \
@@ -59,11 +59,11 @@ RUN set -ex;                                      \
     make;                                                               \
     make install;                                                       \
     # GDB
-    wget -P ~ git.io/.gdbinit;                                          \
+    wget -P ~ git.io/.gdbinit;                      \
     # Cleanup
-    apt-get purge -y --auto-remove $tempPkgs;                           \
-    apt-get autoremove -q -y;                                           \
-    apt-get clean -q -y;                                                \
+    apt-get purge -y --auto-remove $tempPkgs;       \
+    apt-get autoremove -q -y;                       \
+    apt-get clean -q -y;                            \
     rm -rf /var/lib/apt/lists/*
 
 # Locales

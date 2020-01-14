@@ -151,10 +151,11 @@ The helper binary is maintained separately in this repository's [X1_JTAG_boot](.
 folder, and is a modified version of the kernel we used in our tutorials so far.
 
 ```console
-make jtagboot
-[...]
-Raspbootcom V1.0
-### Listening on /dev/ttyUSB0
+» make jtagboot
+Minipush 1.0
+
+[MP] ⏳ Waiting for /dev/ttyUSB0
+[MP] ✅ Connected
  __  __ _      _ _                 _
 |  \/  (_)_ _ (_) |   ___  __ _ __| |
 | |\/| | | ' \| | |__/ _ \/ _` / _` |
@@ -162,12 +163,11 @@ Raspbootcom V1.0
 
            Raspberry Pi 3
 
-[ML] Reqbinary
-### sending kernel /jtag/jtag_boot_rpi3.img [8960 byte]
-### finished sending
+[ML] Requesting binary
+[MP] ⏩ Pushing 8248 KiB =======================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
-[    0.805909] Parking CPU core. Please connect over JTAG now.
+[    0.742123] Parking CPU core. Please connect over JTAG now.
 ```
 
 It is important to keep the USB serial connected and the terminal with the `jtagboot` open and
@@ -302,59 +302,57 @@ Thanks to [@naotaco](https://github.com/naotaco) for laying the groundwork for t
 diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
 --- 08_timestamps/Makefile
 +++ 09_hw_debug_JTAG/Makefile
-@@ -14,6 +14,8 @@
- 	QEMU_BINARY = qemu-system-aarch64
+@@ -19,6 +19,8 @@
+ 	QEMU_BINARY       = qemu-system-aarch64
  	QEMU_MACHINE_TYPE = raspi3
- 	QEMU_MISC_ARGS = -serial stdio -display none
-+	OPENOCD_ARG = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi3.cfg
-+	JTAG_BOOT_IMAGE = jtag_boot_rpi3.img
- 	LINKER_FILE = src/bsp/rpi/link.ld
- 	RUSTC_MISC_ARGS = -C target-cpu=cortex-a53
+ 	QEMU_RELEASE_ARGS = -serial stdio -display none
++	OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi3.cfg
++	JTAG_BOOT_IMAGE   = jtag_boot_rpi3.img
+ 	LINKER_FILE       = src/bsp/rpi/link.ld
+ 	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
  else ifeq ($(BSP),rpi4)
-@@ -22,6 +24,8 @@
- #	QEMU_BINARY = qemu-system-aarch64
- #	QEMU_MACHINE_TYPE =
- #	QEMU_MISC_ARGS = -serial stdio -display none
-+	OPENOCD_ARG = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi4.cfg
-+	JTAG_BOOT_IMAGE = jtag_boot_rpi4.img
- 	LINKER_FILE = src/bsp/rpi/link.ld
- 	RUSTC_MISC_ARGS = -C target-cpu=cortex-a72
+@@ -27,6 +29,8 @@
+ 	# QEMU_BINARY       = qemu-system-aarch64
+ 	# QEMU_MACHINE_TYPE =
+ 	# QEMU_RELEASE_ARGS = -serial stdio -display none
++	OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi4.cfg
++	JTAG_BOOT_IMAGE   = jtag_boot_rpi4.img
+ 	LINKER_FILE       = src/bsp/rpi/link.ld
+ 	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
  endif
-@@ -48,13 +52,15 @@
- DOCKER_CMD        = docker run -it --rm
- DOCKER_ARG_CURDIR = -v $(shell pwd):/work -w /work
- DOCKER_ARG_TTY    = --privileged -v /dev:/dev
-+DOCKER_ARG_JTAG   = -v $(shell pwd)/../X1_JTAG_boot:/jtag
-+DOCKER_ARG_NET    = --network host
-
- DOCKER_EXEC_QEMU         = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE) $(QEMU_MISC_ARGS) -kernel
- DOCKER_EXEC_RASPBOOT     = raspbootcom
- DOCKER_EXEC_RASPBOOT_DEV = /dev/ttyUSB0
- # DOCKER_EXEC_RASPBOOT_DEV = /dev/ttyACM0
+@@ -52,11 +56,13 @@
+ DOCKER_CMD           = docker run -it --rm
+ DOCKER_ARG_DIR_TUT   = -v $(shell pwd):/work -w /work
+ DOCKER_ARG_DIR_UTILS = -v $(shell pwd)/../utils:/utils
++DOCKER_ARG_DIR_JTAG  = -v $(shell pwd)/../X1_JTAG_boot:/jtag
+ DOCKER_ARG_TTY       = --privileged -v /dev:/dev
++DOCKER_ARG_NET       = --network host
+ DOCKER_EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
+ DOCKER_EXEC_MINIPUSH = ruby /utils/minipush.rb
 
 -.PHONY: all doc qemu chainboot clippy clean readelf objdump nm
 +.PHONY: all doc qemu chainboot jtagboot openocd gdb gdb-opt0 clippy clean readelf objdump nm
 
  all: clean $(OUTPUT)
 
-@@ -83,6 +89,28 @@
- 	$(CONTAINER_UTILS) $(DOCKER_EXEC_RASPBOOT) $(DOCKER_EXEC_RASPBOOT_DEV) \
- 	$(OUTPUT)
+@@ -86,6 +92,28 @@
+ 		$(DOCKER_IMAGE) $(DOCKER_EXEC_MINIPUSH) $(DEV_SERIAL)                  \
+ 		$(OUTPUT)
 
 +jtagboot:
-+	$(DOCKER_CMD) $(DOCKER_ARG_TTY) $(DOCKER_ARG_JTAG) $(CONTAINER_UTILS) \
-+	$(DOCKER_EXEC_RASPBOOT) $(DOCKER_EXEC_RASPBOOT_DEV) \
-+	/jtag/$(JTAG_BOOT_IMAGE)
++	@$(DOCKER_CMD) $(DOCKER_ARG_DIR_JTAG) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_ARG_TTY) \
++		$(DOCKER_IMAGE) $(DOCKER_EXEC_MINIPUSH) $(DEV_SERIAL)                   \
++		/jtag/$(JTAG_BOOT_IMAGE)
 +
 +openocd:
-+	$(DOCKER_CMD) $(DOCKER_ARG_TTY) $(DOCKER_ARG_NET) $(CONTAINER_UTILS) \
-+	openocd $(OPENOCD_ARG)
++	@$(DOCKER_CMD) $(DOCKER_ARG_TTY) $(DOCKER_ARG_NET) $(DOCKER_IMAGE) \
++		openocd $(OPENOCD_ARG)
 +
 +define gen_gdb
-+	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(XRUSTC_CMD) $1
++	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC) $1"  $(XRUSTC_CMD)
 +	cp $(CARGO_OUTPUT) kernel_for_jtag
-+	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(DOCKER_ARG_NET) $(CONTAINER_UTILS) \
-+	gdb-multiarch -q kernel_for_jtag
++	@$(DOCKER_CMD) $(DOCKER_ARG_DIR_TUT) $(DOCKER_ARG_NET) $(DOCKER_IMAGE) \
++		gdb-multiarch -q kernel_for_jtag
 +endef
 +
 +gdb: clean $(SOURCES)

@@ -242,9 +242,12 @@ abstractions, it boils down to two assembly instructions:
 ## Test it
 
 ```console
-make chainbot
+» make chainboot
 [...]
-### Listening on /dev/ttyUSB0
+Minipush 1.0
+
+[MP] ⏳ Waiting for /dev/ttyUSB0
+[MP] ✅ Connected
  __  __ _      _ _                 _
 |  \/  (_)_ _ (_) |   ___  __ _ __| |
 | |\/| | | ' \| | |__/ _ \/ _` / _` |
@@ -253,28 +256,27 @@ make chainbot
            Raspberry Pi 3
 
 [ML] Requesting binary
-### sending kernel kernel8.img [65560 byte]
-### finished sending
+[MP] ⏩ Pushing 65568 KiB =====================================🦀 100% 12 KiB/s Time: 00:00:05
 [ML] Loaded! Executing the payload now
 
-[    5.791515] Booting on: Raspberry Pi 3
-[    5.793767] MMU online. Special regions:
-[    5.797674]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
-[    5.805922]       0x1fff0000 - 0x1fffffff |  64 KiB | Dev RW PXN | Remapped Device MMIO
-[    5.813910]       0x3f000000 - 0x3fffffff |  16 MiB | Dev RW PXN | Device MMIO
-[    5.821117] Current privilege level: EL1
-[    5.825024] Exception handling state:
-[    5.828670]       Debug:  Masked
-[    5.831883]       SError: Masked
-[    5.835095]       IRQ:    Masked
-[    5.838308]       FIQ:    Masked
-[    5.841520] Architectural timer resolution: 52 ns
-[    5.846209] Drivers loaded:
-[    5.848987]       1. GPIO
-[    5.851592]       2. PL011Uart
-[    5.854630] Timer test, spinning for 1 second
+[    5.793345] Booting on: Raspberry Pi 3
+[    5.795510] MMU online. Special regions:
+[    5.799330]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
+[    5.807491]       0x1fff0000 - 0x1fffffff |  64 KiB | Dev RW PXN | Remapped Device MMIO
+[    5.815392]       0x3f000000 - 0x3fffffff |  16 MiB | Dev RW PXN | Device MMIO
+[    5.822512] Current privilege level: EL1
+[    5.826332] Exception handling state:
+[    5.829892]       Debug:  Masked
+[    5.833018]       SError: Masked
+[    5.836143]       IRQ:    Masked
+[    5.839269]       FIQ:    Masked
+[    5.842395] Architectural timer resolution: 52 ns
+[    5.846996] Drivers loaded:
+[    5.849688]       1. GPIO
+[    5.852206]       2. PL011Uart
+[    5.855158] Timer test, spinning for 1 second
 [     !!!    ] Writing through the remapped UART at 0x1FFF_1000
-[    6.863133] Echoing input now
+[    6.863485] Echoing input now
 ```
 
 ## Diff to previous

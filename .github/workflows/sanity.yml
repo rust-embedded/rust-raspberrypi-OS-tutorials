@@ -28,7 +28,7 @@ jobs:
     - name: Set up Ruby
       run: |
         gem install bundler
-        bundle install --retry 3 --with development
+        bundle install --retry 3 --without uart
     - name: Setup misspell
       run: |
         curl -L -o ./install-misspell.sh https://git.io/misspell

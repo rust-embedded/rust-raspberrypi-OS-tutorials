@@ -9,45 +9,44 @@ endif
 
 # BSP-specific arguments
 ifeq ($(BSP),rpi3)
-	TARGET = aarch64-unknown-none-softfloat
-	OUTPUT = kernel8.img
-	QEMU_BINARY = qemu-system-aarch64
+	TARGET            = aarch64-unknown-none-softfloat
+	OUTPUT            = kernel8.img
+	QEMU_BINARY       = qemu-system-aarch64
 	QEMU_MACHINE_TYPE = raspi3
-	QEMU_MISC_ARGS = -d in_asm
-	LINKER_FILE = src/bsp/rpi/link.ld
-	RUSTC_MISC_ARGS = -C target-cpu=cortex-a53
+	QEMU_RELEASE_ARGS = -serial stdio -display none
+	LINKER_FILE       = src/bsp/rpi/link.ld
+	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
 else ifeq ($(BSP),rpi4)
-	TARGET = aarch64-unknown-none-softfloat
-	OUTPUT = kernel8.img
-#	QEMU_BINARY = qemu-system-aarch64
-#	QEMU_MACHINE_TYPE =
-#	QEMU_MISC_ARGS = -d in_asm
-	LINKER_FILE = src/bsp/rpi/link.ld
-	RUSTC_MISC_ARGS = -C target-cpu=cortex-a72
+	TARGET            = aarch64-unknown-none-softfloat
+	OUTPUT            = kernel8.img
+	# QEMU_BINARY       = qemu-system-aarch64
+	# QEMU_MACHINE_TYPE =
+	# QEMU_RELEASE_ARGS = -serial stdio -display none
+	LINKER_FILE       = src/bsp/rpi/link.ld
+	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
 endif
 
-RUSTFLAGS = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
+RUSTFLAGS          = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
 RUSTFLAGS_PEDANTIC = $(RUSTFLAGS) -D warnings -D missing_docs
 
 SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) $(wildcard **/*.ld)
 
-XRUSTC_CMD = cargo xrustc \
-		--target=$(TARGET) \
-		--features bsp_$(BSP) \
-		--release
+XRUSTC_CMD = cargo xrustc     \
+	--target=$(TARGET)    \
+	--features bsp_$(BSP) \
+	--release
 
 CARGO_OUTPUT = target/$(TARGET)/release/kernel
 
 OBJCOPY_CMD = cargo objcopy \
-		-- \
-		--strip-all \
-		-O binary
+	--                  \
+	--strip-all         \
+	-O binary
 
-CONTAINER_UTILS   = rustembedded/osdev-utils
-
-DOCKER_CMD        = docker run -it --rm
-DOCKER_ARG_CURDIR = -v $(shell pwd):/work -w /work
-DOCKER_EXEC_QEMU  = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE) $(QEMU_MISC_ARGS) -kernel
+DOCKER_IMAGE         = rustembedded/osdev-utils
+DOCKER_CMD           = docker run -it --rm
+DOCKER_ARG_DIR_TUT   = -v $(shell pwd):/work -w /work
+DOCKER_EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
 
 .PHONY: all doc qemu clippy clean readelf objdump nm
 
@@ -69,8 +68,9 @@ qemu:
 	@echo "This board is not yet supported for QEMU."
 else
 qemu: all
-	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(CONTAINER_UTILS) \
-	$(DOCKER_EXEC_QEMU) $(OUTPUT)
+	@$(DOCKER_CMD) $(DOCKER_ARG_DIR_TUT) $(DOCKER_IMAGE) \
+		$(DOCKER_EXEC_QEMU) $(QEMU_RELEASE_ARGS)     \
+		-kernel $(OUTPUT)
 endif
 
 clippy:

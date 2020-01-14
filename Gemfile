@@ -2,7 +2,13 @@
 
 source 'https://rubygems.org'
 
+gem 'colorize'
+
+group :uart do
+    gem 'ruby-progressbar'
+    gem 'serialport'
+end
+
 group :development do
-    gem 'colorize'
     gem 'rubocop', require: false
 end

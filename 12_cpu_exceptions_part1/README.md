@@ -391,9 +391,12 @@ catch, eventually triggering the `panic!` call from the default handler.
 Emphasis on the events at timestamps > `6.xxxxxx`.
 
 ```console
-make chainboot
+» make chainboot
 [...]
-### Listening on /dev/ttyUSB0
+Minipush 1.0
+
+[MP] ⏳ Waiting for /dev/ttyUSB0
+[MP] ✅ Connected
  __  __ _      _ _                 _
 |  \/  (_)_ _ (_) |   ___  __ _ __| |
 | |\/| | | ' \| | |__/ _ \/ _` / _` |
@@ -402,33 +405,33 @@ make chainboot
            Raspberry Pi 3
 
 [ML] Requesting binary
-### sending kernel kernel8.img [65560 byte]
-### finished sending
+[MP] ⏩ Pushing 65568 KiB =====================================🦀 100% 12 KiB/s Time: 00:00:05
 [ML] Loaded! Executing the payload now
 
-[    5.780890] Booting on: Raspberry Pi 3
-[    5.783142] MMU online. Special regions:
-[    5.787050]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
-[    5.803285]       0x3f000000 - 0x3fffffff |  16 MiB | Dev RW PXN | Device MMIO
-[    5.810492] Current privilege level: EL1
-[    5.814399] Exception handling state:
-[    5.818045]       Debug:  Masked
-[    5.821258]       SError: Masked
-[    5.824470]       IRQ:    Masked
-[    5.827683]       FIQ:    Masked
-[    5.830895] Architectural timer resolution: 52 ns
-[    5.835584] Drivers loaded:
-[    5.838362]       1. GPIO
-[    5.840967]       2. PL011Uart
-[    5.844006] Timer test, spinning for 1 second
-[    6.848348]
-[    6.848352] Trying to write to address 8 GiB...
-[    6.852856] ************************************************
-[    6.858499] Whoa! We recovered from a synchronous exception!
-[    6.864142] ************************************************
-[    6.869786]
-[    6.871262] Let's try again
-[    6.874040] Trying to write to address 9 GiB...
+[    5.779137] Booting on: Raspberry Pi 3
+[    5.781302] MMU online. Special regions:
+[    5.785123]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
+[    5.793284]       0x3f000000 - 0x3fffffff |  16 MiB | Dev RW PXN | Device MMIO
+[    5.800404] Current privilege level: EL1
+[    5.804224] Exception handling state:
+[    5.807783]       Debug:  Masked
+[    5.810909]       SError: Masked
+[    5.814035]       IRQ:    Masked
+[    5.817160]       FIQ:    Masked
+[    5.820286] Architectural timer resolution: 52 ns
+[    5.824888] Drivers loaded:
+[    5.827579]       1. GPIO
+[    5.830097]       2. PL011Uart
+[    5.833049] Timer test, spinning for 1 second
+[    6.837304]
+[    6.837308] Trying to write to address 8 GiB...
+[    6.841638] ************************************************
+[    6.847194] Whoa! We recovered from a synchronous exception!
+[    6.852751] ************************************************
+[    6.858308]
+[    6.859697] Let's try again
+[    6.862388] Trying to write to address 9 GiB...
+
 Kernel panic:
 
 CPU Exception!
@@ -436,7 +439,7 @@ FAR_EL1: 0x0000000240000000
 ESR_EL1: 0x96000004
       Exception Class         (EC) : 0x25 - Data Abort, current EL
       Instr Specific Syndrome (ISS): 0x4
-ELR_EL1: 0x0000000000080e0c
+ELR_EL1: 0x0000000000080e50
 SPSR_EL1: 0x600003c5
       Flags:
             Negative (N): Not set
@@ -452,21 +455,21 @@ SPSR_EL1: 0x600003c5
 
 General purpose register:
       x0 : 0x0000000000000000         x1 : 0x000000000008594e
-      x2 : 0x0000000000000026         x3 : 0x0000000000000000
-      x4 : 0x000000000007fc6d         x5 : 0x0000000000000002
-      x6 : 0x0000000000000000         x7 : 0x679198042b2b0209
-      x8 : 0x0000000240000000         x9 : 0x000000000000000d
-      x10: 0x000000000000000a         x11: 0x000000003f201000
-      x12: 0x0000000000000019         x13: 0x000000000000000a
+      x2 : 0x0000000000000026         x3 : 0x0000000000082b3c
+      x4 : 0x000000000007fc5c         x5 : 0x0000000000000003
+      x6 : 0x0000000000000000         x7 : 0x3f91980500000000
+      x8 : 0x0000000240000000         x9 : 0x000000000008594e
+      x10: 0x0000000000000414         x11: 0x000000003f201000
+      x12: 0x0000000000000019         x13: 0x000000000007fc5d
       x14: 0x000000000007fda8         x15: 0x0000000000000040
       x16: 0x0000000000000000         x17: 0x0000000000000040
-      x18: 0x9a07782900000008         x19: 0x0000000000090008
+      x18: 0x9e077028302d0802         x19: 0x0000000000090008
       x20: 0x000000003b9aca00         x21: 0x00000000000003e8
-      x22: 0x0000000000083064         x23: 0x00000000000831d8
+      x22: 0x0000000000083074         x23: 0x00000000000831e8
       x24: 0x00000000000f4240         x25: 0x00000000000852a8
       x26: 0x0000000000085738         x27: 0x0000000000085818
-      x28: 0x00000000000831d8         x29: 0x0000000000085588
-      lr : 0x0000000000080e00
+      x28: 0x00000000000831e8         x29: 0x0000000000085588
+      lr : 0x0000000000080e44
 ```
 
 ## Diff to previous

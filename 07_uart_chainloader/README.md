@@ -22,9 +22,12 @@ You can try it with this tutorial already:
 5. Observe the loader fetching a kernel over `UART`:
 
 ```console
-make chainboot
+» make chainboot
 [...]
-### Listening on /dev/ttyUSB0
+Minipush 1.0
+
+[MP] ⏳ Waiting for /dev/ttyUSB0
+[MP] ✅ Connected
  __  __ _      _ _                 _
 |  \/  (_)_ _ (_) |   ___  __ _ __| |
 | |\/| | | ' \| | |__/ _ \/ _` / _` |
@@ -32,9 +35,8 @@ make chainboot
 
            Raspberry Pi 3
 
-[ML] Requestibinary
-### sending kernel demo_payload_rpi3.img [7840 byte]
-### finished sending
+[ML] Requesting binary
+[MP] ⏩ Pushing 7856 KiB =======================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
 [0] Booting on: Raspberry Pi 3
@@ -83,44 +85,53 @@ Binary files 06_drivers_gpio_uart/demo_payload_rpi4.img and 07_uart_chainloader/
 diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
 --- 06_drivers_gpio_uart/Makefile
 +++ 07_uart_chainloader/Makefile
-@@ -15,7 +15,8 @@
+@@ -7,6 +7,11 @@
+ 	BSP = rpi3
+ endif
+
++# Default to /dev/ttyUSB0
++ifndef DEV_SERIAL
++	DEV_SERIAL = /dev/ttyUSB0
++endif
++
+ # BSP-specific arguments
+ ifeq ($(BSP),rpi3)
+ 	TARGET            = aarch64-unknown-none-softfloat
+@@ -15,7 +20,8 @@
  	QEMU_MACHINE_TYPE = raspi3
- 	QEMU_MISC_ARGS = -serial stdio -display none
- 	LINKER_FILE = src/bsp/rpi/link.ld
--	RUSTC_MISC_ARGS = -C target-cpu=cortex-a53
-+	RUSTC_MISC_ARGS = -C target-cpu=cortex-a53 -C relocation-model=pic
+ 	QEMU_RELEASE_ARGS = -serial stdio -display none
+ 	LINKER_FILE       = src/bsp/rpi/link.ld
+-	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
++	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53 -C relocation-model=pic
 +	CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi3.img
  else ifeq ($(BSP),rpi4)
- 	TARGET = aarch64-unknown-none-softfloat
- 	OUTPUT = kernel8.img
-@@ -23,7 +24,8 @@
- #	QEMU_MACHINE_TYPE =
- #	QEMU_MISC_ARGS = -serial stdio -display none
- 	LINKER_FILE = src/bsp/rpi/link.ld
--	RUSTC_MISC_ARGS = -C target-cpu=cortex-a72
-+	RUSTC_MISC_ARGS = -C target-cpu=cortex-a72 -C relocation-model=pic
+ 	TARGET            = aarch64-unknown-none-softfloat
+ 	OUTPUT            = kernel8.img
+@@ -23,7 +29,8 @@
+ 	# QEMU_MACHINE_TYPE =
+ 	# QEMU_RELEASE_ARGS = -serial stdio -display none
+ 	LINKER_FILE       = src/bsp/rpi/link.ld
+-	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
++	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72 -C relocation-model=pic
 +	CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi4.img
  endif
 
- RUSTFLAGS = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
-@@ -47,9 +49,14 @@
-
- DOCKER_CMD        = docker run -it --rm
- DOCKER_ARG_CURDIR = -v $(shell pwd):/work -w /work
--DOCKER_EXEC_QEMU  = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE) $(QEMU_MISC_ARGS) -kernel
-+DOCKER_ARG_TTY    = --privileged -v /dev:/dev
+ RUSTFLAGS          = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
+@@ -46,9 +53,12 @@
+ DOCKER_IMAGE         = rustembedded/osdev-utils
+ DOCKER_CMD           = docker run -it --rm
+ DOCKER_ARG_DIR_TUT   = -v $(shell pwd):/work -w /work
++DOCKER_ARG_DIR_UTILS = -v $(shell pwd)/../utils:/utils
++DOCKER_ARG_TTY       = --privileged -v /dev:/dev
+ DOCKER_EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
++DOCKER_EXEC_MINIPUSH = ruby /utils/minipush.rb
 
 -.PHONY: all doc qemu clippy clean readelf objdump nm
-+DOCKER_EXEC_QEMU         = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE) $(QEMU_MISC_ARGS) -kernel
-+DOCKER_EXEC_RASPBOOT     = raspbootcom
-+DOCKER_EXEC_RASPBOOT_DEV = /dev/ttyUSB0
-+# DOCKER_EXEC_RASPBOOT_DEV = /dev/ttyACM0
-+
 +.PHONY: all doc qemu qemuasm chainboot clippy clean readelf objdump nm
 
  all: clean $(OUTPUT)
 
-@@ -67,12 +74,24 @@
+@@ -66,13 +76,26 @@
  ifeq ($(QEMU_MACHINE_TYPE),)
  qemu:
  	@echo "This board is not yet supported for QEMU."
@@ -129,18 +140,20 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
 +	@echo "This board is not yet supported for QEMU."
  else
  qemu: all
- 	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(CONTAINER_UTILS) \
- 	$(DOCKER_EXEC_QEMU) $(OUTPUT)
+ 	@$(DOCKER_CMD) $(DOCKER_ARG_DIR_TUT) $(DOCKER_IMAGE) \
+ 		$(DOCKER_EXEC_QEMU) $(QEMU_RELEASE_ARGS)     \
+ 		-kernel $(OUTPUT)
 +
 +qemuasm: all
-+	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(CONTAINER_UTILS) \
-+	$(DOCKER_EXEC_QEMU) $(OUTPUT) -d in_asm
++	@$(DOCKER_CMD) $(DOCKER_ARG_DIR_TUT) $(DOCKER_IMAGE) \
++		$(DOCKER_EXEC_QEMU) $(QEMU_RELEASE_ARGS)     \
++		-kernel $(OUTPUT) -d in_asm
  endif
 
 +chainboot:
-+	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(DOCKER_ARG_TTY) \
-+	$(CONTAINER_UTILS) $(DOCKER_EXEC_RASPBOOT) $(DOCKER_EXEC_RASPBOOT_DEV) \
-+	$(CHAINBOOT_DEMO_PAYLOAD)
++	@$(DOCKER_CMD) $(DOCKER_ARG_DIR_TUT) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_ARG_TTY) \
++		$(DOCKER_IMAGE) $(DOCKER_EXEC_MINIPUSH) $(DEV_SERIAL)                  \
++		$(CHAINBOOT_DEMO_PAYLOAD)
 +
  clippy:
  	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" cargo xclippy --target=$(TARGET) --features bsp_$(BSP)
@@ -321,7 +334,7 @@ diff -uNr 06_drivers_gpio_uart/src/main.rs 07_uart_chainloader/src/main.rs
 +    // protocol.
 +    bsp::console().clear();
 +
-+    // Notify raspbootcom to send the binary.
++    // Notify `Minipush` to send the binary.
 +    for _ in 0..3 {
 +        bsp::console().write_char(3 as char);
      }

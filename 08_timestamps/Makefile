@@ -7,52 +7,54 @@ ifndef BSP
 	BSP = rpi3
 endif
 
-# BSP-specific arguments
-ifeq ($(BSP),rpi3)
-	TARGET = aarch64-unknown-none-softfloat
-	OUTPUT = kernel8.img
-	QEMU_BINARY = qemu-system-aarch64
-	QEMU_MACHINE_TYPE = raspi3
-	QEMU_MISC_ARGS = -serial stdio -display none
-	LINKER_FILE = src/bsp/rpi/link.ld
-	RUSTC_MISC_ARGS = -C target-cpu=cortex-a53
-else ifeq ($(BSP),rpi4)
-	TARGET = aarch64-unknown-none-softfloat
-	OUTPUT = kernel8.img
-#	QEMU_BINARY = qemu-system-aarch64
-#	QEMU_MACHINE_TYPE =
-#	QEMU_MISC_ARGS = -serial stdio -display none
-	LINKER_FILE = src/bsp/rpi/link.ld
-	RUSTC_MISC_ARGS = -C target-cpu=cortex-a72
+# Default to /dev/ttyUSB0
+ifndef DEV_SERIAL
+	DEV_SERIAL = /dev/ttyUSB0
 endif
 
-RUSTFLAGS = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
+# BSP-specific arguments
+ifeq ($(BSP),rpi3)
+	TARGET            = aarch64-unknown-none-softfloat
+	OUTPUT            = kernel8.img
+	QEMU_BINARY       = qemu-system-aarch64
+	QEMU_MACHINE_TYPE = raspi3
+	QEMU_RELEASE_ARGS = -serial stdio -display none
+	LINKER_FILE       = src/bsp/rpi/link.ld
+	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
+else ifeq ($(BSP),rpi4)
+	TARGET            = aarch64-unknown-none-softfloat
+	OUTPUT            = kernel8.img
+	# QEMU_BINARY       = qemu-system-aarch64
+	# QEMU_MACHINE_TYPE =
+	# QEMU_RELEASE_ARGS = -serial stdio -display none
+	LINKER_FILE       = src/bsp/rpi/link.ld
+	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
+endif
+
+RUSTFLAGS          = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
 RUSTFLAGS_PEDANTIC = $(RUSTFLAGS) -D warnings -D missing_docs
 
 SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) $(wildcard **/*.ld)
 
-XRUSTC_CMD = cargo xrustc \
-		--target=$(TARGET) \
-		--features bsp_$(BSP) \
-		--release
+XRUSTC_CMD = cargo xrustc     \
+	--target=$(TARGET)    \
+	--features bsp_$(BSP) \
+	--release
 
 CARGO_OUTPUT = target/$(TARGET)/release/kernel
 
 OBJCOPY_CMD = cargo objcopy \
-		-- \
-		--strip-all \
-		-O binary
+	--                  \
+	--strip-all         \
+	-O binary
 
-CONTAINER_UTILS   = rustembedded/osdev-utils
-
-DOCKER_CMD        = docker run -it --rm
-DOCKER_ARG_CURDIR = -v $(shell pwd):/work -w /work
-DOCKER_ARG_TTY    = --privileged -v /dev:/dev
-
-DOCKER_EXEC_QEMU         = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE) $(QEMU_MISC_ARGS) -kernel
-DOCKER_EXEC_RASPBOOT     = raspbootcom
-DOCKER_EXEC_RASPBOOT_DEV = /dev/ttyUSB0
-# DOCKER_EXEC_RASPBOOT_DEV = /dev/ttyACM0
+DOCKER_IMAGE         = rustembedded/osdev-utils
+DOCKER_CMD           = docker run -it --rm
+DOCKER_ARG_DIR_TUT   = -v $(shell pwd):/work -w /work
+DOCKER_ARG_DIR_UTILS = -v $(shell pwd)/../utils:/utils
+DOCKER_ARG_TTY       = --privileged -v /dev:/dev
+DOCKER_EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
+DOCKER_EXEC_MINIPUSH = ruby /utils/minipush.rb
 
 .PHONY: all doc qemu chainboot clippy clean readelf objdump nm
 
@@ -74,14 +76,15 @@ qemu:
 	@echo "This board is not yet supported for QEMU."
 else
 qemu: all
-	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(CONTAINER_UTILS) \
-	$(DOCKER_EXEC_QEMU) $(OUTPUT)
+	@$(DOCKER_CMD) $(DOCKER_ARG_DIR_TUT) $(DOCKER_IMAGE) \
+		$(DOCKER_EXEC_QEMU) $(QEMU_RELEASE_ARGS)     \
+		-kernel $(OUTPUT)
 endif
 
 chainboot: all
-	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(DOCKER_ARG_TTY) \
-	$(CONTAINER_UTILS) $(DOCKER_EXEC_RASPBOOT) $(DOCKER_EXEC_RASPBOOT_DEV) \
-	$(OUTPUT)
+	@$(DOCKER_CMD) $(DOCKER_ARG_DIR_TUT) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_ARG_TTY) \
+		$(DOCKER_IMAGE) $(DOCKER_EXEC_MINIPUSH) $(DEV_SERIAL)                  \
+		$(OUTPUT)
 
 clippy:
 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" cargo xclippy --target=$(TARGET) --features bsp_$(BSP)

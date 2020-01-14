@@ -15,5 +15,8 @@ Layout/IndentationWidth:
 Layout/LineLength:
   Max: 100
 
+Metrics/ClassLength:
+  Enabled: false
+
 Metrics/MethodLength:
   Max: 20

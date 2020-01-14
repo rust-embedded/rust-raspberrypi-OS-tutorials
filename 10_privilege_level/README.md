@@ -188,9 +188,12 @@ Looks good! Thanks zero-overhead abstractions in the
 In `main.rs`, we additionally inspect if the mask bits in `SPSR_EL2` made it to `EL1` as well:
 
 ```console
-make chainbot
+» make chainboot
 [...]
-### Listening on /dev/ttyUSB0
+Minipush 1.0
+
+[MP] ⏳ Waiting for /dev/ttyUSB0
+[MP] ✅ Connected
  __  __ _      _ _                 _
 |  \/  (_)_ _ (_) |   ___  __ _ __| |
 | |\/| | | ' \| | |__/ _ \/ _` / _` |
@@ -199,23 +202,22 @@ make chainbot
            Raspberry Pi 3
 
 [ML] Requesting binary
-### sending kernel kernel8.img [16480 byte]
-### finished sending
+[MP] ⏩ Pushing 15840 KiB ======================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
-[    1.459973] Booting on: Raspberry Pi 3
-[    1.462256] Current privilege level: EL1
-[    1.466163] Exception handling state:
-[    1.469810]       Debug:  Masked
-[    1.473023]       SError: Masked
-[    1.476235]       IRQ:    Masked
-[    1.479447]       FIQ:    Masked
-[    1.482661] Architectural timer resolution: 52 ns
-[    1.487349] Drivers loaded:
-[    1.490127]       1. GPIO
-[    1.492731]       2. PL011Uart
-[    1.495770] Timer test, spinning for 1 second
-[    2.500114] Echoing input now
+[    1.402763] Booting on: Raspberry Pi 3
+[    1.404961] Current privilege level: EL1
+[    1.408781] Exception handling state:
+[    1.412341]       Debug:  Masked
+[    1.415466]       SError: Masked
+[    1.418592]       IRQ:    Masked
+[    1.421717]       FIQ:    Masked
+[    1.424844] Architectural timer resolution: 52 ns
+[    1.429445] Drivers loaded:
+[    1.432136]       1. GPIO
+[    1.434654]       2. PL011Uart
+[    1.437606] Timer test, spinning for 1 second
+[    2.441862] Echoing input now
 ```
 
 ## Diff to previous

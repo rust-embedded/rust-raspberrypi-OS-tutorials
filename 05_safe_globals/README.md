@@ -42,7 +42,7 @@ you can check out implemntations in the [spin crate] or the [parking lot crate].
 ### Test it
 
 ```console
-make qemu
+» make qemu
 [...]
 [0] Hello from pure Rust!
 [1] Chars written: 26

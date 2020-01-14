@@ -346,8 +346,8 @@ define KERNEL_TEST_RUNNER
 
 	$(OBJCOPY_CMD) $$1 $$1.img
 	TEST_BINARY=$$(echo $$1.img | sed -e 's/.*target/target/g')
-	$(DOCKER_CMD_TEST) $(DOCKER_ARG_CURDIR) $(CONTAINER_UTILS) \
-	ruby tests/runner.rb $(DOCKER_EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
+	$(DOCKER_CMD_TEST) $(DOCKER_ARG_DIR_TUT) $(DOCKER_IMAGE) \
+		ruby tests/runner.rb $(DOCKER_EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
 endef
 
 export KERNEL_TEST_RUNNER
@@ -356,7 +356,6 @@ test: $(SOURCES)
 	@echo "$$KERNEL_TEST_RUNNER" > target/kernel_test_runner.sh
 	@chmod +x target/kernel_test_runner.sh
 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(XTEST_CMD) $(TEST_ARG)
-endif
 ```
 
 It first does the standard `objcopy` step to strip the `ELF` down to a raw binary. Just like in all
@@ -690,28 +689,27 @@ Believe it or not, that is all. There are three ways you can run tests:
       - For example, `TEST=01_interface_sanity_timer make test`
 
 ```console
-make test
-
-RUSTFLAGS="-C link-arg=-Tsrc/bsp/rpi/link.ld -C target-cpu=cortex-a53 -D warnings -D missing_docs"
-           cargo xtest --target=aarch64-unknown-none-softfloat --features bsp_rpi3 --release
-   Compiling kernel v0.1.0 (/opt/rust-raspi3-OS-tutorials/13_integrated_testing)
-    Finished release [optimized] target(s) in 0.74s
-     Running target/aarch64-unknown-none-softfloat/release/deps/libkernel-a8441de115ec3a67
+» make test
+[...]
+RUSTFLAGS="-C link-arg=-Tsrc/bsp/rpi/link.ld -C target-cpu=cortex-a53 -D warnings -D missing_docs" cargo xtest --target=aarch64-unknown-none-softfloat --features bsp_rpi3 --release
+    Finished release [optimized] target(s) in 0.01s
+     Running target/aarch64-unknown-none-softfloat/release/deps/libkernel-e34f3f4734d1b219
          -------------------------------------------------------------------
-         🦀 Running 4 tests
+         🦀 Running 5 tests
          -------------------------------------------------------------------
 
            1. test_runner_executes_in_kernel_mode.......................[ok]
            2. bss_section_is_sane.......................................[ok]
-           3. virt_mem_layout_has_no_overlaps...........................[ok]
-           4. zero_volatile_works.......................................[ok]
+           3. virt_mem_layout_sections_are_64KiB_aligned................[ok]
+           4. virt_mem_layout_has_no_overlaps...........................[ok]
+           5. zero_volatile_works.......................................[ok]
 
          -------------------------------------------------------------------
          ✅ Success: libkernel
          -------------------------------------------------------------------
 
 
-     Running target/aarch64-unknown-none-softfloat/release/deps/00_interface_sanity_console-e0e4e8cc44addccc
+     Running target/aarch64-unknown-none-softfloat/release/deps/00_interface_sanity_console-fd36bc6543537769
          -------------------------------------------------------------------
          🦀 Running 3 console-based tests
          -------------------------------------------------------------------
@@ -725,7 +723,7 @@ RUSTFLAGS="-C link-arg=-Tsrc/bsp/rpi/link.ld -C target-cpu=cortex-a53 -D warning
          -------------------------------------------------------------------
 
 
-     Running target/aarch64-unknown-none-softfloat/release/deps/01_interface_sanity_timer-a8599d689482115e
+     Running target/aarch64-unknown-none-softfloat/release/deps/01_interface_sanity_timer-9ddd4857e51af91d
          -------------------------------------------------------------------
          🦀 Running 3 tests
          -------------------------------------------------------------------
@@ -739,12 +737,13 @@ RUSTFLAGS="-C link-arg=-Tsrc/bsp/rpi/link.ld -C target-cpu=cortex-a53 -D warning
          -------------------------------------------------------------------
 
 
-     Running target/aarch64-unknown-none-softfloat/release/deps/02_arch_exception_handling-f2ad3f66018143ba
+     Running target/aarch64-unknown-none-softfloat/release/deps/02_arch_exception_handling-8e8e460dd9041f11
          -------------------------------------------------------------------
          🦀 Testing synchronous exception handling by causing a page fault
          -------------------------------------------------------------------
 
          Writing beyond mapped area to address 9 GiB...
+
          Kernel panic:
 
          CPU Exception!
@@ -813,27 +812,23 @@ diff -uNr 12_cpu_exceptions_part1/Cargo.toml 13_integrated_testing/Cargo.toml
 diff -uNr 12_cpu_exceptions_part1/Makefile 13_integrated_testing/Makefile
 --- 12_cpu_exceptions_part1/Makefile
 +++ 13_integrated_testing/Makefile
-@@ -13,7 +13,8 @@
- 	OUTPUT = kernel8.img
- 	QEMU_BINARY = qemu-system-aarch64
+@@ -19,6 +19,7 @@
+ 	QEMU_BINARY       = qemu-system-aarch64
  	QEMU_MACHINE_TYPE = raspi3
--	QEMU_MISC_ARGS = -serial stdio -display none
-+	QEMU_RELEASE_ARGS = -serial stdio -display none
-+	QEMU_TEST_ARGS = $(QEMU_RELEASE_ARGS) -semihosting
- 	OPENOCD_ARG = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi3.cfg
- 	JTAG_BOOT_IMAGE = jtag_boot_rpi3.img
- 	LINKER_FILE = src/bsp/rpi/link.ld
-@@ -23,23 +24,37 @@
- 	OUTPUT = kernel8.img
- #	QEMU_BINARY = qemu-system-aarch64
- #	QEMU_MACHINE_TYPE =
--#	QEMU_MISC_ARGS = -serial stdio -display none
-+#	QEMU_RELEASE_ARGS = -serial stdio -display none
-+#	QEMU_TEST_ARGS = $(QEMU_RELEASE_ARGS) -semihosting
- 	OPENOCD_ARG = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi4.cfg
- 	JTAG_BOOT_IMAGE = jtag_boot_rpi4.img
- 	LINKER_FILE = src/bsp/rpi/link.ld
- 	RUSTC_MISC_ARGS = -C target-cpu=cortex-a72
+ 	QEMU_RELEASE_ARGS = -serial stdio -display none
++	QEMU_TEST_ARGS    = $(QEMU_RELEASE_ARGS) -semihosting
+ 	OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi3.cfg
+ 	JTAG_BOOT_IMAGE   = jtag_boot_rpi3.img
+ 	LINKER_FILE       = src/bsp/rpi/link.ld
+@@ -29,21 +30,34 @@
+ 	# QEMU_BINARY       = qemu-system-aarch64
+ 	# QEMU_MACHINE_TYPE =
+ 	# QEMU_RELEASE_ARGS = -serial stdio -display none
++	# QEMU_TEST_ARGS    = $(QEMU_RELEASE_ARGS) -semihosting
+ 	OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi4.cfg
+ 	JTAG_BOOT_IMAGE   = jtag_boot_rpi4.img
+ 	LINKER_FILE       = src/bsp/rpi/link.ld
+ 	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
  endif
 
 +# Testing-specific arguments
@@ -847,47 +842,42 @@ diff -uNr 12_cpu_exceptions_part1/Makefile 13_integrated_testing/Makefile
 +
 +QEMU_MISSING_STRING = "This board is not yet supported for QEMU."
 +
- RUSTFLAGS = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
+ RUSTFLAGS          = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
  RUSTFLAGS_PEDANTIC = $(RUSTFLAGS) -D warnings -D missing_docs
 
  SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) $(wildcard **/*.ld)
 
--XRUSTC_CMD = cargo xrustc \
--		--target=$(TARGET) \
+-XRUSTC_CMD = cargo xrustc     \
+-	--target=$(TARGET)    \
+-	--features bsp_$(BSP) \
 +X_CMD_ARGS = --target=$(TARGET) \
- 		--features bsp_$(BSP) \
- 		--release
-
++	--features bsp_$(BSP)   \
+ 	--release
 +XRUSTC_CMD = cargo xrustc $(X_CMD_ARGS)
-+XTEST_CMD = cargo xtest $(X_CMD_ARGS)
-+
++XTEST_CMD  = cargo xtest $(X_CMD_ARGS)
+
  CARGO_OUTPUT = target/$(TARGET)/release/kernel
 
- OBJCOPY_CMD = cargo objcopy \
-@@ -49,18 +64,19 @@
+@@ -53,7 +67,8 @@
+ 	-O binary
 
- CONTAINER_UTILS   = rustembedded/osdev-utils
-
--DOCKER_CMD        = docker run -it --rm
-+DOCKER_CMD_TEST   = docker run -i --rm
-+DOCKER_CMD_USER   = $(DOCKER_CMD_TEST) -t
- DOCKER_ARG_CURDIR = -v $(shell pwd):/work -w /work
- DOCKER_ARG_TTY    = --privileged -v /dev:/dev
- DOCKER_ARG_JTAG   = -v $(shell pwd)/../X1_JTAG_boot:/jtag
- DOCKER_ARG_NET    = --network host
-
--DOCKER_EXEC_QEMU         = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE) $(QEMU_MISC_ARGS) -kernel
-+DOCKER_EXEC_QEMU         = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
- DOCKER_EXEC_RASPBOOT     = raspbootcom
- DOCKER_EXEC_RASPBOOT_DEV = /dev/ttyUSB0
- # DOCKER_EXEC_RASPBOOT_DEV = /dev/ttyACM0
+ DOCKER_IMAGE         = rustembedded/osdev-utils
+-DOCKER_CMD           = docker run -it --rm
++DOCKER_CMD_TEST      = docker run -i --rm
++DOCKER_CMD_USER      = $(DOCKER_CMD_TEST) -t
+ DOCKER_ARG_DIR_TUT   = -v $(shell pwd):/work -w /work
+ DOCKER_ARG_DIR_UTILS = -v $(shell pwd)/../utils:/utils
+ DOCKER_ARG_DIR_JTAG  = -v $(shell pwd)/../X1_JTAG_boot:/jtag
+@@ -62,7 +77,7 @@
+ DOCKER_EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
+ DOCKER_EXEC_MINIPUSH = ruby /utils/minipush.rb
 
 -.PHONY: all doc qemu chainboot jtagboot openocd gdb gdb-opt0 clippy clean readelf objdump nm
 +.PHONY: all doc qemu chainboot jtagboot openocd gdb gdb-opt0 clippy clean readelf objdump nm test
 
  all: clean $(OUTPUT)
 
-@@ -73,35 +89,55 @@
+@@ -75,36 +90,55 @@
 
  doc:
  	cargo xdoc --target=$(TARGET) --features bsp_$(BSP) --document-private-items
@@ -903,19 +893,19 @@ diff -uNr 12_cpu_exceptions_part1/Makefile 13_integrated_testing/Makefile
 +	@echo $(QEMU_MISSING_STRING)
  else
  qemu: all
--	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(CONTAINER_UTILS) \
--	$(DOCKER_EXEC_QEMU) $(OUTPUT)
-+	$(DOCKER_CMD_USER) $(DOCKER_ARG_CURDIR) $(CONTAINER_UTILS) \
-+	$(DOCKER_EXEC_QEMU) $(QEMU_RELEASE_ARGS) \
-+	-kernel $(OUTPUT)
+-	@$(DOCKER_CMD) $(DOCKER_ARG_DIR_TUT) $(DOCKER_IMAGE) \
+-		$(DOCKER_EXEC_QEMU) $(QEMU_RELEASE_ARGS)     \
++	@$(DOCKER_CMD_USER) $(DOCKER_ARG_DIR_TUT) $(DOCKER_IMAGE) \
++		$(DOCKER_EXEC_QEMU) $(QEMU_RELEASE_ARGS)          \
+ 		-kernel $(OUTPUT)
 +
 +define KERNEL_TEST_RUNNER
 +	#!/usr/bin/env bash
 +
 +	$(OBJCOPY_CMD) $$1 $$1.img
 +	TEST_BINARY=$$(echo $$1.img | sed -e 's/.*target/target/g')
-+	$(DOCKER_CMD_TEST) $(DOCKER_ARG_CURDIR) $(CONTAINER_UTILS) \
-+	ruby tests/runner.rb $(DOCKER_EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
++	$(DOCKER_CMD_TEST) $(DOCKER_ARG_DIR_TUT) $(DOCKER_IMAGE) \
++		ruby tests/runner.rb $(DOCKER_EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
 +endef
 +
 +export KERNEL_TEST_RUNNER
@@ -927,28 +917,30 @@ diff -uNr 12_cpu_exceptions_part1/Makefile 13_integrated_testing/Makefile
  endif
 
  chainboot: all
--	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(DOCKER_ARG_TTY) \
-+	$(DOCKER_CMD_USER) $(DOCKER_ARG_CURDIR) $(DOCKER_ARG_TTY) \
- 	$(CONTAINER_UTILS) $(DOCKER_EXEC_RASPBOOT) $(DOCKER_EXEC_RASPBOOT_DEV) \
- 	$(OUTPUT)
+-	@$(DOCKER_CMD) $(DOCKER_ARG_DIR_TUT) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_ARG_TTY) \
+-		$(DOCKER_IMAGE) $(DOCKER_EXEC_MINIPUSH) $(DEV_SERIAL)                  \
++	@$(DOCKER_CMD_USER) $(DOCKER_ARG_DIR_TUT) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_ARG_TTY) \
++		$(DOCKER_IMAGE) $(DOCKER_EXEC_MINIPUSH) $(DEV_SERIAL)                       \
+ 		$(OUTPUT)
 
  jtagboot:
--	$(DOCKER_CMD) $(DOCKER_ARG_TTY) $(DOCKER_ARG_JTAG) $(CONTAINER_UTILS) \
-+	$(DOCKER_CMD_USER) $(DOCKER_ARG_TTY) $(DOCKER_ARG_JTAG) $(CONTAINER_UTILS) \
- 	$(DOCKER_EXEC_RASPBOOT) $(DOCKER_EXEC_RASPBOOT_DEV) \
- 	/jtag/$(JTAG_BOOT_IMAGE)
+-	@$(DOCKER_CMD) $(DOCKER_ARG_DIR_JTAG) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_ARG_TTY) \
+-		$(DOCKER_IMAGE) $(DOCKER_EXEC_MINIPUSH) $(DEV_SERIAL)                   \
++	@$(DOCKER_CMD_USER) $(DOCKER_ARG_DIR_JTAG) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_ARG_TTY) \
++		$(DOCKER_IMAGE) $(DOCKER_EXEC_MINIPUSH) $(DEV_SERIAL)                        \
+ 		/jtag/$(JTAG_BOOT_IMAGE)
 
  openocd:
--	$(DOCKER_CMD) $(DOCKER_ARG_TTY) $(DOCKER_ARG_NET) $(CONTAINER_UTILS) \
-+	$(DOCKER_CMD_USER) $(DOCKER_ARG_TTY) $(DOCKER_ARG_NET) $(CONTAINER_UTILS) \
- 	openocd $(OPENOCD_ARG)
+-	@$(DOCKER_CMD) $(DOCKER_ARG_TTY) $(DOCKER_ARG_NET) $(DOCKER_IMAGE) \
++	@$(DOCKER_CMD_USER) $(DOCKER_ARG_TTY) $(DOCKER_ARG_NET) $(DOCKER_IMAGE) \
+ 		openocd $(OPENOCD_ARG)
 
  define gen_gdb
- 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(XRUSTC_CMD) $1
+ 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC) $1"  $(XRUSTC_CMD)
  	cp $(CARGO_OUTPUT) kernel_for_jtag
--	$(DOCKER_CMD) $(DOCKER_ARG_CURDIR) $(DOCKER_ARG_NET) $(CONTAINER_UTILS) \
-+	$(DOCKER_CMD_USER) $(DOCKER_ARG_CURDIR) $(DOCKER_ARG_NET) $(CONTAINER_UTILS) \
- 	gdb-multiarch -q kernel_for_jtag
+-	@$(DOCKER_CMD) $(DOCKER_ARG_DIR_TUT) $(DOCKER_ARG_NET) $(DOCKER_IMAGE) \
++	@$(DOCKER_CMD_USER) $(DOCKER_ARG_DIR_TUT) $(DOCKER_ARG_NET) $(DOCKER_IMAGE) \
+ 		gdb-multiarch -q kernel_for_jtag
  endef
 
 

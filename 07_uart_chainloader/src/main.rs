@@ -83,7 +83,7 @@ fn kernel_main() -> ! {
     // protocol.
     bsp::console().clear();
 
-    // Notify raspbootcom to send the binary.
+    // Notify `Minipush` to send the binary.
     for _ in 0..3 {
         bsp::console().write_char(3 as char);
     }

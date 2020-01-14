@@ -38,7 +38,7 @@ jobs:
     - name: Set up Ruby
       run: |
         gem install bundler
-        bundle install --retry 3 --with development
+        bundle install --retry 3 --without uart
     - name: Make
       run: |
         bundle exec ruby utils/devtool.rb make rpi4
