@@ -162,15 +162,15 @@ impl PL011UartInner {
 
     /// Set up baud rate and characteristics.
     ///
-    /// Results in 8N1 and 115200 baud (if the clk has been previously set to 4 MHz by the
+    /// Results in 8N1 and 230400 baud (if the clk has been previously set to 48 MHz by the
     /// firmware).
     pub fn init(&self) {
         // Turn it off temporarily.
         self.CR.set(0);
 
         self.ICR.write(ICR::ALL::CLEAR);
-        self.IBRD.write(IBRD::IBRD.val(26)); // Results in 115200 baud for UART Clk of 48 MHz.
-        self.FBRD.write(FBRD::FBRD.val(3));
+        self.IBRD.write(IBRD::IBRD.val(13));
+        self.FBRD.write(FBRD::FBRD.val(2));
         self.LCRH
             .write(LCRH::WLEN::EightBit + LCRH::FEN::FifosEnabled); // 8N1 + Fifo on
         self.CR

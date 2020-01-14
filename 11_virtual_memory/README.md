@@ -256,27 +256,28 @@ Minipush 1.0
            Raspberry Pi 3
 
 [ML] Requesting binary
-[MP] ⏩ Pushing 65568 KiB =====================================🦀 100% 12 KiB/s Time: 00:00:05
+[MP] ⏩ Pushing 65568 KiB =====================================🦀 100% 32 KiB/s Time: 00:00:02
 [ML] Loaded! Executing the payload now
 
-[    5.793345] Booting on: Raspberry Pi 3
-[    5.795510] MMU online. Special regions:
-[    5.799330]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
-[    5.807491]       0x1fff0000 - 0x1fffffff |  64 KiB | Dev RW PXN | Remapped Device MMIO
-[    5.815392]       0x3f000000 - 0x3fffffff |  16 MiB | Dev RW PXN | Device MMIO
-[    5.822512] Current privilege level: EL1
-[    5.826332] Exception handling state:
-[    5.829892]       Debug:  Masked
-[    5.833018]       SError: Masked
-[    5.836143]       IRQ:    Masked
-[    5.839269]       FIQ:    Masked
-[    5.842395] Architectural timer resolution: 52 ns
-[    5.846996] Drivers loaded:
-[    5.849688]       1. GPIO
-[    5.852206]       2. PL011Uart
-[    5.855158] Timer test, spinning for 1 second
+[    2.932547] Booting on: Raspberry Pi 3
+[    2.933631] MMU online. Special regions:
+[    2.935543]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
+[    2.939626]       0x1fff0000 - 0x1fffffff |  64 KiB | Dev RW PXN | Remapped Device MMIO
+[    2.943579]       0x3f000000 - 0x3fffffff |  16 MiB | Dev RW PXN | Device MMIO
+[    2.947141] Current privilege level: EL1
+[    2.949052] Exception handling state:
+[    2.950833]       Debug:  Masked
+[    2.952397]       SError: Masked
+[    2.953960]       IRQ:    Masked
+[    2.955524]       FIQ:    Masked
+[    2.957088] Architectural timer resolution: 52 ns
+[    2.959390] Drivers loaded:
+[    2.960737]       1. GPIO
+[    2.961996]       2. PL011Uart
+[    2.963473] Timer test, spinning for 1 second
 [     !!!    ] Writing through the remapped UART at 0x1FFF_1000
-[    6.863485] Echoing input now
+[    3.967641] Echoing input now
+
 ```
 
 ## Diff to previous

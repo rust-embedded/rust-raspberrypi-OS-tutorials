@@ -26,15 +26,15 @@ Minipush 1.0
 [MP] ⏩ Pushing 13152 KiB ======================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
-[    1.169048] Booting on: Raspberry Pi 3
-[    1.171247] Architectural timer resolution: 52 ns
-[    1.175849] Drivers loaded:
-[    1.178540]       1. GPIO
-[    1.181058]       2. PL011Uart
-[W   1.184011] Spin duration smaller than architecturally supported, skipping
-[    1.190783] Spinning for 1 second
-[    2.193996] Spinning for 1 second
-[    3.195732] Spinning for 1 second
+[    0.585762] Booting on: Raspberry Pi 3
+[    0.586849] Architectural timer resolution: 52 ns
+[    0.589152] Drivers loaded:
+[    0.590498]       1. GPIO
+[    0.591758]       2. PL011Uart
+[W   0.593235] Spin duration smaller than architecturally supported, skipping
+[    0.596623] Spinning for 1 second
+[    1.598232] Spinning for 1 second
+[    2.599104] Spinning for 1 second
 ```
 
 ## Diff to previous

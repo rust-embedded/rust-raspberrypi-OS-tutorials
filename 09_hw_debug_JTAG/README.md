@@ -164,10 +164,10 @@ Minipush 1.0
            Raspberry Pi 3
 
 [ML] Requesting binary
-[MP] ⏩ Pushing 8248 KiB =======================================🦀 100% 0 KiB/s Time: 00:00:00
+[MP] ⏩ Pushing 8232 KiB =======================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
-[    0.742123] Parking CPU core. Please connect over JTAG now.
+[    0.372110] Parking CPU core. Please connect over JTAG now.
 ```
 
 It is important to keep the USB serial connected and the terminal with the `jtagboot` open and

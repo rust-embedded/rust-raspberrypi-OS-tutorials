@@ -202,22 +202,23 @@ Minipush 1.0
            Raspberry Pi 3
 
 [ML] Requesting binary
-[MP] ⏩ Pushing 15840 KiB ======================================🦀 100% 0 KiB/s Time: 00:00:00
+[MP] ⏩ Pushing 15824 KiB ======================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
-[    1.402763] Booting on: Raspberry Pi 3
-[    1.404961] Current privilege level: EL1
-[    1.408781] Exception handling state:
-[    1.412341]       Debug:  Masked
-[    1.415466]       SError: Masked
-[    1.418592]       IRQ:    Masked
-[    1.421717]       FIQ:    Masked
-[    1.424844] Architectural timer resolution: 52 ns
-[    1.429445] Drivers loaded:
-[    1.432136]       1. GPIO
-[    1.434654]       2. PL011Uart
-[    1.437606] Timer test, spinning for 1 second
-[    2.441862] Echoing input now
+[    0.702482] Booting on: Raspberry Pi 3
+[    0.703570] Current privilege level: EL1
+[    0.705481] Exception handling state:
+[    0.707262]       Debug:  Masked
+[    0.708826]       SError: Masked
+[    0.710389]       IRQ:    Masked
+[    0.711953]       FIQ:    Masked
+[    0.713518] Architectural timer resolution: 52 ns
+[    0.715819] Drivers loaded:
+[    0.717166]       1. GPIO
+[    0.718425]       2. PL011Uart
+[    0.719902] Timer test, spinning for 1 second
+[    1.722032] Echoing input now
+
 ```
 
 ## Diff to previous
