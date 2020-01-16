@@ -6,10 +6,7 @@
 
 use crate::{arch, arch::sync::NullLock, interface};
 use core::ops;
-use register::{mmio::*, register_bitfields, register_fields};
-
-// Temporary workaround.
-use patches::register_structs;
+use register::{mmio::*, register_bitfields, register_structs};
 
 // GPIO registers.
 //

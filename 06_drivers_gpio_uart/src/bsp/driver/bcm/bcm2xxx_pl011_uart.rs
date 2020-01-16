@@ -111,7 +111,7 @@ register_bitfields! {
 
 register_structs! {
     #[allow(non_snake_case)]
-    RegisterBlock {
+    pub RegisterBlock {
         (0x00 => DR: ReadWrite<u32>),
         (0x04 => _reserved1),
         (0x18 => FR: ReadOnly<u32, FR::Register>),

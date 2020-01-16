@@ -769,7 +769,7 @@ diff -uNr 12_cpu_exceptions_part1/.cargo/config 13_integrated_testing/.cargo/con
 diff -uNr 12_cpu_exceptions_part1/Cargo.toml 13_integrated_testing/Cargo.toml
 --- 12_cpu_exceptions_part1/Cargo.toml
 +++ 13_integrated_testing/Cargo.toml
-@@ -14,7 +14,38 @@
+@@ -14,7 +14,35 @@
  bsp_rpi4 = ["cortex-a", "register"]
 
  [dependencies]
@@ -777,11 +777,9 @@ diff -uNr 12_cpu_exceptions_part1/Cargo.toml 13_integrated_testing/Cargo.toml
 +test-types = { path = "test-types" }
 
  # Optional dependencies
- cortex-a = { version = "2.8.x", optional = true }
- register = { version = "0.4.x", optional = true }
-+
-+# Temporary workaround for register-rs.
-+patches = { path = "patches" }
+ cortex-a = { version = "2.9.x", optional = true }
+-register = { version = "0.5.x", optional = true }
++register = { version = "0.5.x", features=["no_std_unit_tests"], optional = true }
 +
 +##--------------------------------------------------------------------------------------------------
 +## Testing
@@ -843,7 +841,8 @@ diff -uNr 12_cpu_exceptions_part1/Makefile 13_integrated_testing/Makefile
 +QEMU_MISSING_STRING = "This board is not yet supported for QEMU."
 +
  RUSTFLAGS          = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
- RUSTFLAGS_PEDANTIC = $(RUSTFLAGS) -D warnings -D missing_docs
+-RUSTFLAGS_PEDANTIC = $(RUSTFLAGS) -D warnings -D missing_docs
++RUSTFLAGS_PEDANTIC = $(RUSTFLAGS) #-D warnings -D missing_docs
 
  SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) $(wildcard **/*.ld)
 
@@ -944,45 +943,6 @@ diff -uNr 12_cpu_exceptions_part1/Makefile 13_integrated_testing/Makefile
  endef
 
 
-diff -uNr 12_cpu_exceptions_part1/patches/Cargo.toml 13_integrated_testing/patches/Cargo.toml
---- 12_cpu_exceptions_part1/patches/Cargo.toml
-+++ 13_integrated_testing/patches/Cargo.toml
-@@ -0,0 +1,5 @@
-+[package]
-+name = "patches"
-+version = "0.1.0"
-+authors = ["Andre Richter <andre.o.richter@gmail.com>"]
-+edition = "2018"
-
-diff -uNr 12_cpu_exceptions_part1/patches/src/lib.rs 13_integrated_testing/patches/src/lib.rs
---- 12_cpu_exceptions_part1/patches/src/lib.rs
-+++ 13_integrated_testing/patches/src/lib.rs
-@@ -0,0 +1,24 @@
-+// SPDX-License-Identifier: MIT OR Apache-2.0
-+//
-+// Copyright (c) 2019-2020 Andre Richter <andre.o.richter@gmail.com>
-+
-+//! Fix for register-rs.
-+//!
-+//! Used temporarily until https://github.com/tock/tock/issues/1482 is resolved.
-+
-+#![no_std]
-+
-+/// A temporary overwrite for tock's register_structs! so that it does not emit `#[test]` attributes.
-+#[macro_export]
-+macro_rules! register_structs {
-+    {
-+        $(
-+            $(#[$attr:meta])*
-+            $name:ident {
-+                $( $fields:tt )*
-+            }
-+        ),*
-+    } => {
-+        $( register_fields!(@root $(#[$attr])* $name { $($fields)* } ); )*
-+    };
-+}
-
 diff -uNr 12_cpu_exceptions_part1/src/arch/aarch64/exception.rs 13_integrated_testing/src/arch/aarch64/exception.rs
 --- 12_cpu_exceptions_part1/src/arch/aarch64/exception.rs
 +++ 13_integrated_testing/src/arch/aarch64/exception.rs
@@ -1064,33 +1024,14 @@ diff -uNr 12_cpu_exceptions_part1/src/arch.rs 13_integrated_testing/src/arch.rs
 diff -uNr 12_cpu_exceptions_part1/src/bsp/driver/bcm/bcm2xxx_gpio.rs 13_integrated_testing/src/bsp/driver/bcm/bcm2xxx_gpio.rs
 --- 12_cpu_exceptions_part1/src/bsp/driver/bcm/bcm2xxx_gpio.rs
 +++ 13_integrated_testing/src/bsp/driver/bcm/bcm2xxx_gpio.rs
-@@ -6,7 +6,10 @@
+@@ -6,7 +6,7 @@
 
  use crate::{arch, arch::sync::NullLock, interface};
  use core::ops;
 -use register::{mmio::ReadWrite, register_bitfields, register_structs};
-+use register::{mmio::*, register_bitfields, register_fields};
-+
-+// Temporary workaround.
-+use patches::register_structs;
++use register::{mmio::*, register_bitfields, register_structs};
 
  // GPIO registers.
- //
-
-diff -uNr 12_cpu_exceptions_part1/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 13_integrated_testing/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
---- 12_cpu_exceptions_part1/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
-+++ 13_integrated_testing/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -6,7 +6,10 @@
-
- use crate::{arch, arch::sync::NullLock, interface};
- use core::{fmt, ops};
--use register::{mmio::*, register_bitfields, register_structs};
-+use register::{mmio::*, register_bitfields, register_fields};
-+
-+// Temporary workaround.
-+use patches::register_structs;
-
- // PL011 UART registers.
  //
 
 diff -uNr 12_cpu_exceptions_part1/src/bsp/rpi/virt_mem_layout.rs 13_integrated_testing/src/bsp/rpi/virt_mem_layout.rs

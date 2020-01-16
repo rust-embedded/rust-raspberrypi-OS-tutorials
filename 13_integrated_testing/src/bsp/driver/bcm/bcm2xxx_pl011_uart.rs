@@ -6,10 +6,7 @@
 
 use crate::{arch, arch::sync::NullLock, interface};
 use core::{fmt, ops};
-use register::{mmio::*, register_bitfields, register_fields};
-
-// Temporary workaround.
-use patches::register_structs;
+use register::{mmio::*, register_bitfields, register_structs};
 
 // PL011 UART registers.
 //
@@ -114,7 +111,7 @@ register_bitfields! {
 
 register_structs! {
     #[allow(non_snake_case)]
-    RegisterBlock {
+    pub RegisterBlock {
         (0x00 => DR: ReadWrite<u32>),
         (0x04 => _reserved1),
         (0x18 => FR: ReadOnly<u32, FR::Register>),

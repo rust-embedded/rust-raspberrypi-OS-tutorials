@@ -98,8 +98,8 @@ diff -uNr 05_safe_globals/Cargo.toml 06_drivers_gpio_uart/Cargo.toml
  [dependencies]
 
  # Optional dependencies
- cortex-a = { version = "2.8.x", optional = true }
-+register = { version = "0.4.x", optional = true }
+ cortex-a = { version = "2.9.x", optional = true }
++register = { version = "0.5.x", optional = true }
 
 diff -uNr 05_safe_globals/src/arch/aarch64.rs 06_drivers_gpio_uart/src/arch/aarch64.rs
 --- 05_safe_globals/src/arch/aarch64.rs
@@ -388,7 +388,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gp
 +
 +register_structs! {
 +    #[allow(non_snake_case)]
-+    RegisterBlock {
++    pub RegisterBlock {
 +        (0x00 => DR: ReadWrite<u32>),
 +        (0x04 => _reserved1),
 +        (0x18 => FR: ReadOnly<u32, FR::Register>),

@@ -189,6 +189,8 @@ class DevTool
         extensions = ['.S', '.rs', '.rb']
 
         files = tracked_files.select do |f|
+            next unless File.exist?(f)
+
             f.include?('Makefile') ||
                 f.include?('Dockerfile') ||
                 extensions.include?(File.extname(f))
