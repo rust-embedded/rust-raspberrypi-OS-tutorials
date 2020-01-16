@@ -8,7 +8,7 @@
   (provided over `UART` in our case): Sending strings/characters to the console
   and expecting specific answers in return.
 
-![Testing live demo](../doc/testing_demo.gif)
+<img src="../doc/testing_demo.gif" widht="880">
 
 ## Table of Contents
 
