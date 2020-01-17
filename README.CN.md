@@ -79,7 +79,7 @@ cargo install cargo-xbuild cargo-binutils
 
 ## 🙌 致谢
 
-这个教程最初是有[该项目](https://github.com/bztsrc/raspi3-tutoria)衍生出来的，感谢它给我开了一个头。
+这个教程最初是有[该项目](https://github.com/bztsrc/raspi3-tutorial)衍生出来的，感谢它给我开了一个头。
 
 ## License
 
