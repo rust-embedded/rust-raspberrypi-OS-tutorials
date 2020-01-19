@@ -16,11 +16,15 @@ writing to the serial console, setting up virtual memory and handling HW
 exceptions. All while leveraging `Rust`'s unique features to provide for safety
 and speed.
 
-_Cheers,
-[Andre](https://github.com/andre-richter)_
+_Cheers, Andre ([@andre-richter])_
+
+P.S.: In the future, Chinese :cn: versions of the tutorials will be maintained as [`README.CN.md`](README.CN.md) by [@colachg] and [@readlnh].
 
 [ARMv8-A architecture]: https://developer.arm.com/products/architecture/cpu-architecture/a-profile/docs
 [monolithic]: https://en.wikipedia.org/wiki/Monolithic_kernel
+[@andre-richter]: https://github.com/andre-richter
+[@colachg]: https://github.com/colachg
+[@readlnh]: https://github.com/readlnh
 
 ## 📑 Organization
 
