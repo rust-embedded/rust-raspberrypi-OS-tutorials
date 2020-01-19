@@ -12,6 +12,7 @@ require 'colorize'
 require 'ruby-progressbar'
 require 'serialport'
 require 'timeout'
+require_relative 'minipush/progressbar_patch'
 
 class ConnectionError < StandardError; end
 class ProtocolError < StandardError; end
@@ -85,7 +86,7 @@ class MiniPush
     def send_binary
         pb = ProgressBar.create(
             total: @binary_size,
-            format: '[MP] ⏩ Pushing %c KiB %b🦀%i %p%% %r KiB/s %a',
+            format: '[MP] ⏩ Pushing %k KiB %b🦀%i %p%% %r KiB/s %a',
             rate_scale: ->(rate) { rate / 1024 },
             length: 92
         )

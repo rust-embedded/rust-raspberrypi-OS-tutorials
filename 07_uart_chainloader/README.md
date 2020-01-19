@@ -36,7 +36,7 @@ Minipush 1.0
            Raspberry Pi 3
 
 [ML] Requesting binary
-[MP] ⏩ Pushing 7856 KiB =======================================🦀 100% 0 KiB/s Time: 00:00:00
+[MP] ⏩ Pushing 7 KiB ==========================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
 [0] Booting on: Raspberry Pi 3

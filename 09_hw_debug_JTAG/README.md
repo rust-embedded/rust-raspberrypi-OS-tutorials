@@ -164,7 +164,7 @@ Minipush 1.0
            Raspberry Pi 3
 
 [ML] Requesting binary
-[MP] ⏩ Pushing 8232 KiB =======================================🦀 100% 0 KiB/s Time: 00:00:00
+[MP] ⏩ Pushing 8 KiB ==========================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
 [    0.372110] Parking CPU core. Please connect over JTAG now.

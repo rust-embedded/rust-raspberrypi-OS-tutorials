@@ -170,6 +170,15 @@ class DevTool
         clean
     end
 
+    def ready_for_publish_no_rust
+        clean
+        misspell
+        rubocop
+        copyright
+        diff
+        clean
+    end
+
     private
 
     def tutorials
