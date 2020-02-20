@@ -8,6 +8,8 @@ independent code]. This will be the last binary you need to put on the SD card
 for quite some time. Each following tutorial will provide a `chainboot` target in
 the `Makefile` that lets you conveniently load the kernel over `UART`.
 
+**Note**: On the Raspberry Pi 4, `BOOT_UART=1` must be enabled in the EEPROM as described in this [document](https://www.raspberrypi.org/documentation/hardware/raspberrypi/bcm2711_bootloader_config.md).
+
 Our chainloader is called `MiniLoad` and is inspired by [raspbootin].
 
 [chainloader]: https://en.wikipedia.org/wiki/Chain_loading
