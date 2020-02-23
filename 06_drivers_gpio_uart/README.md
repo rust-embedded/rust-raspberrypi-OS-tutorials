@@ -53,9 +53,13 @@ init_uart_clock=48000000
 
 3. Copy the following files from the [Raspberry Pi firmware repo](https://github.com/raspberrypi/firmware/tree/master/boot)  onto the SD card:
     - [fixup4.dat](https://github.com/raspberrypi/firmware/raw/master/boot/fixup4.dat)
-    - [start4.elf](https://github.com/raspberrypi/firmware/raw/master/boot/start4.elf) (on the card, the file must be named `start.elf`, without the 4)
+    - [start4.elf](https://github.com/raspberrypi/firmware/raw/master/boot/start4.elf)
     - [bcm2711-rpi-4-b.dtb](https://github.com/raspberrypi/firmware/raw/master/boot/bcm2711-rpi-4-b.dtb)
 4. Run `BSP=rpi4 make` and copy the [kernel8.img](kernel8.img) onto the SD card.
+
+
+_**Note**: Should it not work on your RPi4, try renaming `start4.elf` to `start.elf` (without the 4) on the SD card._
+
 
 ### Common again
 
