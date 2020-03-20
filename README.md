@@ -47,13 +47,12 @@ P.S.: In the future, Chinese :cn: versions of the tutorials will be maintained a
   written in a modular fashion which allows for easy porting to other CPU
   architectures and/or boards.
   - I would really love if someone takes a shot at a **RISC-V** implementation!
-- For editing, I recommend [Visual Studio Code] with the [Rust Language Server]
-  extension.
+- For editing, I recommend [Visual Studio Code] with [Rust Analyzer].
 - In addition to the tutorial text, also check out the `make doc` command to
   browse the code with HTML goodness.
 
 [Visual Studio Code]: https://code.visualstudio.com
-[Rust Language Server]: https://github.com/rust-lang/rls
+[Rust Analyzer]: https://rust-analyzer.github.io
 
 ## 🚀 Ease of use
 
@@ -86,11 +85,16 @@ curl https://sh.rustup.rs -sSf             \
     |                                      \
     sh -s --                               \
     --default-toolchain nightly-2019-12-20 \
-    --component rust-src llvm-tools-preview rustfmt rls rust-analysis
+    --component rust-src llvm-tools-preview rustfmt
 
 source $HOME/.cargo/env
 cargo install cargo-xbuild cargo-binutils
 ```
+
+In case you use `Visual Studio Code`, I strongly recommend installing the
+[Rust Analyzer extension] as well.
+
+[Rust Analyzer extension]: https://marketplace.visualstudio.com/items?itemName=matklad.rust-analyzer
 
 ## 📟 USB Serial Output
 
@@ -133,3 +137,4 @@ at your option.
 Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
 dual licensed as above, without any additional terms or conditions.
+

@@ -19,11 +19,12 @@ class ProtocolError < StandardError; end
 
 # The main class
 class MiniPush
-    def initialize(serial_name, binary_image)
+    def initialize(serial_name, binary_image_path)
         @target_serial_name = serial_name
         @target_serial = nil
-        @binary_size = File.size(binary_image)
-        @binary_image = File.binread(binary_image)
+        @binary_image_path = binary_image_path
+        @binary_size = nil
+        @binary_image = nil
         @host_console = IO.console
     end
 
@@ -76,6 +77,11 @@ class MiniPush
                 print received
             end
         end
+    end
+
+    def load_binary
+        @binary_size = File.size(@binary_image_path)
+        @binary_image = File.binread(@binary_image_path)
     end
 
     def send_size
@@ -166,6 +172,7 @@ class MiniPush
     def run
         open_serial
         wait_for_binary_request
+        load_binary
         send_size
         send_binary
         terminal
