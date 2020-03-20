@@ -28,12 +28,12 @@ _Cheers,
   - 教程的第一到五章是基础内容，只能运行在`QEMU`上。
   - 到了[第六章]时(06_drivers_gpio_uart)，你可以在树莓派上加载和运行内核并通过`UART`来观察输出结果。
 - 虽然这些教程是以树莓派 3 和 4 为试验对象，但代码是模块化的，所以应该容易移植到其他 CPU 架构的开发板上。
-  - 我希望会有人有机会去实现**RISC-v**架构的代码。
-- 我推荐使用[Visual Studio Code],配置[Rust Language Server]插件开发代码。
+  - 我希望会有人有机会去实现**RISC-V**架构的代码。
+- 我推荐使用[Visual Studio Code],配置[Rust Analyzer]插件开发代码。
 - 除了文本教程之外，也可以用`make doc`命令利用网页的优势来浏览代码。
 
-[visual studio code]: https://code.visualstudio.com
-[rust language server]: https://github.com/rust-lang/rls
+[Visual Studio Code]: https://code.visualstudio.com
+[Rust Analyzer]: https://rust-analyzer.github.io
 
 ## 🚀 易用性
 
@@ -59,11 +59,15 @@ curl https://sh.rustup.rs -sSf             \
     |                                      \
     sh -s --                               \
     --default-toolchain nightly-2019-12-20 \
-    --component rust-src llvm-tools-preview rustfmt rls rust-analysis
+    --component rust-src llvm-tools-preview rustfmt
 
 source $HOME/.cargo/env
 cargo install cargo-xbuild cargo-binutils
 ```
+
+如果你使用 `Visual Studio Code`，我强烈推荐你安装[Rust Analyzer 扩展]。
+
+[Rust Analyzer 扩展]: https://marketplace.visualstudio.com/items?itemName=matklad.rust-analyzer
 
 ## 📟 USB 串行输出
 
