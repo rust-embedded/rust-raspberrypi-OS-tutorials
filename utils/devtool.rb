@@ -132,6 +132,8 @@ class DevTool
     end
 
     def make_xtra
+        return if @user_has_supplied_crates
+
         puts 'Make Xtra crates'.light_blue
         system('cd X1_JTAG_boot && bash update.sh')
     end
