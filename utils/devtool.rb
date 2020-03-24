@@ -80,9 +80,10 @@ end
 # Forks commands to all applicable receivers
 class DevTool
     def initialize
-        all = Dir['*/Cargo.toml'].sort
+        @bsp = bsp_from_env || SUPPORTED_BSPS.first
 
-        @crates = all.map { |c| TutorialCrate.new(c.delete_suffix('/Cargo.toml')) }
+        cl = user_supplied_crate_list || Dir['*/Cargo.toml'].sort
+        @crates = cl.map { |c| TutorialCrate.new(c.delete_suffix('/Cargo.toml')) }
     end
 
     def clean
@@ -90,8 +91,8 @@ class DevTool
         FileUtils.rm_rf('xbuild_sysroot')
     end
 
-    def clippy(bsp = 'rpi3')
-        bsp = ARGV[1] if ARGV[1]
+    def clippy(bsp = nil)
+        bsp ||= @bsp
 
         @crates.each do |c|
             c.clippy(bsp)
@@ -120,8 +121,8 @@ class DevTool
         fmt(true)
     end
 
-    def make(bsp = 'rpi3')
-        bsp = ARGV[1] if ARGV[1]
+    def make(bsp = nil)
+        bsp ||= @bsp
 
         @crates.each do |c|
             c.make(bsp)
@@ -131,6 +132,7 @@ class DevTool
     end
 
     def make_xtra
+        puts 'Make Xtra crates'.light_blue
         system('cd X1_JTAG_boot && bash update.sh')
     end
 
@@ -147,10 +149,12 @@ class DevTool
     end
 
     def misspell
+        puts 'Misspell'.light_blue
         exit(1) unless system("~/bin/misspell -error #{tracked_files.join(' ')}")
     end
 
     def rubocop
+        puts 'Rubocop'.light_blue
         exit(1) unless system('rubocop')
     end
 
@@ -184,15 +188,47 @@ class DevTool
 
     private
 
+    SUPPORTED_BSPS = %w[rpi3 rpi4].freeze
+
+    def bsp_from_env
+        bsp = ENV['BSP']
+
+        return bsp if SUPPORTED_BSPS.include?(bsp)
+
+        nil
+    end
+
+    def user_supplied_crate_list
+        folders = ARGV.drop(1)
+
+        return nil if folders.empty?
+
+        crates = folders.map { |d| d + '/Cargo.toml' }.sort
+        crates.each do |c|
+            unless File.exist?(c)
+                puts "Crate not found: #{c}"
+                exit(1)
+            end
+        end
+
+        @user_has_supplied_crates = true
+        crates
+    end
+
     def tutorials
         @crates.select(&:tutorial?)
     end
 
     def tracked_files
-        `git ls-files`.split("\n")
+        crate_list = @crates.map(&:folder).join(' ') if @user_has_supplied_crates
+
+        `git ls-files #{crate_list}`.split("\n") # crates_list == nil means all files
     end
 
     def diff_pair(original, update, padding)
+        # Only diff adjacent tutorials. This checks the numbers of the tutorial folders.
+        return unless original[0..1].to_i + 1 == update[0..1].to_i
+
         puts 'Diffing '.light_blue + original.ljust(padding) + " -> #{update}"
         system("bash utils/diff_tut_folders.bash #{original} #{update}")
     end
@@ -220,7 +256,7 @@ cmd = ARGV[0]
 commands = tool.public_methods(false).sort
 
 if !commands.include?(cmd&.to_sym)
-    puts "Usage: ./#{__FILE__} COMMAND"
+    puts "Usage: ./#{__FILE__.split('/').last} COMMAND [optional list of folders]"
     puts
     puts 'Commands:'
     commands.each { |m| puts "  #{m}" }
