@@ -41,4 +41,4 @@ jobs:
         bundle install --retry 3 --without uart
     - name: Make
       run: |
-        bundle exec ruby utils/devtool.rb make rpi4
+        BSP=rpi4 bundle exec ruby utils/devtool.rb make
