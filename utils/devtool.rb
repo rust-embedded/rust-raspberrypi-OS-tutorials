@@ -29,10 +29,10 @@ class TutorialCrate
         Dir.chdir(@folder) { FileUtils.rm_rf('target') }
     end
 
-    def clippy
-        puts "Clippy #{@folder}".light_blue
+    def clippy(bsp)
+        puts "Clippy #{@folder} - BSP: #{bsp}".light_blue
 
-        Dir.chdir(@folder) { exit(1) unless system('make clippy') }
+        Dir.chdir(@folder) { exit(1) unless system("BSP=#{bsp} make clippy") }
     end
 
     def fmt(args)
@@ -90,9 +90,11 @@ class DevTool
         FileUtils.rm_rf('xbuild_sysroot')
     end
 
-    def clippy
+    def clippy(bsp = 'rpi3')
+        bsp = ARGV[1] if ARGV[1]
+
         @crates.each do |c|
-            c.clippy
+            c.clippy(bsp)
             puts
             puts
         end
@@ -157,7 +159,8 @@ class DevTool
         fmt
         misspell
         rubocop
-        clippy
+        clippy('rpi4')
+        clippy('rpi3')
         copyright
 
         clean
