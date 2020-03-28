@@ -2,12 +2,14 @@
 //
 // Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 
-//! AArch64.
+//! Architectural processor code.
 
-pub mod sync;
-
-use crate::bsp;
+use crate::{bsp, cpu};
 use cortex_a::{asm, regs::*};
+
+//--------------------------------------------------------------------------------------------------
+// Boot Code
+//--------------------------------------------------------------------------------------------------
 
 /// The entry of the `kernel` binary.
 ///
@@ -16,13 +18,15 @@ use cortex_a::{asm, regs::*};
 /// # Safety
 ///
 /// - Linker script must ensure to place this function at `0x80_000`.
+#[naked]
 #[no_mangle]
 pub unsafe extern "C" fn _start() -> ! {
-    const CORE_MASK: u64 = 0x3;
+    use crate::relocate;
 
-    if bsp::BOOT_CORE_ID == MPIDR_EL1.get() & CORE_MASK {
-        SP.set(bsp::BOOT_CORE_STACK_START);
-        crate::relocate::relocate_self::<u64>()
+    // Expect the boot core to start in EL2.
+    if bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id() {
+        SP.set(bsp::cpu::BOOT_CORE_STACK_START);
+        relocate::relocate_self::<u64>()
     } else {
         // If not core0, infinitely wait for events.
         wait_forever()
@@ -30,19 +34,20 @@ pub unsafe extern "C" fn _start() -> ! {
 }
 
 //--------------------------------------------------------------------------------------------------
-// Implementation of the kernel's architecture abstraction code
+// Public Code
 //--------------------------------------------------------------------------------------------------
 
 pub use asm::nop;
 
 /// Spin for `n` cycles.
+#[inline(always)]
 pub fn spin_for_cycles(n: usize) {
     for _ in 0..n {
         asm::nop();
     }
 }
 
-/// Pause execution on the calling CPU core.
+/// Pause execution on the core.
 #[inline(always)]
 pub fn wait_forever() -> ! {
     loop {
