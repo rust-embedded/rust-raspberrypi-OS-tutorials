@@ -10,7 +10,7 @@ In the exact order as listed:
 4. In new terminal, `make openocd` and keep terminal open.
 5. In new terminal, `make gdb` or make `make gdb-opt0`.
 
-![JTAG live demo](../doc/jtag_demo.gif)
+<img src="../doc/09_demo.gif" widht="880">
 
 ## Table of Contents
 
@@ -233,18 +233,16 @@ $ make gdb
 [...]
 >>> target remote :3333                          # Connect to OpenOCD, core0
 >>> load                                         # Load the kernel into the RPi's DRAM over JTAG.
-Loading section .text, size 0x2660 lma 0x80000
-Loading section .rodata, size 0xfa5 lma 0x82660
-Loading section .data, size 0x18 lma 0x83608
-Start address 0x80000, load size 13853
-Transfer rate: 65 KB/sec, 4617 bytes/write.
+Loading section .text, size 0x2340 lma 0x80000
+Loading section .rodata, size 0xc2d lma 0x82340
+Loading section .data, size 0x20 lma 0x82f70
+Start address 0x80000, load size 12173
+Transfer rate: 65 KB/sec, 4057 bytes/write.
 >>> set $pc = 0x80000                            # Set RPI's program counter to the start of the
                                                  # kernel binary.
 >>> break main.rs:70
-Breakpoint 1 at 0x80124: file src/main.rs, line 70.
+Breakpoint 1 at 0x80108: file src/main.rs, line 153.
 >>> cont
-Breakpoint 1, kernel::kernel_main () at src/main.rs:70
-70          println!("Booting on: {}", bsp::board_name());
 >>> step                                         # Single-step through the kernel
 >>> step
 >>> ...
