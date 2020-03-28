@@ -84,8 +84,8 @@ additional insights.
 
 We introduce a new `Makefile` target:
 
-```shell
-make test
+```console
+$ make test
 ```
 
 In essence, `make test` will execute `cargo xtest` instead of `cargo xrustc`. The details will be

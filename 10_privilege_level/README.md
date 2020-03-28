@@ -149,7 +149,7 @@ We just wrote a big inline rust function, `el2_to_el1_transition()`, that is exe
 where we do not have a stack yet. We should double-check the generated machine code:
 
 ```console
-make objdump
+$ make objdump
 [...]
 Disassembly of section .text:
 

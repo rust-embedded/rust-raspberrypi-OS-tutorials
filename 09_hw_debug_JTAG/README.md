@@ -228,8 +228,8 @@ We can now use the `gdb` commandline to
   3. Manipulate the program counter of the RPi to start execution at our kernel's entry point.
   4. Single-step through its execution.
 
-```shell
-make gdb
+```console
+$ make gdb
 [...]
 >>> target remote :3333                          # Connect to OpenOCD, core0
 >>> load                                         # Load the kernel into the RPi's DRAM over JTAG.
