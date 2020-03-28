@@ -6,28 +6,14 @@
 #![doc(html_logo_url = "https://git.io/JeGIp")]
 
 //! The `kernel` binary.
-//!
-//! The `kernel` is composed by glueing together code from
-//!
-//!   - [Hardware-specific Board Support Packages] (`BSPs`).
-//!   - [Architecture-specific code].
-//!   - HW- and architecture-agnostic `kernel` code.
-//!
-//! using the [`kernel::interface`] traits.
-//!
-//! [Hardware-specific Board Support Packages]: bsp/index.html
-//! [Architecture-specific code]: arch/index.html
-//! [`kernel::interface`]: interface/index.html
 
 #![feature(format_args_nl)]
 #![no_main]
 #![no_std]
 
-use libkernel::{arch, bsp, info, interface};
+use libkernel::{bsp, console, driver, exception, info, memory, time};
 
 /// Early init code.
-///
-/// Concerned with with initializing `BSP` and `arch` parts.
 ///
 /// # Safety
 ///
@@ -39,20 +25,21 @@ use libkernel::{arch, bsp, info, interface};
 ///         the RPi SoCs.
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
-    use interface::mm::MMU;
+    use driver::interface::DriverManager;
+    use memory::mmu::interface::MMU;
 
-    arch::enable_exception_handling();
+    exception::handling_init();
 
-    if let Err(string) = arch::mmu().init() {
+    if let Err(string) = memory::mmu::mmu().init() {
         panic!("MMU: {}", string);
     }
 
-    for i in bsp::device_drivers().iter() {
-        if let Err(()) = i.init() {
+    for i in bsp::driver::driver_manager().all_device_drivers().iter() {
+        if i.init().is_err() {
             panic!("Error loading driver: {}", i.compatible())
         }
     }
-    bsp::post_driver_init();
+    bsp::driver::driver_manager().post_device_driver_init();
     // println! is usable from here on.
 
     // Transition from unsafe to safe.
@@ -61,32 +48,37 @@ unsafe fn kernel_init() -> ! {
 
 /// The main function running after the early init.
 fn kernel_main() -> ! {
-    use interface::console::All;
+    use console::interface::All;
+    use driver::interface::DriverManager;
 
     info!("Booting on: {}", bsp::board_name());
 
     info!("MMU online. Special regions:");
-    bsp::virt_mem_layout().print_layout();
+    bsp::memory::mmu::virt_mem_layout().print_layout();
 
-    let (_, privilege_level) = arch::state::current_privilege_level();
+    let (_, privilege_level) = exception::current_privilege_level();
     info!("Current privilege level: {}", privilege_level);
 
     info!("Exception handling state:");
-    arch::state::print_exception_state();
+    exception::asynchronous::print_state();
 
     info!(
         "Architectural timer resolution: {} ns",
-        arch::timer().resolution().as_nanos()
+        time::time_manager().resolution().as_nanos()
     );
 
     info!("Drivers loaded:");
-    for (i, driver) in bsp::device_drivers().iter().enumerate() {
+    for (i, driver) in bsp::driver::driver_manager()
+        .all_device_drivers()
+        .iter()
+        .enumerate()
+    {
         info!("      {}. {}", i + 1, driver.compatible());
     }
 
     info!("Echoing input now");
     loop {
-        let c = bsp::console().read_char();
-        bsp::console().write_char(c);
+        let c = bsp::console::console().read_char();
+        bsp::console::console().write_char(c);
     }
 }

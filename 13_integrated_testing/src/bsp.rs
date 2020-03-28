@@ -2,15 +2,15 @@
 //
 // Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 
-//! Conditional exporting of Board Support Packages.
+//! Conditional re-exporting of Board Support Packages.
 
-mod driver;
-
-#[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
-mod rpi;
+mod device_driver;
 
 #[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
-pub use rpi::*;
+mod raspberrypi;
+
+#[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
+pub use raspberrypi::*;
 
 //--------------------------------------------------------------------------------------------------
 // Testing
@@ -24,7 +24,7 @@ mod tests {
     /// Ensure the kernel's virtual memory layout is free of overlaps.
     #[kernel_test]
     fn virt_mem_layout_has_no_overlaps() {
-        let layout = virt_mem_layout().inner();
+        let layout = memory::mmu::virt_mem_layout().inner();
 
         for (i, first) in layout.iter().enumerate() {
             for second in layout.iter().skip(i + 1) {

@@ -2,8 +2,8 @@
 //
 // Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 
-/// Call the function provided by parameter `\handler` after saving exception context. Provide the
-/// context as the first parameter to '\handler'.
+/// Call the function provided by parameter `\handler` after saving the exception context. Provide
+/// the context as the first parameter to '\handler'.
 .macro CALL_WITH_CONTEXT handler
     // Make room on the stack for the exception context.
     sub    sp,  sp,  #16 * 17
@@ -52,16 +52,19 @@
 //--------------------------------------------------------------------------------------------------
 .section .exception_vectors, "ax", @progbits
 
-// Align by 2^11 bytes, as demanded by the AArch64 spec. Same as ALIGN(2048) in an ld script.
+// Align by 2^11 bytes, as demanded by ARMv8-A. Same as ALIGN(2048) in an ld script.
 .align 11
 
 // Export a symbol for the Rust code to use.
 __exception_vector_start:
 
 // Current exception level with SP_EL0.
+//
 // .org sets the offset relative to section start.
 //
-// It must be ensured that `CALL_WITH_CONTEXT` <= 0x80 bytes.
+// # Safety
+//
+// - It must be ensured that `CALL_WITH_CONTEXT` <= 0x80 bytes.
 .org 0x000
     CALL_WITH_CONTEXT current_el0_synchronous
 .org 0x080
@@ -81,7 +84,7 @@ __exception_vector_start:
 .org 0x380
     CALL_WITH_CONTEXT current_elx_serror
 
-// Lower exception level, aarch64
+// Lower exception level, AArch64
 .org 0x400
     CALL_WITH_CONTEXT lower_aarch64_synchronous
 .org 0x480
@@ -91,7 +94,7 @@ __exception_vector_start:
 .org 0x580
     CALL_WITH_CONTEXT lower_aarch64_serror
 
-// Lower exception level, aarch32
+// Lower exception level, AArch32
 .org 0x600
     CALL_WITH_CONTEXT lower_aarch32_synchronous
 .org 0x680
@@ -105,6 +108,8 @@ __exception_vector_start:
 //--------------------------------------------------------------------------------------------------
 // Helper functions
 //--------------------------------------------------------------------------------------------------
+.section .text
+
 __exception_restore_context:
     ldr    w19,      [sp, #16 * 16]
     ldp    lr,  x20, [sp, #16 * 15]

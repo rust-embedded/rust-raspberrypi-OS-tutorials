@@ -17,20 +17,22 @@
 /// or indirectly.
 mod panic_exit_success;
 
-use libkernel::{arch, bsp, interface::mm::MMU, println};
+use libkernel::{bsp, cpu, exception, memory, println};
 
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
-    bsp::qemu_bring_up_console();
+    use memory::mmu::interface::MMU;
+
+    bsp::console::qemu_bring_up_console();
 
     println!("Testing synchronous exception handling by causing a page fault");
     println!("-------------------------------------------------------------------\n");
 
-    arch::enable_exception_handling();
+    exception::handling_init();
 
-    if let Err(string) = arch::mmu().init() {
+    if let Err(string) = memory::mmu::mmu().init() {
         println!("MMU: {}", string);
-        arch::qemu_exit_failure()
+        cpu::qemu_exit_failure()
     }
 
     println!("Writing beyond mapped area to address 9 GiB...");
@@ -38,5 +40,5 @@ unsafe fn kernel_init() -> ! {
     core::ptr::read_volatile(big_addr as *mut u64);
 
     // If execution reaches here, the memory access above did not cause a page fault exception.
-    arch::qemu_exit_failure()
+    cpu::qemu_exit_failure()
 }

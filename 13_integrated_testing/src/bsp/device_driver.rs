@@ -2,7 +2,7 @@
 //
 // Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 
-//! Drivers.
+//! Device driver.
 
 #[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
 mod bcm;

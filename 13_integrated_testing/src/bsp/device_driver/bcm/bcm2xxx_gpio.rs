@@ -2,11 +2,15 @@
 //
 // Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 
-//! GPIO driver.
+//! GPIO Driver.
 
-use crate::{arch, arch::sync::NullLock, interface};
+use crate::{cpu, driver, synchronization, synchronization::NullLock};
 use core::ops;
 use register::{mmio::*, register_bitfields, register_structs};
+
+//--------------------------------------------------------------------------------------------------
+// Private Definitions
+//--------------------------------------------------------------------------------------------------
 
 // GPIO registers.
 //
@@ -66,12 +70,23 @@ register_structs! {
     }
 }
 
-/// The driver's private data.
 struct GPIOInner {
     base_addr: usize,
 }
 
-/// Deref to RegisterBlock.
+//--------------------------------------------------------------------------------------------------
+// Public Definitions
+//--------------------------------------------------------------------------------------------------
+
+/// Representation of the GPIO HW.
+pub struct GPIO {
+    inner: NullLock<GPIOInner>,
+}
+
+//--------------------------------------------------------------------------------------------------
+// Private Code
+//--------------------------------------------------------------------------------------------------
+
 impl ops::Deref for GPIOInner {
     type Target = RegisterBlock;
 
@@ -81,29 +96,28 @@ impl ops::Deref for GPIOInner {
 }
 
 impl GPIOInner {
-    const fn new(base_addr: usize) -> GPIOInner {
-        GPIOInner { base_addr }
+    const fn new(base_addr: usize) -> Self {
+        Self { base_addr }
     }
 
-    /// Return a pointer to the register block.
+    /// Return a pointer to the associated MMIO register block.
     fn ptr(&self) -> *const RegisterBlock {
         self.base_addr as *const _
     }
 }
 
 //--------------------------------------------------------------------------------------------------
-// BSP-public
+// Public Code
 //--------------------------------------------------------------------------------------------------
-use interface::sync::Mutex;
-
-/// The driver's main struct.
-pub struct GPIO {
-    inner: NullLock<GPIOInner>,
-}
 
 impl GPIO {
-    pub const unsafe fn new(base_addr: usize) -> GPIO {
-        GPIO {
+    /// Create an instance.
+    ///
+    /// # Safety
+    ///
+    /// - The user must ensure to provide the correct `base_addr`.
+    pub const unsafe fn new(base_addr: usize) -> Self {
+        Self {
             inner: NullLock::new(GPIOInner::new(base_addr)),
         }
     }
@@ -122,24 +136,25 @@ impl GPIO {
 
             // Enable pins 14 and 15.
             inner.GPPUD.set(0);
-            arch::spin_for_cycles(150);
+            cpu::spin_for_cycles(150);
 
             inner
                 .GPPUDCLK0
                 .write(GPPUDCLK0::PUDCLK14::AssertClock + GPPUDCLK0::PUDCLK15::AssertClock);
-            arch::spin_for_cycles(150);
+            cpu::spin_for_cycles(150);
 
             inner.GPPUDCLK0.set(0);
         })
     }
 }
 
-//--------------------------------------------------------------------------------------------------
-// OS interface implementations
-//--------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+// OS Interface Code
+//------------------------------------------------------------------------------
+use synchronization::interface::Mutex;
 
-impl interface::driver::DeviceDriver for GPIO {
+impl driver::interface::DeviceDriver for GPIO {
     fn compatible(&self) -> &str {
-        "GPIO"
+        "BCM GPIO"
     }
 }

@@ -1,16 +1,21 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
-// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
+// Copyright (c) 2020 Andre Richter <andre.o.richter@gmail.com>
 
-//! Conditional exporting of processor architecture code.
+//! Synchronous and asynchronous exception handling.
 
-#[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
-mod aarch64;
+#[cfg(target_arch = "aarch64")]
+#[path = "_arch/aarch64/exception.rs"]
+mod arch_exception;
+pub use arch_exception::*;
 
-#[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
-pub use aarch64::*;
+pub mod asynchronous;
 
-/// Architectural privilege level.
+//--------------------------------------------------------------------------------------------------
+// Public Definitions
+//--------------------------------------------------------------------------------------------------
+
+/// Kernel privilege levels.
 #[allow(missing_docs)]
 #[derive(PartialEq)]
 pub enum PrivilegeLevel {
@@ -32,7 +37,7 @@ mod tests {
     /// Libkernel unit tests must execute in kernel mode.
     #[kernel_test]
     fn test_runner_executes_in_kernel_mode() {
-        let (level, _) = state::current_privilege_level();
+        let (level, _) = current_privilege_level();
 
         assert!(level == PrivilegeLevel::Kernel)
     }
