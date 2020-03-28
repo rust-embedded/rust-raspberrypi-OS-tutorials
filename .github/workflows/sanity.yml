@@ -35,7 +35,8 @@ jobs:
         sh ./install-misspell.sh -b ~/bin
     - name: Run checks
       run: |
-        bundle exec ruby utils/devtool.rb clippy
+        BSP=rpi3 bundle exec ruby utils/devtool.rb clippy
+        BSP=rpi4 bundle exec ruby utils/devtool.rb clippy
         bundle exec ruby utils/devtool.rb copyright
         bundle exec ruby utils/devtool.rb fmt_check
         bundle exec ruby utils/devtool.rb misspell
