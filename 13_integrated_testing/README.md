@@ -500,8 +500,7 @@ again, just like in the `unit test` case.
 
 By default, `cargo xtest` will pull in the test harness (that's the official name for the generated
 `main()` function) into integration tests as well. This gives you a further means of partitioning
-your test code into individual chunks. For example, take a look at
-`tests/01_interface_sanity_timer.rs`:
+your test code into individual chunks. For example, take a look at `tests/01_timer_sanity.rs`:
 
 ```rust
 //! Timer sanity tests.
@@ -556,11 +555,11 @@ them:
 ```toml
 # List of tests without harness.
 [[test]]
-name = "00_interface_sanity_console"
+name = "00_console_sanity"
 harness = false
 
 [[test]]
-name = "02_arch_exception_handling_sync_page_fault"
+name = "02_exception_sync_page_fault"
 harness = false
 ```
 
@@ -588,8 +587,8 @@ fn _panic_exit() -> ! {
 
 Integration tests in `$CRATE/tests/` can now override it according to their needs, because depending
 on the kind of test, a `panic!` could mean success or failure. For example,
-`tests/02_arch_exception_handling_sync_page_fault.rs` is intentionally causing a page fault, so the
-wanted outcome is a `panic!`. Here is the whole test (minus some inline comments):
+`tests/02_exception_sync_page_fault.rs` is intentionally causing a page fault, so the wanted outcome
+is a `panic!`. Here is the whole test (minus some inline comments):
 
 ```rust
 //! Page faults must result in synchronous exceptions.
@@ -645,8 +644,8 @@ little overhead. It basically works like this:
   3. Spawn `QEMU` and attach to the serial console.
   4. Run the console subtests.
 
-Here is an excerpt from `00_interface_sanity_console.rb` showing a subtest that does a handshake
-with the kernel over the console:
+Here is an excerpt from `00_console_sanity.rb` showing a subtest that does a handshake with the
+kernel over the console:
 
 ```ruby
 TIMEOUT_SECS = 3
@@ -665,7 +664,7 @@ end
 ```
 
 The subtest first sends `"ABC"` over the console to the kernel, and then expects to receive
-`"OK1234"` back. On the kernel side, it looks like this in `00_interface_sanity_console.rs`:
+`"OK1234"` back. On the kernel side, it looks like this in `00_console_sanity.rs`:
 
 ```rust
 #![feature(format_args_nl)]
@@ -697,22 +696,22 @@ Believe it or not, that is all. There are three ways you can run tests:
   1. `make test` will run all tests back-to-back.
   2. `TEST=unit make test` will run `libkernel`'s unit tests.
   3. `TEST=TEST_NAME make test` will run a specficic integration test.
-      - For example, `TEST=01_interface_sanity_timer make test`
+      - For example, `TEST=01_timer_sanity make test`
 
 ```console
 $ make test
 [...]
-RUSTFLAGS="-C link-arg=-Tsrc/bsp/rpi/link.ld -C target-cpu=cortex-a53 -D warnings -D missing_docs" cargo xtest --target=aarch64-unknown-none-softfloat --features bsp_rpi3 --release
+RUSTFLAGS="-C link-arg=-Tsrc/bsp/raspberrypi/link.ld -C target-cpu=cortex-a53 -D warnings -D missing_docs" cargo xtest --target=aarch64-unknown-none-softfloat --features bsp_rpi3 --release
     Finished release [optimized] target(s) in 0.01s
-     Running target/aarch64-unknown-none-softfloat/release/deps/libkernel-e34f3f4734d1b219
+     Running target/aarch64-unknown-none-softfloat/release/deps/libkernel-4cc6412ddf631982
          -------------------------------------------------------------------
          🦀 Running 5 tests
          -------------------------------------------------------------------
 
-           1. test_runner_executes_in_kernel_mode.......................[ok]
-           2. bss_section_is_sane.......................................[ok]
-           3. virt_mem_layout_sections_are_64KiB_aligned................[ok]
-           4. virt_mem_layout_has_no_overlaps...........................[ok]
+           1. bss_section_is_sane.......................................[ok]
+           2. virt_mem_layout_sections_are_64KiB_aligned................[ok]
+           3. virt_mem_layout_has_no_overlaps...........................[ok]
+           4. test_runner_executes_in_kernel_mode.......................[ok]
            5. zero_volatile_works.......................................[ok]
 
          -------------------------------------------------------------------
@@ -720,7 +719,7 @@ RUSTFLAGS="-C link-arg=-Tsrc/bsp/rpi/link.ld -C target-cpu=cortex-a53 -D warning
          -------------------------------------------------------------------
 
 
-     Running target/aarch64-unknown-none-softfloat/release/deps/00_interface_sanity_console-fd36bc6543537769
+     Running target/aarch64-unknown-none-softfloat/release/deps/00_console_sanity-557819b436f15a18
          -------------------------------------------------------------------
          🦀 Running 3 console-based tests
          -------------------------------------------------------------------
@@ -730,11 +729,11 @@ RUSTFLAGS="-C link-arg=-Tsrc/bsp/rpi/link.ld -C target-cpu=cortex-a53 -D warning
            3. Receive statistics........................................[ok]
 
          -------------------------------------------------------------------
-         ✅ Success: 00_interface_sanity_console
+         ✅ Success: 00_console_sanity
          -------------------------------------------------------------------
 
 
-     Running target/aarch64-unknown-none-softfloat/release/deps/01_interface_sanity_timer-9ddd4857e51af91d
+     Running target/aarch64-unknown-none-softfloat/release/deps/01_timer_sanity-1e25e7d559a9009f
          -------------------------------------------------------------------
          🦀 Running 3 tests
          -------------------------------------------------------------------
@@ -744,11 +743,11 @@ RUSTFLAGS="-C link-arg=-Tsrc/bsp/rpi/link.ld -C target-cpu=cortex-a53 -D warning
            3. spin_accuracy_check_1_second..............................[ok]
 
          -------------------------------------------------------------------
-         ✅ Success: 01_interface_sanity_timer
+         ✅ Success: 01_timer_sanity
          -------------------------------------------------------------------
 
 
-     Running target/aarch64-unknown-none-softfloat/release/deps/02_arch_exception_handling_sync_page_fault-8e8e460dd9041f11
+     Running target/aarch64-unknown-none-softfloat/release/deps/02_exception_sync_page_fault-14172ce39b3fae1c
          -------------------------------------------------------------------
          🦀 Testing synchronous exception handling by causing a page fault
          -------------------------------------------------------------------
@@ -763,7 +762,7 @@ RUSTFLAGS="-C link-arg=-Tsrc/bsp/rpi/link.ld -C target-cpu=cortex-a53 -D warning
          [...]
 
          -------------------------------------------------------------------
-         ✅ Success: 02_arch_exception_handling_sync_page_fault
+         ✅ Success: 02_exception_sync_page_fault
          -------------------------------------------------------------------
 ```
 
@@ -811,11 +810,11 @@ diff -uNr 12_exceptions_part1_groundwork/Cargo.toml 13_integrated_testing/Cargo.
 +
 +# List of tests without harness.
 +[[test]]
-+name = "00_interface_sanity_console"
++name = "00_console_sanity"
 +harness = false
 +
 +[[test]]
-+name = "02_arch_exception_handling_sync_page_fault"
++name = "02_exception_sync_page_fault"
 +harness = false
 
 diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
@@ -1663,9 +1662,9 @@ diff -uNr 12_exceptions_part1_groundwork/test-macros/src/lib.rs 13_integrated_te
 +    .into()
 +}
 
-diff -uNr 12_exceptions_part1_groundwork/tests/00_interface_sanity_console.rb 13_integrated_testing/tests/00_interface_sanity_console.rb
---- 12_exceptions_part1_groundwork/tests/00_interface_sanity_console.rb
-+++ 13_integrated_testing/tests/00_interface_sanity_console.rb
+diff -uNr 12_exceptions_part1_groundwork/tests/00_console_sanity.rb 13_integrated_testing/tests/00_console_sanity.rb
+--- 12_exceptions_part1_groundwork/tests/00_console_sanity.rb
++++ 13_integrated_testing/tests/00_console_sanity.rb
 @@ -0,0 +1,50 @@
 +# frozen_string_literal: true
 +
@@ -1718,9 +1717,9 @@ diff -uNr 12_exceptions_part1_groundwork/tests/00_interface_sanity_console.rb 13
 +    [TxRxHandshake.new, TxStatistics.new, RxStatistics.new]
 +end
 
-diff -uNr 12_exceptions_part1_groundwork/tests/00_interface_sanity_console.rs 13_integrated_testing/tests/00_interface_sanity_console.rs
---- 12_exceptions_part1_groundwork/tests/00_interface_sanity_console.rs
-+++ 13_integrated_testing/tests/00_interface_sanity_console.rs
+diff -uNr 12_exceptions_part1_groundwork/tests/00_console_sanity.rs 13_integrated_testing/tests/00_console_sanity.rs
+--- 12_exceptions_part1_groundwork/tests/00_console_sanity.rs
++++ 13_integrated_testing/tests/00_console_sanity.rs
 @@ -0,0 +1,36 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -1759,9 +1758,9 @@ diff -uNr 12_exceptions_part1_groundwork/tests/00_interface_sanity_console.rs 13
 +    loop {}
 +}
 
-diff -uNr 12_exceptions_part1_groundwork/tests/01_interface_sanity_timer.rs 13_integrated_testing/tests/01_interface_sanity_timer.rs
---- 12_exceptions_part1_groundwork/tests/01_interface_sanity_timer.rs
-+++ 13_integrated_testing/tests/01_interface_sanity_timer.rs
+diff -uNr 12_exceptions_part1_groundwork/tests/01_timer_sanity.rs 13_integrated_testing/tests/01_timer_sanity.rs
+--- 12_exceptions_part1_groundwork/tests/01_timer_sanity.rs
++++ 13_integrated_testing/tests/01_timer_sanity.rs
 @@ -0,0 +1,50 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -1814,9 +1813,9 @@ diff -uNr 12_exceptions_part1_groundwork/tests/01_interface_sanity_timer.rs 13_i
 +    assert_eq!((t2 - t1).as_secs(), 1)
 +}
 
-diff -uNr 12_exceptions_part1_groundwork/tests/02_arch_exception_handling_sync_page_fault.rs 13_integrated_testing/tests/02_arch_exception_handling_sync_page_fault.rs
---- 12_exceptions_part1_groundwork/tests/02_arch_exception_handling_sync_page_fault.rs
-+++ 13_integrated_testing/tests/02_arch_exception_handling_sync_page_fault.rs
+diff -uNr 12_exceptions_part1_groundwork/tests/02_exception_sync_page_fault.rs 13_integrated_testing/tests/02_exception_sync_page_fault.rs
+--- 12_exceptions_part1_groundwork/tests/02_exception_sync_page_fault.rs
++++ 13_integrated_testing/tests/02_exception_sync_page_fault.rs
 @@ -0,0 +1,44 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
