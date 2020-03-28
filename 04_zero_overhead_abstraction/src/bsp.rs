@@ -2,10 +2,10 @@
 //
 // Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 
-//! Conditional exporting of Board Support Packages.
+//! Conditional re-exporting of Board Support Packages.
 
 #[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
-mod rpi;
+mod raspberrypi;
 
 #[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
-pub use rpi::*;
+pub use raspberrypi::*;
