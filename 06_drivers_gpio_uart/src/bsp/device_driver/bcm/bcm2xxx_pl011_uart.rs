@@ -4,9 +4,13 @@
 
 //! PL011 UART driver.
 
-use crate::{arch, arch::sync::NullLock, interface};
+use crate::{console, cpu, driver, synchronization, synchronization::NullLock};
 use core::{fmt, ops};
 use register::{mmio::*, register_bitfields, register_structs};
+
+//--------------------------------------------------------------------------------------------------
+// Private Definitions
+//--------------------------------------------------------------------------------------------------
 
 // PL011 UART registers.
 //
@@ -109,6 +113,10 @@ register_bitfields! {
     ]
 }
 
+//--------------------------------------------------------------------------------------------------
+// Public Definitions
+//--------------------------------------------------------------------------------------------------
+
 register_structs! {
     #[allow(non_snake_case)]
     pub RegisterBlock {
@@ -126,12 +134,23 @@ register_structs! {
     }
 }
 
-/// The driver's mutex protected part.
 pub struct PL011UartInner {
     base_addr: usize,
     chars_written: usize,
     chars_read: usize,
 }
+
+// Export the inner struct so that BSPs can use it for the panic handler.
+pub use PL011UartInner as PanicUart;
+
+/// Representation of the UART.
+pub struct PL011Uart {
+    inner: NullLock<PL011UartInner>,
+}
+
+//--------------------------------------------------------------------------------------------------
+// Public Code
+//--------------------------------------------------------------------------------------------------
 
 /// Deref to RegisterBlock.
 ///
@@ -152,8 +171,13 @@ impl ops::Deref for PL011UartInner {
 }
 
 impl PL011UartInner {
-    pub const unsafe fn new(base_addr: usize) -> PL011UartInner {
-        PL011UartInner {
+    /// Create an instance.
+    ///
+    /// # Safety
+    ///
+    /// - The user must ensure to provide the correct `base_addr`.
+    pub const unsafe fn new(base_addr: usize) -> Self {
+        Self {
             base_addr,
             chars_written: 0,
             chars_read: 0,
@@ -164,7 +188,7 @@ impl PL011UartInner {
     ///
     /// Results in 8N1 and 230400 baud (if the clk has been previously set to 48 MHz by the
     /// firmware).
-    pub fn init(&self) {
+    pub fn init(&mut self) {
         // Turn it off temporarily.
         self.CR.set(0);
 
@@ -186,7 +210,7 @@ impl PL011UartInner {
     fn write_char(&mut self, c: char) {
         // Spin while TX FIFO full is set, waiting for an empty slot.
         while self.FR.matches_all(FR::TXFF::SET) {
-            arch::nop();
+            cpu::nop();
         }
 
         // Write the character to the buffer.
@@ -215,42 +239,28 @@ impl fmt::Write for PL011UartInner {
     }
 }
 
-//--------------------------------------------------------------------------------------------------
-// Export the inner struct so that BSPs can use it for the panic handler
-//--------------------------------------------------------------------------------------------------
-pub use PL011UartInner as PanicUart;
-
-//--------------------------------------------------------------------------------------------------
-// BSP-public
-//--------------------------------------------------------------------------------------------------
-
-/// The driver's main struct.
-pub struct PL011Uart {
-    inner: NullLock<PL011UartInner>,
-}
-
 impl PL011Uart {
     /// # Safety
     ///
-    /// The user must ensure to provide the correct `base_addr`.
-    pub const unsafe fn new(base_addr: usize) -> PL011Uart {
-        PL011Uart {
+    /// - The user must ensure to provide the correct `base_addr`.
+    pub const unsafe fn new(base_addr: usize) -> Self {
+        Self {
             inner: NullLock::new(PL011UartInner::new(base_addr)),
         }
     }
 }
 
-//--------------------------------------------------------------------------------------------------
-// OS interface implementations
-//--------------------------------------------------------------------------------------------------
-use interface::sync::Mutex;
+//------------------------------------------------------------------------------
+// OS Interface Code
+//------------------------------------------------------------------------------
+use synchronization::interface::Mutex;
 
-impl interface::driver::DeviceDriver for PL011Uart {
+impl driver::interface::DeviceDriver for PL011Uart {
     fn compatible(&self) -> &str {
-        "PL011Uart"
+        "BCM PL011 UART"
     }
 
-    fn init(&self) -> interface::driver::Result {
+    fn init(&self) -> Result<(), ()> {
         let mut r = &self.inner;
         r.lock(|inner| inner.init());
 
@@ -258,7 +268,7 @@ impl interface::driver::DeviceDriver for PL011Uart {
     }
 }
 
-impl interface::console::Write for PL011Uart {
+impl console::interface::Write for PL011Uart {
     /// Passthrough of `args` to the `core::fmt::Write` implementation, but guarded by a Mutex to
     /// serialize access.
     fn write_char(&self, c: char) {
@@ -274,13 +284,13 @@ impl interface::console::Write for PL011Uart {
     }
 }
 
-impl interface::console::Read for PL011Uart {
+impl console::interface::Read for PL011Uart {
     fn read_char(&self) -> char {
         let mut r = &self.inner;
         r.lock(|inner| {
             // Spin while RX FIFO empty is set.
             while inner.FR.matches_all(FR::RXFE::SET) {
-                arch::nop();
+                cpu::nop();
             }
 
             // Read one character.
@@ -299,7 +309,7 @@ impl interface::console::Read for PL011Uart {
     }
 }
 
-impl interface::console::Statistics for PL011Uart {
+impl console::interface::Statistics for PL011Uart {
     fn chars_written(&self) -> usize {
         let mut r = &self.inner;
         r.lock(|inner| inner.chars_written)
