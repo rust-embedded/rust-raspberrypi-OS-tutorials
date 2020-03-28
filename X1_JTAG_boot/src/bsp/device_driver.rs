@@ -2,10 +2,10 @@
 //
 // Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 
-//! Conditional exporting of processor architecture code.
+//! Device driver.
 
 #[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
-mod aarch64;
+mod bcm;
 
 #[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
-pub use aarch64::*;
+pub use bcm::*;
