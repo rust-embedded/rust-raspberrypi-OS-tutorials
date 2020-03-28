@@ -13,16 +13,16 @@ ifeq ($(BSP),rpi3)
 	OUTPUT            = kernel8.img
 	QEMU_BINARY       = qemu-system-aarch64
 	QEMU_MACHINE_TYPE = raspi3
-	QEMU_RELEASE_ARGS = -serial stdio -display none
-	LINKER_FILE       = src/bsp/rpi/link.ld
+	QEMU_RELEASE_ARGS = -d in_asm -display none
+	LINKER_FILE       = src/bsp/raspberrypi/link.ld
 	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
 else ifeq ($(BSP),rpi4)
 	TARGET            = aarch64-unknown-none-softfloat
 	OUTPUT            = kernel8.img
 	# QEMU_BINARY       = qemu-system-aarch64
 	# QEMU_MACHINE_TYPE =
-	# QEMU_RELEASE_ARGS = -serial stdio -display none
-	LINKER_FILE       = src/bsp/rpi/link.ld
+	# QEMU_RELEASE_ARGS = -d in_asm -display none
+	LINKER_FILE       = src/bsp/raspberrypi/link.ld
 	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
 endif
 
@@ -60,8 +60,7 @@ $(OUTPUT): $(CARGO_OUTPUT)
 	$(OBJCOPY_CMD) $< $(OUTPUT)
 
 doc:
-	cargo xdoc --target=$(TARGET) --features bsp_$(BSP) --document-private-items
-	xdg-open target/$(TARGET)/doc/kernel/index.html
+	cargo xdoc --target=$(TARGET) --features bsp_$(BSP) --document-private-items --open
 
 ifeq ($(QEMU_MACHINE_TYPE),)
 qemu:

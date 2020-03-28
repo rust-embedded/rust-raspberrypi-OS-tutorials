@@ -2,15 +2,16 @@
 //
 // Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 
-//! AArch64.
+//! Architectural processor code.
 
-global_asm!(include_str!("aarch64/start.S"));
+// Assembly counterpart to this file.
+global_asm!(include_str!("cpu.S"));
 
 //--------------------------------------------------------------------------------------------------
-// Implementation of the kernel's architecture abstraction code
+// Public Code
 //--------------------------------------------------------------------------------------------------
 
-/// Pause execution on the calling CPU core.
+/// Pause execution on the core.
 #[inline(always)]
 pub fn wait_forever() -> ! {
     unsafe {
