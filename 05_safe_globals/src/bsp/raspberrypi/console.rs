@@ -2,16 +2,14 @@
 //
 // Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 
-//! Board Support Package for the Raspberry Pi.
+//! BSP console facilities.
 
-use crate::{arch::sync::NullLock, interface};
+use crate::{console, synchronization, synchronization::NullLock};
 use core::fmt;
 
-/// Used by `arch` code to find the early boot core.
-pub const BOOT_CORE_ID: u64 = 0;
-
-/// The early boot core's stack address.
-pub const BOOT_CORE_STACK_START: u64 = 0x80_000;
+//--------------------------------------------------------------------------------------------------
+// Private Definitions
+//--------------------------------------------------------------------------------------------------
 
 /// A mystical, magical device for generating QEMU output out of the void.
 ///
@@ -19,6 +17,25 @@ pub const BOOT_CORE_STACK_START: u64 = 0x80_000;
 struct QEMUOutputInner {
     chars_written: usize,
 }
+
+//--------------------------------------------------------------------------------------------------
+// Public Definitions
+//--------------------------------------------------------------------------------------------------
+
+/// The main struct.
+pub struct QEMUOutput {
+    inner: NullLock<QEMUOutputInner>,
+}
+
+//--------------------------------------------------------------------------------------------------
+// Global instances
+//--------------------------------------------------------------------------------------------------
+
+static QEMU_OUTPUT: QEMUOutput = QEMUOutput::new();
+
+//--------------------------------------------------------------------------------------------------
+// Private Code
+//--------------------------------------------------------------------------------------------------
 
 impl QEMUOutputInner {
     const fn new() -> QEMUOutputInner {
@@ -30,6 +47,8 @@ impl QEMUOutputInner {
         unsafe {
             core::ptr::write_volatile(0x3F20_1000 as *mut u8, c as u8);
         }
+
+        self.chars_written += 1;
     }
 }
 
@@ -53,22 +72,16 @@ impl fmt::Write for QEMUOutputInner {
             self.write_char(c);
         }
 
-        self.chars_written += s.len();
-
         Ok(())
     }
 }
 
 //--------------------------------------------------------------------------------------------------
-// BSP-public
+// Public Code
 //--------------------------------------------------------------------------------------------------
 
-/// The main struct.
-pub struct QEMUOutput {
-    inner: NullLock<QEMUOutputInner>,
-}
-
 impl QEMUOutput {
+    /// Create a new instance.
     pub const fn new() -> QEMUOutput {
         QEMUOutput {
             inner: NullLock::new(QEMUOutputInner::new()),
@@ -76,16 +89,20 @@ impl QEMUOutput {
     }
 }
 
-//--------------------------------------------------------------------------------------------------
-// OS interface implementations
-//--------------------------------------------------------------------------------------------------
+/// Return a reference to the console.
+pub fn console() -> &'static impl console::interface::All {
+    &QEMU_OUTPUT
+}
+
+//------------------------------------------------------------------------------
+// OS Interface Code
+//------------------------------------------------------------------------------
+use synchronization::interface::Mutex;
 
 /// Passthrough of `args` to the `core::fmt::Write` implementation, but guarded by a Mutex to
 /// serialize access.
-impl interface::console::Write for QEMUOutput {
+impl console::interface::Write for QEMUOutput {
     fn write_fmt(&self, args: core::fmt::Arguments) -> fmt::Result {
-        use interface::sync::Mutex;
-
         // Fully qualified syntax for the call to `core::fmt::Write::write:fmt()` to increase
         // readability.
         let mut r = &self.inner;
@@ -93,28 +110,9 @@ impl interface::console::Write for QEMUOutput {
     }
 }
 
-impl interface::console::Read for QEMUOutput {}
-
-impl interface::console::Statistics for QEMUOutput {
+impl console::interface::Statistics for QEMUOutput {
     fn chars_written(&self) -> usize {
-        use interface::sync::Mutex;
-
         let mut r = &self.inner;
         r.lock(|inner| inner.chars_written)
     }
-}
-
-//--------------------------------------------------------------------------------------------------
-// Global instances
-//--------------------------------------------------------------------------------------------------
-
-static QEMU_OUTPUT: QEMUOutput = QEMUOutput::new();
-
-//--------------------------------------------------------------------------------------------------
-// Implementation of the kernel's BSP calls
-//--------------------------------------------------------------------------------------------------
-
-/// Return a reference to a `console::All` implementation.
-pub fn console() -> &'static impl interface::console::All {
-    &QEMU_OUTPUT
 }
