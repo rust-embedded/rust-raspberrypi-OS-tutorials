@@ -87,7 +87,7 @@ Before you can start, you must install a suitable Rust toolchain:
 curl https://sh.rustup.rs -sSf             \
     |                                      \
     sh -s --                               \
-    --default-toolchain nightly-2019-12-20 \
+    --default-toolchain nightly-2020-03-19 \
     --component rust-src llvm-tools-preview rustfmt
 
 source $HOME/.cargo/env
@@ -140,4 +140,3 @@ at your option.
 Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
 dual licensed as above, without any additional terms or conditions.
-
