@@ -2,25 +2,45 @@
 //
 // Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 
-//! Timer primitives.
+//! Architectural timer primitives.
 
-use crate::{interface, warn};
+use crate::{time, warn};
 use core::time::Duration;
 use cortex_a::regs::*;
+
+//--------------------------------------------------------------------------------------------------
+// Private Definitions
+//--------------------------------------------------------------------------------------------------
 
 const NS_PER_S: u64 = 1_000_000_000;
 
 //--------------------------------------------------------------------------------------------------
-// Arch-public
+// Public Definitions
 //--------------------------------------------------------------------------------------------------
 
-pub struct Timer;
+/// ARMv8 Generic Timer.
+pub struct GenericTimer;
 
 //--------------------------------------------------------------------------------------------------
-// OS interface implementations
+// Global instances
 //--------------------------------------------------------------------------------------------------
 
-impl interface::time::Timer for Timer {
+static TIME_MANAGER: GenericTimer = GenericTimer;
+
+//--------------------------------------------------------------------------------------------------
+// Public Code
+//--------------------------------------------------------------------------------------------------
+
+/// Return a reference to the time manager.
+pub fn time_manager() -> &'static impl time::interface::TimeManager {
+    &TIME_MANAGER
+}
+
+//------------------------------------------------------------------------------
+// OS Interface Code
+//------------------------------------------------------------------------------
+
+impl time::interface::TimeManager for GenericTimer {
     fn resolution(&self) -> Duration {
         Duration::from_nanos(NS_PER_S / (CNTFRQ_EL0.get() as u64))
     }
