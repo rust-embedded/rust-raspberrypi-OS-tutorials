@@ -220,3 +220,274 @@ Minipush 1.0
 ```
 
 ## Diff to previous
+```diff
+
+diff -uNr 09_hw_debug_JTAG/src/_arch/aarch64/cpu.rs 10_privilege_level/src/_arch/aarch64/cpu.rs
+--- 09_hw_debug_JTAG/src/_arch/aarch64/cpu.rs
++++ 10_privilege_level/src/_arch/aarch64/cpu.rs
+@@ -21,18 +21,59 @@
+ #[naked]
+ #[no_mangle]
+ pub unsafe extern "C" fn _start() -> ! {
+-    use crate::runtime_init;
+-
+     // Expect the boot core to start in EL2.
+-    if bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id() {
+-        SP.set(bsp::cpu::BOOT_CORE_STACK_START);
+-        runtime_init::runtime_init()
++    if (bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id())
++        && (CurrentEL.get() == CurrentEL::EL::EL2.value)
++    {
++        el2_to_el1_transition()
+     } else {
+         // If not core0, infinitely wait for events.
+         wait_forever()
+     }
+ }
+
++/// Transition from EL2 to EL1.
++///
++/// # Safety
++///
++/// - The HW state of EL1 must be prepared in a sound way.
++/// - Exception return from EL2 must must continue execution in EL1 with
++///   `runtime_init::runtime_init()`.
++#[inline(always)]
++unsafe fn el2_to_el1_transition() -> ! {
++    use crate::runtime_init;
++
++    // Enable timer counter registers for EL1.
++    CNTHCTL_EL2.write(CNTHCTL_EL2::EL1PCEN::SET + CNTHCTL_EL2::EL1PCTEN::SET);
++
++    // No offset for reading the counters.
++    CNTVOFF_EL2.set(0);
++
++    // Set EL1 execution state to AArch64.
++    HCR_EL2.write(HCR_EL2::RW::EL1IsAarch64);
++
++    // Set up a simulated exception return.
++    //
++    // First, fake a saved program status where all interrupts were masked and SP_EL1 was used as a
++    // stack pointer.
++    SPSR_EL2.write(
++        SPSR_EL2::D::Masked
++            + SPSR_EL2::A::Masked
++            + SPSR_EL2::I::Masked
++            + SPSR_EL2::F::Masked
++            + SPSR_EL2::M::EL1h,
++    );
++
++    // Second, let the link register point to runtime_init().
++    ELR_EL2.set(runtime_init::runtime_init as *const () as u64);
++
++    // Set up SP_EL1 (stack pointer), which will be used by EL1 once we "return" to it.
++    SP_EL1.set(bsp::cpu::BOOT_CORE_STACK_START);
++
++    // Use `eret` to "return" to EL1. This results in execution of runtime_init() in EL1.
++    asm::eret()
++}
++
+ //--------------------------------------------------------------------------------------------------
+ // Public Code
+ //--------------------------------------------------------------------------------------------------
+
+diff -uNr 09_hw_debug_JTAG/src/_arch/aarch64/exception/asynchronous.rs 10_privilege_level/src/_arch/aarch64/exception/asynchronous.rs
+--- 09_hw_debug_JTAG/src/_arch/aarch64/exception/asynchronous.rs
++++ 10_privilege_level/src/_arch/aarch64/exception/asynchronous.rs
+@@ -0,0 +1,71 @@
++// SPDX-License-Identifier: MIT OR Apache-2.0
++//
++// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
++
++//! Architectural asynchronous exception handling.
++
++use cortex_a::regs::*;
++
++//--------------------------------------------------------------------------------------------------
++// Private Definitions
++//--------------------------------------------------------------------------------------------------
++
++trait DaifField {
++    fn daif_field() -> register::Field<u32, DAIF::Register>;
++}
++
++struct Debug;
++struct SError;
++struct IRQ;
++struct FIQ;
++
++//--------------------------------------------------------------------------------------------------
++// Private Code
++//--------------------------------------------------------------------------------------------------
++
++impl DaifField for Debug {
++    fn daif_field() -> register::Field<u32, DAIF::Register> {
++        DAIF::D
++    }
++}
++
++impl DaifField for SError {
++    fn daif_field() -> register::Field<u32, DAIF::Register> {
++        DAIF::A
++    }
++}
++
++impl DaifField for IRQ {
++    fn daif_field() -> register::Field<u32, DAIF::Register> {
++        DAIF::I
++    }
++}
++
++impl DaifField for FIQ {
++    fn daif_field() -> register::Field<u32, DAIF::Register> {
++        DAIF::F
++    }
++}
++
++fn is_masked<T: DaifField>() -> bool {
++    DAIF.is_set(T::daif_field())
++}
++
++//--------------------------------------------------------------------------------------------------
++// Public Code
++//--------------------------------------------------------------------------------------------------
++
++/// Print the AArch64 exceptions status.
++#[rustfmt::skip]
++pub fn print_state() {
++    use crate::info;
++
++    let to_mask_str = |x| -> _ {
++        if x { "Masked" } else { "Unmasked" }
++    };
++
++    info!("      Debug:  {}", to_mask_str(is_masked::<Debug>()));
++    info!("      SError: {}", to_mask_str(is_masked::<SError>()));
++    info!("      IRQ:    {}", to_mask_str(is_masked::<IRQ>()));
++    info!("      FIQ:    {}", to_mask_str(is_masked::<FIQ>()));
++}
+
+diff -uNr 09_hw_debug_JTAG/src/_arch/aarch64/exception.rs 10_privilege_level/src/_arch/aarch64/exception.rs
+--- 09_hw_debug_JTAG/src/_arch/aarch64/exception.rs
++++ 10_privilege_level/src/_arch/aarch64/exception.rs
+@@ -0,0 +1,23 @@
++// SPDX-License-Identifier: MIT OR Apache-2.0
++//
++// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
++
++//! Architectural synchronous and asynchronous exception handling.
++
++use cortex_a::regs::*;
++
++//--------------------------------------------------------------------------------------------------
++// Public Code
++//--------------------------------------------------------------------------------------------------
++use crate::exception::PrivilegeLevel;
++
++/// The processing element's current privilege level.
++pub fn current_privilege_level() -> (PrivilegeLevel, &'static str) {
++    let el = CurrentEL.read_as_enum(CurrentEL::EL);
++    match el {
++        Some(CurrentEL::EL::Value::EL2) => (PrivilegeLevel::Hypervisor, "EL2"),
++        Some(CurrentEL::EL::Value::EL1) => (PrivilegeLevel::Kernel, "EL1"),
++        Some(CurrentEL::EL::Value::EL0) => (PrivilegeLevel::User, "EL0"),
++        _ => (PrivilegeLevel::Unknown, "Unknown"),
++    }
++}
+
+diff -uNr 09_hw_debug_JTAG/src/exception/asynchronous.rs 10_privilege_level/src/exception/asynchronous.rs
+--- 09_hw_debug_JTAG/src/exception/asynchronous.rs
++++ 10_privilege_level/src/exception/asynchronous.rs
+@@ -0,0 +1,10 @@
++// SPDX-License-Identifier: MIT OR Apache-2.0
++//
++// Copyright (c) 2020 Andre Richter <andre.o.richter@gmail.com>
++
++//! Asynchronous exception handling.
++
++#[cfg(target_arch = "aarch64")]
++#[path = "../_arch/aarch64/exception/asynchronous.rs"]
++mod arch_exception_async;
++pub use arch_exception_async::*;
+
+diff -uNr 09_hw_debug_JTAG/src/exception.rs 10_privilege_level/src/exception.rs
+--- 09_hw_debug_JTAG/src/exception.rs
++++ 10_privilege_level/src/exception.rs
+@@ -0,0 +1,26 @@
++// SPDX-License-Identifier: MIT OR Apache-2.0
++//
++// Copyright (c) 2020 Andre Richter <andre.o.richter@gmail.com>
++
++//! Synchronous and asynchronous exception handling.
++
++#[cfg(target_arch = "aarch64")]
++#[path = "_arch/aarch64/exception.rs"]
++mod arch_exception;
++pub use arch_exception::*;
++
++pub mod asynchronous;
++
++//--------------------------------------------------------------------------------------------------
++// Public Definitions
++//--------------------------------------------------------------------------------------------------
++
++/// Kernel privilege levels.
++#[allow(missing_docs)]
++#[derive(PartialEq)]
++pub enum PrivilegeLevel {
++    User,
++    Kernel,
++    Hypervisor,
++    Unknown,
++}
+
+diff -uNr 09_hw_debug_JTAG/src/main.rs 10_privilege_level/src/main.rs
+--- 09_hw_debug_JTAG/src/main.rs
++++ 10_privilege_level/src/main.rs
+@@ -116,6 +116,7 @@
+ mod console;
+ mod cpu;
+ mod driver;
++mod exception;
+ mod memory;
+ mod panic_wait;
+ mod print;
+@@ -146,12 +147,19 @@
+
+ /// The main function running after the early init.
+ fn kernel_main() -> ! {
++    use console::interface::All;
+     use core::time::Duration;
+     use driver::interface::DriverManager;
+     use time::interface::TimeManager;
+
+     info!("Booting on: {}", bsp::board_name());
+
++    let (_, privilege_level) = exception::current_privilege_level();
++    info!("Current privilege level: {}", privilege_level);
++
++    info!("Exception handling state:");
++    exception::asynchronous::print_state();
++
+     info!(
+         "Architectural timer resolution: {} ns",
+         time::time_manager().resolution().as_nanos()
+@@ -166,11 +174,12 @@
+         info!("      {}. {}", i + 1, driver.compatible());
+     }
+
+-    // Test a failing timer case.
+-    time::time_manager().spin_for(Duration::from_nanos(1));
++    info!("Timer test, spinning for 1 second");
++    time::time_manager().spin_for(Duration::from_secs(1));
+
++    info!("Echoing input now");
+     loop {
+-        info!("Spinning for 1 second");
+-        time::time_manager().spin_for(Duration::from_secs(1));
++        let c = bsp::console::console().read_char();
++        bsp::console::console().write_char(c);
+     }
+ }
+
+```

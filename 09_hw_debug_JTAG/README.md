@@ -302,3 +302,71 @@ runs, while keeping the debugger connected.
 Thanks to [@naotaco](https://github.com/naotaco) for laying the groundwork for this tutorial.
 
 ## Diff to previous
+```diff
+
+diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
+--- 08_timestamps/Makefile
++++ 09_hw_debug_JTAG/Makefile
+@@ -19,6 +19,8 @@
+ 	QEMU_BINARY       = qemu-system-aarch64
+ 	QEMU_MACHINE_TYPE = raspi3
+ 	QEMU_RELEASE_ARGS = -serial stdio -display none
++	OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi3.cfg
++	JTAG_BOOT_IMAGE   = jtag_boot_rpi3.img
+ 	LINKER_FILE       = src/bsp/raspberrypi/link.ld
+ 	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
+ else ifeq ($(BSP),rpi4)
+@@ -27,6 +29,8 @@
+ 	# QEMU_BINARY       = qemu-system-aarch64
+ 	# QEMU_MACHINE_TYPE =
+ 	# QEMU_RELEASE_ARGS = -serial stdio -display none
++	OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi4.cfg
++	JTAG_BOOT_IMAGE   = jtag_boot_rpi4.img
+ 	LINKER_FILE       = src/bsp/raspberrypi/link.ld
+ 	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
+ endif
+@@ -52,11 +56,13 @@
+ DOCKER_CMD           = docker run -it --rm
+ DOCKER_ARG_DIR_TUT   = -v $(shell pwd):/work -w /work
+ DOCKER_ARG_DIR_UTILS = -v $(shell pwd)/../utils:/utils
++DOCKER_ARG_DIR_JTAG  = -v $(shell pwd)/../X1_JTAG_boot:/jtag
+ DOCKER_ARG_TTY       = --privileged -v /dev:/dev
++DOCKER_ARG_NET       = --network host
+ DOCKER_EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
+ DOCKER_EXEC_MINIPUSH = ruby /utils/minipush.rb
+
+-.PHONY: all doc qemu chainboot clippy clean readelf objdump nm
++.PHONY: all doc qemu chainboot jtagboot openocd gdb gdb-opt0 clippy clean readelf objdump nm
+
+ all: clean $(OUTPUT)
+
+@@ -85,6 +91,28 @@
+ 		$(DOCKER_IMAGE) $(DOCKER_EXEC_MINIPUSH) $(DEV_SERIAL)                  \
+ 		$(OUTPUT)
+
++jtagboot:
++	@$(DOCKER_CMD) $(DOCKER_ARG_DIR_JTAG) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_ARG_TTY) \
++		$(DOCKER_IMAGE) $(DOCKER_EXEC_MINIPUSH) $(DEV_SERIAL)                   \
++		/jtag/$(JTAG_BOOT_IMAGE)
++
++openocd:
++	@$(DOCKER_CMD) $(DOCKER_ARG_TTY) $(DOCKER_ARG_NET) $(DOCKER_IMAGE) \
++		openocd $(OPENOCD_ARG)
++
++define gen_gdb
++	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC) $1"  $(XRUSTC_CMD)
++	cp $(CARGO_OUTPUT) kernel_for_jtag
++	@$(DOCKER_CMD) $(DOCKER_ARG_DIR_TUT) $(DOCKER_ARG_NET) $(DOCKER_IMAGE) \
++		gdb-multiarch -q kernel_for_jtag
++endef
++
++gdb: clean $(SOURCES)
++	$(call gen_gdb,-C debuginfo=2)
++
++gdb-opt0: clean $(SOURCES)
++	$(call gen_gdb,-C debuginfo=2 -C opt-level=0)
++
+ clippy:
+ 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" cargo xclippy --target=$(TARGET) --features bsp_$(BSP)
+
+```

@@ -477,3 +477,544 @@ General purpose register:
 ```
 
 ## Diff to previous
+```diff
+
+diff -uNr 11_virtual_memory/src/_arch/aarch64/exception.rs 12_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs
+--- 11_virtual_memory/src/_arch/aarch64/exception.rs
++++ 12_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs
+@@ -4,7 +4,230 @@
+
+ //! Architectural synchronous and asynchronous exception handling.
+
+-use cortex_a::regs::*;
++use core::fmt;
++use cortex_a::{asm, barrier, regs::*};
++use register::InMemoryRegister;
++
++// Assembly counterpart to this file.
++global_asm!(include_str!("exception.S"));
++
++//--------------------------------------------------------------------------------------------------
++// Private Definitions
++//--------------------------------------------------------------------------------------------------
++
++/// Wrapper struct for memory copy of SPSR_EL1.
++#[repr(transparent)]
++struct SpsrEL1(InMemoryRegister<u32, SPSR_EL1::Register>);
++
++/// The exception context as it is stored on the stack on exception entry.
++#[repr(C)]
++struct ExceptionContext {
++    /// General Purpose Registers.
++    gpr: [u64; 30],
++
++    /// The link register, aka x30.
++    lr: u64,
++
++    /// Exception link register. The program counter at the time the exception happened.
++    elr_el1: u64,
++
++    /// Saved program status.
++    spsr_el1: SpsrEL1,
++}
++
++/// Wrapper struct for pretty printing ESR_EL1.
++struct EsrEL1;
++
++//--------------------------------------------------------------------------------------------------
++// Private Code
++//--------------------------------------------------------------------------------------------------
++
++/// Print verbose information about the exception and the panic.
++fn default_exception_handler(e: &ExceptionContext) {
++    panic!(
++        "\n\nCPU Exception!\n\
++         FAR_EL1: {:#018x}\n\
++         {}\n\
++         {}",
++        FAR_EL1.get(),
++        EsrEL1 {},
++        e
++    );
++}
++
++//------------------------------------------------------------------------------
++// Current, EL0
++//------------------------------------------------------------------------------
++
++#[no_mangle]
++unsafe extern "C" fn current_el0_synchronous(e: &mut ExceptionContext) {
++    default_exception_handler(e);
++}
++
++#[no_mangle]
++unsafe extern "C" fn current_el0_irq(e: &mut ExceptionContext) {
++    default_exception_handler(e);
++}
++
++#[no_mangle]
++unsafe extern "C" fn current_el0_serror(e: &mut ExceptionContext) {
++    default_exception_handler(e);
++}
++
++//------------------------------------------------------------------------------
++// Current, ELx
++//------------------------------------------------------------------------------
++
++#[no_mangle]
++unsafe extern "C" fn current_elx_synchronous(e: &mut ExceptionContext) {
++    let far_el1 = FAR_EL1.get();
++
++    // This catches the demo case for this tutorial. If the fault address happens to be 8 GiB,
++    // advance the exception link register for one instruction, so that execution can continue.
++    if far_el1 == 8 * 1024 * 1024 * 1024 {
++        e.elr_el1 += 4;
++
++        asm::eret()
++    }
++
++    default_exception_handler(e);
++}
++
++#[no_mangle]
++unsafe extern "C" fn current_elx_irq(e: &mut ExceptionContext) {
++    default_exception_handler(e);
++}
++
++#[no_mangle]
++unsafe extern "C" fn current_elx_serror(e: &mut ExceptionContext) {
++    default_exception_handler(e);
++}
++
++//------------------------------------------------------------------------------
++// Lower, AArch64
++//------------------------------------------------------------------------------
++
++#[no_mangle]
++unsafe extern "C" fn lower_aarch64_synchronous(e: &mut ExceptionContext) {
++    default_exception_handler(e);
++}
++
++#[no_mangle]
++unsafe extern "C" fn lower_aarch64_irq(e: &mut ExceptionContext) {
++    default_exception_handler(e);
++}
++
++#[no_mangle]
++unsafe extern "C" fn lower_aarch64_serror(e: &mut ExceptionContext) {
++    default_exception_handler(e);
++}
++
++//------------------------------------------------------------------------------
++// Lower, AArch32
++//------------------------------------------------------------------------------
++
++#[no_mangle]
++unsafe extern "C" fn lower_aarch32_synchronous(e: &mut ExceptionContext) {
++    default_exception_handler(e);
++}
++
++#[no_mangle]
++unsafe extern "C" fn lower_aarch32_irq(e: &mut ExceptionContext) {
++    default_exception_handler(e);
++}
++
++#[no_mangle]
++unsafe extern "C" fn lower_aarch32_serror(e: &mut ExceptionContext) {
++    default_exception_handler(e);
++}
++
++//------------------------------------------------------------------------------
++// Pretty printing
++//------------------------------------------------------------------------------
++
++/// Human readable ESR_EL1.
++#[rustfmt::skip]
++impl fmt::Display for EsrEL1 {
++    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
++        let esr_el1 = ESR_EL1.extract();
++
++        // Raw print of whole register.
++        writeln!(f, "ESR_EL1: {:#010x}", esr_el1.get())?;
++
++        // Raw print of exception class.
++        write!(f, "      Exception Class         (EC) : {:#x}", esr_el1.read(ESR_EL1::EC))?;
++
++        // Exception class, translation.
++        let ec_translation = match esr_el1.read_as_enum(ESR_EL1::EC) {
++            Some(ESR_EL1::EC::Value::DataAbortCurrentEL) => "Data Abort, current EL",
++            _ => "N/A",
++        };
++        writeln!(f, " - {}", ec_translation)?;
++
++        // Raw print of instruction specific syndrome.
++        write!(f, "      Instr Specific Syndrome (ISS): {:#x}", esr_el1.read(ESR_EL1::ISS))?;
++
++        Ok(())
++    }
++}
++
++/// Human readable SPSR_EL1.
++#[rustfmt::skip]
++impl fmt::Display for SpsrEL1 {
++    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
++        // Raw value.
++        writeln!(f, "SPSR_EL1: {:#010x}", self.0.get())?;
++
++        let to_flag_str = |x| -> _ {
++            if x { "Set" } else { "Not set" }
++         };
++
++        writeln!(f, "      Flags:")?;
++        writeln!(f, "            Negative (N): {}", to_flag_str(self.0.is_set(SPSR_EL1::N)))?;
++        writeln!(f, "            Zero     (Z): {}", to_flag_str(self.0.is_set(SPSR_EL1::Z)))?;
++        writeln!(f, "            Carry    (C): {}", to_flag_str(self.0.is_set(SPSR_EL1::C)))?;
++        writeln!(f, "            Overflow (V): {}", to_flag_str(self.0.is_set(SPSR_EL1::V)))?;
++
++        let to_mask_str = |x| -> _ {
++            if x { "Masked" } else { "Unmasked" }
++        };
++
++        writeln!(f, "      Exception handling state:")?;
++        writeln!(f, "            Debug  (D): {}", to_mask_str(self.0.is_set(SPSR_EL1::D)))?;
++        writeln!(f, "            SError (A): {}", to_mask_str(self.0.is_set(SPSR_EL1::A)))?;
++        writeln!(f, "            IRQ    (I): {}", to_mask_str(self.0.is_set(SPSR_EL1::I)))?;
++        writeln!(f, "            FIQ    (F): {}", to_mask_str(self.0.is_set(SPSR_EL1::F)))?;
++
++        write!(f, "      Illegal Execution State (IL): {}",
++            to_flag_str(self.0.is_set(SPSR_EL1::IL))
++        )?;
++
++        Ok(())
++    }
++}
++
++/// Human readable print of the exception context.
++impl fmt::Display for ExceptionContext {
++    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
++        writeln!(f, "ELR_EL1: {:#018x}", self.elr_el1)?;
++        writeln!(f, "{}", self.spsr_el1)?;
++        writeln!(f)?;
++        writeln!(f, "General purpose register:")?;
++
++        #[rustfmt::skip]
++        let alternating = |x| -> _ {
++            if x modulo 2 == 0 { "   " } else { "\n" }
++        };
++
++        // Print two registers per line.
++        for (i, reg) in self.gpr.iter().enumerate() {
++            write!(f, "      x{: <2}: {: >#018x}{}", i, reg, alternating(i))?;
++        }
++        write!(f, "      lr : {:#018x}", self.lr)?;
++
++        Ok(())
++    }
++}
+
+ //--------------------------------------------------------------------------------------------------
+ // Public Code
+@@ -21,3 +244,24 @@
+         _ => (PrivilegeLevel::Unknown, "Unknown"),
+     }
+ }
++
++/// Init exception handling by setting the exception vector base address register.
++///
++/// # Safety
++///
++/// - Changes the HW state of the executing core.
++/// - The vector table and the symbol `__exception_vector_table_start` from the linker script must
++///   adhere to the alignment and size constraints demanded by the ARMv8-A Architecture Reference
++///   Manual.
++pub unsafe fn handling_init() {
++    // Provided by exception.S.
++    extern "C" {
++        static mut __exception_vector_start: u64;
++    }
++    let addr: u64 = &__exception_vector_start as *const _ as u64;
++
++    VBAR_EL1.set(addr);
++
++    // Force VBAR update to complete before next instruction.
++    barrier::isb(barrier::SY);
++}
+
+diff -uNr 11_virtual_memory/src/_arch/aarch64/exception.S 12_exceptions_part1_groundwork/src/_arch/aarch64/exception.S
+--- 11_virtual_memory/src/_arch/aarch64/exception.S
++++ 12_exceptions_part1_groundwork/src/_arch/aarch64/exception.S
+@@ -0,0 +1,138 @@
++// SPDX-License-Identifier: MIT OR Apache-2.0
++//
++// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
++
++/// Call the function provided by parameter `\handler` after saving the exception context. Provide
++/// the context as the first parameter to '\handler'.
++.macro CALL_WITH_CONTEXT handler
++    // Make room on the stack for the exception context.
++    sub    sp,  sp,  #16 * 17
++
++    // Store all general purpose registers on the stack.
++    stp    x0,  x1,  [sp, #16 * 0]
++    stp    x2,  x3,  [sp, #16 * 1]
++    stp    x4,  x5,  [sp, #16 * 2]
++    stp    x6,  x7,  [sp, #16 * 3]
++    stp    x8,  x9,  [sp, #16 * 4]
++    stp    x10, x11, [sp, #16 * 5]
++    stp    x12, x13, [sp, #16 * 6]
++    stp    x14, x15, [sp, #16 * 7]
++    stp    x16, x17, [sp, #16 * 8]
++    stp    x18, x19, [sp, #16 * 9]
++    stp    x20, x21, [sp, #16 * 10]
++    stp    x22, x23, [sp, #16 * 11]
++    stp    x24, x25, [sp, #16 * 12]
++    stp    x26, x27, [sp, #16 * 13]
++    stp    x28, x29, [sp, #16 * 14]
++
++    // Add the exception link register (ELR_EL1) and the saved program status (SPSR_EL1).
++    mrs    x1,  ELR_EL1
++    mrs    x2,  SPSR_EL1
++
++    stp    lr,  x1,  [sp, #16 * 15]
++    str    w2,       [sp, #16 * 16]
++
++    // x0 is the first argument for the function called through `\handler`.
++    mov    x0,  sp
++
++    // Call `\handler`.
++    bl     \handler
++
++    // After returning from exception handling code, replay the saved context and return via `eret`.
++    b      __exception_restore_context
++.endm
++
++.macro FIQ_SUSPEND
++1:  wfe
++    b      1b
++.endm
++
++//--------------------------------------------------------------------------------------------------
++// The exception vector table.
++//--------------------------------------------------------------------------------------------------
++.section .exception_vectors, "ax", @progbits
++
++// Align by 2^11 bytes, as demanded by ARMv8-A. Same as ALIGN(2048) in an ld script.
++.align 11
++
++// Export a symbol for the Rust code to use.
++__exception_vector_start:
++
++// Current exception level with SP_EL0.
++//
++// .org sets the offset relative to section start.
++//
++// # Safety
++//
++// - It must be ensured that `CALL_WITH_CONTEXT` <= 0x80 bytes.
++.org 0x000
++    CALL_WITH_CONTEXT current_el0_synchronous
++.org 0x080
++    CALL_WITH_CONTEXT current_el0_irq
++.org 0x100
++    FIQ_SUSPEND
++.org 0x180
++    CALL_WITH_CONTEXT current_el0_serror
++
++// Current exception level with SP_ELx, x > 0.
++.org 0x200
++    CALL_WITH_CONTEXT current_elx_synchronous
++.org 0x280
++    CALL_WITH_CONTEXT current_elx_irq
++.org 0x300
++    FIQ_SUSPEND
++.org 0x380
++    CALL_WITH_CONTEXT current_elx_serror
++
++// Lower exception level, AArch64
++.org 0x400
++    CALL_WITH_CONTEXT lower_aarch64_synchronous
++.org 0x480
++    CALL_WITH_CONTEXT lower_aarch64_irq
++.org 0x500
++    FIQ_SUSPEND
++.org 0x580
++    CALL_WITH_CONTEXT lower_aarch64_serror
++
++// Lower exception level, AArch32
++.org 0x600
++    CALL_WITH_CONTEXT lower_aarch32_synchronous
++.org 0x680
++    CALL_WITH_CONTEXT lower_aarch32_irq
++.org 0x700
++    FIQ_SUSPEND
++.org 0x780
++    CALL_WITH_CONTEXT lower_aarch32_serror
++.org 0x800
++
++//--------------------------------------------------------------------------------------------------
++// Helper functions
++//--------------------------------------------------------------------------------------------------
++.section .text
++
++__exception_restore_context:
++    ldr    w19,      [sp, #16 * 16]
++    ldp    lr,  x20, [sp, #16 * 15]
++
++    msr    SPSR_EL1, x19
++    msr    ELR_EL1,  x20
++
++    ldp    x0,  x1,  [sp, #16 * 0]
++    ldp    x2,  x3,  [sp, #16 * 1]
++    ldp    x4,  x5,  [sp, #16 * 2]
++    ldp    x6,  x7,  [sp, #16 * 3]
++    ldp    x8,  x9,  [sp, #16 * 4]
++    ldp    x10, x11, [sp, #16 * 5]
++    ldp    x12, x13, [sp, #16 * 6]
++    ldp    x14, x15, [sp, #16 * 7]
++    ldp    x16, x17, [sp, #16 * 8]
++    ldp    x18, x19, [sp, #16 * 9]
++    ldp    x20, x21, [sp, #16 * 10]
++    ldp    x22, x23, [sp, #16 * 11]
++    ldp    x24, x25, [sp, #16 * 12]
++    ldp    x26, x27, [sp, #16 * 13]
++    ldp    x28, x29, [sp, #16 * 14]
++
++    add    sp,  sp,  #16 * 17
++
++    eret
+
+diff -uNr 11_virtual_memory/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 12_exceptions_part1_groundwork/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
+--- 11_virtual_memory/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
++++ 12_exceptions_part1_groundwork/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
+@@ -118,7 +118,6 @@
+ //--------------------------------------------------------------------------------------------------
+
+ register_structs! {
+-    #[allow(missing_docs)]
+     #[allow(non_snake_case)]
+     pub RegisterBlock {
+         (0x00 => DR: ReadWrite<u32>),
+@@ -135,7 +134,6 @@
+     }
+ }
+
+-#[allow(missing_docs)]
+ pub struct PL011UartInner {
+     base_addr: usize,
+     chars_written: usize,
+
+diff -uNr 11_virtual_memory/src/bsp/raspberrypi/memory/mmu.rs 12_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs
+--- 11_virtual_memory/src/bsp/raspberrypi/memory/mmu.rs
++++ 12_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs
+@@ -12,7 +12,7 @@
+ // Public Definitions
+ //--------------------------------------------------------------------------------------------------
+
+-const NUM_MEM_RANGES: usize = 3;
++const NUM_MEM_RANGES: usize = 2;
+
+ /// The virtual memory layout.
+ ///
+@@ -55,19 +55,6 @@
+             },
+         },
+         RangeDescriptor {
+-            name: "Remapped Device MMIO",
+-            virtual_range: || {
+-                // The last 64 KiB slot in the first 512 MiB
+-                RangeInclusive::new(0x1FFF_0000, 0x1FFF_FFFF)
+-            },
+-            translation: Translation::Offset(memory::map::mmio::BASE + 0x20_0000),
+-            attribute_fields: AttributeFields {
+-                mem_attributes: MemAttributes::Device,
+-                acc_perms: AccessPermissions::ReadWrite,
+-                execute_never: true,
+-            },
+-        },
+-        RangeDescriptor {
+             name: "Device MMIO",
+             virtual_range: || {
+                 RangeInclusive::new(memory::map::mmio::BASE, memory::map::mmio::END_INCLUSIVE)
+
+diff -uNr 11_virtual_memory/src/bsp.rs 12_exceptions_part1_groundwork/src/bsp.rs
+--- 11_virtual_memory/src/bsp.rs
++++ 12_exceptions_part1_groundwork/src/bsp.rs
+@@ -4,7 +4,7 @@
+
+ //! Conditional re-exporting of Board Support Packages.
+
+-pub mod device_driver;
++mod device_driver;
+
+ #[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
+ mod raspberrypi;
+
+diff -uNr 11_virtual_memory/src/main.rs 12_exceptions_part1_groundwork/src/main.rs
+--- 11_virtual_memory/src/main.rs
++++ 12_exceptions_part1_groundwork/src/main.rs
+@@ -107,6 +107,7 @@
+ #![allow(incomplete_features)]
+ #![feature(const_generics)]
+ #![feature(format_args_nl)]
++#![feature(global_asm)]
+ #![feature(naked_functions)]
+ #![feature(panic_info_message)]
+ #![feature(trait_alias)]
+@@ -142,6 +143,8 @@
+     use driver::interface::DriverManager;
+     use memory::mmu::interface::MMU;
+
++    exception::handling_init();
++
+     if let Err(string) = memory::mmu::mmu().init() {
+         panic!("MMU: {}", string);
+     }
+@@ -193,13 +196,28 @@
+     info!("Timer test, spinning for 1 second");
+     time::time_manager().spin_for(Duration::from_secs(1));
+
+-    let remapped_uart = unsafe { bsp::device_driver::PL011Uart::new(0x1FFF_1000) };
+-    writeln!(
+-        remapped_uart,
+-        "[     !!!    ] Writing through the remapped UART at 0x1FFF_1000"
+-    )
+-    .unwrap();
++    // Cause an exception by accessing a virtual address for which no translation was set up. This
++    // code accesses the address 8 GiB, which is outside the mapped address space.
++    //
++    // For demo purposes, the exception handler will catch the faulting 8 GiB address and allow
++    // execution to continue.
++    info!("");
++    info!("Trying to write to address 8 GiB...");
++    let mut big_addr: u64 = 8 * 1024 * 1024 * 1024;
++    unsafe { core::ptr::read_volatile(big_addr as *mut u64) };
++
++    info!("************************************************");
++    info!("Whoa! We recovered from a synchronous exception!");
++    info!("************************************************");
++    info!("");
++    info!("Let's try again");
++
++    // Now use address 9 GiB. The exception handler won't forgive us this time.
++    info!("Trying to write to address 9 GiB...");
++    big_addr = 9 * 1024 * 1024 * 1024;
++    unsafe { core::ptr::read_volatile(big_addr as *mut u64) };
+
++    // Will never reach here in this tutorial.
+     info!("Echoing input now");
+     loop {
+         let c = bsp::console::console().read_char();
+
+diff -uNr 11_virtual_memory/src/memory/mmu.rs 12_exceptions_part1_groundwork/src/memory/mmu.rs
+--- 11_virtual_memory/src/memory/mmu.rs
++++ 12_exceptions_part1_groundwork/src/memory/mmu.rs
+@@ -42,6 +42,7 @@
+
+ /// Architecture agnostic translation types.
+ #[allow(missing_docs)]
++#[allow(dead_code)]
+ #[derive(Copy, Clone)]
+ pub enum Translation {
+     Identity,
+
+```
