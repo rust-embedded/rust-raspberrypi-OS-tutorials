@@ -2,19 +2,21 @@
 //
 // Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 
-//! Memory Management Unit.
+//! Memory Management Unit Driver.
 //!
 //! Static page tables, compiled on boot; Everything 64 KiB granule.
 
-use crate::{
-    bsp, interface,
-    memory::{AccessPermissions, AttributeFields, MemAttributes},
-};
+use super::{AccessPermissions, AttributeFields, MemAttributes};
+use crate::{bsp, memory};
 use core::convert;
 use cortex_a::{barrier, regs::*};
 use register::register_bitfields;
 
-// A table descriptor, as per AArch64 Reference Manual Figure D4-15.
+//--------------------------------------------------------------------------------------------------
+// Private Definitions
+//--------------------------------------------------------------------------------------------------
+
+// A table descriptor, as per ARMv8-A Architecture Reference Manual Figure D4-15.
 register_bitfields! {u64,
     STAGE1_TABLE_DESCRIPTOR [
         /// Physical address of the next page table.
@@ -32,7 +34,7 @@ register_bitfields! {u64,
     ]
 }
 
-// A level 3 page descriptor, as per AArch64 Reference Manual Figure D4-17.
+// A level 3 page descriptor, as per ARMv8-A Architecture Reference Manual Figure D4-17.
 register_bitfields! {u64,
     STAGE1_PAGE_DESCRIPTOR [
         /// Privileged execute-never.
@@ -101,18 +103,21 @@ struct PageDescriptor(u64);
 #[repr(C)]
 #[repr(align(65536))]
 struct PageTables<const N: usize> {
-    // Page descriptors, covering 64 KiB windows per entry.
+    /// Page descriptors, covering 64 KiB windows per entry.
     lvl3: [[PageDescriptor; 8192]; N],
-    // Table descriptors, covering 512 MiB windows.
+
+    /// Table descriptors, covering 512 MiB windows.
     lvl2: [TableDescriptor; N],
 }
 
 /// Usually evaluates to 1 GiB for RPi3 and 4 GiB for RPi 4.
-const ENTRIES_512_MIB: usize = bsp::addr_space_size() >> FIVETWELVE_MIB_SHIFT;
+const ENTRIES_512_MIB: usize = bsp::memory::mmu::addr_space_size() >> FIVETWELVE_MIB_SHIFT;
 
 /// The page tables.
 ///
-/// Supposed to land in `.bss`. Therefore, ensure that they boil down to all "0" entries.
+/// # Safety
+///
+/// - Supposed to land in `.bss`. Therefore, ensure that they boil down to all "0" entries.
 static mut TABLES: PageTables<{ ENTRIES_512_MIB }> = PageTables {
     lvl3: [[PageDescriptor(0); 8192]; ENTRIES_512_MIB],
     lvl2: [TableDescriptor(0); ENTRIES_512_MIB],
@@ -122,6 +127,30 @@ trait BaseAddr {
     fn base_addr_u64(&self) -> u64;
     fn base_addr_usize(&self) -> usize;
 }
+
+/// Constants for indexing the MAIR_EL1.
+#[allow(dead_code)]
+mod mair {
+    pub const DEVICE: u64 = 0;
+    pub const NORMAL: u64 = 1;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Public Definitions
+//--------------------------------------------------------------------------------------------------
+
+/// Memory Management Unit type.
+pub struct MemoryManagementUnit;
+
+//--------------------------------------------------------------------------------------------------
+// Global instances
+//--------------------------------------------------------------------------------------------------
+
+static MMU: MemoryManagementUnit = MemoryManagementUnit;
+
+//--------------------------------------------------------------------------------------------------
+// Private Code
+//--------------------------------------------------------------------------------------------------
 
 impl<T, const N: usize> BaseAddr for [T; N] {
     fn base_addr_u64(&self) -> u64 {
@@ -180,7 +209,7 @@ impl convert::From<AttributeFields>
 }
 
 impl PageDescriptor {
-    fn new(output_addr: usize, attribute_fields: AttributeFields) -> PageDescriptor {
+    fn new(output_addr: usize, attribute_fields: AttributeFields) -> Self {
         let shifted = output_addr >> SIXTYFOUR_KIB_SHIFT;
         let val = (STAGE1_PAGE_DESCRIPTOR::VALID::True
             + STAGE1_PAGE_DESCRIPTOR::AF::True
@@ -189,15 +218,8 @@ impl PageDescriptor {
             + STAGE1_PAGE_DESCRIPTOR::OUTPUT_ADDR_64KiB.val(shifted as u64))
         .value;
 
-        PageDescriptor(val)
+        Self(val)
     }
-}
-
-/// Constants for indexing the MAIR_EL1.
-#[allow(dead_code)]
-mod mair {
-    pub const DEVICE: u64 = 0;
-    pub const NORMAL: u64 = 1;
 }
 
 /// Setup function for the MAIR_EL1 register.
@@ -227,7 +249,7 @@ unsafe fn populate_pt_entries() -> Result<(), &'static str> {
             let virt_addr = (l2_nr << FIVETWELVE_MIB_SHIFT) + (l3_nr << SIXTYFOUR_KIB_SHIFT);
 
             let (output_addr, attribute_fields) =
-                bsp::virt_mem_layout().get_virt_addr_properties(virt_addr)?;
+                bsp::memory::mmu::virt_mem_layout().get_virt_addr_properties(virt_addr)?;
 
             *l3_entry = PageDescriptor::new(output_addr, attribute_fields);
         }
@@ -252,16 +274,19 @@ fn configure_translation_control() {
 }
 
 //--------------------------------------------------------------------------------------------------
-// Arch-public
+// Public Code
 //--------------------------------------------------------------------------------------------------
 
-pub struct MMU;
+/// Return a reference to the MMU.
+pub fn mmu() -> &'static impl memory::mmu::interface::MMU {
+    &MMU
+}
 
-//--------------------------------------------------------------------------------------------------
-// OS interface implementations
-//--------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+// OS Interface Code
+//------------------------------------------------------------------------------
 
-impl interface::mm::MMU for MMU {
+impl memory::mmu::interface::MMU for MemoryManagementUnit {
     unsafe fn init(&self) -> Result<(), &'static str> {
         // Fail early if translation granule is not supported. Both RPis support it, though.
         if !ID_AA64MMFR0_EL1.matches_all(ID_AA64MMFR0_EL1::TGran64::Supported) {
