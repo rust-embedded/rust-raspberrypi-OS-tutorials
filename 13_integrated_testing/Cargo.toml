@@ -44,5 +44,5 @@ name = "00_interface_sanity_console"
 harness = false
 
 [[test]]
-name = "02_arch_exception_handling"
+name = "02_arch_exception_handling_sync_page_fault"
 harness = false

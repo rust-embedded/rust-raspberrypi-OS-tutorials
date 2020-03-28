@@ -22,7 +22,7 @@ ifeq ($(BSP),rpi3)
 	QEMU_TEST_ARGS    = $(QEMU_RELEASE_ARGS) -semihosting
 	OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi3.cfg
 	JTAG_BOOT_IMAGE   = jtag_boot_rpi3.img
-	LINKER_FILE       = src/bsp/rpi/link.ld
+	LINKER_FILE       = src/bsp/raspberrypi/link.ld
 	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
 else ifeq ($(BSP),rpi4)
 	TARGET            = aarch64-unknown-none-softfloat
@@ -33,7 +33,7 @@ else ifeq ($(BSP),rpi4)
 	# QEMU_TEST_ARGS    = $(QEMU_RELEASE_ARGS) -semihosting
 	OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi4.cfg
 	JTAG_BOOT_IMAGE   = jtag_boot_rpi4.img
-	LINKER_FILE       = src/bsp/rpi/link.ld
+	LINKER_FILE       = src/bsp/raspberrypi/link.ld
 	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
 endif
 
@@ -89,8 +89,7 @@ $(OUTPUT): $(CARGO_OUTPUT)
 	$(OBJCOPY_CMD) $< $(OUTPUT)
 
 doc:
-	cargo xdoc --target=$(TARGET) --features bsp_$(BSP) --document-private-items
-	xdg-open target/$(TARGET)/doc/libkernel/index.html
+	cargo xdoc --target=$(TARGET) --features bsp_$(BSP) --document-private-items --open
 
 ifeq ($(QEMU_MACHINE_TYPE),)
 qemu:

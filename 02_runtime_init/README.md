@@ -2,37 +2,30 @@
 
 ## tl;dr
 
-We are calling into Rust code for the first time and zero the [bss] section.
-Check out `make qemu` again to see the additional code run.
+We extend `cpu.S` to call into Rust code for the first time. There,we zero the [bss] section before
+execution is halted with a call to `panic()`. Check out `make qemu` again to see the additional code
+run.
+
+## Notable additions
 
 - More sections in linker script:
      - `.rodata`, `.data`
      - `.bss`
 - `_start()`:
      - Halt core if core != `core0`.
-     - `core0` jumps to `runtime_init()` Rust function.
+     - `core0` jumps to the `runtime_init()` Rust function.
 - `runtime_init()` in `runtime_init.rs`
      - Zeros the `.bss` section.
-     - Calls `kernel_init()`, which calls `panic!()`, which eventually halts
-       `core0` as well.
+     - Calls `kernel_init()`, which calls `panic!()`, which eventually halts `core0` as well.
 
 [bss]: https://en.wikipedia.org/wiki/.bss
 
 ## Diff to previous
 ```diff
 
-diff -uNr 01_wait_forever/Cargo.toml 02_runtime_init/Cargo.toml
---- 01_wait_forever/Cargo.toml
-+++ 02_runtime_init/Cargo.toml
-@@ -14,4 +14,3 @@
- bsp_rpi4 = []
-
- [dependencies]
--
-
-diff -uNr 01_wait_forever/src/arch/aarch64/start.S 02_runtime_init/src/arch/aarch64/start.S
---- 01_wait_forever/src/arch/aarch64/start.S
-+++ 02_runtime_init/src/arch/aarch64/start.S
+diff -uNr 01_wait_forever/src/_arch/aarch64/cpu.S 02_runtime_init/src/_arch/aarch64/cpu.S
+--- 01_wait_forever/src/_arch/aarch64/cpu.S
++++ 02_runtime_init/src/_arch/aarch64/cpu.S
 @@ -7,5 +7,15 @@
  .global _start
 
@@ -52,9 +45,9 @@ diff -uNr 01_wait_forever/src/arch/aarch64/start.S 02_runtime_init/src/arch/aarc
 +    b       1b              // We should never reach here. But just in case,
 +                            // park this core aswell
 
-diff -uNr 01_wait_forever/src/bsp/rpi/link.ld 02_runtime_init/src/bsp/rpi/link.ld
---- 01_wait_forever/src/bsp/rpi/link.ld
-+++ 02_runtime_init/src/bsp/rpi/link.ld
+diff -uNr 01_wait_forever/src/bsp/raspberrypi/link.ld 02_runtime_init/src/bsp/raspberrypi/link.ld
+--- 01_wait_forever/src/bsp/raspberrypi/link.ld
++++ 02_runtime_init/src/bsp/raspberrypi/link.ld
 @@ -13,5 +13,24 @@
          *(.text._start) *(.text*)
      }
@@ -84,18 +77,19 @@ diff -uNr 01_wait_forever/src/bsp/rpi/link.ld 02_runtime_init/src/bsp/rpi/link.l
 diff -uNr 01_wait_forever/src/main.rs 02_runtime_init/src/main.rs
 --- 01_wait_forever/src/main.rs
 +++ 02_runtime_init/src/main.rs
-@@ -16,9 +16,20 @@
- // the first function to run.
- mod arch;
+@@ -97,10 +97,20 @@
+ #![no_main]
+ #![no_std]
 
-+// `_start()` then calls `runtime_init()`, which on completion, jumps to `kernel_init()`.
-+mod runtime_init;
-+
- // Conditionally includes the selected `BSP` code.
+-// `mod cpu` provides the `_start()` function, the first function to run.
++// `mod cpu` provides the `_start()` function, the first function to run. `_start()` then calls
++// `runtime_init()`, which jumps to `kernel_init()`.
+
  mod bsp;
-
+ mod cpu;
 +mod memory;
  mod panic_wait;
++mod runtime_init;
 
 -// Kernel code coming next tutorial.
 +/// Early init code.
@@ -110,7 +104,7 @@ diff -uNr 01_wait_forever/src/main.rs 02_runtime_init/src/main.rs
 diff -uNr 01_wait_forever/src/memory.rs 02_runtime_init/src/memory.rs
 --- 01_wait_forever/src/memory.rs
 +++ 02_runtime_init/src/memory.rs
-@@ -0,0 +1,25 @@
+@@ -0,0 +1,29 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
@@ -118,6 +112,10 @@ diff -uNr 01_wait_forever/src/memory.rs 02_runtime_init/src/memory.rs
 +//! Memory Management.
 +
 +use core::ops::Range;
++
++//--------------------------------------------------------------------------------------------------
++// Public Code
++//--------------------------------------------------------------------------------------------------
 +
 +/// Zero out a memory region.
 +///
@@ -140,7 +138,7 @@ diff -uNr 01_wait_forever/src/memory.rs 02_runtime_init/src/memory.rs
 diff -uNr 01_wait_forever/src/runtime_init.rs 02_runtime_init/src/runtime_init.rs
 --- 01_wait_forever/src/runtime_init.rs
 +++ 02_runtime_init/src/runtime_init.rs
-@@ -0,0 +1,50 @@
+@@ -0,0 +1,58 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
@@ -149,6 +147,10 @@ diff -uNr 01_wait_forever/src/runtime_init.rs 02_runtime_init/src/runtime_init.r
 +
 +use crate::memory;
 +use core::ops::Range;
++
++//--------------------------------------------------------------------------------------------------
++// Private Code
++//--------------------------------------------------------------------------------------------------
 +
 +/// Return the range spanning the .bss section.
 +///
@@ -178,6 +180,10 @@ diff -uNr 01_wait_forever/src/runtime_init.rs 02_runtime_init/src/runtime_init.r
 +unsafe fn zero_bss() {
 +    memory::zero_volatile(bss_range());
 +}
++
++//--------------------------------------------------------------------------------------------------
++// Public Code
++//--------------------------------------------------------------------------------------------------
 +
 +/// Equivalent to `crt0` or `c0` code in C/C++ world. Clears the `bss` section, then jumps to kernel
 +/// init code.

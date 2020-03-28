@@ -4,15 +4,23 @@
 
 //! Printing facilities.
 
-use crate::{bsp, interface};
+use crate::{bsp, console};
 use core::fmt;
+
+//--------------------------------------------------------------------------------------------------
+// Private Code
+//--------------------------------------------------------------------------------------------------
 
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
-    use interface::console::Write;
+    use console::interface::Write;
 
-    bsp::console().write_fmt(args).unwrap();
+    bsp::console::console().write_fmt(args).unwrap();
 }
+
+//--------------------------------------------------------------------------------------------------
+// Public Code
+//--------------------------------------------------------------------------------------------------
 
 /// Prints without a newline.
 ///
@@ -33,14 +41,14 @@ macro_rules! println {
     })
 }
 
-/// Prints an info, with newline.
+/// Prints an info, with a newline.
 #[macro_export]
 macro_rules! info {
     ($string:expr) => ({
         #[allow(unused_imports)]
-        use crate::interface::time::Timer;
+        use crate::time::interface::TimeManager;
 
-        let timestamp = $crate::arch::timer().uptime();
+        let timestamp = $crate::time::time_manager().uptime();
         let timestamp_subsec_us = timestamp.subsec_micros();
 
         $crate::print::_print(format_args_nl!(
@@ -52,9 +60,9 @@ macro_rules! info {
     });
     ($format_string:expr, $($arg:tt)*) => ({
         #[allow(unused_imports)]
-        use crate::interface::time::Timer;
+        use crate::time::interface::TimeManager;
 
-        let timestamp = $crate::arch::timer().uptime();
+        let timestamp = $crate::time::time_manager().uptime();
         let timestamp_subsec_us = timestamp.subsec_micros();
 
         $crate::print::_print(format_args_nl!(
@@ -67,14 +75,14 @@ macro_rules! info {
     })
 }
 
-/// Prints a warning, with newline.
+/// Prints a warning, with a newline.
 #[macro_export]
 macro_rules! warn {
     ($string:expr) => ({
         #[allow(unused_imports)]
-        use crate::interface::time::Timer;
+        use crate::time::interface::TimeManager;
 
-        let timestamp = $crate::arch::timer().uptime();
+        let timestamp = $crate::time::time_manager().uptime();
         let timestamp_subsec_us = timestamp.subsec_micros();
 
         $crate::print::_print(format_args_nl!(
@@ -86,9 +94,9 @@ macro_rules! warn {
     });
     ($format_string:expr, $($arg:tt)*) => ({
         #[allow(unused_imports)]
-        use crate::interface::time::Timer;
+        use crate::time::interface::TimeManager;
 
-        let timestamp = $crate::arch::timer().uptime();
+        let timestamp = $crate::time::time_manager().uptime();
         let timestamp_subsec_us = timestamp.subsec_micros();
 
         $crate::print::_print(format_args_nl!(

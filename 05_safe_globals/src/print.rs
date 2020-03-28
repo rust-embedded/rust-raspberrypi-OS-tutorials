@@ -4,15 +4,23 @@
 
 //! Printing facilities.
 
-use crate::{bsp, interface};
+use crate::{bsp, console};
 use core::fmt;
+
+//--------------------------------------------------------------------------------------------------
+// Private Code
+//--------------------------------------------------------------------------------------------------
 
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
-    use interface::console::Write;
+    use console::interface::Write;
 
-    bsp::console().write_fmt(args).unwrap();
+    bsp::console::console().write_fmt(args).unwrap();
 }
+
+//--------------------------------------------------------------------------------------------------
+// Public Code
+//--------------------------------------------------------------------------------------------------
 
 /// Prints without a newline.
 ///

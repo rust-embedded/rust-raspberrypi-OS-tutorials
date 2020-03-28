@@ -4,8 +4,14 @@
 
 //! Relocation code.
 
-/// Relocates the own binary from `bsp::BOARD_DEFAULT_LOAD_ADDRESS` to the `__binary_start` address
-/// from the linker script.
+use crate::{bsp, runtime_init};
+
+//--------------------------------------------------------------------------------------------------
+// Public Code
+//--------------------------------------------------------------------------------------------------
+
+/// Relocates the own binary from `bsp::cpu::BOARD_DEFAULT_LOAD_ADDRESS` to the `__binary_start`
+/// address from the linker script.
 ///
 /// # Safety
 ///
@@ -25,7 +31,7 @@ pub unsafe fn relocate_self<T>() -> ! {
     let mut reloc_dst_addr: *mut T = binary_start_addr as *mut T;
 
     // The address of where the previous firmware loaded us.
-    let mut src_addr: *const T = crate::bsp::BOARD_DEFAULT_LOAD_ADDRESS as *const _;
+    let mut src_addr: *const T = bsp::cpu::BOARD_DEFAULT_LOAD_ADDRESS as *const _;
 
     // Copy the whole binary.
     //
@@ -39,8 +45,8 @@ pub unsafe fn relocate_self<T>() -> ! {
         src_addr = src_addr.offset(1);
     }
 
-    // Call `init()` through a trait object, causing the jump to use an absolute address to reach
-    // the relocated binary. An elaborate explanation can be found in the runtime_init.rs source
-    // comments.
-    crate::runtime_init::get().runtime_init()
+    // Call `runtime_init()` through a trait object, causing the jump to use an absolute address to
+    // reach the relocated binary. An elaborate explanation can be found in the `runtime_init.rs`
+    // source comments.
+    runtime_init::get().runtime_init()
 }

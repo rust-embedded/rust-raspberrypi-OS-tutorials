@@ -2,52 +2,86 @@
 
 ## tl;dr
 
-Introducing global `print!()` macros to enable "printf debugging" at the
-earliest; To keep tutorial length reasonable, printing functions for now "abuse" a
-QEMU property that lets us use the RPi's `UART` without setting it up properly;
-Using  the real hardware `UART` is enabled step-by-step in following tutorials.
+Introducing global `print!()` macros to enable "printf debugging" at the earliest; To keep tutorial
+length reasonable, printing functions for now "abuse" a QEMU property that lets us use the RPi's
+`UART` without setting it up properly; Using  the real hardware `UART` is enabled step-by-step in
+following tutorials.
 
-- `interface.rs` is introduced:
-	- Provides `Traits` for abstracting `kernel` from `BSP` and `arch` code.
-- Panic handler `print!()`s supplied error messages.
-    - This is showcased in `main()`.
+## Notable additions
 
-### Test it
+- `src/console.rs` introduces interface `Traits` for console commands.
+- `src/bsp/rpi.rs` implements the interface for QEMU's emulated UART.
+- The panic handler makes use of the new `print!()` to display user error messages.
 
-QEMU is no longer running in assembly mode. It will from now on show the output
-of the `console`.
+## Test it
+
+QEMU is no longer running in assembly mode. It will from now on show the output of the `console`.
 
 ```console
-» make qemu
+$ make qemu
 [...]
 Hello from Rust!
+
 Kernel panic: Stopping here.
 ```
 
 ## Diff to previous
 ```diff
 
-diff -uNr 02_runtime_init/src/bsp/rpi.rs 03_hacky_hello_world/src/bsp/rpi.rs
---- 02_runtime_init/src/bsp/rpi.rs
-+++ 03_hacky_hello_world/src/bsp/rpi.rs
-@@ -4,4 +4,35 @@
+diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
+--- 02_runtime_init/Makefile
++++ 03_hacky_hello_world/Makefile
+@@ -13,7 +13,7 @@
+ 	OUTPUT            = kernel8.img
+ 	QEMU_BINARY       = qemu-system-aarch64
+ 	QEMU_MACHINE_TYPE = raspi3
+-	QEMU_RELEASE_ARGS = -d in_asm -display none
++	QEMU_RELEASE_ARGS = -serial stdio -display none
+ 	LINKER_FILE       = src/bsp/raspberrypi/link.ld
+ 	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
+ else ifeq ($(BSP),rpi4)
+@@ -21,7 +21,7 @@
+ 	OUTPUT            = kernel8.img
+ 	# QEMU_BINARY       = qemu-system-aarch64
+ 	# QEMU_MACHINE_TYPE =
+-	# QEMU_RELEASE_ARGS = -d in_asm -display none
++	# QEMU_RELEASE_ARGS = -serial stdio -display none
+ 	LINKER_FILE       = src/bsp/raspberrypi/link.ld
+ 	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
+ endif
 
- //! Board Support Package for the Raspberry Pi.
-
--// Coming soon.
-+use crate::interface;
+diff -uNr 02_runtime_init/src/bsp/raspberrypi/console.rs 03_hacky_hello_world/src/bsp/raspberrypi/console.rs
+--- 02_runtime_init/src/bsp/raspberrypi/console.rs
++++ 03_hacky_hello_world/src/bsp/raspberrypi/console.rs
+@@ -0,0 +1,47 @@
++// SPDX-License-Identifier: MIT OR Apache-2.0
++//
++// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
++
++//! BSP console facilities.
++
++use crate::console;
 +use core::fmt;
++
++//--------------------------------------------------------------------------------------------------
++// Private Definitions
++//--------------------------------------------------------------------------------------------------
 +
 +/// A mystical, magical device for generating QEMU output out of the void.
 +struct QEMUOutput;
 +
-+/// Implementing `console::Write` enables usage of the `format_args!` macros, which in turn are used
-+/// to implement the `kernel`'s `print!` and `println!` macros.
++//--------------------------------------------------------------------------------------------------
++// Private Code
++//--------------------------------------------------------------------------------------------------
++
++/// Implementing `core::fmt::Write` enables usage of the `format_args!` macros, which in turn are
++/// used to implement the `kernel`'s `print!` and `println!` macros. By implementing `write_str()`,
++/// we get `write_fmt()` automatically.
 +///
 +/// See [`src/print.rs`].
 +///
 +/// [`src/print.rs`]: ../../print/index.html
-+impl interface::console::Write for QEMUOutput {
++impl fmt::Write for QEMUOutput {
 +    fn write_str(&mut self, s: &str) -> fmt::Result {
 +        for c in s.chars() {
 +            unsafe {
@@ -60,75 +94,53 @@ diff -uNr 02_runtime_init/src/bsp/rpi.rs 03_hacky_hello_world/src/bsp/rpi.rs
 +}
 +
 +//--------------------------------------------------------------------------------------------------
-+// Implementation of the kernel's BSP calls
++// Public Code
 +//--------------------------------------------------------------------------------------------------
 +
-+/// Returns a ready-to-use `console::Write` implementation.
-+pub fn console() -> impl interface::console::Write {
++/// Return a reference to the console.
++pub fn console() -> impl console::interface::Write {
 +    QEMUOutput {}
 +}
 
-diff -uNr 02_runtime_init/src/interface.rs 03_hacky_hello_world/src/interface.rs
---- 02_runtime_init/src/interface.rs
-+++ 03_hacky_hello_world/src/interface.rs
-@@ -0,0 +1,37 @@
+diff -uNr 02_runtime_init/src/bsp/raspberrypi.rs 03_hacky_hello_world/src/bsp/raspberrypi.rs
+--- 02_runtime_init/src/bsp/raspberrypi.rs
++++ 03_hacky_hello_world/src/bsp/raspberrypi.rs
+@@ -4,4 +4,4 @@
+
+ //! Top-level BSP file for the Raspberry Pi 3 and 4.
+
+-// Coming soon.
++pub mod console;
+
+diff -uNr 02_runtime_init/src/console.rs 03_hacky_hello_world/src/console.rs
+--- 02_runtime_init/src/console.rs
++++ 03_hacky_hello_world/src/console.rs
+@@ -0,0 +1,19 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 +
-+//! Trait definitions for coupling `kernel` and `BSP` code.
-+//!
-+//! ```
-+//!         +-------------------+
-+//!         | Interface (Trait) |
-+//!         |                   |
-+//!         +--+-------------+--+
-+//!            ^             ^
-+//!            |             |
-+//!            |             |
-+//! +----------+--+       +--+----------+
-+//! | Kernel code |       |  BSP Code   |
-+//! |             |       |             |
-+//! +-------------+       +-------------+
-+//! ```
++//! System console.
 +
-+/// System console operations.
-+pub mod console {
++//--------------------------------------------------------------------------------------------------
++// Public Definitions
++//--------------------------------------------------------------------------------------------------
++
++/// Console interfaces.
++pub mod interface {
 +    /// Console write functions.
 +    ///
 +    /// `core::fmt::Write` is exactly what we need for now. Re-export it here because
 +    /// implementing `console::Write` gives a better hint to the reader about the
 +    /// intention.
 +    pub use core::fmt::Write;
-+
-+    /// Console read functions.
-+    pub trait Read {
-+        /// Read a single character.
-+        fn read_char(&self) -> char {
-+            ' '
-+        }
-+    }
 +}
 
 diff -uNr 02_runtime_init/src/main.rs 03_hacky_hello_world/src/main.rs
 --- 02_runtime_init/src/main.rs
 +++ 03_hacky_hello_world/src/main.rs
-@@ -6,9 +6,23 @@
- #![doc(html_logo_url = "https://git.io/JeGIp")]
-
- //! The `kernel`
-+//!
-+//! The `kernel` is composed by glueing together code from
-+//!
-+//!   - [Hardware-specific Board Support Packages] (`BSPs`).
-+//!   - [Architecture-specific code].
-+//!   - HW- and architecture-agnostic `kernel` code.
-+//!
-+//! using the [`kernel::interface`] traits.
-+//!
-+//! [Hardware-specific Board Support Packages]: bsp/index.html
-+//! [Architecture-specific code]: arch/index.html
-+//! [`kernel::interface`]: interface/index.html
+@@ -93,7 +93,9 @@
+ //! - `crate::bsp::memory::*`
 
  #![feature(asm)]
 +#![feature(format_args_nl)]
@@ -137,23 +149,24 @@ diff -uNr 02_runtime_init/src/main.rs 03_hacky_hello_world/src/main.rs
  #![no_main]
  #![no_std]
 
-@@ -22,8 +36,10 @@
- // Conditionally includes the selected `BSP` code.
- mod bsp;
+@@ -101,9 +103,11 @@
+ // `runtime_init()`, which jumps to `kernel_init()`.
 
-+mod interface;
+ mod bsp;
++mod console;
+ mod cpu;
  mod memory;
  mod panic_wait;
 +mod print;
+ mod runtime_init;
 
  /// Early init code.
- ///
-@@ -31,5 +47,7 @@
+@@ -112,5 +116,7 @@
  ///
  /// - Only a single core must be active and running this function.
  unsafe fn kernel_init() -> ! {
 -    panic!()
-+    println!("Hello from Rust!");
++    println!("[0] Hello from Rust!");
 +
 +    panic!("Stopping here.")
  }
@@ -161,16 +174,16 @@ diff -uNr 02_runtime_init/src/main.rs 03_hacky_hello_world/src/main.rs
 diff -uNr 02_runtime_init/src/panic_wait.rs 03_hacky_hello_world/src/panic_wait.rs
 --- 02_runtime_init/src/panic_wait.rs
 +++ 03_hacky_hello_world/src/panic_wait.rs
-@@ -4,9 +4,16 @@
+@@ -4,10 +4,16 @@
 
  //! A panic handler that infinitely waits.
 
-+use crate::{arch, println};
+-use crate::cpu;
++use crate::{cpu, println};
  use core::panic::PanicInfo;
 
  #[panic_handler]
 -fn panic(_info: &PanicInfo) -> ! {
--    crate::arch::wait_forever()
 +fn panic(info: &PanicInfo) -> ! {
 +    if let Some(args) = info.message() {
 +        println!("\nKernel panic: {}", args);
@@ -178,28 +191,36 @@ diff -uNr 02_runtime_init/src/panic_wait.rs 03_hacky_hello_world/src/panic_wait.
 +        println!("\nKernel panic!");
 +    }
 +
-+    arch::wait_forever()
+     cpu::wait_forever()
  }
 
 diff -uNr 02_runtime_init/src/print.rs 03_hacky_hello_world/src/print.rs
 --- 02_runtime_init/src/print.rs
 +++ 03_hacky_hello_world/src/print.rs
-@@ -0,0 +1,34 @@
+@@ -0,0 +1,42 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Printing facilities.
 +
-+use crate::{bsp, interface};
++use crate::{bsp, console};
 +use core::fmt;
++
++//--------------------------------------------------------------------------------------------------
++// Private Code
++//--------------------------------------------------------------------------------------------------
 +
 +#[doc(hidden)]
 +pub fn _print(args: fmt::Arguments) {
-+    use interface::console::Write;
++    use console::interface::Write;
 +
-+    bsp::console().write_fmt(args).unwrap();
++    bsp::console::console().write_fmt(args).unwrap();
 +}
++
++//--------------------------------------------------------------------------------------------------
++// Public Code
++//--------------------------------------------------------------------------------------------------
 +
 +/// Prints without a newline.
 +///

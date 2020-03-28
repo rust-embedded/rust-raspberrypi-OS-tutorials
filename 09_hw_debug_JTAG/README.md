@@ -61,12 +61,12 @@ enable_jtag_gpio=1
 ## Hardware Setup
 
 Unlike microcontroller boards like the `STM32F3DISCOVERY`, which is used in our WG's [Embedded Rust
-Book](https://rust-embedded.github.io/book/start/hardware.html), the Raspberry Pi does not have an
-embedded debugger on its board. Hence, you need to buy one.
+Book], the Raspberry Pi does not have an embedded debugger on its board. Hence, you need to buy one.
 
 For this tutorial, we will use the [ARM-USB-TINY-H] from OLIMEX. It has a standard [ARM JTAG 20
 connector]. Unfortunately, the RPi does not, so we have to connect it via jumper wires.
 
+[Embedded Rust Book]: https://rust-embedded.github.io/book/start/hardware.html
 [ARM-USB-TINY-H]: https://www.olimex.com/Products/ARM/JTAG/ARM-USB-TINY-H
 [ARM JTAG 20 connector]: http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0499dj/BEHEIHCE.html
 
@@ -147,11 +147,13 @@ over `JTAG`. Therefore, we add a new `Makefile` target, `make jtagboot`, which
 uses the `chainboot` approach to load a tiny helper binary onto the RPi that
 just parks the executing core into a waiting state.
 
-The helper binary is maintained separately in this repository's [X1_JTAG_boot](../X1_JTAG_boot)
-folder, and is a modified version of the kernel we used in our tutorials so far.
+The helper binary is maintained separately in this repository's [X1_JTAG_boot] folder, and is a
+modified version of the kernel we used in our tutorials so far.
+
+[X1_JTAG_boot]: ../X1_JTAG_boot
 
 ```console
-» make jtagboot
+$ make jtagboot
 Minipush 1.0
 
 [MP] ⏳ Waiting for /dev/ttyUSB0
@@ -175,18 +177,21 @@ running. When we load the actual kernel later, `UART` output will appear here.
 
 ## OpenOCD
 
-Next, we need to launch the [Open On-Chip Debugger](http://openocd.org/), aka `OpenOCD` to actually
-connect the `JTAG`.
+Next, we need to launch the [Open On-Chip Debugger], aka `OpenOCD` to actually connect the `JTAG`.
+
+[Open On-Chip Debugger]: http://openocd.org
 
 As always, our tutorials try to be as painless as possible regarding dev-tools, which is why we have
-packaged everything into the [dedicated Docker container](../docker/rustembedded-osdev-utils) that
-is already used for chainbooting and `QEMU`.
+packaged everything into the [dedicated Docker container] that is already used for chainbooting and
+`QEMU`.
+
+[dedicated Docker container]: ../docker/rustembedded-osdev-utils
 
 Connect the Olimex USB JTAG debugger, open a new terminal and in the same folder, type `make
 openocd` (in that order!). You will see some initial output:
 
 ```console
-make openocd
+$ make openocd
 [...]
 Open On-Chip Debugger 0.10.0
 [...]
@@ -223,8 +228,8 @@ We can now use the `gdb` commandline to
   3. Manipulate the program counter of the RPi to start execution at our kernel's entry point.
   4. Single-step through its execution.
 
-```shell
-make gdb
+```console
+$ make gdb
 [...]
 >>> target remote :3333                          # Connect to OpenOCD, core0
 >>> load                                         # Load the kernel into the RPi's DRAM over JTAG.
@@ -308,7 +313,7 @@ diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
  	QEMU_RELEASE_ARGS = -serial stdio -display none
 +	OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi3.cfg
 +	JTAG_BOOT_IMAGE   = jtag_boot_rpi3.img
- 	LINKER_FILE       = src/bsp/rpi/link.ld
+ 	LINKER_FILE       = src/bsp/raspberrypi/link.ld
  	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
  else ifeq ($(BSP),rpi4)
 @@ -27,6 +29,8 @@
@@ -317,7 +322,7 @@ diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
  	# QEMU_RELEASE_ARGS = -serial stdio -display none
 +	OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi4.cfg
 +	JTAG_BOOT_IMAGE   = jtag_boot_rpi4.img
- 	LINKER_FILE       = src/bsp/rpi/link.ld
+ 	LINKER_FILE       = src/bsp/raspberrypi/link.ld
  	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
  endif
 @@ -52,11 +56,13 @@
@@ -335,7 +340,7 @@ diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
 
  all: clean $(OUTPUT)
 
-@@ -86,6 +92,28 @@
+@@ -85,6 +91,28 @@
  		$(DOCKER_IMAGE) $(DOCKER_EXEC_MINIPUSH) $(DEV_SERIAL)                  \
  		$(OUTPUT)
 

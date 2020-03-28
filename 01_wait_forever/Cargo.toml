@@ -14,4 +14,3 @@ bsp_rpi3 = []
 bsp_rpi4 = []
 
 [dependencies]
-

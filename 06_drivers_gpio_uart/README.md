@@ -2,9 +2,11 @@
 
 ## tl;dr
 
-Now that we enabled safe globals in the previous tutorial, the infrastructure is
-laid for adding the first real device drivers. We throw out the magic QEMU
-console and use a real UART now. Like serious embedded hackers do!
+Now that we enabled safe globals in the previous tutorial, the infrastructure is laid for adding the
+first real device drivers. We throw out the magic QEMU console and use a real UART now. Like serious
+embedded hackers do!
+
+## Notable additions
 
 - For the first time, we will be able to run the code on the real hardware.
   - Therefore, building is now differentiated between the **RPi 3** and the **RPi4**.
@@ -13,15 +15,14 @@ console and use a real UART now. Like serious embedded hackers do!
     - `BSP=rpi4 make`
     - `BSP=rpi4 make doc`
   - Unfortunately, QEMU does not yet support the **RPi4**, so `BSP=rpi4 make qemu` won't work.
-- A `DeviceDriver` trait is added for abstracting `BSP` driver implementations
+- A `driver::interface::DeviceDriver` trait is added for abstracting `BSP` driver implementations
   from kernel code.
-- Drivers are stored in `bsp/driver`, and can be reused between `BSP`s.
-    - Introducing the `GPIO` driver, which pinmuxes the RPi's PL011 UART.
-    - Most importantly, the `PL011Uart` driver: It implements the `Console`
-      traits and is from now on used as the system console output.
-- `BSP`s now contain a`memory_map.rs`. In the specific case, they contain the
-  RPi's MMIO addresses which are used to instantiate compatible device drivers
-  from `bsp/driver`.
+- Drivers are stored in `src/bsp/device_driver`, and can be reused between `BSP`s.
+    - We introduce the `GPIO` driver, which pinmuxes the RPi's PL011 UART.
+    - Most importantly, the `PL011Uart` driver: It implements the `console::interface::*` traits and
+      is from now on used as the main system console output.
+- `BSP`s now contain a memory map in `src/bsp/memory.rs`. In the specific case, they contain the
+  Raspberry's `MMIO` addresses which are used to instantiate the respectivedevice drivers.
 - We also modify the `panic!` handler, so that it does not anymore rely on `println!`, which uses
   the globally-shared instance of the `UART` that might be locked when an error is encountered (for
   now this can't happen due to the `NullLock`, but with a real lock it becomes an issue).
@@ -43,7 +44,7 @@ init_uart_clock=48000000
 ```
 ### Pi 3
 
-3. Copy the following files from the [Raspberry Pi firmware repo](https://github.com/raspberrypi/firmware/tree/master/boot)  onto the SD card:
+3. Copy the following files from the [Raspberry Pi firmware repo](https://github.com/raspberrypi/firmware/tree/master/boot) onto the SD card:
     - [bootcode.bin](https://github.com/raspberrypi/firmware/raw/master/boot/bootcode.bin)
     - [fixup.dat](https://github.com/raspberrypi/firmware/raw/master/boot/fixup.dat)
     - [start.elf](https://github.com/raspberrypi/firmware/raw/master/boot/start.elf)
@@ -51,15 +52,14 @@ init_uart_clock=48000000
 
 ### Pi 4
 
-3. Copy the following files from the [Raspberry Pi firmware repo](https://github.com/raspberrypi/firmware/tree/master/boot)  onto the SD card:
+3. Copy the following files from the [Raspberry Pi firmware repo](https://github.com/raspberrypi/firmware/tree/master/boot) onto the SD card:
     - [fixup4.dat](https://github.com/raspberrypi/firmware/raw/master/boot/fixup4.dat)
     - [start4.elf](https://github.com/raspberrypi/firmware/raw/master/boot/start4.elf)
     - [bcm2711-rpi-4-b.dtb](https://github.com/raspberrypi/firmware/raw/master/boot/bcm2711-rpi-4-b.dtb)
 4. Run `BSP=rpi4 make` and copy the [kernel8.img](kernel8.img) onto the SD card.
 
-
-_**Note**: Should it not work on your RPi4, try renaming `start4.elf` to `start.elf` (without the 4) on the SD card._
-
+_**Note**: Should it not work on your RPi4, try renaming `start4.elf` to `start.elf` (without the 4)
+on the SD card._
 
 ### Common again
 
@@ -76,9 +76,9 @@ sudo screen /dev/ttyUSB0 230400
 ```console
 [0] Booting on: Raspberry Pi 3
 [1] Drivers loaded:
-      1. GPIO
-      2. PL011Uart
-[2] Chars written: 84
+      1. BCM GPIO
+      2. BCM PL011 UART
+[2] Chars written: 93
 [3] Echoing input now
 ```
 
@@ -105,39 +105,44 @@ diff -uNr 05_safe_globals/Cargo.toml 06_drivers_gpio_uart/Cargo.toml
  cortex-a = { version = "2.9.x", optional = true }
 +register = { version = "0.5.x", optional = true }
 
-diff -uNr 05_safe_globals/src/arch/aarch64.rs 06_drivers_gpio_uart/src/arch/aarch64.rs
---- 05_safe_globals/src/arch/aarch64.rs
-+++ 06_drivers_gpio_uart/src/arch/aarch64.rs
-@@ -33,6 +33,15 @@
- // Implementation of the kernel's architecture abstraction code
+diff -uNr 05_safe_globals/src/_arch/aarch64/cpu.rs 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs
+--- 05_safe_globals/src/_arch/aarch64/cpu.rs
++++ 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs
+@@ -37,6 +37,16 @@
+ // Public Code
  //--------------------------------------------------------------------------------------------------
 
 +pub use asm::nop;
 +
 +/// Spin for `n` cycles.
++#[inline(always)]
 +pub fn spin_for_cycles(n: usize) {
 +    for _ in 0..n {
 +        asm::nop();
 +    }
 +}
 +
- /// Pause execution on the calling CPU core.
+ /// Pause execution on the core.
  #[inline(always)]
  pub fn wait_forever() -> ! {
 
-diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_gpio.rs 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_gpio.rs
---- 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_gpio.rs
-+++ 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_gpio.rs
-@@ -0,0 +1,145 @@
+diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
+--- 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
++++ 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
+@@ -0,0 +1,160 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 +
-+//! GPIO driver.
++//! GPIO Driver.
 +
-+use crate::{arch, arch::sync::NullLock, interface};
++use crate::{cpu, driver, synchronization, synchronization::NullLock};
 +use core::ops;
-+use register::{mmio::ReadWrite, register_bitfields, register_structs};
++use register::{mmio::*, register_bitfields, register_structs};
++
++//--------------------------------------------------------------------------------------------------
++// Private Definitions
++//--------------------------------------------------------------------------------------------------
 +
 +// GPIO registers.
 +//
@@ -197,12 +202,23 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_gpio.rs 06_drivers_gpio_uar
 +    }
 +}
 +
-+/// The driver's private data.
 +struct GPIOInner {
 +    base_addr: usize,
 +}
 +
-+/// Deref to RegisterBlock.
++//--------------------------------------------------------------------------------------------------
++// Public Definitions
++//--------------------------------------------------------------------------------------------------
++
++/// Representation of the GPIO HW.
++pub struct GPIO {
++    inner: NullLock<GPIOInner>,
++}
++
++//--------------------------------------------------------------------------------------------------
++// Private Code
++//--------------------------------------------------------------------------------------------------
++
 +impl ops::Deref for GPIOInner {
 +    type Target = RegisterBlock;
 +
@@ -212,29 +228,28 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_gpio.rs 06_drivers_gpio_uar
 +}
 +
 +impl GPIOInner {
-+    const fn new(base_addr: usize) -> GPIOInner {
-+        GPIOInner { base_addr }
++    const fn new(base_addr: usize) -> Self {
++        Self { base_addr }
 +    }
 +
-+    /// Return a pointer to the register block.
++    /// Return a pointer to the associated MMIO register block.
 +    fn ptr(&self) -> *const RegisterBlock {
 +        self.base_addr as *const _
 +    }
 +}
 +
 +//--------------------------------------------------------------------------------------------------
-+// BSP-public
++// Public Code
 +//--------------------------------------------------------------------------------------------------
-+use interface::sync::Mutex;
-+
-+/// The driver's main struct.
-+pub struct GPIO {
-+    inner: NullLock<GPIOInner>,
-+}
 +
 +impl GPIO {
-+    pub const unsafe fn new(base_addr: usize) -> GPIO {
-+        GPIO {
++    /// Create an instance.
++    ///
++    /// # Safety
++    ///
++    /// - The user must ensure to provide the correct `base_addr`.
++    pub const unsafe fn new(base_addr: usize) -> Self {
++        Self {
 +            inner: NullLock::new(GPIOInner::new(base_addr)),
 +        }
 +    }
@@ -253,41 +268,46 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_gpio.rs 06_drivers_gpio_uar
 +
 +            // Enable pins 14 and 15.
 +            inner.GPPUD.set(0);
-+            arch::spin_for_cycles(150);
++            cpu::spin_for_cycles(150);
 +
 +            inner
 +                .GPPUDCLK0
 +                .write(GPPUDCLK0::PUDCLK14::AssertClock + GPPUDCLK0::PUDCLK15::AssertClock);
-+            arch::spin_for_cycles(150);
++            cpu::spin_for_cycles(150);
 +
 +            inner.GPPUDCLK0.set(0);
 +        })
 +    }
 +}
 +
-+//--------------------------------------------------------------------------------------------------
-+// OS interface implementations
-+//--------------------------------------------------------------------------------------------------
++//------------------------------------------------------------------------------
++// OS Interface Code
++//------------------------------------------------------------------------------
++use synchronization::interface::Mutex;
 +
-+impl interface::driver::DeviceDriver for GPIO {
++impl driver::interface::DeviceDriver for GPIO {
 +    fn compatible(&self) -> &str {
-+        "GPIO"
++        "BCM GPIO"
 +    }
 +}
 
-diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
---- 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
-+++ 06_drivers_gpio_uart/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -0,0 +1,312 @@
+diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
+--- 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
++++ 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
+@@ -0,0 +1,322 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! PL011 UART driver.
 +
-+use crate::{arch, arch::sync::NullLock, interface};
++use crate::{console, cpu, driver, synchronization, synchronization::NullLock};
 +use core::{fmt, ops};
 +use register::{mmio::*, register_bitfields, register_structs};
++
++//--------------------------------------------------------------------------------------------------
++// Private Definitions
++//--------------------------------------------------------------------------------------------------
 +
 +// PL011 UART registers.
 +//
@@ -390,6 +410,10 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gp
 +    ]
 +}
 +
++//--------------------------------------------------------------------------------------------------
++// Public Definitions
++//--------------------------------------------------------------------------------------------------
++
 +register_structs! {
 +    #[allow(non_snake_case)]
 +    pub RegisterBlock {
@@ -407,12 +431,23 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gp
 +    }
 +}
 +
-+/// The driver's mutex protected part.
 +pub struct PL011UartInner {
 +    base_addr: usize,
 +    chars_written: usize,
 +    chars_read: usize,
 +}
++
++// Export the inner struct so that BSPs can use it for the panic handler.
++pub use PL011UartInner as PanicUart;
++
++/// Representation of the UART.
++pub struct PL011Uart {
++    inner: NullLock<PL011UartInner>,
++}
++
++//--------------------------------------------------------------------------------------------------
++// Public Code
++//--------------------------------------------------------------------------------------------------
 +
 +/// Deref to RegisterBlock.
 +///
@@ -433,8 +468,13 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gp
 +}
 +
 +impl PL011UartInner {
-+    pub const unsafe fn new(base_addr: usize) -> PL011UartInner {
-+        PL011UartInner {
++    /// Create an instance.
++    ///
++    /// # Safety
++    ///
++    /// - The user must ensure to provide the correct `base_addr`.
++    pub const unsafe fn new(base_addr: usize) -> Self {
++        Self {
 +            base_addr,
 +            chars_written: 0,
 +            chars_read: 0,
@@ -445,7 +485,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gp
 +    ///
 +    /// Results in 8N1 and 230400 baud (if the clk has been previously set to 48 MHz by the
 +    /// firmware).
-+    pub fn init(&self) {
++    pub fn init(&mut self) {
 +        // Turn it off temporarily.
 +        self.CR.set(0);
 +
@@ -467,7 +507,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gp
 +    fn write_char(&mut self, c: char) {
 +        // Spin while TX FIFO full is set, waiting for an empty slot.
 +        while self.FR.matches_all(FR::TXFF::SET) {
-+            arch::nop();
++            cpu::nop();
 +        }
 +
 +        // Write the character to the buffer.
@@ -496,42 +536,28 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gp
 +    }
 +}
 +
-+//--------------------------------------------------------------------------------------------------
-+// Export the inner struct so that BSPs can use it for the panic handler
-+//--------------------------------------------------------------------------------------------------
-+pub use PL011UartInner as PanicUart;
-+
-+//--------------------------------------------------------------------------------------------------
-+// BSP-public
-+//--------------------------------------------------------------------------------------------------
-+
-+/// The driver's main struct.
-+pub struct PL011Uart {
-+    inner: NullLock<PL011UartInner>,
-+}
-+
 +impl PL011Uart {
 +    /// # Safety
 +    ///
-+    /// The user must ensure to provide the correct `base_addr`.
-+    pub const unsafe fn new(base_addr: usize) -> PL011Uart {
-+        PL011Uart {
++    /// - The user must ensure to provide the correct `base_addr`.
++    pub const unsafe fn new(base_addr: usize) -> Self {
++        Self {
 +            inner: NullLock::new(PL011UartInner::new(base_addr)),
 +        }
 +    }
 +}
 +
-+//--------------------------------------------------------------------------------------------------
-+// OS interface implementations
-+//--------------------------------------------------------------------------------------------------
-+use interface::sync::Mutex;
++//------------------------------------------------------------------------------
++// OS Interface Code
++//------------------------------------------------------------------------------
++use synchronization::interface::Mutex;
 +
-+impl interface::driver::DeviceDriver for PL011Uart {
++impl driver::interface::DeviceDriver for PL011Uart {
 +    fn compatible(&self) -> &str {
-+        "PL011Uart"
++        "BCM PL011 UART"
 +    }
 +
-+    fn init(&self) -> interface::driver::Result {
++    fn init(&self) -> Result<(), ()> {
 +        let mut r = &self.inner;
 +        r.lock(|inner| inner.init());
 +
@@ -539,7 +565,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gp
 +    }
 +}
 +
-+impl interface::console::Write for PL011Uart {
++impl console::interface::Write for PL011Uart {
 +    /// Passthrough of `args` to the `core::fmt::Write` implementation, but guarded by a Mutex to
 +    /// serialize access.
 +    fn write_char(&self, c: char) {
@@ -555,13 +581,13 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gp
 +    }
 +}
 +
-+impl interface::console::Read for PL011Uart {
++impl console::interface::Read for PL011Uart {
 +    fn read_char(&self) -> char {
 +        let mut r = &self.inner;
 +        r.lock(|inner| {
 +            // Spin while RX FIFO empty is set.
 +            while inner.FR.matches_all(FR::RXFE::SET) {
-+                arch::nop();
++                cpu::nop();
 +            }
 +
 +            // Read one character.
@@ -580,7 +606,7 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gp
 +    }
 +}
 +
-+impl interface::console::Statistics for PL011Uart {
++impl console::interface::Statistics for PL011Uart {
 +    fn chars_written(&self) -> usize {
 +        let mut r = &self.inner;
 +        r.lock(|inner| inner.chars_written)
@@ -592,9 +618,9 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gp
 +    }
 +}
 
-diff -uNr 05_safe_globals/src/bsp/driver/bcm.rs 06_drivers_gpio_uart/src/bsp/driver/bcm.rs
---- 05_safe_globals/src/bsp/driver/bcm.rs
-+++ 06_drivers_gpio_uart/src/bsp/driver/bcm.rs
+diff -uNr 05_safe_globals/src/bsp/device_driver/bcm.rs 06_drivers_gpio_uart/src/bsp/device_driver/bcm.rs
+--- 05_safe_globals/src/bsp/device_driver/bcm.rs
++++ 06_drivers_gpio_uart/src/bsp/device_driver/bcm.rs
 @@ -0,0 +1,11 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -605,18 +631,18 @@ diff -uNr 05_safe_globals/src/bsp/driver/bcm.rs 06_drivers_gpio_uart/src/bsp/dri
 +mod bcm2xxx_gpio;
 +mod bcm2xxx_pl011_uart;
 +
-+pub use bcm2xxx_gpio::GPIO;
-+pub use bcm2xxx_pl011_uart::{PL011Uart, PanicUart};
++pub use bcm2xxx_gpio::*;
++pub use bcm2xxx_pl011_uart::*;
 
-diff -uNr 05_safe_globals/src/bsp/driver.rs 06_drivers_gpio_uart/src/bsp/driver.rs
---- 05_safe_globals/src/bsp/driver.rs
-+++ 06_drivers_gpio_uart/src/bsp/driver.rs
+diff -uNr 05_safe_globals/src/bsp/device_driver.rs 06_drivers_gpio_uart/src/bsp/device_driver.rs
+--- 05_safe_globals/src/bsp/device_driver.rs
++++ 06_drivers_gpio_uart/src/bsp/device_driver.rs
 @@ -0,0 +1,11 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 +
-+//! Drivers.
++//! Device driver.
 +
 +#[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
 +mod bcm;
@@ -624,48 +650,22 @@ diff -uNr 05_safe_globals/src/bsp/driver.rs 06_drivers_gpio_uart/src/bsp/driver.
 +#[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
 +pub use bcm::*;
 
-diff -uNr 05_safe_globals/src/bsp/rpi/memory_map.rs 06_drivers_gpio_uart/src/bsp/rpi/memory_map.rs
---- 05_safe_globals/src/bsp/rpi/memory_map.rs
-+++ 06_drivers_gpio_uart/src/bsp/rpi/memory_map.rs
-@@ -0,0 +1,18 @@
-+// SPDX-License-Identifier: MIT OR Apache-2.0
-+//
-+// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
-+
-+//! The board's memory map.
-+
-+/// Physical devices.
-+#[rustfmt::skip]
-+pub mod mmio {
-+    #[cfg(feature = "bsp_rpi3")]
-+    pub const BASE:            usize =        0x3F00_0000;
-+
-+    #[cfg(feature = "bsp_rpi4")]
-+    pub const BASE:            usize =        0xFE00_0000;
-+
-+    pub const GPIO_BASE:       usize = BASE + 0x0020_0000;
-+    pub const PL011_UART_BASE: usize = BASE + 0x0020_1000;
-+}
+diff -uNr 05_safe_globals/src/bsp/raspberrypi/console.rs 06_drivers_gpio_uart/src/bsp/raspberrypi/console.rs
+--- 05_safe_globals/src/bsp/raspberrypi/console.rs
++++ 06_drivers_gpio_uart/src/bsp/raspberrypi/console.rs
+@@ -4,115 +4,27 @@
 
-diff -uNr 05_safe_globals/src/bsp/rpi.rs 06_drivers_gpio_uart/src/bsp/rpi.rs
---- 05_safe_globals/src/bsp/rpi.rs
-+++ 06_drivers_gpio_uart/src/bsp/rpi.rs
-@@ -4,7 +4,10 @@
+ //! BSP console facilities.
 
- //! Board Support Package for the Raspberry Pi.
-
--use crate::{arch::sync::NullLock, interface};
-+mod memory_map;
-+
-+use super::driver;
-+use crate::interface;
+-use crate::{console, synchronization, synchronization::NullLock};
++use super::{super::device_driver, memory::map};
++use crate::console;
  use core::fmt;
 
- /// Used by `arch` code to find the early boot core.
-@@ -13,108 +16,59 @@
- /// The early boot core's stack address.
- pub const BOOT_CORE_STACK_START: u64 = 0x80_000;
-
+ //--------------------------------------------------------------------------------------------------
+-// Private Definitions
+-//--------------------------------------------------------------------------------------------------
+-
 -/// A mystical, magical device for generating QEMU output out of the void.
 -///
 -/// The mutex protected part.
@@ -673,6 +673,26 @@ diff -uNr 05_safe_globals/src/bsp/rpi.rs 06_drivers_gpio_uart/src/bsp/rpi.rs
 -    chars_written: usize,
 -}
 -
+-//--------------------------------------------------------------------------------------------------
+-// Public Definitions
+-//--------------------------------------------------------------------------------------------------
+-
+-/// The main struct.
+-pub struct QEMUOutput {
+-    inner: NullLock<QEMUOutputInner>,
+-}
+-
+-//--------------------------------------------------------------------------------------------------
+-// Global instances
+-//--------------------------------------------------------------------------------------------------
+-
+-static QEMU_OUTPUT: QEMUOutput = QEMUOutput::new();
+-
+-//--------------------------------------------------------------------------------------------------
+-// Private Code
++// Public Code
+ //--------------------------------------------------------------------------------------------------
+
 -impl QEMUOutputInner {
 -    const fn new() -> QEMUOutputInner {
 -        QEMUOutputInner { chars_written: 0 }
@@ -683,15 +703,20 @@ diff -uNr 05_safe_globals/src/bsp/rpi.rs 06_drivers_gpio_uart/src/bsp/rpi.rs
 -        unsafe {
 -            core::ptr::write_volatile(0x3F20_1000 as *mut u8, c as u8);
 -        }
+-
+-        self.chars_written += 1;
 -    }
 -}
 -
 -/// Implementing `core::fmt::Write` enables usage of the `format_args!` macros, which in turn are
 -/// used to implement the `kernel`'s `print!` and `println!` macros. By implementing `write_str()`,
 -/// we get `write_fmt()` automatically.
--///
++/// In case of a panic, the panic handler uses this function to take a last shot at printing
++/// something before the system is halted.
+ ///
 -/// The function takes an `&mut self`, so it must be implemented for the inner struct.
--///
++/// # Safety
+ ///
 -/// See [`src/print.rs`].
 -///
 -/// [`src/print.rs`]: ../../print/index.html
@@ -706,129 +731,207 @@ diff -uNr 05_safe_globals/src/bsp/rpi.rs 06_drivers_gpio_uart/src/bsp/rpi.rs
 -            self.write_char(c);
 -        }
 -
--        self.chars_written += s.len();
--
 -        Ok(())
 -    }
 -}
 -
- //--------------------------------------------------------------------------------------------------
--// BSP-public
-+// Global BSP driver instances
- //--------------------------------------------------------------------------------------------------
-
--/// The main struct.
--pub struct QEMUOutput {
--    inner: NullLock<QEMUOutputInner>,
--}
+-//--------------------------------------------------------------------------------------------------
+-// Public Code
+-//--------------------------------------------------------------------------------------------------
 -
 -impl QEMUOutput {
+-    /// Create a new instance.
 -    pub const fn new() -> QEMUOutput {
 -        QEMUOutput {
 -            inner: NullLock::new(QEMUOutputInner::new()),
 -        }
 -    }
++/// - Use only for printing during a panic.
++pub unsafe fn panic_console_out() -> impl fmt::Write {
++    let mut uart = device_driver::PanicUart::new(map::mmio::PL011_UART_BASE);
++    uart.init();
++    uart
+ }
+
+ /// Return a reference to the console.
+ pub fn console() -> &'static impl console::interface::All {
+-    &QEMU_OUTPUT
 -}
-+static GPIO: driver::GPIO = unsafe { driver::GPIO::new(memory_map::mmio::GPIO_BASE) };
-+static PL011_UART: driver::PL011Uart =
-+    unsafe { driver::PL011Uart::new(memory_map::mmio::PL011_UART_BASE) };
-
- //--------------------------------------------------------------------------------------------------
--// OS interface implementations
-+// Implementation of the kernel's BSP calls
- //--------------------------------------------------------------------------------------------------
-
+-
+-//------------------------------------------------------------------------------
+-// OS Interface Code
+-//------------------------------------------------------------------------------
+-use synchronization::interface::Mutex;
+-
 -/// Passthrough of `args` to the `core::fmt::Write` implementation, but guarded by a Mutex to
 -/// serialize access.
--impl interface::console::Write for QEMUOutput {
+-impl console::interface::Write for QEMUOutput {
 -    fn write_fmt(&self, args: core::fmt::Arguments) -> fmt::Result {
--        use interface::sync::Mutex;
--
 -        // Fully qualified syntax for the call to `core::fmt::Write::write:fmt()` to increase
 -        // readability.
 -        let mut r = &self.inner;
 -        r.lock(|inner| fmt::Write::write_fmt(inner, args))
+-    }
+-}
+-
+-impl console::interface::Statistics for QEMUOutput {
+-    fn chars_written(&self) -> usize {
+-        let mut r = &self.inner;
+-        r.lock(|inner| inner.chars_written)
+-    }
++    &super::PL011_UART
+ }
+
+diff -uNr 05_safe_globals/src/bsp/raspberrypi/driver.rs 06_drivers_gpio_uart/src/bsp/raspberrypi/driver.rs
+--- 05_safe_globals/src/bsp/raspberrypi/driver.rs
++++ 06_drivers_gpio_uart/src/bsp/raspberrypi/driver.rs
+@@ -0,0 +1,49 @@
++// SPDX-License-Identifier: MIT OR Apache-2.0
++//
++// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
++
++//! BSP driver support.
++
++use crate::driver;
++
++//--------------------------------------------------------------------------------------------------
++// Public Definitions
++//--------------------------------------------------------------------------------------------------
++
++/// Device Driver Manager type.
++pub struct BSPDriverManager {
++    device_drivers: [&'static (dyn DeviceDriver + Sync); 2],
++}
++
++//--------------------------------------------------------------------------------------------------
++// Global instances
++//--------------------------------------------------------------------------------------------------
++
++static BSP_DRIVER_MANAGER: BSPDriverManager = BSPDriverManager {
++    device_drivers: [&super::GPIO, &super::PL011_UART],
++};
++
++//--------------------------------------------------------------------------------------------------
++// Public Code
++//--------------------------------------------------------------------------------------------------
++
++/// Return a reference to the driver manager.
++pub fn driver_manager() -> &'static impl driver::interface::DriverManager {
++    &BSP_DRIVER_MANAGER
++}
++
++//------------------------------------------------------------------------------
++// OS Interface Code
++//------------------------------------------------------------------------------
++use driver::interface::DeviceDriver;
++
++impl driver::interface::DriverManager for BSPDriverManager {
++    fn all_device_drivers(&self) -> &[&'static (dyn DeviceDriver + Sync)] {
++        &self.device_drivers[..]
++    }
++
++    fn post_device_driver_init(&self) {
++        // Configure PL011Uart's output pins.
++        super::GPIO.map_pl011_uart();
++    }
++}
+
+diff -uNr 05_safe_globals/src/bsp/raspberrypi/memory.rs 06_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs
+--- 05_safe_globals/src/bsp/raspberrypi/memory.rs
++++ 06_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs
+@@ -0,0 +1,36 @@
++// SPDX-License-Identifier: MIT OR Apache-2.0
++//
++// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
++
++//! BSP Memory Management.
++
++//--------------------------------------------------------------------------------------------------
++// Public Definitions
++//--------------------------------------------------------------------------------------------------
++
++/// The board's memory map.
++#[rustfmt::skip]
++pub(super) mod map {
++    pub const GPIO_OFFSET:                              usize =        0x0020_0000;
++    pub const UART_OFFSET:                              usize =        0x0020_1000;
++
++    /// Physical devices.
++    #[cfg(feature = "bsp_rpi3")]
++    pub mod mmio {
++        use super::*;
++
++        pub const BASE:                                 usize =        0x3F00_0000;
++        pub const GPIO_BASE:                            usize = BASE + GPIO_OFFSET;
++        pub const PL011_UART_BASE:                      usize = BASE + UART_OFFSET;
++    }
++
++    /// Physical devices.
++    #[cfg(feature = "bsp_rpi4")]
++    pub mod mmio {
++        use super::*;
++
++        pub const BASE:                                 usize =        0xFE00_0000;
++        pub const GPIO_BASE:                            usize = BASE + GPIO_OFFSET;
++        pub const PL011_UART_BASE:                      usize = BASE + UART_OFFSET;
++    }
++}
+
+diff -uNr 05_safe_globals/src/bsp/raspberrypi.rs 06_drivers_gpio_uart/src/bsp/raspberrypi.rs
+--- 05_safe_globals/src/bsp/raspberrypi.rs
++++ 06_drivers_gpio_uart/src/bsp/raspberrypi.rs
+@@ -6,3 +6,33 @@
+
+ pub mod console;
+ pub mod cpu;
++pub mod driver;
++pub mod memory;
++
++//--------------------------------------------------------------------------------------------------
++// Global instances
++//--------------------------------------------------------------------------------------------------
++use super::device_driver;
++
++static GPIO: device_driver::GPIO =
++    unsafe { device_driver::GPIO::new(memory::map::mmio::GPIO_BASE) };
++
++static PL011_UART: device_driver::PL011Uart =
++    unsafe { device_driver::PL011Uart::new(memory::map::mmio::PL011_UART_BASE) };
++
++//--------------------------------------------------------------------------------------------------
++// Public Code
++//--------------------------------------------------------------------------------------------------
++
 +/// Board identification.
 +pub fn board_name() -> &'static str {
 +    #[cfg(feature = "bsp_rpi3")]
 +    {
 +        "Raspberry Pi 3"
-     }
--}
-
--impl interface::console::Read for QEMUOutput {}
--
--impl interface::console::Statistics for QEMUOutput {
--    fn chars_written(&self) -> usize {
--        use interface::sync::Mutex;
--
--        let mut r = &self.inner;
--        r.lock(|inner| inner.chars_written)
++    }
++
 +    #[cfg(feature = "bsp_rpi4")]
 +    {
 +        "Raspberry Pi 4"
-     }
- }
-
--//--------------------------------------------------------------------------------------------------
--// Global instances
--//--------------------------------------------------------------------------------------------------
-+/// Return a reference to a `console::All` implementation.
-+pub fn console() -> &'static impl interface::console::All {
-+    &PL011_UART
++    }
 +}
-
--static QEMU_OUTPUT: QEMUOutput = QEMUOutput::new();
-+/// In case of a panic, the panic handler uses this function to take a last shot at printing
-+/// something before the system is halted.
-+///
-+/// # Safety
-+///
-+/// - Use only for printing during a panic.
-+pub unsafe fn panic_console_out() -> impl fmt::Write {
-+    let uart = driver::PanicUart::new(memory_map::mmio::PL011_UART_BASE);
-+    uart.init();
-+    uart
-+}
-
--//--------------------------------------------------------------------------------------------------
--// Implementation of the kernel's BSP calls
--//--------------------------------------------------------------------------------------------------
-+/// Return an array of references to all `DeviceDriver` compatible `BSP` drivers.
-+///
-+/// # Safety
-+///
-+/// The order of devices is the order in which `DeviceDriver::init()` is called.
-+pub fn device_drivers() -> [&'static dyn interface::driver::DeviceDriver; 2] {
-+    [&GPIO, &PL011_UART]
-+}
-
--/// Return a reference to a `console::All` implementation.
--pub fn console() -> &'static impl interface::console::All {
--    &QEMU_OUTPUT
-+/// BSP initialization code that runs after driver init.
-+pub fn post_driver_init() {
-+    // Configure PL011Uart's output pins.
-+    GPIO.map_pl011_uart();
- }
 
 diff -uNr 05_safe_globals/src/bsp.rs 06_drivers_gpio_uart/src/bsp.rs
 --- 05_safe_globals/src/bsp.rs
 +++ 06_drivers_gpio_uart/src/bsp.rs
 @@ -4,6 +4,8 @@
 
- //! Conditional exporting of Board Support Packages.
+ //! Conditional re-exporting of Board Support Packages.
 
-+mod driver;
++mod device_driver;
 +
  #[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
- mod rpi;
+ mod raspberrypi;
 
 
-diff -uNr 05_safe_globals/src/interface.rs 06_drivers_gpio_uart/src/interface.rs
---- 05_safe_globals/src/interface.rs
-+++ 06_drivers_gpio_uart/src/interface.rs
-@@ -24,6 +24,9 @@
+diff -uNr 05_safe_globals/src/console.rs 06_drivers_gpio_uart/src/console.rs
+--- 05_safe_globals/src/console.rs
++++ 06_drivers_gpio_uart/src/console.rs
+@@ -14,18 +14,34 @@
 
      /// Console write functions.
      pub trait Write {
@@ -838,15 +941,49 @@ diff -uNr 05_safe_globals/src/interface.rs 06_drivers_gpio_uart/src/interface.rs
          /// Write a Rust format string.
          fn write_fmt(&self, args: fmt::Arguments) -> fmt::Result;
      }
-@@ -85,3 +88,20 @@
-         fn lock<R>(&mut self, f: impl FnOnce(&mut Self::Data) -> R) -> R;
+
++    /// Console read functions.
++    pub trait Read {
++        /// Read a single character.
++        fn read_char(&self) -> char {
++            ' '
++        }
++    }
++
+     /// Console statistics.
+     pub trait Statistics {
+         /// Return the number of characters written.
+         fn chars_written(&self) -> usize {
+             0
+         }
++
++        /// Return the number of characters read.
++        fn chars_read(&self) -> usize {
++            0
++        }
      }
+
+     /// Trait alias for a full-fledged console.
+-    pub trait All = Write + Statistics;
++    pub trait All = Write + Read + Statistics;
  }
+
+diff -uNr 05_safe_globals/src/driver.rs 06_drivers_gpio_uart/src/driver.rs
+--- 05_safe_globals/src/driver.rs
++++ 06_drivers_gpio_uart/src/driver.rs
+@@ -0,0 +1,41 @@
++// SPDX-License-Identifier: MIT OR Apache-2.0
++//
++// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
++
++//! Driver support.
++
++//--------------------------------------------------------------------------------------------------
++// Public Definitions
++//--------------------------------------------------------------------------------------------------
 +
 +/// Driver interfaces.
-+pub mod driver {
-+    /// Driver result type, e.g. for indicating successful driver init.
-+    pub type Result = core::result::Result<(), ()>;
++pub mod interface {
 +
 +    /// Device Driver functions.
 +    pub trait DeviceDriver {
@@ -854,86 +991,135 @@ diff -uNr 05_safe_globals/src/interface.rs 06_drivers_gpio_uart/src/interface.rs
 +        fn compatible(&self) -> &str;
 +
 +        /// Called by the kernel to bring up the device.
-+        fn init(&self) -> Result {
++        fn init(&self) -> Result<(), ()> {
 +            Ok(())
 +        }
++    }
++
++    /// Device driver management functions.
++    ///
++    /// The `BSP` is supposed to supply one global instance.
++    pub trait DriverManager {
++        /// Return a slice of references to all `BSP`-instantiated drivers.
++        ///
++        /// # Safety
++        ///
++        /// - The order of devices is the order in which `DeviceDriver::init()` is called.
++        fn all_device_drivers(&self) -> &[&'static (dyn DeviceDriver + Sync)];
++
++        /// Initialization code that runs after driver init.
++        ///
++        /// For example, device driver code that depends on other drivers already being online.
++        fn post_device_driver_init(&self);
 +    }
 +}
 
 diff -uNr 05_safe_globals/src/main.rs 06_drivers_gpio_uart/src/main.rs
 --- 05_safe_globals/src/main.rs
 +++ 06_drivers_gpio_uart/src/main.rs
-@@ -42,16 +42,48 @@
+@@ -7,6 +7,14 @@
 
- /// Early init code.
- ///
-+/// Concerned with with initializing `BSP` and `arch` parts.
-+///
+ //! The `kernel` binary.
+ //!
++//! # TL;DR - Overview of important Kernel entities
++//!
++//! - [`bsp::console::console()`] - Returns a reference to the kernel's [console interface].
++//! - [`bsp::driver::driver_manager()`] - Returns a reference to the kernel's [driver interface].
++//!
++//! [console interface]: ../libkernel/console/interface/index.html
++//! [driver interface]: ../libkernel/driver/interface/trait.DriverManager.html
++//!
+ //! # Code organization and architecture
+ //!
+ //! The code is divided into different *modules*, each representing a typical **subsystem** of the
+@@ -105,6 +113,7 @@
+ mod bsp;
+ mod console;
+ mod cpu;
++mod driver;
+ mod memory;
+ mod panic_wait;
+ mod print;
+@@ -116,16 +125,53 @@
  /// # Safety
  ///
  /// - Only a single core must be active and running this function.
 +/// - The init calls in this function must appear in the correct order.
  unsafe fn kernel_init() -> ! {
--    use interface::console::Statistics;
-+    for i in bsp::device_drivers().iter() {
-+        if let Err(()) = i.init() {
+-    use console::interface::Statistics;
++    use driver::interface::DriverManager;
++
++    for i in bsp::driver::driver_manager().all_device_drivers().iter() {
++        if i.init().is_err() {
 +            panic!("Error loading driver: {}", i.compatible())
 +        }
 +    }
-+    bsp::post_driver_init();
++    bsp::driver::driver_manager().post_device_driver_init();
 +    // println! is usable from here on.
 +
 +    // Transition from unsafe to safe.
 +    kernel_main()
 +}
-+
+
+-    println!("[0] Hello from pure Rust!");
 +/// The main function running after the early init.
 +fn kernel_main() -> ! {
-+    use interface::console::All;
++    use console::interface::All;
++    use driver::interface::DriverManager;
 +
-+    // UART should be functional now. Wait for user to hit Enter.
++    // Wait for user to hit Enter.
 +    loop {
-+        if bsp::console().read_char() == '\n' {
++        if bsp::console::console().read_char() == '\n' {
 +            break;
 +        }
 +    }
 +
 +    println!("[0] Booting on: {}", bsp::board_name());
-
--    println!("[0] Hello from pure Rust!");
++
 +    println!("[1] Drivers loaded:");
-+    for (i, driver) in bsp::device_drivers().iter().enumerate() {
++    for (i, driver) in bsp::driver::driver_manager()
++        .all_device_drivers()
++        .iter()
++        .enumerate()
++    {
 +        println!("      {}. {}", i + 1, driver.compatible());
 +    }
 
--    println!("[1] Chars written: {}", bsp::console().chars_written());
-+    println!("[2] Chars written: {}", bsp::console().chars_written());
+     println!(
+-        "[1] Chars written: {}",
++        "[2] Chars written: {}",
+         bsp::console::console().chars_written()
+     );
 +    println!("[3] Echoing input now");
 
 -    println!("[2] Stopping here.");
--    arch::wait_forever()
+-    cpu::wait_forever()
 +    loop {
-+        let c = bsp::console().read_char();
-+        bsp::console().write_char(c);
++        let c = bsp::console::console().read_char();
++        bsp::console::console().write_char(c);
 +    }
  }
 
 diff -uNr 05_safe_globals/src/panic_wait.rs 06_drivers_gpio_uart/src/panic_wait.rs
 --- 05_safe_globals/src/panic_wait.rs
 +++ 06_drivers_gpio_uart/src/panic_wait.rs
-@@ -4,15 +4,31 @@
+@@ -4,15 +4,35 @@
 
  //! A panic handler that infinitely waits.
 
--use crate::{arch, println};
+-use crate::{cpu, println};
 -use core::panic::PanicInfo;
-+use crate::{arch, bsp};
++use crate::{bsp, cpu};
 +use core::{fmt, panic::PanicInfo};
++
++//--------------------------------------------------------------------------------------------------
++// Private Code
++//--------------------------------------------------------------------------------------------------
 +
 +fn _panic_print(args: fmt::Arguments) {
 +    use fmt::Write;
 +
-+    unsafe { bsp::panic_console_out().write_fmt(args).unwrap() };
++    unsafe { bsp::console::panic_console_out().write_fmt(args).unwrap() };
 +}
 +
 +/// Prints with a newline - only use from the panic handler.
@@ -956,6 +1142,6 @@ diff -uNr 05_safe_globals/src/panic_wait.rs 06_drivers_gpio_uart/src/panic_wait.
 +        panic_println!("\nKernel panic!");
      }
 
-     arch::wait_forever()
+     cpu::wait_forever()
 
 ```

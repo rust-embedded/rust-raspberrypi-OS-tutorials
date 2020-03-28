@@ -33,10 +33,9 @@ P.S.: In the future, Chinese :cn: versions of the tutorials will be maintained a
 - Each tutorial `README` will have a short `tl;dr` section giving a brief
   overview of the additions, and show the source code `diff` to the previous
   tutorial, so that you can conveniently inspect the changes/additions.
-- Some tutorials have a full-fledged, detailed text in addition to the `tl;dr`
-  section. The long-term plan is that all tutorials get a full text, but for now
-  this is exclusive to tutorials where I think that `tl;dr` and `diff` are not
-  enough to get the idea.
+    - Some tutorials have a full-fledged, detailed text in addition to the `tl;dr` section. The
+      long-term plan is that all tutorials get a full text, but for now this is exclusive to
+      tutorials where I think that `tl;dr` and `diff` are not enough to get the idea.
 - The code written in these tutorials supports and runs on the **Raspberry Pi
   3** and the **Raspberry Pi 4**.
   - Tutorials 1 till 5 are groundwork code which only makes sense to run in
@@ -48,8 +47,12 @@ P.S.: In the future, Chinese :cn: versions of the tutorials will be maintained a
   architectures and/or boards.
   - I would really love if someone takes a shot at a **RISC-V** implementation!
 - For editing, I recommend [Visual Studio Code] with [Rust Analyzer].
-- In addition to the tutorial text, also check out the `make doc` command to
-  browse the code with HTML goodness.
+- In addition to the tutorial text, also check out the `make doc` command in each tutorial to browse
+  the code, which is extensively documented.
+
+### Output of `make doc`
+
+<img src="doc/make_doc.png" widht="880">
 
 [Visual Studio Code]: https://code.visualstudio.com
 [Rust Analyzer]: https://rust-analyzer.github.io
@@ -84,7 +87,7 @@ Before you can start, you must install a suitable Rust toolchain:
 curl https://sh.rustup.rs -sSf             \
     |                                      \
     sh -s --                               \
-    --default-toolchain nightly-2019-12-20 \
+    --default-toolchain nightly-2020-03-19 \
     --component rust-src llvm-tools-preview rustfmt
 
 source $HOME/.cargo/env
@@ -137,4 +140,3 @@ at your option.
 Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
 dual licensed as above, without any additional terms or conditions.
-

@@ -4,13 +4,17 @@
 
 //! A panic handler that infinitely waits.
 
-use crate::{arch, bsp};
+use crate::{bsp, cpu};
 use core::{fmt, panic::PanicInfo};
+
+//--------------------------------------------------------------------------------------------------
+// Private Code
+//--------------------------------------------------------------------------------------------------
 
 fn _panic_print(args: fmt::Arguments) {
     use fmt::Write;
 
-    unsafe { bsp::panic_console_out().write_fmt(args).unwrap() };
+    unsafe { bsp::console::panic_console_out().write_fmt(args).unwrap() };
 }
 
 /// Prints with a newline - only use from the panic handler.
@@ -31,5 +35,5 @@ fn panic(info: &PanicInfo) -> ! {
         panic_println!("\nKernel panic!");
     }
 
-    arch::wait_forever()
+    cpu::wait_forever()
 }

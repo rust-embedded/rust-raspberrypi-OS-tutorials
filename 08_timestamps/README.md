@@ -2,14 +2,14 @@
 
 ## tl;dr
 
-We add abstractions for the architectural timer, implement it for `aarch64` and
-use it to annotate prints with timestamps; A `warn!()` macro is added.
+We add abstractions for the architectural timer, implement it for `aarch64` and use it to annotate
+prints with timestamps; A `warn!()` macro is added.
 
 ## Test it
 
 Check it out via chainboot (added in previous tutorial):
 ```console
-» make chainboot
+$ make chainboot
 [...]
 Minipush 1.0
 
@@ -26,15 +26,16 @@ Minipush 1.0
 [MP] ⏩ Pushing 12 KiB =========================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
-[    0.585762] Booting on: Raspberry Pi 3
-[    0.586849] Architectural timer resolution: 52 ns
-[    0.589152] Drivers loaded:
-[    0.590498]       1. GPIO
-[    0.591758]       2. PL011Uart
-[W   0.593235] Spin duration smaller than architecturally supported, skipping
-[    0.596623] Spinning for 1 second
-[    1.598232] Spinning for 1 second
-[    2.599104] Spinning for 1 second
+[    0.586140] Booting on: Raspberry Pi 3
+[    0.587227] Architectural timer resolution: 52 ns
+[    0.589530] Drivers loaded:
+[    0.590876]       1. BCM GPIO
+[    0.592309]       2. BCM PL011 UART
+[W   0.594005] Spin duration smaller than architecturally supported, skipping
+[    0.597392] Spinning for 1 second
+[    1.599001] Spinning for 1 second
+[    2.599872] Spinning for 1 second
+
 ```
 
 ## Diff to previous
@@ -48,7 +49,7 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
 @@ -20,8 +20,7 @@
  	QEMU_MACHINE_TYPE = raspi3
  	QEMU_RELEASE_ARGS = -serial stdio -display none
- 	LINKER_FILE       = src/bsp/rpi/link.ld
+ 	LINKER_FILE       = src/bsp/raspberrypi/link.ld
 -	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53 -C relocation-model=pic
 -	CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi3.img
 +	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
@@ -58,7 +59,7 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
 @@ -29,8 +28,7 @@
  	# QEMU_MACHINE_TYPE =
  	# QEMU_RELEASE_ARGS = -serial stdio -display none
- 	LINKER_FILE       = src/bsp/rpi/link.ld
+ 	LINKER_FILE       = src/bsp/raspberrypi/link.ld
 -	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72 -C relocation-model=pic
 -	CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi4.img
 +	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
@@ -74,7 +75,7 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
 
  all: clean $(OUTPUT)
 
-@@ -76,25 +74,17 @@
+@@ -75,25 +73,17 @@
  ifeq ($(QEMU_MACHINE_TYPE),)
  qemu:
  	@echo "This board is not yet supported for QEMU."
@@ -103,33 +104,72 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
  clippy:
  	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" cargo xclippy --target=$(TARGET) --features bsp_$(BSP)
 
-diff -uNr 07_uart_chainloader/src/arch/aarch64/time.rs 08_timestamps/src/arch/aarch64/time.rs
---- 07_uart_chainloader/src/arch/aarch64/time.rs
-+++ 08_timestamps/src/arch/aarch64/time.rs
-@@ -0,0 +1,81 @@
+diff -uNr 07_uart_chainloader/src/_arch/aarch64/cpu.rs 08_timestamps/src/_arch/aarch64/cpu.rs
+--- 07_uart_chainloader/src/_arch/aarch64/cpu.rs
++++ 08_timestamps/src/_arch/aarch64/cpu.rs
+@@ -21,12 +21,12 @@
+ #[naked]
+ #[no_mangle]
+ pub unsafe extern "C" fn _start() -> ! {
+-    use crate::relocate;
++    use crate::runtime_init;
+
+     // Expect the boot core to start in EL2.
+     if bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id() {
+         SP.set(bsp::cpu::BOOT_CORE_STACK_START);
+-        relocate::relocate_self::<u64>()
++        runtime_init::runtime_init()
+     } else {
+         // If not core0, infinitely wait for events.
+         wait_forever()
+
+diff -uNr 07_uart_chainloader/src/_arch/aarch64/time.rs 08_timestamps/src/_arch/aarch64/time.rs
+--- 07_uart_chainloader/src/_arch/aarch64/time.rs
++++ 08_timestamps/src/_arch/aarch64/time.rs
+@@ -0,0 +1,101 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 +
-+//! Timer primitives.
++//! Architectural timer primitives.
 +
-+use crate::{interface, warn};
++use crate::{time, warn};
 +use core::time::Duration;
 +use cortex_a::regs::*;
++
++//--------------------------------------------------------------------------------------------------
++// Private Definitions
++//--------------------------------------------------------------------------------------------------
 +
 +const NS_PER_S: u64 = 1_000_000_000;
 +
 +//--------------------------------------------------------------------------------------------------
-+// Arch-public
++// Public Definitions
 +//--------------------------------------------------------------------------------------------------
 +
-+pub struct Timer;
++/// ARMv8 Generic Timer.
++pub struct GenericTimer;
 +
 +//--------------------------------------------------------------------------------------------------
-+// OS interface implementations
++// Global instances
 +//--------------------------------------------------------------------------------------------------
 +
-+impl interface::time::Timer for Timer {
++static TIME_MANAGER: GenericTimer = GenericTimer;
++
++//--------------------------------------------------------------------------------------------------
++// Public Code
++//--------------------------------------------------------------------------------------------------
++
++/// Return a reference to the time manager.
++pub fn time_manager() -> &'static impl time::interface::TimeManager {
++    &TIME_MANAGER
++}
++
++//------------------------------------------------------------------------------
++// OS Interface Code
++//------------------------------------------------------------------------------
++
++impl time::interface::TimeManager for GenericTimer {
 +    fn resolution(&self) -> Duration {
 +        Duration::from_nanos(NS_PER_S / (CNTFRQ_EL0.get() as u64))
 +    }
@@ -189,60 +229,11 @@ diff -uNr 07_uart_chainloader/src/arch/aarch64/time.rs 08_timestamps/src/arch/aa
 +    }
 +}
 
-diff -uNr 07_uart_chainloader/src/arch/aarch64.rs 08_timestamps/src/arch/aarch64.rs
---- 07_uart_chainloader/src/arch/aarch64.rs
-+++ 08_timestamps/src/arch/aarch64.rs
-@@ -5,8 +5,9 @@
- //! AArch64.
-
- pub mod sync;
-+mod time;
-
--use crate::bsp;
-+use crate::{bsp, interface};
- use cortex_a::{asm, regs::*};
-
- /// The entry of the `kernel` binary.
-@@ -22,7 +23,7 @@
-
-     if bsp::BOOT_CORE_ID == MPIDR_EL1.get() & CORE_MASK {
-         SP.set(bsp::BOOT_CORE_STACK_START);
--        crate::relocate::relocate_self::<u64>()
-+        crate::runtime_init::runtime_init()
-     } else {
-         // If not core0, infinitely wait for events.
-         wait_forever()
-@@ -30,6 +31,12 @@
- }
-
- //--------------------------------------------------------------------------------------------------
-+// Global instances
-+//--------------------------------------------------------------------------------------------------
-+
-+static TIMER: time::Timer = time::Timer;
-+
-+//--------------------------------------------------------------------------------------------------
- // Implementation of the kernel's architecture abstraction code
- //--------------------------------------------------------------------------------------------------
-
-@@ -42,6 +49,11 @@
-     }
- }
-
-+/// Return a reference to a `interface::time::TimeKeeper` implementation.
-+pub fn timer() -> &'static impl interface::time::Timer {
-+    &TIMER
-+}
-+
- /// Pause execution on the calling CPU core.
- #[inline(always)]
- pub fn wait_forever() -> ! {
-
-diff -uNr 07_uart_chainloader/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 08_timestamps/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
---- 07_uart_chainloader/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
-+++ 08_timestamps/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -293,11 +293,18 @@
-                 arch::nop();
+diff -uNr 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 08_timestamps/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
+--- 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
++++ 08_timestamps/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
+@@ -303,11 +303,18 @@
+                 cpu::nop();
              }
 
 +            // Read one character.
@@ -263,9 +254,20 @@ diff -uNr 07_uart_chainloader/src/bsp/driver/bcm/bcm2xxx_pl011_uart.rs 08_timest
      }
 
 
-diff -uNr 07_uart_chainloader/src/bsp/rpi/link.ld 08_timestamps/src/bsp/rpi/link.ld
---- 07_uart_chainloader/src/bsp/rpi/link.ld
-+++ 08_timestamps/src/bsp/rpi/link.ld
+diff -uNr 07_uart_chainloader/src/bsp/raspberrypi/cpu.rs 08_timestamps/src/bsp/raspberrypi/cpu.rs
+--- 07_uart_chainloader/src/bsp/raspberrypi/cpu.rs
++++ 08_timestamps/src/bsp/raspberrypi/cpu.rs
+@@ -13,6 +13,3 @@
+
+ /// The early boot core's stack address.
+ pub const BOOT_CORE_STACK_START: u64 = 0x80_000;
+-
+-/// The address on which the Raspberry firmware loads every binary by default.
+-pub const BOARD_DEFAULT_LOAD_ADDRESS: usize = 0x80_000;
+
+diff -uNr 07_uart_chainloader/src/bsp/raspberrypi/link.ld 08_timestamps/src/bsp/raspberrypi/link.ld
+--- 07_uart_chainloader/src/bsp/raspberrypi/link.ld
++++ 08_timestamps/src/bsp/raspberrypi/link.ld
 @@ -5,10 +5,9 @@
 
  SECTIONS
@@ -295,69 +297,52 @@ diff -uNr 07_uart_chainloader/src/bsp/rpi/link.ld 08_timestamps/src/bsp/rpi/link
      /DISCARD/ : { *(.comment*) }
  }
 
-diff -uNr 07_uart_chainloader/src/bsp/rpi.rs 08_timestamps/src/bsp/rpi.rs
---- 07_uart_chainloader/src/bsp/rpi.rs
-+++ 08_timestamps/src/bsp/rpi.rs
-@@ -16,9 +16,6 @@
- /// The early boot core's stack address.
- pub const BOOT_CORE_STACK_START: u64 = 0x80_000;
-
--/// The address on which the RPi3 firmware loads every binary by default.
--pub const BOARD_DEFAULT_LOAD_ADDRESS: usize = 0x80_000;
--
- //--------------------------------------------------------------------------------------------------
- // Global BSP driver instances
- //--------------------------------------------------------------------------------------------------
-
-diff -uNr 07_uart_chainloader/src/interface.rs 08_timestamps/src/interface.rs
---- 07_uart_chainloader/src/interface.rs
-+++ 08_timestamps/src/interface.rs
-@@ -112,3 +112,22 @@
-         }
-     }
- }
-+
-+/// Timekeeping interfaces.
-+pub mod time {
-+    use core::time::Duration;
-+
-+    /// Timer functions.
-+    pub trait Timer {
-+        /// The timer's resolution.
-+        fn resolution(&self) -> Duration;
-+
-+        /// The uptime since power-on of the device.
-+        ///
-+        /// This includes time consumed by firmware and bootloaders.
-+        fn uptime(&self) -> Duration;
-+
-+        /// Spin for a given duration.
-+        fn spin_for(&self, duration: Duration);
-+    }
-+}
-
 diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
 --- 07_uart_chainloader/src/main.rs
 +++ 08_timestamps/src/main.rs
-@@ -29,11 +29,7 @@
- // the first function to run.
- mod arch;
+@@ -11,9 +11,11 @@
+ //!
+ //! - [`bsp::console::console()`] - Returns a reference to the kernel's [console interface].
+ //! - [`bsp::driver::driver_manager()`] - Returns a reference to the kernel's [driver interface].
++//! - [`time::time_manager()`] - Returns a reference to the kernel's [timer interface].
+ //!
+ //! [console interface]: ../libkernel/console/interface/index.html
+ //! [driver interface]: ../libkernel/driver/interface/trait.DriverManager.html
++//! [timer interface]: ../libkernel/time/interface/trait.TimeManager.html
+ //!
+ //! # Code organization and architecture
+ //!
+@@ -108,8 +110,7 @@
+ #![no_std]
 
--// `_start()` then calls `relocate::relocate_self()`.
--mod relocate;
--
--// `relocate::relocate_self()` calls `runtime_init()`, which on completion, jumps to
+ // `mod cpu` provides the `_start()` function, the first function to run. `_start()` then calls
+-// `relocate::relocate_self()`. `relocate::relocate_self()` calls `runtime_init()`, which jumps to
 -// `kernel_init()`.
-+// `_start()` then calls `runtime_init()`, which on completion, jumps to `kernel_init()`.
- mod runtime_init;
++// `runtime_init()`, which jumps to `kernel_init()`.
 
- // Conditionally includes the selected `BSP` code.
-@@ -67,51 +63,25 @@
+ mod bsp;
+ mod console;
+@@ -118,9 +119,9 @@
+ mod memory;
+ mod panic_wait;
+ mod print;
+-mod relocate;
+ mod runtime_init;
+ mod synchronization;
++mod time;
+
+ /// Early init code.
+ ///
+@@ -145,52 +146,31 @@
 
  /// The main function running after the early init.
  fn kernel_main() -> ! {
--    use interface::console::All;
--
+-    use bsp::console::console;
+-    use console::interface::All;
++    use core::time::Duration;
++    use driver::interface::DriverManager;
++    use time::interface::TimeManager;
+
 -    println!(" __  __ _      _ _                 _ ");
 -    println!("|  \\/  (_)_ _ (_) |   ___  __ _ __| |");
 -    println!("| |\\/| | | ' \\| | |__/ _ \\/ _` / _` |");
@@ -366,78 +351,80 @@ diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
 -    println!("{:^37}", bsp::board_name());
 -    println!();
 -    println!("[ML] Requesting binary");
--    bsp::console().flush();
+-    console().flush();
 -
 -    // Clear the RX FIFOs, if any, of spurious received characters before starting with the loader
 -    // protocol.
--    bsp::console().clear();
+-    console().clear();
 -
 -    // Notify `Minipush` to send the binary.
 -    for _ in 0..3 {
--        bsp::console().write_char(3 as char);
+-        console().write_char(3 as char);
 -    }
-+    use core::time::Duration;
-+    use interface::time::Timer;
++    info!("Booting on: {}", bsp::board_name());
 
 -    // Read the binary's size.
--    let mut size: u32 = u32::from(bsp::console().read_char() as u8);
--    size |= u32::from(bsp::console().read_char() as u8) << 8;
--    size |= u32::from(bsp::console().read_char() as u8) << 16;
--    size |= u32::from(bsp::console().read_char() as u8) << 24;
+-    let mut size: u32 = u32::from(console().read_char() as u8);
+-    size |= u32::from(console().read_char() as u8) << 8;
+-    size |= u32::from(console().read_char() as u8) << 16;
+-    size |= u32::from(console().read_char() as u8) << 24;
 -
 -    // Trust it's not too big.
--    bsp::console().write_char('O');
--    bsp::console().write_char('K');
+-    console().write_char('O');
+-    console().write_char('K');
 -
--    let kernel_addr: *mut u8 = bsp::BOARD_DEFAULT_LOAD_ADDRESS as *mut u8;
+-    let kernel_addr: *mut u8 = bsp::cpu::BOARD_DEFAULT_LOAD_ADDRESS as *mut u8;
 -    unsafe {
 -        // Read the kernel byte by byte.
 -        for i in 0..size {
--            *kernel_addr.offset(i as isize) = bsp::console().read_char() as u8;
+-            *kernel_addr.offset(i as isize) = console().read_char() as u8;
 -        }
-+    info!("Booting on: {}", bsp::board_name());
 +    info!(
 +        "Architectural timer resolution: {} ns",
-+        arch::timer().resolution().as_nanos()
++        time::time_manager().resolution().as_nanos()
 +    );
 +
 +    info!("Drivers loaded:");
-+    for (i, driver) in bsp::device_drivers().iter().enumerate() {
++    for (i, driver) in bsp::driver::driver_manager()
++        .all_device_drivers()
++        .iter()
++        .enumerate()
++    {
 +        info!("      {}. {}", i + 1, driver.compatible());
      }
 
 -    println!("[ML] Loaded! Executing the payload now\n");
--    bsp::console().flush();
--
+-    console().flush();
++    // Test a failing timer case.
++    time::time_manager().spin_for(Duration::from_nanos(1));
+
 -    // Use black magic to get a function pointer.
 -    let kernel: extern "C" fn() -> ! = unsafe { core::mem::transmute(kernel_addr as *const ()) };
-+    // Test a failing timer case.
-+    arch::timer().spin_for(Duration::from_nanos(1));
-
+-
 -    // Jump to loaded kernel!
 -    kernel()
 +    loop {
 +        info!("Spinning for 1 second");
-+        arch::timer().spin_for(Duration::from_secs(1));
++        time::time_manager().spin_for(Duration::from_secs(1));
 +    }
  }
 
 diff -uNr 07_uart_chainloader/src/print.rs 08_timestamps/src/print.rs
 --- 07_uart_chainloader/src/print.rs
 +++ 08_timestamps/src/print.rs
-@@ -32,3 +32,71 @@
+@@ -40,3 +40,71 @@
          $crate::print::_print(format_args_nl!($($arg)*));
      })
  }
 +
-+/// Prints an info, with newline.
++/// Prints an info, with a newline.
 +#[macro_export]
 +macro_rules! info {
 +    ($string:expr) => ({
 +        #[allow(unused_imports)]
-+        use crate::interface::time::Timer;
++        use crate::time::interface::TimeManager;
 +
-+        let timestamp = $crate::arch::timer().uptime();
++        let timestamp = $crate::time::time_manager().uptime();
 +        let timestamp_subsec_us = timestamp.subsec_micros();
 +
 +        $crate::print::_print(format_args_nl!(
@@ -449,9 +436,9 @@ diff -uNr 07_uart_chainloader/src/print.rs 08_timestamps/src/print.rs
 +    });
 +    ($format_string:expr, $($arg:tt)*) => ({
 +        #[allow(unused_imports)]
-+        use crate::interface::time::Timer;
++        use crate::time::interface::TimeManager;
 +
-+        let timestamp = $crate::arch::timer().uptime();
++        let timestamp = $crate::time::time_manager().uptime();
 +        let timestamp_subsec_us = timestamp.subsec_micros();
 +
 +        $crate::print::_print(format_args_nl!(
@@ -464,14 +451,14 @@ diff -uNr 07_uart_chainloader/src/print.rs 08_timestamps/src/print.rs
 +    })
 +}
 +
-+/// Prints a warning, with newline.
++/// Prints a warning, with a newline.
 +#[macro_export]
 +macro_rules! warn {
 +    ($string:expr) => ({
 +        #[allow(unused_imports)]
-+        use crate::interface::time::Timer;
++        use crate::time::interface::TimeManager;
 +
-+        let timestamp = $crate::arch::timer().uptime();
++        let timestamp = $crate::time::time_manager().uptime();
 +        let timestamp_subsec_us = timestamp.subsec_micros();
 +
 +        $crate::print::_print(format_args_nl!(
@@ -483,9 +470,9 @@ diff -uNr 07_uart_chainloader/src/print.rs 08_timestamps/src/print.rs
 +    });
 +    ($format_string:expr, $($arg:tt)*) => ({
 +        #[allow(unused_imports)]
-+        use crate::interface::time::Timer;
++        use crate::time::interface::TimeManager;
 +
-+        let timestamp = $crate::arch::timer().uptime();
++        let timestamp = $crate::time::time_manager().uptime();
 +        let timestamp_subsec_us = timestamp.subsec_micros();
 +
 +        $crate::print::_print(format_args_nl!(
@@ -501,15 +488,21 @@ diff -uNr 07_uart_chainloader/src/print.rs 08_timestamps/src/print.rs
 diff -uNr 07_uart_chainloader/src/relocate.rs 08_timestamps/src/relocate.rs
 --- 07_uart_chainloader/src/relocate.rs
 +++ 08_timestamps/src/relocate.rs
-@@ -1,46 +0,0 @@
+@@ -1,52 +0,0 @@
 -// SPDX-License-Identifier: MIT OR Apache-2.0
 -//
 -// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 -
 -//! Relocation code.
 -
--/// Relocates the own binary from `bsp::BOARD_DEFAULT_LOAD_ADDRESS` to the `__binary_start` address
--/// from the linker script.
+-use crate::{bsp, runtime_init};
+-
+-//--------------------------------------------------------------------------------------------------
+-// Public Code
+-//--------------------------------------------------------------------------------------------------
+-
+-/// Relocates the own binary from `bsp::cpu::BOARD_DEFAULT_LOAD_ADDRESS` to the `__binary_start`
+-/// address from the linker script.
 -///
 -/// # Safety
 -///
@@ -529,7 +522,7 @@ diff -uNr 07_uart_chainloader/src/relocate.rs 08_timestamps/src/relocate.rs
 -    let mut reloc_dst_addr: *mut T = binary_start_addr as *mut T;
 -
 -    // The address of where the previous firmware loaded us.
--    let mut src_addr: *const T = crate::bsp::BOARD_DEFAULT_LOAD_ADDRESS as *const _;
+-    let mut src_addr: *const T = bsp::cpu::BOARD_DEFAULT_LOAD_ADDRESS as *const _;
 -
 -    // Copy the whole binary.
 -    //
@@ -543,27 +536,34 @@ diff -uNr 07_uart_chainloader/src/relocate.rs 08_timestamps/src/relocate.rs
 -        src_addr = src_addr.offset(1);
 -    }
 -
--    // Call `init()` through a trait object, causing the jump to use an absolute address to reach
--    // the relocated binary. An elaborate explanation can be found in the runtime_init.rs source
--    // comments.
--    crate::runtime_init::get().runtime_init()
+-    // Call `runtime_init()` through a trait object, causing the jump to use an absolute address to
+-    // reach the relocated binary. An elaborate explanation can be found in the `runtime_init.rs`
+-    // source comments.
+-    runtime_init::get().runtime_init()
 -}
 
 diff -uNr 07_uart_chainloader/src/runtime_init.rs 08_timestamps/src/runtime_init.rs
 --- 07_uart_chainloader/src/runtime_init.rs
 +++ 08_timestamps/src/runtime_init.rs
-@@ -36,32 +36,14 @@
-     memory::zero_volatile(bss_range());
- }
+@@ -8,43 +8,9 @@
+ use core::ops::Range;
 
+ //--------------------------------------------------------------------------------------------------
+-// Private Definitions
+-//--------------------------------------------------------------------------------------------------
+-
+-struct Traitor;
+-
+-//--------------------------------------------------------------------------------------------------
+-// Public Definitions
+-//--------------------------------------------------------------------------------------------------
+-
 -/// We are outsmarting the compiler here by using a trait as a layer of indirection. Because we are
 -/// generating PIC code, a static dispatch to `init()` would generate a relative jump from the
 -/// callee to `init()`. However, when calling `init()`, code just finished copying the binary to the
 -/// actual link-time address, and hence is still running at whatever location the previous loader
 -/// has put it. So we do not want a relative jump, because it would not jump to the relocated code.
-+/// Equivalent to `crt0` or `c0` code in C/C++ world. Clears the `bss` section, then jumps to kernel
-+/// init code.
- ///
+-///
 -/// By indirecting through a trait object, we can make use of the property that vtables store
 -/// absolute addresses. So calling `init()` this way will kick execution to the relocated binary.
 -pub trait RunTimeInit {
@@ -580,18 +580,72 @@ diff -uNr 07_uart_chainloader/src/runtime_init.rs 08_timestamps/src/runtime_init
 -    }
 -}
 -
--struct Traitor;
+-//--------------------------------------------------------------------------------------------------
+ // Private Code
+ //--------------------------------------------------------------------------------------------------
+
 -impl RunTimeInit for Traitor {}
+-
+ /// Return the range spanning the .bss section.
+ ///
+ /// # Safety
+@@ -78,7 +44,14 @@
+ // Public Code
+ //--------------------------------------------------------------------------------------------------
+
+-/// Give the callee a `RunTimeInit` trait object.
+-pub fn get() -> &'static dyn RunTimeInit {
+-    &Traitor {}
++/// Equivalent to `crt0` or `c0` code in C/C++ world. Clears the `bss` section, then jumps to kernel
++/// init code.
++///
 +/// # Safety
 +///
 +/// - Only a single core must be active and running this function.
 +pub unsafe fn runtime_init() -> ! {
 +    zero_bss();
-
--/// Give the callee a `RunTimeInit` trait object.
--pub fn get() -> &'static dyn RunTimeInit {
--    &Traitor {}
++
 +    crate::kernel_init()
  }
+
+diff -uNr 07_uart_chainloader/src/time.rs 08_timestamps/src/time.rs
+--- 07_uart_chainloader/src/time.rs
++++ 08_timestamps/src/time.rs
+@@ -0,0 +1,35 @@
++// SPDX-License-Identifier: MIT OR Apache-2.0
++//
++// Copyright (c) 2020 Andre Richter <andre.o.richter@gmail.com>
++
++//! Timer primitives.
++
++#[cfg(target_arch = "aarch64")]
++#[path = "_arch/aarch64/time.rs"]
++mod arch_time;
++pub use arch_time::*;
++
++//--------------------------------------------------------------------------------------------------
++// Public Definitions
++//--------------------------------------------------------------------------------------------------
++
++/// Timekeeping interfaces.
++pub mod interface {
++    use core::time::Duration;
++
++    /// Time management functions.
++    ///
++    /// The `BSP` is supposed to supply one global instance.
++    pub trait TimeManager {
++        /// The timer's resolution.
++        fn resolution(&self) -> Duration;
++
++        /// The uptime since power-on of the device.
++        ///
++        /// This includes time consumed by firmware and bootloaders.
++        fn uptime(&self) -> Duration;
++
++        /// Spin for a given duration.
++        fn spin_for(&self, duration: Duration);
++    }
++}
 
 ```
