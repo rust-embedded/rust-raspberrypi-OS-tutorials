@@ -48,7 +48,7 @@ P.S.: In the future, Chinese :cn: versions of the tutorials will be maintained a
   - I would really love if someone takes a shot at a **RISC-V** implementation!
 - For editing, I recommend [Visual Studio Code] with [Rust Analyzer].
 - In addition to the tutorial text, also check out the `make doc` command in each tutorial to browse
-  the code, which is extensively documented, with HTML goodness.
+  the code, which is extensively documented.
 
 ### Output of `make doc`
 
