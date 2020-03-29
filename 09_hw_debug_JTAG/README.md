@@ -88,7 +88,7 @@ connector]. Unfortunately, the RPi does not, so we have to connect it via jumper
             <td>VTREF</td>
             <td>1</td>
             <td>to 3.3V</td>
-            <td rowspan="8"><img src="../doc/wiring_jtag.png"></td>
+            <td rowspan="8"><img src="../doc/09_wiring_jtag.png"></td>
         </tr>
         <tr>
             <td></td>
@@ -135,7 +135,7 @@ connector]. Unfortunately, the RPi does not, so we have to connect it via jumper
     </tbody>
 </table>
 
-<p align="center"><img src="../doc/image_jtag_connected.jpg" width="50%"></p>
+<p align="center"><img src="../doc/09_image_jtag_connected.jpg" width="50%"></p>
 
 ## Getting ready to connect
 
