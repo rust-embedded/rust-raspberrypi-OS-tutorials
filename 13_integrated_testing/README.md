@@ -1629,12 +1629,10 @@ diff -uNr 12_exceptions_part1_groundwork/test-macros/Cargo.toml 13_integrated_te
 diff -uNr 12_exceptions_part1_groundwork/test-macros/src/lib.rs 13_integrated_testing/test-macros/src/lib.rs
 --- 12_exceptions_part1_groundwork/test-macros/src/lib.rs
 +++ 13_integrated_testing/test-macros/src/lib.rs
-@@ -0,0 +1,31 @@
+@@ -0,0 +1,29 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2019-2020 Andre Richter <andre.o.richter@gmail.com>
-+
-+extern crate proc_macro;
 +
 +use proc_macro::TokenStream;
 +use proc_macro2::Span;

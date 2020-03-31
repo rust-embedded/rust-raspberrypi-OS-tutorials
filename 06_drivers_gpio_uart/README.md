@@ -658,8 +658,8 @@ diff -uNr 05_safe_globals/src/bsp/raspberrypi/console.rs 06_drivers_gpio_uart/sr
  //! BSP console facilities.
 
 -use crate::{console, synchronization, synchronization::NullLock};
-+use super::{super::device_driver, memory::map};
-+use crate::console;
++use super::memory;
++use crate::{bsp::device_driver, console};
  use core::fmt;
 
  //--------------------------------------------------------------------------------------------------
@@ -748,7 +748,7 @@ diff -uNr 05_safe_globals/src/bsp/raspberrypi/console.rs 06_drivers_gpio_uart/sr
 -    }
 +/// - Use only for printing during a panic.
 +pub unsafe fn panic_console_out() -> impl fmt::Write {
-+    let mut uart = device_driver::PanicUart::new(map::mmio::PL011_UART_BASE);
++    let mut uart = device_driver::PanicUart::new(memory::map::mmio::PL011_UART_BASE);
 +    uart.init();
 +    uart
  }

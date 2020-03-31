@@ -673,7 +673,7 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory/mmu.rs 11_virtual_memory
 +
 +//! BSP Memory Management Unit.
 +
-+use super::super::memory;
++use super::map as memory_map;
 +use crate::memory::mmu::*;
 +use core::ops::RangeInclusive;
 +
@@ -688,7 +688,7 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory/mmu.rs 11_virtual_memory
 +/// The layout must contain only special ranges, aka anything that is _not_ normal cacheable DRAM.
 +/// It is agnostic of the paging granularity that the architecture's MMU will use.
 +pub static LAYOUT: KernelVirtualLayout<{ NUM_MEM_RANGES }> = KernelVirtualLayout::new(
-+    memory::map::END_INCLUSIVE,
++    memory_map::END_INCLUSIVE,
 +    [
 +        RangeDescriptor {
 +            name: "Kernel code and RO data",
@@ -729,7 +729,7 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory/mmu.rs 11_virtual_memory
 +                // The last 64 KiB slot in the first 512 MiB
 +                RangeInclusive::new(0x1FFF_0000, 0x1FFF_FFFF)
 +            },
-+            translation: Translation::Offset(memory::map::mmio::BASE + 0x20_0000),
++            translation: Translation::Offset(memory_map::mmio::BASE + 0x20_0000),
 +            attribute_fields: AttributeFields {
 +                mem_attributes: MemAttributes::Device,
 +                acc_perms: AccessPermissions::ReadWrite,
@@ -739,7 +739,7 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory/mmu.rs 11_virtual_memory
 +        RangeDescriptor {
 +            name: "Device MMIO",
 +            virtual_range: || {
-+                RangeInclusive::new(memory::map::mmio::BASE, memory::map::mmio::END_INCLUSIVE)
++                RangeInclusive::new(memory_map::mmio::BASE, memory_map::mmio::END_INCLUSIVE)
 +            },
 +            translation: Translation::Identity,
 +            attribute_fields: AttributeFields {
@@ -757,7 +757,7 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory/mmu.rs 11_virtual_memory
 +
 +/// Return the address space size in bytes.
 +pub const fn addr_space_size() -> usize {
-+    memory::map::END_INCLUSIVE + 1
++    memory_map::END_INCLUSIVE + 1
 +}
 +
 +/// Return a reference to the virtual memory layout.

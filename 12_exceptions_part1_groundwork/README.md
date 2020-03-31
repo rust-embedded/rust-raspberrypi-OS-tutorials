@@ -924,7 +924,7 @@ diff -uNr 11_virtual_memory/src/bsp/raspberrypi/memory/mmu.rs 12_exceptions_part
 -                // The last 64 KiB slot in the first 512 MiB
 -                RangeInclusive::new(0x1FFF_0000, 0x1FFF_FFFF)
 -            },
--            translation: Translation::Offset(memory::map::mmio::BASE + 0x20_0000),
+-            translation: Translation::Offset(memory_map::mmio::BASE + 0x20_0000),
 -            attribute_fields: AttributeFields {
 -                mem_attributes: MemAttributes::Device,
 -                acc_perms: AccessPermissions::ReadWrite,
@@ -934,7 +934,7 @@ diff -uNr 11_virtual_memory/src/bsp/raspberrypi/memory/mmu.rs 12_exceptions_part
 -        RangeDescriptor {
              name: "Device MMIO",
              virtual_range: || {
-                 RangeInclusive::new(memory::map::mmio::BASE, memory::map::mmio::END_INCLUSIVE)
+                 RangeInclusive::new(memory_map::mmio::BASE, memory_map::mmio::END_INCLUSIVE)
 
 diff -uNr 11_virtual_memory/src/bsp.rs 12_exceptions_part1_groundwork/src/bsp.rs
 --- 11_virtual_memory/src/bsp.rs
