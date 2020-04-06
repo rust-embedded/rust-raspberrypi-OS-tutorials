@@ -209,7 +209,7 @@ The following block diagram visualizes the underlying translation for the second
 
 ### Address translation using a 64 KiB page descriptor
 
-<img src="../doc/11_page_tables_64KiB.png" widht="880">
+<img src="../doc/11_page_tables_64KiB.png" width="880">
 
 ## Zero-cost abstraction
 

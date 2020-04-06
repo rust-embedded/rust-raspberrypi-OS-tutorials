@@ -10,7 +10,7 @@ In the exact order as listed:
 4. In new terminal, `make openocd` and keep terminal open.
 5. In new terminal, `make gdb` or make `make gdb-opt0`.
 
-<img src="../doc/09_demo.gif" widht="880">
+<img src="../doc/09_demo.gif" width="880">
 
 ## Table of Contents
 

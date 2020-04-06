@@ -7,7 +7,7 @@
 - It is also possible to have test automation for the kernel's `console` (provided over `UART` in
   our case): Sending strings/characters to the console and expecting specific answers in return.
 
-<img src="../doc/13_demo.gif" widht="880">
+<img src="../doc/13_demo.gif" width="880">
 
 ## Table of Contents
 
