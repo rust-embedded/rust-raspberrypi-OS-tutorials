@@ -118,7 +118,6 @@
 #![feature(const_if_match)]
 #![feature(const_panic)]
 #![feature(core_intrinsics)]
-#![feature(custom_inner_attributes)]
 #![feature(format_args_nl)]
 #![feature(global_asm)]
 #![feature(linkage)]

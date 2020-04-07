@@ -1487,17 +1487,15 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2.rs 14_exceptions
 diff -uNr 13_integrated_testing/src/bsp/device_driver/arm.rs 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm.rs
 --- 13_integrated_testing/src/bsp/device_driver/arm.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm.rs
-@@ -0,0 +1,11 @@
+@@ -0,0 +1,9 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2020 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! ARM driver top level.
 +
-+#[cfg(feature = "bsp_rpi4")]
 +pub mod gicv2;
 +
-+#[cfg(feature = "bsp_rpi4")]
 +pub use gicv2::*;
 
 diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
@@ -2163,9 +2161,13 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
 diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm.rs 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm.rs
 --- 13_integrated_testing/src/bsp/device_driver/bcm.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm.rs
-@@ -5,7 +5,11 @@
+@@ -4,8 +4,15 @@
+
  //! BCM driver top level.
 
++#![allow(unused_attributes)]
++#![rustfmt::skip]
++
  mod bcm2xxx_gpio;
 +#[cfg(feature = "bsp_rpi3")]
 +mod bcm2xxx_interrupt_controller;
@@ -2219,10 +2221,13 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/common.rs 14_exceptions_pa
 diff -uNr 13_integrated_testing/src/bsp/device_driver.rs 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver.rs
 --- 13_integrated_testing/src/bsp/device_driver.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver.rs
-@@ -4,8 +4,13 @@
+@@ -4,8 +4,16 @@
 
  //! Device driver.
 
++#![allow(unused_attributes)]
++#![rustfmt::skip]
++
 +#[cfg(feature = "bsp_rpi4")]
 +mod arm;
  #[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
@@ -2571,20 +2576,21 @@ diff -uNr 13_integrated_testing/src/lib.rs 14_exceptions_part2_peripheral_IRQs/s
  //! [timer interface]: ../libkernel/time/interface/trait.TimeManager.html
  //!
  //! # Code organization and architecture
-@@ -107,7 +112,12 @@
+@@ -107,8 +112,12 @@
  //! - `crate::bsp::memory::*`
 
  #![allow(incomplete_features)]
 +#![feature(asm)]
 +#![feature(const_fn)]
  #![feature(const_generics)]
+-#![feature(custom_inner_attributes)]
 +#![feature(const_if_match)]
 +#![feature(const_panic)]
 +#![feature(core_intrinsics)]
- #![feature(custom_inner_attributes)]
  #![feature(format_args_nl)]
  #![feature(global_asm)]
-@@ -137,6 +147,7 @@
+ #![feature(linkage)]
+@@ -137,6 +146,7 @@
  pub mod exception;
  pub mod memory;
  pub mod print;

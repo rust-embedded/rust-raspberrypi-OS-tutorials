@@ -4,8 +4,6 @@
 
 //! ARM driver top level.
 
-#[cfg(feature = "bsp_rpi4")]
 pub mod gicv2;
 
-#[cfg(feature = "bsp_rpi4")]
 pub use gicv2::*;

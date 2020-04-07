@@ -4,6 +4,9 @@
 
 //! BCM driver top level.
 
+#![allow(unused_attributes)]
+#![rustfmt::skip]
+
 mod bcm2xxx_gpio;
 #[cfg(feature = "bsp_rpi3")]
 mod bcm2xxx_interrupt_controller;
