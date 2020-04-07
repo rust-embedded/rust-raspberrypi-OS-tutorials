@@ -13,7 +13,7 @@ zero-overhead abstractions and wraps the `unsafe` parts.
 diff -uNr 03_hacky_hello_world/Cargo.toml 04_zero_overhead_abstraction/Cargo.toml
 --- 03_hacky_hello_world/Cargo.toml
 +++ 04_zero_overhead_abstraction/Cargo.toml
-@@ -10,7 +10,10 @@
+@@ -7,7 +7,10 @@
  # The features section is used to select the target board.
  [features]
  default = []

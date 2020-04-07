@@ -323,7 +323,7 @@ diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
  	LINKER_FILE       = src/bsp/raspberrypi/link.ld
  	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
  endif
-@@ -52,11 +56,13 @@
+@@ -54,11 +58,13 @@
  DOCKER_CMD           = docker run -it --rm
  DOCKER_ARG_DIR_TUT   = -v $(shell pwd):/work -w /work
  DOCKER_ARG_DIR_UTILS = -v $(shell pwd)/../utils:/utils
@@ -338,7 +338,7 @@ diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
 
  all: clean $(OUTPUT)
 
-@@ -85,6 +91,28 @@
+@@ -87,6 +93,28 @@
  		$(DOCKER_IMAGE) $(DOCKER_EXEC_MINIPUSH) $(DEV_SERIAL)                  \
  		$(OUTPUT)
 
@@ -352,7 +352,7 @@ diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
 +		openocd $(OPENOCD_ARG)
 +
 +define gen_gdb
-+	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC) $1"  $(XRUSTC_CMD)
++	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC) $1"  $(RUSTC_CMD)
 +	cp $(CARGO_OUTPUT) kernel_for_jtag
 +	@$(DOCKER_CMD) $(DOCKER_ARG_DIR_TUT) $(DOCKER_ARG_NET) $(DOCKER_IMAGE) \
 +		gdb-multiarch -q kernel_for_jtag
@@ -365,6 +365,6 @@ diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
 +	$(call gen_gdb,-C debuginfo=2 -C opt-level=0)
 +
  clippy:
- 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" cargo xclippy --target=$(TARGET) --features bsp_$(BSP)
+ 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD)
 
 ```

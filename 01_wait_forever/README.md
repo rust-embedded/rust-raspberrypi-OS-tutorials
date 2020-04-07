@@ -7,8 +7,6 @@ executing the kernel code.
 
 ## Building
 
-- Toolchain: `cargo xbuild` tools (`xrustc`, `xclippy`) and the `aarch64-unknown-none-softfloat`
-  target are used for building `AArch64` bare-metal code.
 - `Makefile` targets:
     - `doc`: Generate documentation.
     - `qemu`: Run the `kernel` in QEMU

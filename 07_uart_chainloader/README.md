@@ -118,8 +118,8 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
 +	CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi4.img
  endif
 
- RUSTFLAGS          = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
-@@ -46,9 +53,12 @@
+ SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) $(wildcard **/*.ld)
+@@ -48,9 +55,12 @@
  DOCKER_IMAGE         = rustembedded/osdev-utils
  DOCKER_CMD           = docker run -it --rm
  DOCKER_ARG_DIR_TUT   = -v $(shell pwd):/work -w /work
@@ -133,7 +133,7 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
 
  all: clean $(OUTPUT)
 
-@@ -65,13 +75,26 @@
+@@ -67,13 +77,26 @@
  ifeq ($(QEMU_MACHINE_TYPE),)
  qemu:
  	@echo "This board is not yet supported for QEMU."
@@ -158,7 +158,7 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
 +		$(CHAINBOOT_DEMO_PAYLOAD)
 +
  clippy:
- 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" cargo xclippy --target=$(TARGET) --features bsp_$(BSP)
+ 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD)
 
 
 diff -uNr 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs 07_uart_chainloader/src/_arch/aarch64/cpu.rs

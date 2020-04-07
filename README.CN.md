@@ -58,11 +58,12 @@ _Cheers,
 curl https://sh.rustup.rs -sSf             \
     |                                      \
     sh -s --                               \
-    --default-toolchain nightly-2019-12-20 \
-    --component rust-src llvm-tools-preview rustfmt
+    --default-toolchain nightly-2020-04-07 \
+    --component llvm-tools-preview rustfmt
 
 source $HOME/.cargo/env
-cargo install cargo-xbuild cargo-binutils
+rustup target add aarch64-unknown-none-softfloat
+cargo install cargo-binutils
 ```
 
 如果你使用 `Visual Studio Code`，我强烈推荐你安装[Rust Analyzer 扩展]。

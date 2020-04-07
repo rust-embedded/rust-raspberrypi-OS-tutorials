@@ -88,7 +88,6 @@ class DevTool
 
     def clean
         @crates.each(&:clean)
-        FileUtils.rm_rf('xbuild_sysroot')
     end
 
     def clippy(bsp = nil)

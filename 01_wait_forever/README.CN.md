@@ -4,7 +4,6 @@
 
 项目框架已经构建完成；目前代码做的仅仅是挂起CPU核心执行内核代码。
 
-- 工具链：  `cargo xbuild` 工具 （包括 `xrustc`， `xclippy`） 以及用于构建 `AArch64` 裸机代码的  `aarch64-unknown-none-softfloat` 目标平台。
 -  `Makefile` 目标项：
     - `doc`: 生成文档。
     - `qemu`: 在 QEMU 中运行 `kernel`。

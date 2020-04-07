@@ -31,15 +31,17 @@ else ifeq ($(BSP),rpi4)
 	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
 endif
 
+SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) $(wildcard **/*.ld)
+
 RUSTFLAGS          = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
 RUSTFLAGS_PEDANTIC = $(RUSTFLAGS) -D warnings -D missing_docs
 
-SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) $(wildcard **/*.ld)
-
-XRUSTC_CMD = cargo xrustc     \
-	--target=$(TARGET)    \
-	--features bsp_$(BSP) \
+COMPILER_ARGS = --target=$(TARGET) \
+	--features bsp_$(BSP)      \
 	--release
+
+RUSTC_CMD  = cargo rustc $(COMPILER_ARGS)
+CLIPPY_CMD = cargo clippy $(COMPILER_ARGS)
 
 CARGO_OUTPUT = target/$(TARGET)/release/kernel
 
@@ -61,7 +63,7 @@ DOCKER_EXEC_MINIPUSH = ruby /utils/minipush.rb
 all: clean $(OUTPUT)
 
 $(CARGO_OUTPUT): $(SOURCES)
-	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(XRUSTC_CMD)
+	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(RUSTC_CMD)
 
 $(OUTPUT): $(CARGO_OUTPUT)
 	cp $< .
@@ -86,7 +88,7 @@ chainboot: all
 		$(OUTPUT)
 
 clippy:
-	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" cargo xclippy --target=$(TARGET) --features bsp_$(BSP)
+	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD)
 
 clean:
 	rm -rf target

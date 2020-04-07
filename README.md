@@ -87,11 +87,12 @@ Before you can start, you must install a suitable Rust toolchain:
 curl https://sh.rustup.rs -sSf             \
     |                                      \
     sh -s --                               \
-    --default-toolchain nightly-2020-03-19 \
-    --component rust-src llvm-tools-preview rustfmt
+    --default-toolchain nightly-2020-04-07 \
+    --component llvm-tools-preview rustfmt
 
 source $HOME/.cargo/env
-cargo install cargo-xbuild cargo-binutils
+rustup target add aarch64-unknown-none-softfloat
+cargo install cargo-binutils
 ```
 
 In case you use `Visual Studio Code`, I strongly recommend installing the

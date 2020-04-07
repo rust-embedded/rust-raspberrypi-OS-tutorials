@@ -48,17 +48,19 @@ endif
 
 QEMU_MISSING_STRING = "This board is not yet supported for QEMU."
 
+SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) $(wildcard **/*.ld)
+
 RUSTFLAGS          = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
 RUSTFLAGS_PEDANTIC = $(RUSTFLAGS) -D warnings -D missing_docs
 FEATURES           = bsp_$(BSP)
 
-SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) $(wildcard **/*.ld)
-
-X_CMD_ARGS = --target=$(TARGET) \
-	--features $(FEATURES)  \
+COMPILER_ARGS = --target=$(TARGET) \
+	--features $(FEATURES)     \
 	--release
-XRUSTC_CMD = cargo xrustc $(X_CMD_ARGS)
-XTEST_CMD  = cargo xtest $(X_CMD_ARGS)
+
+RUSTC_CMD  = cargo rustc $(COMPILER_ARGS)
+CLIPPY_CMD = cargo clippy $(COMPILER_ARGS)
+TEST_CMD   = cargo test $(COMPILER_ARGS)
 
 CARGO_OUTPUT = target/$(TARGET)/release/kernel
 
@@ -83,7 +85,7 @@ DOCKER_EXEC_MINIPUSH = ruby /utils/minipush.rb
 all: clean $(OUTPUT)
 
 $(CARGO_OUTPUT): $(SOURCES)
-	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(XRUSTC_CMD)
+	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(RUSTC_CMD)
 
 $(OUTPUT): $(CARGO_OUTPUT)
 	cp $< .
@@ -120,7 +122,7 @@ test: $(SOURCES)
 	@mkdir -p target
 	@echo "$$KERNEL_TEST_RUNNER" > target/kernel_test_runner.sh
 	@chmod +x target/kernel_test_runner.sh
-	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(XTEST_CMD) $(TEST_ARG)
+	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(TEST_CMD) $(TEST_ARG)
 endif
 
 chainboot: all
@@ -138,7 +140,7 @@ openocd:
 		openocd $(OPENOCD_ARG)
 
 define gen_gdb
-	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC) $1"  $(XRUSTC_CMD)
+	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC) $1"  $(RUSTC_CMD)
 	cp $(CARGO_OUTPUT) kernel_for_jtag
 	@$(DOCKER_CMD_USER) $(DOCKER_ARG_DIR_TUT) $(DOCKER_ARG_NET) $(DOCKER_IMAGE) \
 		gdb-multiarch -q kernel_for_jtag
@@ -151,7 +153,7 @@ gdb-opt0: clean $(SOURCES)
 	$(call gen_gdb,-C debuginfo=2 -C opt-level=0)
 
 clippy:
-	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" cargo xclippy --target=$(TARGET) --features bsp_$(BSP)
+	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD)
 
 clean:
 	rm -rf target

@@ -32,9 +32,10 @@ jobs:
     - name: Set up Rust nightly
       run: |
           rustup self update
-          rustup toolchain install nightly --component rust-src llvm-tools-preview
+          rustup toolchain install nightly --component llvm-tools-preview
           rustup default nightly
-          cargo install cargo-xbuild cargo-binutils
+          rustup target add aarch64-unknown-none-softfloat
+          cargo install cargo-binutils
     - name: Set up Ruby
       run: |
         gem install bundler

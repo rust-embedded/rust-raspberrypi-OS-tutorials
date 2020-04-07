@@ -750,7 +750,7 @@ Minipush 1.0
 diff -uNr 13_integrated_testing/Cargo.toml 14_exceptions_part2_peripheral_IRQs/Cargo.toml
 --- 13_integrated_testing/Cargo.toml
 +++ 14_exceptions_part2_peripheral_IRQs/Cargo.toml
-@@ -12,6 +12,7 @@
+@@ -9,6 +9,7 @@
  default = []
  bsp_rpi3 = ["cortex-a", "register"]
  bsp_rpi4 = ["cortex-a", "register"]
@@ -762,21 +762,19 @@ diff -uNr 13_integrated_testing/Cargo.toml 14_exceptions_part2_peripheral_IRQs/C
 diff -uNr 13_integrated_testing/Makefile 14_exceptions_part2_peripheral_IRQs/Makefile
 --- 13_integrated_testing/Makefile
 +++ 14_exceptions_part2_peripheral_IRQs/Makefile
-@@ -50,11 +50,12 @@
+@@ -52,9 +52,10 @@
 
  RUSTFLAGS          = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
  RUSTFLAGS_PEDANTIC = $(RUSTFLAGS) -D warnings -D missing_docs
 +FEATURES           = bsp_$(BSP)
 
- SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) $(wildcard **/*.ld)
-
- X_CMD_ARGS = --target=$(TARGET) \
--	--features bsp_$(BSP)   \
-+	--features $(FEATURES)  \
+ COMPILER_ARGS = --target=$(TARGET) \
+-	--features bsp_$(BSP)      \
++	--features $(FEATURES)     \
  	--release
- XRUSTC_CMD = cargo xrustc $(X_CMD_ARGS)
- XTEST_CMD  = cargo xtest $(X_CMD_ARGS)
-@@ -91,6 +92,7 @@
+
+ RUSTC_CMD  = cargo rustc $(COMPILER_ARGS)
+@@ -93,6 +94,7 @@
  doc:
  	cargo xdoc --target=$(TARGET) --features bsp_$(BSP) --document-private-items --open
 
@@ -784,7 +782,7 @@ diff -uNr 13_integrated_testing/Makefile 14_exceptions_part2_peripheral_IRQs/Mak
  ifeq ($(QEMU_MACHINE_TYPE),)
  qemu:
  	@echo $(QEMU_MISSING_STRING)
-@@ -113,6 +115,7 @@
+@@ -115,6 +117,7 @@
  endef
 
  export KERNEL_TEST_RUNNER

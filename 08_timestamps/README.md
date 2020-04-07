@@ -65,8 +65,8 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
 +	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
  endif
 
- RUSTFLAGS          = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
-@@ -58,7 +56,7 @@
+ SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) $(wildcard **/*.ld)
+@@ -60,7 +58,7 @@
  DOCKER_EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
  DOCKER_EXEC_MINIPUSH = ruby /utils/minipush.rb
 
@@ -75,7 +75,7 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
 
  all: clean $(OUTPUT)
 
-@@ -75,25 +73,17 @@
+@@ -77,25 +75,17 @@
  ifeq ($(QEMU_MACHINE_TYPE),)
  qemu:
  	@echo "This board is not yet supported for QEMU."
@@ -102,7 +102,7 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
 +		$(OUTPUT)
 
  clippy:
- 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" cargo xclippy --target=$(TARGET) --features bsp_$(BSP)
+ 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD)
 
 diff -uNr 07_uart_chainloader/src/_arch/aarch64/cpu.rs 08_timestamps/src/_arch/aarch64/cpu.rs
 --- 07_uart_chainloader/src/_arch/aarch64/cpu.rs

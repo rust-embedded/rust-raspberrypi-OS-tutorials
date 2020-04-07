@@ -90,7 +90,7 @@ sudo screen /dev/ttyUSB0 230400
 diff -uNr 05_safe_globals/Cargo.toml 06_drivers_gpio_uart/Cargo.toml
 --- 05_safe_globals/Cargo.toml
 +++ 06_drivers_gpio_uart/Cargo.toml
-@@ -10,10 +10,11 @@
+@@ -7,10 +7,11 @@
  # The features section is used to select the target board.
  [features]
  default = []
