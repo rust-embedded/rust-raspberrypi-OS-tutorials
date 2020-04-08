@@ -68,7 +68,7 @@ on the SD card._
 6. Run `screen` (you might need to install it first):
 
 ```console
-sudo screen /dev/ttyUSB0 230400
+$ sudo screen /dev/ttyUSB0 230400
 ```
 
 7. Hit <kbd>Enter</kbd> to kick off the kernel boot process. Observe the output:
