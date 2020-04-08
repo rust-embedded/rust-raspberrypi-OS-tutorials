@@ -2161,13 +2161,9 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
 diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm.rs 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm.rs
 --- 13_integrated_testing/src/bsp/device_driver/bcm.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm.rs
-@@ -4,8 +4,15 @@
-
+@@ -5,7 +5,11 @@
  //! BCM driver top level.
 
-+#![allow(unused_attributes)]
-+#![rustfmt::skip]
-+
  mod bcm2xxx_gpio;
 +#[cfg(feature = "bsp_rpi3")]
 +mod bcm2xxx_interrupt_controller;
@@ -2221,13 +2217,10 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/common.rs 14_exceptions_pa
 diff -uNr 13_integrated_testing/src/bsp/device_driver.rs 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver.rs
 --- 13_integrated_testing/src/bsp/device_driver.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver.rs
-@@ -4,8 +4,16 @@
+@@ -4,8 +4,13 @@
 
  //! Device driver.
 
-+#![allow(unused_attributes)]
-+#![rustfmt::skip]
-+
 +#[cfg(feature = "bsp_rpi4")]
 +mod arm;
  #[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
