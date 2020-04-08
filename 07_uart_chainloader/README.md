@@ -57,25 +57,26 @@ kernel.
 
 The `Makefile` in this tutorial has an additional target, `qemuasm`, that lets
 you nicely observe the jump from the loaded address (`0x80_XXX`) to the
-relocated code at (`0x3EFF_0XXX`):
+relocated code at (`0x1000_0XXX`):
 
 ```console
 $ make qemuasm
 [...]
 IN:
-0x00080990:  d0000008  adrp     x8, #0x82000
-0x00080994:  52800020  movz     w0, #0x1
-0x00080998:  f9416908  ldr      x8, [x8, #0x2d0]
+0x0008098c:  b0000008  adrp     x8, #0x81000
+0x00080990:  b0000000  adrp     x0, #0x81000
+0x00080994:  912a8000  add      x0, x0, #0xaa0
+0x00080998:  f9471908  ldr      x8, [x8, #0xe30]
 0x0008099c:  d63f0100  blr      x8
 
 ----------------
 IN:
-0x3eff0b10:  d0000008  adrp     x8, #0x3eff2000
-0x3eff0b14:  d0000009  adrp     x9, #0x3eff2000
-0x3eff0b18:  f941ad08  ldr      x8, [x8, #0x358]
-0x3eff0b1c:  f941b129  ldr      x9, [x9, #0x360]
-0x3eff0b20:  eb08013f  cmp      x9, x8
-0x3eff0b24:  540000c2  b.hs     #0x3eff0b3c
+0x10000b1c:  b0000008  adrp     x8, #0x10001000
+0x10000b20:  b0000009  adrp     x9, #0x10001000
+0x10000b24:  f9475d08  ldr      x8, [x8, #0xeb8]
+0x10000b28:  f9476129  ldr      x9, [x9, #0xec0]
+0x10000b2c:  eb08013f  cmp      x9, x8
+0x10000b30:  540000c2  b.hs     #0x10000b48
 [...]
 ```
 
@@ -252,8 +253,8 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/raspberrypi/link.ld 07_uart_chainloader/s
  {
 -    /* Set current address to the value from which the RPi starts execution */
 -    . = 0x80000;
-+    /* Set the link address to the top-most 40 KiB of DRAM (assuming 1GiB) */
-+    . = 0x3F000000 - 0x10000;
++    /* Set the link address to 256 MiB */
++    . = 0x10000000;
 
 +    __binary_start = .;
      .text :

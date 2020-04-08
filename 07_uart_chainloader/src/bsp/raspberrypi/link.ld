@@ -5,8 +5,8 @@
 
 SECTIONS
 {
-    /* Set the link address to the top-most 40 KiB of DRAM (assuming 1GiB) */
-    . = 0x3F000000 - 0x10000;
+    /* Set the link address to 256 MiB */
+    . = 0x10000000;
 
     __binary_start = .;
     .text :
