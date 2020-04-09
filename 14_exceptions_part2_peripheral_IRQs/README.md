@@ -774,15 +774,15 @@ diff -uNr 13_integrated_testing/Makefile 14_exceptions_part2_peripheral_IRQs/Mak
  	--release
 
  RUSTC_CMD  = cargo rustc $(COMPILER_ARGS)
-@@ -93,6 +94,7 @@
+@@ -94,6 +95,7 @@
  doc:
- 	cargo xdoc --target=$(TARGET) --features bsp_$(BSP) --document-private-items --open
+ 	$(DOC_CMD) --document-private-items --open
 
 +qemu: FEATURES += --features qemu-quirks
  ifeq ($(QEMU_MACHINE_TYPE),)
  qemu:
  	@echo $(QEMU_MISSING_STRING)
-@@ -115,6 +117,7 @@
+@@ -116,6 +118,7 @@
  endef
 
  export KERNEL_TEST_RUNNER

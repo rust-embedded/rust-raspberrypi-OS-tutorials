@@ -323,7 +323,7 @@ diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
  	LINKER_FILE       = src/bsp/raspberrypi/link.ld
  	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
  endif
-@@ -54,11 +58,13 @@
+@@ -55,11 +59,13 @@
  DOCKER_CMD           = docker run -it --rm
  DOCKER_ARG_DIR_TUT   = -v $(shell pwd):/work -w /work
  DOCKER_ARG_DIR_UTILS = -v $(shell pwd)/../utils:/utils
@@ -338,7 +338,7 @@ diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
 
  all: clean $(OUTPUT)
 
-@@ -87,6 +93,28 @@
+@@ -88,6 +94,28 @@
  		$(DOCKER_IMAGE) $(DOCKER_EXEC_MINIPUSH) $(DEV_SERIAL)                  \
  		$(OUTPUT)
 

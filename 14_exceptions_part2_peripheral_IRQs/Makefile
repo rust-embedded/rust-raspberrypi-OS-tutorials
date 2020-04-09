@@ -59,6 +59,7 @@ COMPILER_ARGS = --target=$(TARGET) \
 	--release
 
 RUSTC_CMD  = cargo rustc $(COMPILER_ARGS)
+DOC_CMD     = cargo doc $(COMPILER_ARGS)
 CLIPPY_CMD = cargo clippy $(COMPILER_ARGS)
 TEST_CMD   = cargo test $(COMPILER_ARGS)
 
@@ -92,7 +93,7 @@ $(OUTPUT): $(CARGO_OUTPUT)
 	$(OBJCOPY_CMD) $< $(OUTPUT)
 
 doc:
-	cargo xdoc --target=$(TARGET) --features bsp_$(BSP) --document-private-items --open
+	$(DOC_CMD) --document-private-items --open
 
 qemu: FEATURES += --features qemu-quirks
 ifeq ($(QEMU_MACHINE_TYPE),)

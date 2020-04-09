@@ -853,15 +853,15 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
  SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) $(wildcard **/*.ld)
 
  RUSTFLAGS          = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
-@@ -46,6 +59,7 @@
-
+@@ -47,6 +60,7 @@
  RUSTC_CMD  = cargo rustc $(COMPILER_ARGS)
+ DOC_CMD     = cargo doc $(COMPILER_ARGS)
  CLIPPY_CMD = cargo clippy $(COMPILER_ARGS)
 +TEST_CMD   = cargo test $(COMPILER_ARGS)
 
  CARGO_OUTPUT = target/$(TARGET)/release/kernel
 
-@@ -55,7 +69,8 @@
+@@ -56,7 +70,8 @@
  	-O binary
 
  DOCKER_IMAGE         = rustembedded/osdev-utils
@@ -871,7 +871,7 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
  DOCKER_ARG_DIR_TUT   = -v $(shell pwd):/work -w /work
  DOCKER_ARG_DIR_UTILS = -v $(shell pwd)/../utils:/utils
  DOCKER_ARG_DIR_JTAG  = -v $(shell pwd)/../X1_JTAG_boot:/jtag
-@@ -64,7 +79,7 @@
+@@ -65,7 +80,7 @@
  DOCKER_EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
  DOCKER_EXEC_MINIPUSH = ruby /utils/minipush.rb
 
@@ -880,7 +880,7 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
 
  all: clean $(OUTPUT)
 
-@@ -80,32 +95,51 @@
+@@ -81,32 +96,51 @@
 
  ifeq ($(QEMU_MACHINE_TYPE),)
  qemu:

@@ -66,7 +66,7 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
  endif
 
  SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) $(wildcard **/*.ld)
-@@ -60,7 +58,7 @@
+@@ -61,7 +59,7 @@
  DOCKER_EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
  DOCKER_EXEC_MINIPUSH = ruby /utils/minipush.rb
 
@@ -75,7 +75,7 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
 
  all: clean $(OUTPUT)
 
-@@ -77,25 +75,17 @@
+@@ -78,25 +76,17 @@
  ifeq ($(QEMU_MACHINE_TYPE),)
  qemu:
  	@echo "This board is not yet supported for QEMU."
@@ -272,8 +272,8 @@ diff -uNr 07_uart_chainloader/src/bsp/raspberrypi/link.ld 08_timestamps/src/bsp/
 
  SECTIONS
  {
--    /* Set the link address to the top-most 40 KiB of DRAM (assuming 1GiB) */
--    . = 0x3F000000 - 0x10000;
+-    /* Set the link address to 256 MiB */
+-    . = 0x10000000;
 +    /* Set current address to the value from which the RPi starts execution */
 +    . = 0x80000;
 

@@ -120,7 +120,7 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
  endif
 
  SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) $(wildcard **/*.ld)
-@@ -48,9 +55,12 @@
+@@ -49,9 +56,12 @@
  DOCKER_IMAGE         = rustembedded/osdev-utils
  DOCKER_CMD           = docker run -it --rm
  DOCKER_ARG_DIR_TUT   = -v $(shell pwd):/work -w /work
@@ -134,7 +134,7 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
 
  all: clean $(OUTPUT)
 
-@@ -67,13 +77,26 @@
+@@ -68,13 +78,26 @@
  ifeq ($(QEMU_MACHINE_TYPE),)
  qemu:
  	@echo "This board is not yet supported for QEMU."
