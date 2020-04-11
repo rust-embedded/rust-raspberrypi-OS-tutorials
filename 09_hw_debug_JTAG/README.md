@@ -305,57 +305,68 @@ Thanks to [@naotaco](https://github.com/naotaco) for laying the groundwork for t
 diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
 --- 08_timestamps/Makefile
 +++ 09_hw_debug_JTAG/Makefile
-@@ -19,6 +19,8 @@
+@@ -22,6 +22,8 @@
  	QEMU_BINARY       = qemu-system-aarch64
  	QEMU_MACHINE_TYPE = raspi3
  	QEMU_RELEASE_ARGS = -serial stdio -display none
 +	OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi3.cfg
-+	JTAG_BOOT_IMAGE   = jtag_boot_rpi3.img
++	JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi3.img
  	LINKER_FILE       = src/bsp/raspberrypi/link.ld
  	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
  else ifeq ($(BSP),rpi4)
-@@ -27,6 +29,8 @@
+@@ -30,6 +32,8 @@
  	# QEMU_BINARY       = qemu-system-aarch64
  	# QEMU_MACHINE_TYPE =
  	# QEMU_RELEASE_ARGS = -serial stdio -display none
 +	OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi4.cfg
-+	JTAG_BOOT_IMAGE   = jtag_boot_rpi4.img
++	JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi4.img
  	LINKER_FILE       = src/bsp/raspberrypi/link.ld
  	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
  endif
-@@ -55,11 +59,13 @@
- DOCKER_CMD           = docker run -it --rm
- DOCKER_ARG_DIR_TUT   = -v $(shell pwd):/work -w /work
- DOCKER_ARG_DIR_UTILS = -v $(shell pwd)/../utils:/utils
-+DOCKER_ARG_DIR_JTAG  = -v $(shell pwd)/../X1_JTAG_boot:/jtag
- DOCKER_ARG_TTY       = --privileged -v /dev:/dev
+@@ -56,21 +60,28 @@
+ DOCKER_IMAGE         = rustembedded/osdev-utils
+ DOCKER_CMD           = docker run -it --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
+ DOCKER_ARG_DIR_UTILS = -v $(shell pwd)/../utils:/work/utils
++DOCKER_ARG_DIR_JTAG  = -v $(shell pwd)/../X1_JTAG_boot:/work/X1_JTAG_boot
+ DOCKER_ARG_DEV       = --privileged -v /dev:/dev
 +DOCKER_ARG_NET       = --network host
- DOCKER_EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
- DOCKER_EXEC_MINIPUSH = ruby /utils/minipush.rb
+
+ DOCKER_QEMU = $(DOCKER_CMD) $(DOCKER_IMAGE)
++DOCKER_GDB  = $(DOCKER_CMD) $(DOCKER_ARG_NET) $(DOCKER_IMAGE)
+
+ # Dockerize commands that require USB device passthrough only on Linux
+ ifeq ($(UNAME_S),Linux)
+ DOCKER_CMD_DEV = $(DOCKER_CMD) $(DOCKER_ARG_DEV)
+
+ DOCKER_CHAINBOOT = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_IMAGE)
++DOCKER_JTAGBOOT  = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_ARG_DIR_JTAG) $(DOCKER_IMAGE)
++DOCKER_OPENOCD   = $(DOCKER_CMD_DEV) $(DOCKER_ARG_NET) $(DOCKER_IMAGE)
++else
++DOCKER_OPENOCD   = echo "Not yet supported on non-Linux systems."; \#
+ endif
+
+ EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
+ EXEC_MINIPUSH = ruby ../utils/minipush.rb
 
 -.PHONY: all doc qemu chainboot clippy clean readelf objdump nm
 +.PHONY: all doc qemu chainboot jtagboot openocd gdb gdb-opt0 clippy clean readelf objdump nm
 
  all: clean $(OUTPUT)
 
-@@ -88,6 +94,28 @@
- 		$(DOCKER_IMAGE) $(DOCKER_EXEC_MINIPUSH) $(DEV_SERIAL)                  \
- 		$(OUTPUT)
+@@ -95,6 +106,24 @@
+ chainboot: all
+ 	@$(DOCKER_CHAINBOOT) $(EXEC_MINIPUSH) $(DEV_SERIAL) $(OUTPUT)
 
 +jtagboot:
-+	@$(DOCKER_CMD) $(DOCKER_ARG_DIR_JTAG) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_ARG_TTY) \
-+		$(DOCKER_IMAGE) $(DOCKER_EXEC_MINIPUSH) $(DEV_SERIAL)                   \
-+		/jtag/$(JTAG_BOOT_IMAGE)
++	@$(DOCKER_JTAGBOOT) $(EXEC_MINIPUSH) $(DEV_SERIAL) $(JTAG_BOOT_IMAGE)
 +
 +openocd:
-+	@$(DOCKER_CMD) $(DOCKER_ARG_TTY) $(DOCKER_ARG_NET) $(DOCKER_IMAGE) \
-+		openocd $(OPENOCD_ARG)
++	@$(DOCKER_OPENOCD) openocd $(OPENOCD_ARG)
 +
 +define gen_gdb
 +	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC) $1"  $(RUSTC_CMD)
-+	cp $(CARGO_OUTPUT) kernel_for_jtag
-+	@$(DOCKER_CMD) $(DOCKER_ARG_DIR_TUT) $(DOCKER_ARG_NET) $(DOCKER_IMAGE) \
-+		gdb-multiarch -q kernel_for_jtag
++	cp $(KERNEL_ELF) kernel_for_jtag
++	@$(DOCKER_GDB) gdb-multiarch -q kernel_for_jtag
 +endef
 +
 +gdb: clean $(SOURCES)

@@ -46,7 +46,7 @@ Binary files 07_uart_chainloader/demo_payload_rpi4.img and 08_timestamps/demo_pa
 diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
 --- 07_uart_chainloader/Makefile
 +++ 08_timestamps/Makefile
-@@ -20,8 +20,7 @@
+@@ -23,8 +23,7 @@
  	QEMU_MACHINE_TYPE = raspi3
  	QEMU_RELEASE_ARGS = -serial stdio -display none
  	LINKER_FILE       = src/bsp/raspberrypi/link.ld
@@ -56,7 +56,7 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
  else ifeq ($(BSP),rpi4)
  	TARGET            = aarch64-unknown-none-softfloat
  	OUTPUT            = kernel8.img
-@@ -29,8 +28,7 @@
+@@ -32,8 +31,7 @@
  	# QEMU_MACHINE_TYPE =
  	# QEMU_RELEASE_ARGS = -serial stdio -display none
  	LINKER_FILE       = src/bsp/raspberrypi/link.ld
@@ -66,16 +66,16 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
  endif
 
  SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) $(wildcard **/*.ld)
-@@ -61,7 +59,7 @@
- DOCKER_EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
- DOCKER_EXEC_MINIPUSH = ruby /utils/minipush.rb
+@@ -72,7 +70,7 @@
+ EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
+ EXEC_MINIPUSH = ruby ../utils/minipush.rb
 
 -.PHONY: all doc qemu qemuasm chainboot clippy clean readelf objdump nm
 +.PHONY: all doc qemu chainboot clippy clean readelf objdump nm
 
  all: clean $(OUTPUT)
 
-@@ -78,25 +76,17 @@
+@@ -89,19 +87,13 @@
  ifeq ($(QEMU_MACHINE_TYPE),)
  qemu:
  	@echo "This board is not yet supported for QEMU."
@@ -84,22 +84,16 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
 -	@echo "This board is not yet supported for QEMU."
  else
  qemu: all
- 	@$(DOCKER_CMD) $(DOCKER_ARG_DIR_TUT) $(DOCKER_IMAGE) \
- 		$(DOCKER_EXEC_QEMU) $(QEMU_RELEASE_ARGS)     \
- 		-kernel $(OUTPUT)
+ 	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(OUTPUT)
 -
 -qemuasm: all
--	@$(DOCKER_CMD) $(DOCKER_ARG_DIR_TUT) $(DOCKER_IMAGE) \
--		$(DOCKER_EXEC_QEMU) $(QEMU_RELEASE_ARGS)     \
--		-kernel $(OUTPUT) -d in_asm
+-	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(OUTPUT) -d in_asm
  endif
 
 -chainboot:
+-	@$(DOCKER_CHAINBOOT) $(EXEC_MINIPUSH) $(DEV_SERIAL) $(CHAINBOOT_DEMO_PAYLOAD)
 +chainboot: all
- 	@$(DOCKER_CMD) $(DOCKER_ARG_DIR_TUT) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_ARG_TTY) \
- 		$(DOCKER_IMAGE) $(DOCKER_EXEC_MINIPUSH) $(DEV_SERIAL)                  \
--		$(CHAINBOOT_DEMO_PAYLOAD)
-+		$(OUTPUT)
++	@$(DOCKER_CHAINBOOT) $(EXEC_MINIPUSH) $(DEV_SERIAL) $(OUTPUT)
 
  clippy:
  	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD)

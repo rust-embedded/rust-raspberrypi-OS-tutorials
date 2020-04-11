@@ -88,19 +88,22 @@ Binary files 06_drivers_gpio_uart/demo_payload_rpi4.img and 07_uart_chainloader/
 diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
 --- 06_drivers_gpio_uart/Makefile
 +++ 07_uart_chainloader/Makefile
-@@ -7,6 +7,11 @@
+@@ -7,6 +7,14 @@
  	BSP = rpi3
  endif
 
-+# Default to /dev/ttyUSB0
++# Default to a serial device name that is common in Linux.
 +ifndef DEV_SERIAL
 +	DEV_SERIAL = /dev/ttyUSB0
 +endif
 +
++# Query the host system's kernel name
++UNAME_S := $(shell uname -s)
++
  # BSP-specific arguments
  ifeq ($(BSP),rpi3)
  	TARGET            = aarch64-unknown-none-softfloat
-@@ -15,7 +20,8 @@
+@@ -15,7 +23,8 @@
  	QEMU_MACHINE_TYPE = raspi3
  	QEMU_RELEASE_ARGS = -serial stdio -display none
  	LINKER_FILE       = src/bsp/raspberrypi/link.ld
@@ -110,7 +113,7 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
  else ifeq ($(BSP),rpi4)
  	TARGET            = aarch64-unknown-none-softfloat
  	OUTPUT            = kernel8.img
-@@ -23,7 +29,8 @@
+@@ -23,7 +32,8 @@
  	# QEMU_MACHINE_TYPE =
  	# QEMU_RELEASE_ARGS = -serial stdio -display none
  	LINKER_FILE       = src/bsp/raspberrypi/link.ld
@@ -120,21 +123,31 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
  endif
 
  SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) $(wildcard **/*.ld)
-@@ -49,9 +56,12 @@
+@@ -47,12 +57,22 @@
+
  DOCKER_IMAGE         = rustembedded/osdev-utils
- DOCKER_CMD           = docker run -it --rm
- DOCKER_ARG_DIR_TUT   = -v $(shell pwd):/work -w /work
-+DOCKER_ARG_DIR_UTILS = -v $(shell pwd)/../utils:/utils
-+DOCKER_ARG_TTY       = --privileged -v /dev:/dev
- DOCKER_EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
-+DOCKER_EXEC_MINIPUSH = ruby /utils/minipush.rb
+ DOCKER_CMD           = docker run -it --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
++DOCKER_ARG_DIR_UTILS = -v $(shell pwd)/../utils:/work/utils
++DOCKER_ARG_DEV       = --privileged -v /dev:/dev
+
+ DOCKER_QEMU = $(DOCKER_CMD) $(DOCKER_IMAGE)
+
++# Dockerize commands that require USB device passthrough only on Linux
++ifeq ($(UNAME_S),Linux)
++DOCKER_CMD_DEV = $(DOCKER_CMD) $(DOCKER_ARG_DEV)
++
++DOCKER_CHAINBOOT = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_IMAGE)
++endif
++
+ EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
++EXEC_MINIPUSH = ruby ../utils/minipush.rb
 
 -.PHONY: all doc qemu clippy clean readelf objdump nm
 +.PHONY: all doc qemu qemuasm chainboot clippy clean readelf objdump nm
 
  all: clean $(OUTPUT)
 
-@@ -68,13 +78,26 @@
+@@ -69,11 +89,20 @@
  ifeq ($(QEMU_MACHINE_TYPE),)
  qemu:
  	@echo "This board is not yet supported for QEMU."
@@ -143,20 +156,14 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
 +	@echo "This board is not yet supported for QEMU."
  else
  qemu: all
- 	@$(DOCKER_CMD) $(DOCKER_ARG_DIR_TUT) $(DOCKER_IMAGE) \
- 		$(DOCKER_EXEC_QEMU) $(QEMU_RELEASE_ARGS)     \
- 		-kernel $(OUTPUT)
+ 	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(OUTPUT)
 +
 +qemuasm: all
-+	@$(DOCKER_CMD) $(DOCKER_ARG_DIR_TUT) $(DOCKER_IMAGE) \
-+		$(DOCKER_EXEC_QEMU) $(QEMU_RELEASE_ARGS)     \
-+		-kernel $(OUTPUT) -d in_asm
++	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(OUTPUT) -d in_asm
  endif
 
 +chainboot:
-+	@$(DOCKER_CMD) $(DOCKER_ARG_DIR_TUT) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_ARG_TTY) \
-+		$(DOCKER_IMAGE) $(DOCKER_EXEC_MINIPUSH) $(DEV_SERIAL)                  \
-+		$(CHAINBOOT_DEMO_PAYLOAD)
++	@$(DOCKER_CHAINBOOT) $(EXEC_MINIPUSH) $(DEV_SERIAL) $(CHAINBOOT_DEMO_PAYLOAD)
 +
  clippy:
  	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD)

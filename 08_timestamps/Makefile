@@ -7,10 +7,13 @@ ifndef BSP
 	BSP = rpi3
 endif
 
-# Default to /dev/ttyUSB0
+# Default to a serial device name that is common in Linux.
 ifndef DEV_SERIAL
 	DEV_SERIAL = /dev/ttyUSB0
 endif
+
+# Query the host system's kernel name
+UNAME_S := $(shell uname -s)
 
 # BSP-specific arguments
 ifeq ($(BSP),rpi3)
@@ -40,33 +43,41 @@ COMPILER_ARGS = --target=$(TARGET) \
 	--features bsp_$(BSP)      \
 	--release
 
-RUSTC_CMD  = cargo rustc $(COMPILER_ARGS)
+RUSTC_CMD   = cargo rustc $(COMPILER_ARGS)
 DOC_CMD     = cargo doc $(COMPILER_ARGS)
-CLIPPY_CMD = cargo clippy $(COMPILER_ARGS)
-
-CARGO_OUTPUT = target/$(TARGET)/release/kernel
-
+CLIPPY_CMD  = cargo clippy $(COMPILER_ARGS)
 OBJCOPY_CMD = cargo objcopy \
 	--                  \
 	--strip-all         \
 	-O binary
 
+KERNEL_ELF = target/$(TARGET)/release/kernel
+
 DOCKER_IMAGE         = rustembedded/osdev-utils
-DOCKER_CMD           = docker run -it --rm
-DOCKER_ARG_DIR_TUT   = -v $(shell pwd):/work -w /work
-DOCKER_ARG_DIR_UTILS = -v $(shell pwd)/../utils:/utils
-DOCKER_ARG_TTY       = --privileged -v /dev:/dev
-DOCKER_EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
-DOCKER_EXEC_MINIPUSH = ruby /utils/minipush.rb
+DOCKER_CMD           = docker run -it --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
+DOCKER_ARG_DIR_UTILS = -v $(shell pwd)/../utils:/work/utils
+DOCKER_ARG_DEV       = --privileged -v /dev:/dev
+
+DOCKER_QEMU = $(DOCKER_CMD) $(DOCKER_IMAGE)
+
+# Dockerize commands that require USB device passthrough only on Linux
+ifeq ($(UNAME_S),Linux)
+DOCKER_CMD_DEV = $(DOCKER_CMD) $(DOCKER_ARG_DEV)
+
+DOCKER_CHAINBOOT = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_IMAGE)
+endif
+
+EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
+EXEC_MINIPUSH = ruby ../utils/minipush.rb
 
 .PHONY: all doc qemu chainboot clippy clean readelf objdump nm
 
 all: clean $(OUTPUT)
 
-$(CARGO_OUTPUT): $(SOURCES)
+$(KERNEL_ELF): $(SOURCES)
 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(RUSTC_CMD)
 
-$(OUTPUT): $(CARGO_OUTPUT)
+$(OUTPUT): $(KERNEL_ELF)
 	cp $< .
 	$(OBJCOPY_CMD) $< $(OUTPUT)
 
@@ -78,15 +89,11 @@ qemu:
 	@echo "This board is not yet supported for QEMU."
 else
 qemu: all
-	@$(DOCKER_CMD) $(DOCKER_ARG_DIR_TUT) $(DOCKER_IMAGE) \
-		$(DOCKER_EXEC_QEMU) $(QEMU_RELEASE_ARGS)     \
-		-kernel $(OUTPUT)
+	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(OUTPUT)
 endif
 
 chainboot: all
-	@$(DOCKER_CMD) $(DOCKER_ARG_DIR_TUT) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_ARG_TTY) \
-		$(DOCKER_IMAGE) $(DOCKER_EXEC_MINIPUSH) $(DEV_SERIAL)                  \
-		$(OUTPUT)
+	@$(DOCKER_CHAINBOOT) $(EXEC_MINIPUSH) $(DEV_SERIAL) $(OUTPUT)
 
 clippy:
 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD)

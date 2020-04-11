@@ -350,8 +350,7 @@ define KERNEL_TEST_RUNNER
 
 	$(OBJCOPY_CMD) $$1 $$1.img
 	TEST_BINARY=$$(echo $$1.img | sed -e 's/.*target/target/g')
-	$(DOCKER_CMD_TEST) $(DOCKER_ARG_DIR_TUT) $(DOCKER_IMAGE) \
-		ruby tests/runner.rb $(DOCKER_EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
+	$(DOCKER_TEST) ruby tests/runner.rb $(EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
 endef
 
 export KERNEL_TEST_RUNNER
@@ -368,7 +367,7 @@ provided to it by `cargo`, and finally compiles a `docker` command to execute th
 reference, here it is fully resolved for an `RPi3 BSP`:
 
 ```bash
-docker run -it --rm -v /opt/rust-raspi3-OS-tutorials/13_integrated_testing:/work -w /work rustembedded/osdev-utils ruby tests/runner.rb qemu-system-aarch64 -M raspi3 -serial stdio -display none -semihosting -kernel $TEST_BINARY
+docker run -i --rm -v /opt/rust-raspberrypi-OS-tutorials/13_integrated_testing:/work/tutorial -w /work/tutorial rustembedded/osdev-utils ruby tests/runner.rb qemu-system-aarch64 -M raspi3 -serial stdio -display none -semihosting -kernel $TEST_BINARY
 ```
 
 We're still not done with all the redirections. Spotted the `ruby tests/runner.rb` part that gets
@@ -820,21 +819,21 @@ diff -uNr 12_exceptions_part1_groundwork/Cargo.toml 13_integrated_testing/Cargo.
 diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
 --- 12_exceptions_part1_groundwork/Makefile
 +++ 13_integrated_testing/Makefile
-@@ -19,6 +19,7 @@
+@@ -22,6 +22,7 @@
  	QEMU_BINARY       = qemu-system-aarch64
  	QEMU_MACHINE_TYPE = raspi3
  	QEMU_RELEASE_ARGS = -serial stdio -display none
 +	QEMU_TEST_ARGS    = $(QEMU_RELEASE_ARGS) -semihosting
  	OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi3.cfg
- 	JTAG_BOOT_IMAGE   = jtag_boot_rpi3.img
+ 	JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi3.img
  	LINKER_FILE       = src/bsp/raspberrypi/link.ld
-@@ -29,12 +30,24 @@
+@@ -32,12 +33,24 @@
  	# QEMU_BINARY       = qemu-system-aarch64
  	# QEMU_MACHINE_TYPE =
  	# QEMU_RELEASE_ARGS = -serial stdio -display none
 +	# QEMU_TEST_ARGS    = $(QEMU_RELEASE_ARGS) -semihosting
  	OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi4.cfg
- 	JTAG_BOOT_IMAGE   = jtag_boot_rpi4.img
+ 	JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi4.img
  	LINKER_FILE       = src/bsp/raspberrypi/link.ld
  	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
  endif
@@ -853,34 +852,49 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
  SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) $(wildcard **/*.ld)
 
  RUSTFLAGS          = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
-@@ -47,6 +60,7 @@
- RUSTC_CMD  = cargo rustc $(COMPILER_ARGS)
+@@ -50,6 +63,7 @@
+ RUSTC_CMD   = cargo rustc $(COMPILER_ARGS)
  DOC_CMD     = cargo doc $(COMPILER_ARGS)
- CLIPPY_CMD = cargo clippy $(COMPILER_ARGS)
-+TEST_CMD   = cargo test $(COMPILER_ARGS)
-
- CARGO_OUTPUT = target/$(TARGET)/release/kernel
-
-@@ -56,7 +70,8 @@
- 	-O binary
+ CLIPPY_CMD  = cargo clippy $(COMPILER_ARGS)
++TEST_CMD    = cargo test $(COMPILER_ARGS)
+ OBJCOPY_CMD = cargo objcopy \
+ 	--                  \
+ 	--strip-all         \
+@@ -58,18 +72,20 @@
+ KERNEL_ELF = target/$(TARGET)/release/kernel
 
  DOCKER_IMAGE         = rustembedded/osdev-utils
--DOCKER_CMD           = docker run -it --rm
-+DOCKER_CMD_TEST      = docker run -i --rm
+-DOCKER_CMD           = docker run -it --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
++DOCKER_CMD_TEST      = docker run -i --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
 +DOCKER_CMD_USER      = $(DOCKER_CMD_TEST) -t
- DOCKER_ARG_DIR_TUT   = -v $(shell pwd):/work -w /work
- DOCKER_ARG_DIR_UTILS = -v $(shell pwd)/../utils:/utils
- DOCKER_ARG_DIR_JTAG  = -v $(shell pwd)/../X1_JTAG_boot:/jtag
-@@ -65,7 +80,7 @@
- DOCKER_EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
- DOCKER_EXEC_MINIPUSH = ruby /utils/minipush.rb
+ DOCKER_ARG_DIR_UTILS = -v $(shell pwd)/../utils:/work/utils
+ DOCKER_ARG_DIR_JTAG  = -v $(shell pwd)/../X1_JTAG_boot:/work/X1_JTAG_boot
+ DOCKER_ARG_DEV       = --privileged -v /dev:/dev
+ DOCKER_ARG_NET       = --network host
+
+-DOCKER_QEMU = $(DOCKER_CMD) $(DOCKER_IMAGE)
+-DOCKER_GDB  = $(DOCKER_CMD) $(DOCKER_ARG_NET) $(DOCKER_IMAGE)
++DOCKER_QEMU = $(DOCKER_CMD_USER) $(DOCKER_IMAGE)
++DOCKER_GDB  = $(DOCKER_CMD_USER) $(DOCKER_ARG_NET) $(DOCKER_IMAGE)
++DOCKER_TEST = $(DOCKER_CMD_TEST) $(DOCKER_IMAGE)
+
+ # Dockerize commands that require USB device passthrough only on Linux
+ ifeq ($(UNAME_S),Linux)
+-DOCKER_CMD_DEV = $(DOCKER_CMD) $(DOCKER_ARG_DEV)
++DOCKER_CMD_DEV = $(DOCKER_CMD_USER) $(DOCKER_ARG_DEV)
+
+ DOCKER_CHAINBOOT = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_IMAGE)
+ DOCKER_JTAGBOOT  = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_ARG_DIR_JTAG) $(DOCKER_IMAGE)
+@@ -81,7 +97,7 @@
+ EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
+ EXEC_MINIPUSH = ruby ../utils/minipush.rb
 
 -.PHONY: all doc qemu chainboot jtagboot openocd gdb gdb-opt0 clippy clean readelf objdump nm
 +.PHONY: all doc qemu chainboot jtagboot openocd gdb gdb-opt0 clippy clean readelf objdump nm test
 
  all: clean $(OUTPUT)
 
-@@ -81,32 +96,51 @@
+@@ -97,10 +113,28 @@
 
  ifeq ($(QEMU_MACHINE_TYPE),)
  qemu:
@@ -891,19 +905,14 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
 +	@echo $(QEMU_MISSING_STRING)
  else
  qemu: all
--	@$(DOCKER_CMD) $(DOCKER_ARG_DIR_TUT) $(DOCKER_IMAGE) \
--		$(DOCKER_EXEC_QEMU) $(QEMU_RELEASE_ARGS)     \
-+	@$(DOCKER_CMD_USER) $(DOCKER_ARG_DIR_TUT) $(DOCKER_IMAGE) \
-+		$(DOCKER_EXEC_QEMU) $(QEMU_RELEASE_ARGS)          \
- 		-kernel $(OUTPUT)
+ 	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(OUTPUT)
 +
 +define KERNEL_TEST_RUNNER
 +	#!/usr/bin/env bash
 +
 +	$(OBJCOPY_CMD) $$1 $$1.img
 +	TEST_BINARY=$$(echo $$1.img | sed -e 's/.*target/target/g')
-+	$(DOCKER_CMD_TEST) $(DOCKER_ARG_DIR_TUT) $(DOCKER_IMAGE) \
-+		ruby tests/runner.rb $(DOCKER_EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
++	$(DOCKER_TEST) ruby tests/runner.rb $(EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
 +endef
 +
 +export KERNEL_TEST_RUNNER
@@ -915,32 +924,6 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
  endif
 
  chainboot: all
--	@$(DOCKER_CMD) $(DOCKER_ARG_DIR_TUT) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_ARG_TTY) \
--		$(DOCKER_IMAGE) $(DOCKER_EXEC_MINIPUSH) $(DEV_SERIAL)                  \
-+	@$(DOCKER_CMD_USER) $(DOCKER_ARG_DIR_TUT) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_ARG_TTY) \
-+		$(DOCKER_IMAGE) $(DOCKER_EXEC_MINIPUSH) $(DEV_SERIAL)                       \
- 		$(OUTPUT)
-
- jtagboot:
--	@$(DOCKER_CMD) $(DOCKER_ARG_DIR_JTAG) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_ARG_TTY) \
--		$(DOCKER_IMAGE) $(DOCKER_EXEC_MINIPUSH) $(DEV_SERIAL)                   \
-+	@$(DOCKER_CMD_USER) $(DOCKER_ARG_DIR_JTAG) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_ARG_TTY) \
-+		$(DOCKER_IMAGE) $(DOCKER_EXEC_MINIPUSH) $(DEV_SERIAL)                        \
- 		/jtag/$(JTAG_BOOT_IMAGE)
-
- openocd:
--	@$(DOCKER_CMD) $(DOCKER_ARG_TTY) $(DOCKER_ARG_NET) $(DOCKER_IMAGE) \
-+	@$(DOCKER_CMD_USER) $(DOCKER_ARG_TTY) $(DOCKER_ARG_NET) $(DOCKER_IMAGE) \
- 		openocd $(OPENOCD_ARG)
-
- define gen_gdb
- 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC) $1"  $(RUSTC_CMD)
- 	cp $(CARGO_OUTPUT) kernel_for_jtag
--	@$(DOCKER_CMD) $(DOCKER_ARG_DIR_TUT) $(DOCKER_ARG_NET) $(DOCKER_IMAGE) \
-+	@$(DOCKER_CMD_USER) $(DOCKER_ARG_DIR_TUT) $(DOCKER_ARG_NET) $(DOCKER_IMAGE) \
- 		gdb-multiarch -q kernel_for_jtag
- endef
-
 
 diff -uNr 12_exceptions_part1_groundwork/src/_arch/aarch64/cpu.rs 13_integrated_testing/src/_arch/aarch64/cpu.rs
 --- 12_exceptions_part1_groundwork/src/_arch/aarch64/cpu.rs
