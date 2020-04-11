@@ -272,8 +272,8 @@ diff -uNr 07_uart_chainloader/src/bsp/raspberrypi/link.ld 08_timestamps/src/bsp/
 
  SECTIONS
  {
--    /* Set the link address to 256 MiB */
--    . = 0x10000000;
+-    /* Set the link address to 32 MiB */
+-    . = 0x2000000;
 +    /* Set current address to the value from which the RPi starts execution */
 +    . = 0x80000;
 

@@ -57,7 +57,7 @@ kernel.
 
 The `Makefile` in this tutorial has an additional target, `qemuasm`, that lets
 you nicely observe the jump from the loaded address (`0x80_XXX`) to the
-relocated code at (`0x1000_0XXX`):
+relocated code at (`0x0200_0XXX`):
 
 ```console
 $ make qemuasm
@@ -71,12 +71,12 @@ IN:
 
 ----------------
 IN:
-0x10000b1c:  b0000008  adrp     x8, #0x10001000
-0x10000b20:  b0000009  adrp     x9, #0x10001000
-0x10000b24:  f9475d08  ldr      x8, [x8, #0xeb8]
-0x10000b28:  f9476129  ldr      x9, [x9, #0xec0]
-0x10000b2c:  eb08013f  cmp      x9, x8
-0x10000b30:  540000c2  b.hs     #0x10000b48
+0x02000b1c:  b0000008  adrp     x8, #0x2001000
+0x02000b20:  b0000009  adrp     x9, #0x2001000
+0x02000b24:  f9475d08  ldr      x8, [x8, #0xeb8]
+0x02000b28:  f9476129  ldr      x9, [x9, #0xec0]
+0x02000b2c:  eb08013f  cmp      x9, x8
+0x02000b30:  540000c2  b.hs     #0x2000b48
 [...]
 ```
 
@@ -253,8 +253,8 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/raspberrypi/link.ld 07_uart_chainloader/s
  {
 -    /* Set current address to the value from which the RPi starts execution */
 -    . = 0x80000;
-+    /* Set the link address to 256 MiB */
-+    . = 0x10000000;
++    /* Set the link address to 32 MiB */
++    . = 0x2000000;
 
 +    __binary_start = .;
      .text :
