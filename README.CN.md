@@ -1,6 +1,6 @@
 # Rust 开发树莓派操作系统教程
 
-![](https://github.com/rust-embedded/rust-raspi3-OS-tutorials/workflows/BSP-RPi3/badge.svg) ![](https://github.com/rust-embedded/rust-raspi3-OS-tutorials/workflows/BSP-RPi4/badge.svg) ![](https://github.com/rust-embedded/rust-raspi3-OS-tutorials/workflows/Unit-Tests/badge.svg) ![](https://github.com/rust-embedded/rust-raspi3-OS-tutorials/workflows/Integration-Tests/badge.svg) ![](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue)
+![](https://github.com/rust-embedded/rust-raspberrypi-OS-tutorials/workflows/BSP-RPi3/badge.svg) ![](https://github.com/rust-embedded/rust-raspberrypi-OS-tutorials/workflows/BSP-RPi4/badge.svg) ![](https://github.com/rust-embedded/rust-raspberrypi-OS-tutorials/workflows/Unit-Tests/badge.svg) ![](https://github.com/rust-embedded/rust-raspberrypi-OS-tutorials/workflows/Integration-Tests/badge.svg) ![](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue)
 
 <br/>
 
@@ -48,7 +48,7 @@ _Cheers,
 - 编译器，链接器和二进制工具用 Rust 最新版所提供的。
 - 额外的操作系统开发工具如：`QEMU`和`GDB`通过[容器](docker/rustembedded-osdev-utils)提供。
 
-如果你想了解更多关于这个容器的信息，可以看看[这里](https://github.com/rust-embedded/rust-raspi3-OS-tutorials/tree/master/docker)
+如果你想了解更多关于这个容器的信息，可以看看[这里](https://github.com/rust-embedded/rust-raspberrypi-OS-tutorials/tree/master/docker)
 
 ## 🛠 前提条件
 

@@ -42,7 +42,7 @@ If you set up your SD Card exactly like mentioned in [tutorial 06], the Rpi will
 executing in `EL2`. Since we are writing a traditional `Kernel`, we have to transition into the more
 appropriate `EL1`.
 
-[tutorial 06]: https://github.com/rust-embedded/rust-raspi3-OS-tutorials/tree/master/06_drivers_gpio_uart#boot-it-from-sd-card
+[tutorial 06]: https://github.com/rust-embedded/rust-raspberrypi-OS-tutorials/tree/master/06_drivers_gpio_uart#boot-it-from-sd-card
 
 ## Checking for EL2 in the entrypoint
 

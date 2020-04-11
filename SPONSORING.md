@@ -9,4 +9,4 @@ contributions useful.
 If you would like to support any of the developers, please take a moment to [click through to their
 profiles] to see if they accept sponsorship and/or charitable gifts made in their name.
 
-[click through to their profiles]: https://github.com/rust-embedded/rust-raspi3-OS-tutorials/graphs/contributors
+[click through to their profiles]: https://github.com/rust-embedded/rust-raspberrypi-OS-tutorials/graphs/contributors
