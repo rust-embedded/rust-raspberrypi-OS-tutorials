@@ -21,6 +21,12 @@ You can try it with this tutorial already:
 4. Now plug in the USB Serial.
 5. Observe the loader fetching a kernel over `UART`:
 
+> ❗ **NOTE**: By default, `make chainboot` tries to connect to `/dev/ttyUSB0`.
+> Should the USB serial on your system have a different name, you have to provide it explicitly. For
+> exmaple:
+>
+> `DEV_SERIAL=/dev/tty.usbserial-0001 make chainboot`
+
 [raspbootin]: https://github.com/mrvn/raspbootin
 
 ```console

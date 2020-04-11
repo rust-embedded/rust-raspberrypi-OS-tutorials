@@ -3,8 +3,8 @@
 ## tl;dr
 
 Now that we enabled safe globals in the previous tutorial, the infrastructure is laid for adding the
-first real device drivers. We throw out the magic QEMU console and use a real UART now. Like serious
-embedded hackers do!
+first real device drivers. We throw out the magic QEMU console and use a real `UART` now. Like
+serious embedded hackers do!
 
 ## Notable additions
 
@@ -70,6 +70,9 @@ on the SD card._
 ```console
 $ sudo screen /dev/ttyUSB0 230400
 ```
+
+> ❗ **NOTE**: Depending on your host operating system, the serial device name might differ.
+> For example, on `macOS`, it might be something like `/dev/tty.usbserial-0001`.
 
 7. Hit <kbd>Enter</kbd> to kick off the kernel boot process. Observe the output:
 
