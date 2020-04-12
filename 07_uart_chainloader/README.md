@@ -94,42 +94,40 @@ Binary files 06_drivers_gpio_uart/demo_payload_rpi4.img and 07_uart_chainloader/
 diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
 --- 06_drivers_gpio_uart/Makefile
 +++ 07_uart_chainloader/Makefile
-@@ -7,6 +7,14 @@
- 	BSP = rpi3
- endif
+@@ -5,6 +5,12 @@
+ # Default to the RPi3
+ BSP ?= rpi3
 
 +# Default to a serial device name that is common in Linux.
-+ifndef DEV_SERIAL
-+	DEV_SERIAL = /dev/ttyUSB0
-+endif
++DEV_SERIAL ?= /dev/ttyUSB0
 +
 +# Query the host system's kernel name
-+UNAME_S := $(shell uname -s)
++UNAME_S = $(shell uname -s)
 +
  # BSP-specific arguments
  ifeq ($(BSP),rpi3)
- 	TARGET            = aarch64-unknown-none-softfloat
-@@ -15,7 +23,8 @@
- 	QEMU_MACHINE_TYPE = raspi3
- 	QEMU_RELEASE_ARGS = -serial stdio -display none
- 	LINKER_FILE       = src/bsp/raspberrypi/link.ld
--	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
-+	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53 -C relocation-model=pic
-+	CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi3.img
+     TARGET            = aarch64-unknown-none-softfloat
+@@ -13,7 +19,8 @@
+     QEMU_MACHINE_TYPE = raspi3
+     QEMU_RELEASE_ARGS = -serial stdio -display none
+     LINKER_FILE       = src/bsp/raspberrypi/link.ld
+-    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
++    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53 -C relocation-model=pic
++    CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi3.img
  else ifeq ($(BSP),rpi4)
- 	TARGET            = aarch64-unknown-none-softfloat
- 	OUTPUT            = kernel8.img
-@@ -23,7 +32,8 @@
- 	# QEMU_MACHINE_TYPE =
- 	# QEMU_RELEASE_ARGS = -serial stdio -display none
- 	LINKER_FILE       = src/bsp/raspberrypi/link.ld
--	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
-+	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72 -C relocation-model=pic
-+	CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi4.img
+     TARGET            = aarch64-unknown-none-softfloat
+     OUTPUT            = kernel8.img
+@@ -21,7 +28,8 @@
+     QEMU_MACHINE_TYPE =
+     QEMU_RELEASE_ARGS = -serial stdio -display none
+     LINKER_FILE       = src/bsp/raspberrypi/link.ld
+-    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
++    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72 -C relocation-model=pic
++    CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi4.img
  endif
 
- SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) $(wildcard **/*.ld)
-@@ -46,12 +56,22 @@
+ SOURCES = $(shell find . -name '*.rs' -o -name '*.S' -o -name '*.ld')
+@@ -44,12 +52,22 @@
 
  DOCKER_IMAGE         = rustembedded/osdev-utils
  DOCKER_CMD           = docker run -it --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
@@ -138,28 +136,29 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
 
  DOCKER_QEMU = $(DOCKER_CMD) $(DOCKER_IMAGE)
 
+-EXEC_QEMU = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
 +# Dockerize commands that require USB device passthrough only on Linux
 +ifeq ($(UNAME_S),Linux)
-+DOCKER_CMD_DEV = $(DOCKER_CMD) $(DOCKER_ARG_DEV)
++    DOCKER_CMD_DEV = $(DOCKER_CMD) $(DOCKER_ARG_DEV)
 +
-+DOCKER_CHAINBOOT = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_IMAGE)
++    DOCKER_CHAINBOOT = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_IMAGE)
 +endif
-+
- EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
-+EXEC_MINIPUSH = ruby ../utils/minipush.rb
 
 -.PHONY: all doc qemu clippy clean readelf objdump nm
++EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
++EXEC_MINIPUSH = ruby ../utils/minipush.rb
++
 +.PHONY: all doc qemu qemuasm chainboot clippy clean readelf objdump nm
 
  all: clean $(OUTPUT)
 
-@@ -68,11 +88,20 @@
+@@ -64,13 +82,19 @@
+ 	$(DOC_CMD) --document-private-items --open
+
  ifeq ($(QEMU_MACHINE_TYPE),)
- qemu:
+-qemu:
++qemu qemuasm:
  	@echo "This board is not yet supported for QEMU."
-+
-+qemuasm:
-+	@echo "This board is not yet supported for QEMU."
  else
  qemu: all
  	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(OUTPUT)

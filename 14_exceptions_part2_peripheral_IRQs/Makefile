@@ -3,71 +3,67 @@
 ## Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 
 # Default to the RPi3
-ifndef BSP
-	BSP = rpi3
-endif
+BSP ?= rpi3
 
 # Default to a serial device name that is common in Linux.
-ifndef DEV_SERIAL
-	DEV_SERIAL = /dev/ttyUSB0
-endif
+DEV_SERIAL ?= /dev/ttyUSB0
 
 # Query the host system's kernel name
-UNAME_S := $(shell uname -s)
+UNAME_S = $(shell uname -s)
 
 # BSP-specific arguments
 ifeq ($(BSP),rpi3)
-	TARGET            = aarch64-unknown-none-softfloat
-	OUTPUT            = kernel8.img
-	QEMU_BINARY       = qemu-system-aarch64
-	QEMU_MACHINE_TYPE = raspi3
-	QEMU_RELEASE_ARGS = -serial stdio -display none
-	QEMU_TEST_ARGS    = $(QEMU_RELEASE_ARGS) -semihosting
-	OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi3.cfg
-	JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi3.img
-	LINKER_FILE       = src/bsp/raspberrypi/link.ld
-	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
+    TARGET            = aarch64-unknown-none-softfloat
+    OUTPUT            = kernel8.img
+    QEMU_BINARY       = qemu-system-aarch64
+    QEMU_MACHINE_TYPE = raspi3
+    QEMU_RELEASE_ARGS = -serial stdio -display none
+    QEMU_TEST_ARGS    = $(QEMU_RELEASE_ARGS) -semihosting
+    OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi3.cfg
+    JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi3.img
+    LINKER_FILE       = src/bsp/raspberrypi/link.ld
+    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
 else ifeq ($(BSP),rpi4)
-	TARGET            = aarch64-unknown-none-softfloat
-	OUTPUT            = kernel8.img
-	# QEMU_BINARY       = qemu-system-aarch64
-	# QEMU_MACHINE_TYPE =
-	# QEMU_RELEASE_ARGS = -serial stdio -display none
-	# QEMU_TEST_ARGS    = $(QEMU_RELEASE_ARGS) -semihosting
-	OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi4.cfg
-	JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi4.img
-	LINKER_FILE       = src/bsp/raspberrypi/link.ld
-	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
+    TARGET            = aarch64-unknown-none-softfloat
+    OUTPUT            = kernel8.img
+    QEMU_BINARY       = qemu-system-aarch64
+    QEMU_MACHINE_TYPE =
+    QEMU_RELEASE_ARGS = -serial stdio -display none
+    QEMU_TEST_ARGS    = $(QEMU_RELEASE_ARGS) -semihosting
+    OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi4.cfg
+    JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi4.img
+    LINKER_FILE       = src/bsp/raspberrypi/link.ld
+    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
 endif
 
 # Testing-specific arguments
 ifdef TEST
-	ifeq ($(TEST),unit)
-		TEST_ARG = --lib
-	else
-		TEST_ARG = --test $(TEST)
-	endif
+    ifeq ($(TEST),unit)
+        TEST_ARG = --lib
+    else
+        TEST_ARG = --test $(TEST)
+    endif
 endif
 
 QEMU_MISSING_STRING = "This board is not yet supported for QEMU."
 
-SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) $(wildcard **/*.ld)
+SOURCES = $(shell find . -name '*.rs' -o -name '*.S' -o -name '*.ld')
 
 RUSTFLAGS          = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
 RUSTFLAGS_PEDANTIC = $(RUSTFLAGS) -D warnings -D missing_docs
 
 FEATURES      = bsp_$(BSP)
 COMPILER_ARGS = --target=$(TARGET) \
-	--features $(FEATURES)     \
-	--release
+    --features $(FEATURES)         \
+    --release
 
 RUSTC_CMD   = cargo rustc $(COMPILER_ARGS)
 DOC_CMD     = cargo doc $(COMPILER_ARGS)
 CLIPPY_CMD  = cargo clippy $(COMPILER_ARGS)
 TEST_CMD    = cargo test $(COMPILER_ARGS)
 OBJCOPY_CMD = rust-objcopy \
-	--strip-all        \
-	-O binary
+    --strip-all            \
+    -O binary
 
 KERNEL_ELF = target/$(TARGET)/release/kernel
 
@@ -85,17 +81,17 @@ DOCKER_TEST = $(DOCKER_CMD_TEST) $(DOCKER_IMAGE)
 
 # Dockerize commands that require USB device passthrough only on Linux
 ifeq ($(UNAME_S),Linux)
-DOCKER_CMD_DEV = $(DOCKER_CMD_USER) $(DOCKER_ARG_DEV)
+    DOCKER_CMD_DEV = $(DOCKER_CMD_USER) $(DOCKER_ARG_DEV)
 
-DOCKER_CHAINBOOT = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_IMAGE)
-DOCKER_JTAGBOOT  = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_ARG_DIR_JTAG) $(DOCKER_IMAGE)
-DOCKER_OPENOCD   = $(DOCKER_CMD_DEV) $(DOCKER_ARG_NET) $(DOCKER_IMAGE)
+    DOCKER_CHAINBOOT = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_IMAGE)
+    DOCKER_JTAGBOOT  = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_ARG_DIR_JTAG) $(DOCKER_IMAGE)
+    DOCKER_OPENOCD   = $(DOCKER_CMD_DEV) $(DOCKER_ARG_NET) $(DOCKER_IMAGE)
 else
-DOCKER_OPENOCD   = echo "Not yet supported on non-Linux systems."; \#
+    DOCKER_OPENOCD   = echo "Not yet supported on non-Linux systems."; \#
 endif
 
-EXEC_QEMU            = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
-EXEC_MINIPUSH        = ruby ../utils/minipush.rb
+EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
+EXEC_MINIPUSH = ruby ../utils/minipush.rb
 
 .PHONY: all doc qemu chainboot jtagboot openocd gdb gdb-opt0 clippy clean readelf objdump nm test
 
@@ -113,21 +109,18 @@ doc:
 
 qemu: FEATURES += --features qemu-quirks
 ifeq ($(QEMU_MACHINE_TYPE),)
-qemu:
-	@echo $(QEMU_MISSING_STRING)
-
-test:
+qemu test:
 	@echo $(QEMU_MISSING_STRING)
 else
 qemu: all
 	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(OUTPUT)
 
 define KERNEL_TEST_RUNNER
-	#!/usr/bin/env bash
+    #!/usr/bin/env bash
 
-	$(OBJCOPY_CMD) $$1 $$1.img
-	TEST_BINARY=$$(echo $$1.img | sed -e 's/.*target/target/g')
-	$(DOCKER_TEST) ruby tests/runner.rb $(EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
+    $(OBJCOPY_CMD) $$1 $$1.img
+    TEST_BINARY=$$(echo $$1.img | sed -e 's/.*target/target/g')
+    $(DOCKER_TEST) ruby tests/runner.rb $(EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
 endef
 
 export KERNEL_TEST_RUNNER
@@ -149,9 +142,9 @@ openocd:
 	@$(DOCKER_OPENOCD) openocd $(OPENOCD_ARG)
 
 define gen_gdb
-	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC) $1"  $(RUSTC_CMD)
-	cp $(KERNEL_ELF) kernel_for_jtag
-	@$(DOCKER_GDB) gdb-multiarch -q kernel_for_jtag
+    RUSTFLAGS="$(RUSTFLAGS_PEDANTIC) $1"  $(RUSTC_CMD)
+    cp $(KERNEL_ELF) kernel_for_jtag
+    @$(DOCKER_GDB) gdb-multiarch -q kernel_for_jtag
 endef
 
 gdb: clean $(SOURCES)
@@ -167,10 +160,10 @@ clean:
 	rm -rf target
 
 readelf:
-	readelf -a kernel
+	readelf -a $(KERNEL_ELF)
 
 objdump:
-	cargo objdump --target $(TARGET) -- -disassemble -no-show-raw-insn -print-imm-hex kernel
+	rust-objdump --arch-name aarch64 -disassemble -no-show-raw-insn -print-imm-hex $(KERNEL_ELF)
 
 nm:
-	cargo nm --target $(TARGET) -- -print-size kernel | sort
+	rust-nm --demangle --print-size $(KERNEL_ELF) | sort

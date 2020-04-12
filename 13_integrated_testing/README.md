@@ -346,11 +346,11 @@ The file `kernel_test_runner.sh` does not exist by default. We generate it on de
 
 ```Makefile
 define KERNEL_TEST_RUNNER
-	#!/usr/bin/env bash
+    #!/usr/bin/env bash
 
-	$(OBJCOPY_CMD) $$1 $$1.img
-	TEST_BINARY=$$(echo $$1.img | sed -e 's/.*target/target/g')
-	$(DOCKER_TEST) ruby tests/runner.rb $(EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
+    $(OBJCOPY_CMD) $$1 $$1.img
+    TEST_BINARY=$$(echo $$1.img | sed -e 's/.*target/target/g')
+    $(DOCKER_TEST) ruby tests/runner.rb $(EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
 endef
 
 export KERNEL_TEST_RUNNER
@@ -819,48 +819,48 @@ diff -uNr 12_exceptions_part1_groundwork/Cargo.toml 13_integrated_testing/Cargo.
 diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
 --- 12_exceptions_part1_groundwork/Makefile
 +++ 13_integrated_testing/Makefile
-@@ -22,6 +22,7 @@
- 	QEMU_BINARY       = qemu-system-aarch64
- 	QEMU_MACHINE_TYPE = raspi3
- 	QEMU_RELEASE_ARGS = -serial stdio -display none
-+	QEMU_TEST_ARGS    = $(QEMU_RELEASE_ARGS) -semihosting
- 	OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi3.cfg
- 	JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi3.img
- 	LINKER_FILE       = src/bsp/raspberrypi/link.ld
-@@ -32,12 +33,24 @@
- 	# QEMU_BINARY       = qemu-system-aarch64
- 	# QEMU_MACHINE_TYPE =
- 	# QEMU_RELEASE_ARGS = -serial stdio -display none
-+	# QEMU_TEST_ARGS    = $(QEMU_RELEASE_ARGS) -semihosting
- 	OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi4.cfg
- 	JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi4.img
- 	LINKER_FILE       = src/bsp/raspberrypi/link.ld
- 	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
+@@ -18,6 +18,7 @@
+     QEMU_BINARY       = qemu-system-aarch64
+     QEMU_MACHINE_TYPE = raspi3
+     QEMU_RELEASE_ARGS = -serial stdio -display none
++    QEMU_TEST_ARGS    = $(QEMU_RELEASE_ARGS) -semihosting
+     OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi3.cfg
+     JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi3.img
+     LINKER_FILE       = src/bsp/raspberrypi/link.ld
+@@ -28,12 +29,24 @@
+     QEMU_BINARY       = qemu-system-aarch64
+     QEMU_MACHINE_TYPE =
+     QEMU_RELEASE_ARGS = -serial stdio -display none
++    QEMU_TEST_ARGS    = $(QEMU_RELEASE_ARGS) -semihosting
+     OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi4.cfg
+     JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi4.img
+     LINKER_FILE       = src/bsp/raspberrypi/link.ld
+     RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
  endif
 
 +# Testing-specific arguments
 +ifdef TEST
-+	ifeq ($(TEST),unit)
-+		TEST_ARG = --lib
-+	else
-+		TEST_ARG = --test $(TEST)
-+	endif
++    ifeq ($(TEST),unit)
++        TEST_ARG = --lib
++    else
++        TEST_ARG = --test $(TEST)
++    endif
 +endif
 +
 +QEMU_MISSING_STRING = "This board is not yet supported for QEMU."
 +
- SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) $(wildcard **/*.ld)
+ SOURCES = $(shell find . -name '*.rs' -o -name '*.S' -o -name '*.ld')
 
  RUSTFLAGS          = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
-@@ -50,6 +63,7 @@
+@@ -46,6 +59,7 @@
  RUSTC_CMD   = cargo rustc $(COMPILER_ARGS)
  DOC_CMD     = cargo doc $(COMPILER_ARGS)
  CLIPPY_CMD  = cargo clippy $(COMPILER_ARGS)
 +TEST_CMD    = cargo test $(COMPILER_ARGS)
  OBJCOPY_CMD = rust-objcopy \
- 	--strip-all        \
- 	-O binary
-@@ -57,18 +71,20 @@
+     --strip-all            \
+     -O binary
+@@ -53,18 +67,20 @@
  KERNEL_ELF = target/$(TARGET)/release/kernel
 
  DOCKER_IMAGE         = rustembedded/osdev-utils
@@ -880,12 +880,12 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
 
  # Dockerize commands that require USB device passthrough only on Linux
  ifeq ($(UNAME_S),Linux)
--DOCKER_CMD_DEV = $(DOCKER_CMD) $(DOCKER_ARG_DEV)
-+DOCKER_CMD_DEV = $(DOCKER_CMD_USER) $(DOCKER_ARG_DEV)
+-    DOCKER_CMD_DEV = $(DOCKER_CMD) $(DOCKER_ARG_DEV)
++    DOCKER_CMD_DEV = $(DOCKER_CMD_USER) $(DOCKER_ARG_DEV)
 
- DOCKER_CHAINBOOT = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_IMAGE)
- DOCKER_JTAGBOOT  = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_ARG_DIR_JTAG) $(DOCKER_IMAGE)
-@@ -80,7 +96,7 @@
+     DOCKER_CHAINBOOT = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_IMAGE)
+     DOCKER_JTAGBOOT  = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_ARG_DIR_JTAG) $(DOCKER_IMAGE)
+@@ -76,7 +92,7 @@
  EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
  EXEC_MINIPUSH = ruby ../utils/minipush.rb
 
@@ -894,25 +894,24 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
 
  all: clean $(OUTPUT)
 
-@@ -96,10 +112,28 @@
+@@ -91,11 +107,26 @@
+ 	$(DOC_CMD) --document-private-items --open
 
  ifeq ($(QEMU_MACHINE_TYPE),)
- qemu:
+-qemu:
 -	@echo "This board is not yet supported for QEMU."
-+	@echo $(QEMU_MISSING_STRING)
-+
-+test:
++qemu test:
 +	@echo $(QEMU_MISSING_STRING)
  else
  qemu: all
  	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(OUTPUT)
 +
 +define KERNEL_TEST_RUNNER
-+	#!/usr/bin/env bash
++    #!/usr/bin/env bash
 +
-+	$(OBJCOPY_CMD) $$1 $$1.img
-+	TEST_BINARY=$$(echo $$1.img | sed -e 's/.*target/target/g')
-+	$(DOCKER_TEST) ruby tests/runner.rb $(EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
++    $(OBJCOPY_CMD) $$1 $$1.img
++    TEST_BINARY=$$(echo $$1.img | sed -e 's/.*target/target/g')
++    $(DOCKER_TEST) ruby tests/runner.rb $(EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
 +endef
 +
 +export KERNEL_TEST_RUNNER

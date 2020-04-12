@@ -46,27 +46,27 @@ Binary files 07_uart_chainloader/demo_payload_rpi4.img and 08_timestamps/demo_pa
 diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
 --- 07_uart_chainloader/Makefile
 +++ 08_timestamps/Makefile
-@@ -23,8 +23,7 @@
- 	QEMU_MACHINE_TYPE = raspi3
- 	QEMU_RELEASE_ARGS = -serial stdio -display none
- 	LINKER_FILE       = src/bsp/raspberrypi/link.ld
--	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53 -C relocation-model=pic
--	CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi3.img
-+	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
+@@ -19,8 +19,7 @@
+     QEMU_MACHINE_TYPE = raspi3
+     QEMU_RELEASE_ARGS = -serial stdio -display none
+     LINKER_FILE       = src/bsp/raspberrypi/link.ld
+-    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53 -C relocation-model=pic
+-    CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi3.img
++    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
  else ifeq ($(BSP),rpi4)
- 	TARGET            = aarch64-unknown-none-softfloat
- 	OUTPUT            = kernel8.img
-@@ -32,8 +31,7 @@
- 	# QEMU_MACHINE_TYPE =
- 	# QEMU_RELEASE_ARGS = -serial stdio -display none
- 	LINKER_FILE       = src/bsp/raspberrypi/link.ld
--	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72 -C relocation-model=pic
--	CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi4.img
-+	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
+     TARGET            = aarch64-unknown-none-softfloat
+     OUTPUT            = kernel8.img
+@@ -28,8 +27,7 @@
+     QEMU_MACHINE_TYPE =
+     QEMU_RELEASE_ARGS = -serial stdio -display none
+     LINKER_FILE       = src/bsp/raspberrypi/link.ld
+-    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72 -C relocation-model=pic
+-    CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi4.img
++    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
  endif
 
- SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) $(wildcard **/*.ld)
-@@ -71,7 +69,7 @@
+ SOURCES = $(shell find . -name '*.rs' -o -name '*.S' -o -name '*.ld')
+@@ -67,7 +65,7 @@
  EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
  EXEC_MINIPUSH = ruby ../utils/minipush.rb
 
@@ -75,13 +75,13 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
 
  all: clean $(OUTPUT)
 
-@@ -88,19 +86,13 @@
+@@ -82,18 +80,15 @@
+ 	$(DOC_CMD) --document-private-items --open
+
  ifeq ($(QEMU_MACHINE_TYPE),)
- qemu:
+-qemu qemuasm:
++qemu:
  	@echo "This board is not yet supported for QEMU."
--
--qemuasm:
--	@echo "This board is not yet supported for QEMU."
  else
  qemu: all
  	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(OUTPUT)

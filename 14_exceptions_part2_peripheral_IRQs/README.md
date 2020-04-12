@@ -762,37 +762,26 @@ diff -uNr 13_integrated_testing/Cargo.toml 14_exceptions_part2_peripheral_IRQs/C
 diff -uNr 13_integrated_testing/Makefile 14_exceptions_part2_peripheral_IRQs/Makefile
 --- 13_integrated_testing/Makefile
 +++ 14_exceptions_part2_peripheral_IRQs/Makefile
-@@ -56,8 +56,9 @@
+@@ -52,8 +52,9 @@
  RUSTFLAGS          = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
  RUSTFLAGS_PEDANTIC = $(RUSTFLAGS) -D warnings -D missing_docs
 
 +FEATURES      = bsp_$(BSP)
  COMPILER_ARGS = --target=$(TARGET) \
--	--features bsp_$(BSP)      \
-+	--features $(FEATURES)     \
- 	--release
+-    --features bsp_$(BSP)          \
++    --features $(FEATURES)         \
+     --release
 
  RUSTC_CMD   = cargo rustc $(COMPILER_ARGS)
-@@ -93,8 +94,8 @@
- DOCKER_OPENOCD   = echo "Not yet supported on non-Linux systems."; \#
- endif
-
--EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
--EXEC_MINIPUSH = ruby ../utils/minipush.rb
-+EXEC_QEMU            = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
-+EXEC_MINIPUSH        = ruby ../utils/minipush.rb
-
- .PHONY: all doc qemu chainboot jtagboot openocd gdb gdb-opt0 clippy clean readelf objdump nm test
-
-@@ -110,6 +111,7 @@
+@@ -106,6 +107,7 @@
  doc:
  	$(DOC_CMD) --document-private-items --open
 
 +qemu: FEATURES += --features qemu-quirks
  ifeq ($(QEMU_MACHINE_TYPE),)
- qemu:
+ qemu test:
  	@echo $(QEMU_MISSING_STRING)
-@@ -129,6 +131,7 @@
+@@ -122,6 +124,7 @@
  endef
 
  export KERNEL_TEST_RUNNER

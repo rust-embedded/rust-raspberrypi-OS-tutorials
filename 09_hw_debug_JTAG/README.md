@@ -305,25 +305,25 @@ Thanks to [@naotaco](https://github.com/naotaco) for laying the groundwork for t
 diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
 --- 08_timestamps/Makefile
 +++ 09_hw_debug_JTAG/Makefile
-@@ -22,6 +22,8 @@
- 	QEMU_BINARY       = qemu-system-aarch64
- 	QEMU_MACHINE_TYPE = raspi3
- 	QEMU_RELEASE_ARGS = -serial stdio -display none
-+	OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi3.cfg
-+	JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi3.img
- 	LINKER_FILE       = src/bsp/raspberrypi/link.ld
- 	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
+@@ -18,6 +18,8 @@
+     QEMU_BINARY       = qemu-system-aarch64
+     QEMU_MACHINE_TYPE = raspi3
+     QEMU_RELEASE_ARGS = -serial stdio -display none
++    OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi3.cfg
++    JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi3.img
+     LINKER_FILE       = src/bsp/raspberrypi/link.ld
+     RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
  else ifeq ($(BSP),rpi4)
-@@ -30,6 +32,8 @@
- 	# QEMU_BINARY       = qemu-system-aarch64
- 	# QEMU_MACHINE_TYPE =
- 	# QEMU_RELEASE_ARGS = -serial stdio -display none
-+	OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi4.cfg
-+	JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi4.img
- 	LINKER_FILE       = src/bsp/raspberrypi/link.ld
- 	RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
+@@ -26,6 +28,8 @@
+     QEMU_BINARY       = qemu-system-aarch64
+     QEMU_MACHINE_TYPE =
+     QEMU_RELEASE_ARGS = -serial stdio -display none
++    OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi4.cfg
++    JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi4.img
+     LINKER_FILE       = src/bsp/raspberrypi/link.ld
+     RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
  endif
-@@ -55,21 +59,28 @@
+@@ -51,21 +55,28 @@
  DOCKER_IMAGE         = rustembedded/osdev-utils
  DOCKER_CMD           = docker run -it --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
  DOCKER_ARG_DIR_UTILS = -v $(shell pwd)/../utils:/work/utils
@@ -336,13 +336,13 @@ diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
 
  # Dockerize commands that require USB device passthrough only on Linux
  ifeq ($(UNAME_S),Linux)
- DOCKER_CMD_DEV = $(DOCKER_CMD) $(DOCKER_ARG_DEV)
+     DOCKER_CMD_DEV = $(DOCKER_CMD) $(DOCKER_ARG_DEV)
 
- DOCKER_CHAINBOOT = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_IMAGE)
-+DOCKER_JTAGBOOT  = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_ARG_DIR_JTAG) $(DOCKER_IMAGE)
-+DOCKER_OPENOCD   = $(DOCKER_CMD_DEV) $(DOCKER_ARG_NET) $(DOCKER_IMAGE)
+     DOCKER_CHAINBOOT = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_IMAGE)
++    DOCKER_JTAGBOOT  = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_ARG_DIR_JTAG) $(DOCKER_IMAGE)
++    DOCKER_OPENOCD   = $(DOCKER_CMD_DEV) $(DOCKER_ARG_NET) $(DOCKER_IMAGE)
 +else
-+DOCKER_OPENOCD   = echo "Not yet supported on non-Linux systems."; \#
++    DOCKER_OPENOCD   = echo "Not yet supported on non-Linux systems."; \#
  endif
 
  EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
@@ -353,7 +353,7 @@ diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
 
  all: clean $(OUTPUT)
 
-@@ -94,6 +105,24 @@
+@@ -90,6 +101,24 @@
  chainboot: all
  	@$(DOCKER_CHAINBOOT) $(EXEC_MINIPUSH) $(DEV_SERIAL) $(OUTPUT)
 
@@ -364,9 +364,9 @@ diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
 +	@$(DOCKER_OPENOCD) openocd $(OPENOCD_ARG)
 +
 +define gen_gdb
-+	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC) $1"  $(RUSTC_CMD)
-+	cp $(KERNEL_ELF) kernel_for_jtag
-+	@$(DOCKER_GDB) gdb-multiarch -q kernel_for_jtag
++    RUSTFLAGS="$(RUSTFLAGS_PEDANTIC) $1"  $(RUSTC_CMD)
++    cp $(KERNEL_ELF) kernel_for_jtag
++    @$(DOCKER_GDB) gdb-multiarch -q kernel_for_jtag
 +endef
 +
 +gdb: clean $(SOURCES)
