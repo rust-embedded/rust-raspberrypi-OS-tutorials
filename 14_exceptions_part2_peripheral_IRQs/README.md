@@ -773,7 +773,7 @@ diff -uNr 13_integrated_testing/Makefile 14_exceptions_part2_peripheral_IRQs/Mak
  	--release
 
  RUSTC_CMD   = cargo rustc $(COMPILER_ARGS)
-@@ -94,8 +95,8 @@
+@@ -93,8 +94,8 @@
  DOCKER_OPENOCD   = echo "Not yet supported on non-Linux systems."; \#
  endif
 
@@ -784,7 +784,7 @@ diff -uNr 13_integrated_testing/Makefile 14_exceptions_part2_peripheral_IRQs/Mak
 
  .PHONY: all doc qemu chainboot jtagboot openocd gdb gdb-opt0 clippy clean readelf objdump nm test
 
-@@ -111,6 +112,7 @@
+@@ -110,6 +111,7 @@
  doc:
  	$(DOC_CMD) --document-private-items --open
 
@@ -792,7 +792,7 @@ diff -uNr 13_integrated_testing/Makefile 14_exceptions_part2_peripheral_IRQs/Mak
  ifeq ($(QEMU_MACHINE_TYPE),)
  qemu:
  	@echo $(QEMU_MISSING_STRING)
-@@ -130,6 +132,7 @@
+@@ -129,6 +131,7 @@
  endef
 
  export KERNEL_TEST_RUNNER

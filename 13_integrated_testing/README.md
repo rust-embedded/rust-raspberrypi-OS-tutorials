@@ -857,10 +857,10 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
  DOC_CMD     = cargo doc $(COMPILER_ARGS)
  CLIPPY_CMD  = cargo clippy $(COMPILER_ARGS)
 +TEST_CMD    = cargo test $(COMPILER_ARGS)
- OBJCOPY_CMD = cargo objcopy \
- 	--                  \
- 	--strip-all         \
-@@ -58,18 +72,20 @@
+ OBJCOPY_CMD = rust-objcopy \
+ 	--strip-all        \
+ 	-O binary
+@@ -57,18 +71,20 @@
  KERNEL_ELF = target/$(TARGET)/release/kernel
 
  DOCKER_IMAGE         = rustembedded/osdev-utils
@@ -885,7 +885,7 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
 
  DOCKER_CHAINBOOT = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_IMAGE)
  DOCKER_JTAGBOOT  = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_ARG_DIR_JTAG) $(DOCKER_IMAGE)
-@@ -81,7 +97,7 @@
+@@ -80,7 +96,7 @@
  EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
  EXEC_MINIPUSH = ruby ../utils/minipush.rb
 
@@ -894,7 +894,7 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
 
  all: clean $(OUTPUT)
 
-@@ -97,10 +113,28 @@
+@@ -96,10 +112,28 @@
 
  ifeq ($(QEMU_MACHINE_TYPE),)
  qemu:

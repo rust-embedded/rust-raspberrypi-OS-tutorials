@@ -64,9 +64,8 @@ RUSTC_CMD   = cargo rustc $(COMPILER_ARGS)
 DOC_CMD     = cargo doc $(COMPILER_ARGS)
 CLIPPY_CMD  = cargo clippy $(COMPILER_ARGS)
 TEST_CMD    = cargo test $(COMPILER_ARGS)
-OBJCOPY_CMD = cargo objcopy \
-	--                  \
-	--strip-all         \
+OBJCOPY_CMD = rust-objcopy \
+	--strip-all        \
 	-O binary
 
 KERNEL_ELF = target/$(TARGET)/release/kernel

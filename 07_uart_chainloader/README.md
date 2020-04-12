@@ -23,7 +23,7 @@ You can try it with this tutorial already:
 
 > ❗ **NOTE**: By default, `make chainboot` tries to connect to `/dev/ttyUSB0`.
 > Should the USB serial on your system have a different name, you have to provide it explicitly. For
-> exmaple:
+> example:
 >
 > `DEV_SERIAL=/dev/tty.usbserial-0001 make chainboot`
 
@@ -129,7 +129,7 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
  endif
 
  SOURCES = $(wildcard **/*.rs) $(wildcard **/*.S) $(wildcard **/*.ld)
-@@ -47,12 +57,22 @@
+@@ -46,12 +56,22 @@
 
  DOCKER_IMAGE         = rustembedded/osdev-utils
  DOCKER_CMD           = docker run -it --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
@@ -153,7 +153,7 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
 
  all: clean $(OUTPUT)
 
-@@ -69,11 +89,20 @@
+@@ -68,11 +88,20 @@
  ifeq ($(QEMU_MACHINE_TYPE),)
  qemu:
  	@echo "This board is not yet supported for QEMU."
