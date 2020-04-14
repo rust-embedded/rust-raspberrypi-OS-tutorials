@@ -36,6 +36,9 @@ else ifeq ($(BSP),rpi4)
     RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
 endif
 
+# Export for build.rs
+export LINKER_FILE
+
 # Testing-specific arguments
 ifdef TEST
     ifeq ($(TEST),unit)
@@ -46,8 +49,6 @@ ifdef TEST
 endif
 
 QEMU_MISSING_STRING = "This board is not yet supported for QEMU."
-
-SOURCES = $(shell find . -name '*.rs' -o -name '*.S' -o -name '*.ld')
 
 RUSTFLAGS          = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
 RUSTFLAGS_PEDANTIC = $(RUSTFLAGS) -D warnings -D missing_docs
@@ -95,14 +96,12 @@ EXEC_MINIPUSH = ruby ../utils/minipush.rb
 
 .PHONY: all doc qemu chainboot jtagboot openocd gdb gdb-opt0 clippy clean readelf objdump nm test
 
-all: clean $(OUTPUT)
-
-$(KERNEL_ELF): $(SOURCES)
+all:
 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(RUSTC_CMD)
-
-$(OUTPUT): $(KERNEL_ELF)
-	cp $< .
-	$(OBJCOPY_CMD) $< $(OUTPUT)
+	@if [ ! -f kernel ] || [ $(KERNEL_ELF) -nt kernel ]; then \
+	    cp $(KERNEL_ELF) .;                                   \
+	    $(OBJCOPY_CMD) kernel $(OUTPUT);                      \
+	fi
 
 doc:
 	$(DOC_CMD) --document-private-items --open
@@ -125,7 +124,7 @@ endef
 
 export KERNEL_TEST_RUNNER
 test: FEATURES += --features qemu-quirks
-test: $(SOURCES)
+test:
 	@mkdir -p target
 	@echo "$$KERNEL_TEST_RUNNER" > target/kernel_test_runner.sh
 	@chmod +x target/kernel_test_runner.sh
@@ -147,10 +146,10 @@ define gen_gdb
     @$(DOCKER_GDB) gdb-multiarch -q kernel_for_jtag
 endef
 
-gdb: clean $(SOURCES)
+gdb:
 	$(call gen_gdb,-C debuginfo=2)
 
-gdb-opt0: clean $(SOURCES)
+gdb-opt0:
 	$(call gen_gdb,-C debuginfo=2 -C opt-level=0)
 
 clippy:
@@ -159,11 +158,11 @@ clippy:
 clean:
 	rm -rf target
 
-readelf:
+readelf: all
 	readelf -a $(KERNEL_ELF)
 
-objdump:
+objdump: all
 	rust-objdump --arch-name aarch64 -disassemble -no-show-raw-insn -print-imm-hex $(KERNEL_ELF)
 
-nm:
+nm: all
 	rust-nm --demangle --print-size $(KERNEL_ELF) | sort

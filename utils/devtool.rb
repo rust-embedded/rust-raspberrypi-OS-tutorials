@@ -239,6 +239,7 @@ class DevTool
 
         files = tracked_files.select do |f|
             next unless File.exist?(f)
+            next if f.include?('build.rs')
 
             f.include?('Makefile') ||
                 f.include?('Dockerfile') ||

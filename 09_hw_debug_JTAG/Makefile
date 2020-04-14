@@ -34,7 +34,8 @@ else ifeq ($(BSP),rpi4)
     RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
 endif
 
-SOURCES = $(shell find . -name '*.rs' -o -name '*.S' -o -name '*.ld')
+# Export for build.rs
+export LINKER_FILE
 
 RUSTFLAGS          = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
 RUSTFLAGS_PEDANTIC = $(RUSTFLAGS) -D warnings -D missing_docs
@@ -78,14 +79,12 @@ EXEC_MINIPUSH = ruby ../utils/minipush.rb
 
 .PHONY: all doc qemu chainboot jtagboot openocd gdb gdb-opt0 clippy clean readelf objdump nm
 
-all: clean $(OUTPUT)
-
-$(KERNEL_ELF): $(SOURCES)
+all:
 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(RUSTC_CMD)
-
-$(OUTPUT): $(KERNEL_ELF)
-	cp $< .
-	$(OBJCOPY_CMD) $< $(OUTPUT)
+	@if [ ! -f kernel ] || [ $(KERNEL_ELF) -nt kernel ]; then \
+	    cp $(KERNEL_ELF) .;                                   \
+	    $(OBJCOPY_CMD) kernel $(OUTPUT);                      \
+	fi
 
 doc:
 	$(DOC_CMD) --document-private-items --open
@@ -113,10 +112,10 @@ define gen_gdb
     @$(DOCKER_GDB) gdb-multiarch -q kernel_for_jtag
 endef
 
-gdb: clean $(SOURCES)
+gdb:
 	$(call gen_gdb,-C debuginfo=2)
 
-gdb-opt0: clean $(SOURCES)
+gdb-opt0:
 	$(call gen_gdb,-C debuginfo=2 -C opt-level=0)
 
 clippy:
@@ -125,11 +124,11 @@ clippy:
 clean:
 	rm -rf target
 
-readelf:
+readelf: all
 	readelf -a $(KERNEL_ELF)
 
-objdump:
+objdump: all
 	rust-objdump --arch-name aarch64 -disassemble -no-show-raw-insn -print-imm-hex $(KERNEL_ELF)
 
-nm:
+nm: all
 	rust-nm --demangle --print-size $(KERNEL_ELF) | sort

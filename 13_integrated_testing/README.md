@@ -354,7 +354,7 @@ define KERNEL_TEST_RUNNER
 endef
 
 export KERNEL_TEST_RUNNER
-test: $(SOURCES)
+test:
 	@mkdir -p target
 	@echo "$$KERNEL_TEST_RUNNER" > target/kernel_test_runner.sh
 	@chmod +x target/kernel_test_runner.sh
@@ -827,7 +827,7 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
      OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi3.cfg
      JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi3.img
      LINKER_FILE       = src/bsp/raspberrypi/link.ld
-@@ -28,12 +29,24 @@
+@@ -28,6 +29,7 @@
      QEMU_BINARY       = qemu-system-aarch64
      QEMU_MACHINE_TYPE =
      QEMU_RELEASE_ARGS = -serial stdio -display none
@@ -835,8 +835,9 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
      OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi4.cfg
      JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi4.img
      LINKER_FILE       = src/bsp/raspberrypi/link.ld
-     RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
- endif
+@@ -37,6 +39,17 @@
+ # Export for build.rs
+ export LINKER_FILE
 
 +# Testing-specific arguments
 +ifdef TEST
@@ -849,10 +850,10 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
 +
 +QEMU_MISSING_STRING = "This board is not yet supported for QEMU."
 +
- SOURCES = $(shell find . -name '*.rs' -o -name '*.S' -o -name '*.ld')
-
  RUSTFLAGS          = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
-@@ -46,6 +59,7 @@
+ RUSTFLAGS_PEDANTIC = $(RUSTFLAGS) -D warnings -D missing_docs
+
+@@ -47,6 +60,7 @@
  RUSTC_CMD   = cargo rustc $(COMPILER_ARGS)
  DOC_CMD     = cargo doc $(COMPILER_ARGS)
  CLIPPY_CMD  = cargo clippy $(COMPILER_ARGS)
@@ -860,7 +861,7 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
  OBJCOPY_CMD = rust-objcopy \
      --strip-all            \
      -O binary
-@@ -53,18 +67,20 @@
+@@ -54,18 +68,20 @@
  KERNEL_ELF = target/$(TARGET)/release/kernel
 
  DOCKER_IMAGE         = rustembedded/osdev-utils
@@ -885,16 +886,16 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
 
      DOCKER_CHAINBOOT = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_IMAGE)
      DOCKER_JTAGBOOT  = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_ARG_DIR_JTAG) $(DOCKER_IMAGE)
-@@ -76,7 +92,7 @@
+@@ -77,7 +93,7 @@
  EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
  EXEC_MINIPUSH = ruby ../utils/minipush.rb
 
 -.PHONY: all doc qemu chainboot jtagboot openocd gdb gdb-opt0 clippy clean readelf objdump nm
 +.PHONY: all doc qemu chainboot jtagboot openocd gdb gdb-opt0 clippy clean readelf objdump nm test
 
- all: clean $(OUTPUT)
-
-@@ -91,11 +107,26 @@
+ all:
+ 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(RUSTC_CMD)
+@@ -90,11 +106,26 @@
  	$(DOC_CMD) --document-private-items --open
 
  ifeq ($(QEMU_MACHINE_TYPE),)
@@ -915,7 +916,7 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
 +endef
 +
 +export KERNEL_TEST_RUNNER
-+test: $(SOURCES)
++test:
 +	@mkdir -p target
 +	@echo "$$KERNEL_TEST_RUNNER" > target/kernel_test_runner.sh
 +	@chmod +x target/kernel_test_runner.sh

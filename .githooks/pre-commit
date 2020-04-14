@@ -13,6 +13,8 @@ source_files_exts = ['.S', '.rs', '.rb']
 
 staged_files = `git --no-pager diff --name-only --cached --diff-filter=d`.split(/\n/)
 staged_files.select! do |f|
+    next if f.include?('build.rs')
+
     f.include?('Makefile') ||
         f.include?('Dockerfile') ||
         source_files_exts.include?(File.extname(f))

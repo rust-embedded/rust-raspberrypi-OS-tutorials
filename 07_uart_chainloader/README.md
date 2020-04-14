@@ -126,8 +126,8 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
 +    CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi4.img
  endif
 
- SOURCES = $(shell find . -name '*.rs' -o -name '*.S' -o -name '*.ld')
-@@ -44,12 +52,22 @@
+ # Export for build.rs
+@@ -45,12 +53,22 @@
 
  DOCKER_IMAGE         = rustembedded/osdev-utils
  DOCKER_CMD           = docker run -it --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
@@ -150,9 +150,9 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
 +
 +.PHONY: all doc qemu qemuasm chainboot clippy clean readelf objdump nm
 
- all: clean $(OUTPUT)
-
-@@ -64,13 +82,19 @@
+ all:
+ 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(RUSTC_CMD)
+@@ -63,13 +81,19 @@
  	$(DOC_CMD) --document-private-items --open
 
  ifeq ($(QEMU_MACHINE_TYPE),)

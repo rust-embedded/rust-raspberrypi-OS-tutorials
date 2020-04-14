@@ -762,7 +762,7 @@ diff -uNr 13_integrated_testing/Cargo.toml 14_exceptions_part2_peripheral_IRQs/C
 diff -uNr 13_integrated_testing/Makefile 14_exceptions_part2_peripheral_IRQs/Makefile
 --- 13_integrated_testing/Makefile
 +++ 14_exceptions_part2_peripheral_IRQs/Makefile
-@@ -52,8 +52,9 @@
+@@ -53,8 +53,9 @@
  RUSTFLAGS          = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
  RUSTFLAGS_PEDANTIC = $(RUSTFLAGS) -D warnings -D missing_docs
 
@@ -773,7 +773,7 @@ diff -uNr 13_integrated_testing/Makefile 14_exceptions_part2_peripheral_IRQs/Mak
      --release
 
  RUSTC_CMD   = cargo rustc $(COMPILER_ARGS)
-@@ -106,6 +107,7 @@
+@@ -105,6 +106,7 @@
  doc:
  	$(DOC_CMD) --document-private-items --open
 
@@ -781,12 +781,12 @@ diff -uNr 13_integrated_testing/Makefile 14_exceptions_part2_peripheral_IRQs/Mak
  ifeq ($(QEMU_MACHINE_TYPE),)
  qemu test:
  	@echo $(QEMU_MISSING_STRING)
-@@ -122,6 +124,7 @@
+@@ -121,6 +123,7 @@
  endef
 
  export KERNEL_TEST_RUNNER
 +test: FEATURES += --features qemu-quirks
- test: $(SOURCES)
+ test:
  	@mkdir -p target
  	@echo "$$KERNEL_TEST_RUNNER" > target/kernel_test_runner.sh
 

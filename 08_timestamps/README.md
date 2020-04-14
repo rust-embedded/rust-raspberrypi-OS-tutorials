@@ -65,17 +65,17 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
 +    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
  endif
 
- SOURCES = $(shell find . -name '*.rs' -o -name '*.S' -o -name '*.ld')
-@@ -67,7 +65,7 @@
+ # Export for build.rs
+@@ -68,7 +66,7 @@
  EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
  EXEC_MINIPUSH = ruby ../utils/minipush.rb
 
 -.PHONY: all doc qemu qemuasm chainboot clippy clean readelf objdump nm
 +.PHONY: all doc qemu chainboot clippy clean readelf objdump nm
 
- all: clean $(OUTPUT)
-
-@@ -82,18 +80,15 @@
+ all:
+ 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(RUSTC_CMD)
+@@ -81,18 +79,15 @@
  	$(DOC_CMD) --document-private-items --open
 
  ifeq ($(QEMU_MACHINE_TYPE),)

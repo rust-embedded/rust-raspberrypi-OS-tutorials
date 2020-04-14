@@ -323,7 +323,7 @@ diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
      LINKER_FILE       = src/bsp/raspberrypi/link.ld
      RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
  endif
-@@ -51,21 +55,28 @@
+@@ -52,21 +56,28 @@
  DOCKER_IMAGE         = rustembedded/osdev-utils
  DOCKER_CMD           = docker run -it --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
  DOCKER_ARG_DIR_UTILS = -v $(shell pwd)/../utils:/work/utils
@@ -351,9 +351,9 @@ diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
 -.PHONY: all doc qemu chainboot clippy clean readelf objdump nm
 +.PHONY: all doc qemu chainboot jtagboot openocd gdb gdb-opt0 clippy clean readelf objdump nm
 
- all: clean $(OUTPUT)
-
-@@ -90,6 +101,24 @@
+ all:
+ 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(RUSTC_CMD)
+@@ -89,6 +100,24 @@
  chainboot: all
  	@$(DOCKER_CHAINBOOT) $(EXEC_MINIPUSH) $(DEV_SERIAL) $(OUTPUT)
 
@@ -369,10 +369,10 @@ diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
 +    @$(DOCKER_GDB) gdb-multiarch -q kernel_for_jtag
 +endef
 +
-+gdb: clean $(SOURCES)
++gdb:
 +	$(call gen_gdb,-C debuginfo=2)
 +
-+gdb-opt0: clean $(SOURCES)
++gdb-opt0:
 +	$(call gen_gdb,-C debuginfo=2 -C opt-level=0)
 +
  clippy:
