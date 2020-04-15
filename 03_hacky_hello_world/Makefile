@@ -81,7 +81,8 @@ readelf: all
 	readelf -a $(KERNEL_ELF)
 
 objdump: all
-	rust-objdump --arch-name aarch64 -disassemble -no-show-raw-insn -print-imm-hex $(KERNEL_ELF)
+	rust-objdump --arch-name aarch64 --disassemble --demangle --no-show-raw-insn \
+	    --print-imm-hex $(KERNEL_ELF)
 
 nm: all
 	rust-nm --demangle --print-size $(KERNEL_ELF) | sort
