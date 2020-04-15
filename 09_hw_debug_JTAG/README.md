@@ -323,7 +323,7 @@ diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
      LINKER_FILE       = src/bsp/raspberrypi/link.ld
      RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
  endif
-@@ -52,21 +56,28 @@
+@@ -53,21 +57,28 @@
  DOCKER_IMAGE         = rustembedded/osdev-utils
  DOCKER_CMD           = docker run -it --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
  DOCKER_ARG_DIR_UTILS = -v $(shell pwd)/../utils:/work/utils
@@ -348,12 +348,12 @@ diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
  EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
  EXEC_MINIPUSH = ruby ../utils/minipush.rb
 
--.PHONY: all doc qemu chainboot clippy clean readelf objdump nm
-+.PHONY: all doc qemu chainboot jtagboot openocd gdb gdb-opt0 clippy clean readelf objdump nm
+-.PHONY: all doc qemu chainboot clippy clean readelf objdump nm check
++.PHONY: all doc qemu chainboot jtagboot openocd gdb gdb-opt0 clippy clean readelf objdump nm check
 
  all:
  	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(RUSTC_CMD)
-@@ -89,6 +100,24 @@
+@@ -90,6 +101,24 @@
  chainboot: all
  	@$(DOCKER_CHAINBOOT) $(EXEC_MINIPUSH) $(DEV_SERIAL) $(OUTPUT)
 

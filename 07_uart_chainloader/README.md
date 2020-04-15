@@ -127,7 +127,7 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
  endif
 
  # Export for build.rs
-@@ -45,12 +53,22 @@
+@@ -46,12 +54,22 @@
 
  DOCKER_IMAGE         = rustembedded/osdev-utils
  DOCKER_CMD           = docker run -it --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
@@ -144,15 +144,15 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
 +    DOCKER_CHAINBOOT = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_IMAGE)
 +endif
 
--.PHONY: all doc qemu clippy clean readelf objdump nm
+-.PHONY: all doc qemu clippy clean readelf objdump nm check
 +EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
 +EXEC_MINIPUSH = ruby ../utils/minipush.rb
 +
-+.PHONY: all doc qemu qemuasm chainboot clippy clean readelf objdump nm
++.PHONY: all doc qemu qemuasm chainboot clippy clean readelf objdump nm check
 
  all:
  	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(RUSTC_CMD)
-@@ -63,13 +81,19 @@
+@@ -64,13 +82,19 @@
  	$(DOC_CMD) --document-private-items --open
 
  ifeq ($(QEMU_MACHINE_TYPE),)

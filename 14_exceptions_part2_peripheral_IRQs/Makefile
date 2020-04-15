@@ -61,6 +61,7 @@ COMPILER_ARGS = --target=$(TARGET) \
 RUSTC_CMD   = cargo rustc $(COMPILER_ARGS)
 DOC_CMD     = cargo doc $(COMPILER_ARGS)
 CLIPPY_CMD  = cargo clippy $(COMPILER_ARGS)
+CHECK_CMD   = cargo check $(COMPILER_ARGS)
 TEST_CMD    = cargo test $(COMPILER_ARGS)
 OBJCOPY_CMD = rust-objcopy \
     --strip-all            \
@@ -94,7 +95,7 @@ endif
 EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
 EXEC_MINIPUSH = ruby ../utils/minipush.rb
 
-.PHONY: all doc qemu chainboot jtagboot openocd gdb gdb-opt0 clippy clean readelf objdump nm test
+.PHONY: all doc qemu test chainboot jtagboot openocd gdb gdb-opt0 clippy clean readelf objdump nm check
 
 all:
 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(RUSTC_CMD)
@@ -166,3 +167,7 @@ objdump: all
 
 nm: all
 	rust-nm --demangle --print-size $(KERNEL_ELF) | sort
+
+# For rust-analyzer
+check:
+	@RUSTFLAGS="$(RUSTFLAGS)" $(CHECK_CMD) --message-format=json

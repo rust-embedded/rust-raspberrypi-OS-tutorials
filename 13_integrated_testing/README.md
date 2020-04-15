@@ -853,15 +853,15 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
  RUSTFLAGS          = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
  RUSTFLAGS_PEDANTIC = $(RUSTFLAGS) -D warnings -D missing_docs
 
-@@ -47,6 +60,7 @@
- RUSTC_CMD   = cargo rustc $(COMPILER_ARGS)
+@@ -48,6 +61,7 @@
  DOC_CMD     = cargo doc $(COMPILER_ARGS)
  CLIPPY_CMD  = cargo clippy $(COMPILER_ARGS)
+ CHECK_CMD   = cargo check $(COMPILER_ARGS)
 +TEST_CMD    = cargo test $(COMPILER_ARGS)
  OBJCOPY_CMD = rust-objcopy \
      --strip-all            \
      -O binary
-@@ -54,18 +68,20 @@
+@@ -55,18 +69,20 @@
  KERNEL_ELF = target/$(TARGET)/release/kernel
 
  DOCKER_IMAGE         = rustembedded/osdev-utils
@@ -886,16 +886,16 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
 
      DOCKER_CHAINBOOT = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_IMAGE)
      DOCKER_JTAGBOOT  = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_ARG_DIR_JTAG) $(DOCKER_IMAGE)
-@@ -77,7 +93,7 @@
+@@ -78,7 +94,7 @@
  EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
  EXEC_MINIPUSH = ruby ../utils/minipush.rb
 
--.PHONY: all doc qemu chainboot jtagboot openocd gdb gdb-opt0 clippy clean readelf objdump nm
-+.PHONY: all doc qemu chainboot jtagboot openocd gdb gdb-opt0 clippy clean readelf objdump nm test
+-.PHONY: all doc qemu chainboot jtagboot openocd gdb gdb-opt0 clippy clean readelf objdump nm check
++.PHONY: all doc qemu test chainboot jtagboot openocd gdb gdb-opt0 clippy clean readelf objdump nm check
 
  all:
  	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(RUSTC_CMD)
-@@ -90,11 +106,26 @@
+@@ -91,11 +107,26 @@
  	$(DOC_CMD) --document-private-items --open
 
  ifeq ($(QEMU_MACHINE_TYPE),)

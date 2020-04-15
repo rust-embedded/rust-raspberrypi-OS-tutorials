@@ -66,16 +66,16 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
  endif
 
  # Export for build.rs
-@@ -68,7 +66,7 @@
+@@ -69,7 +67,7 @@
  EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
  EXEC_MINIPUSH = ruby ../utils/minipush.rb
 
--.PHONY: all doc qemu qemuasm chainboot clippy clean readelf objdump nm
-+.PHONY: all doc qemu chainboot clippy clean readelf objdump nm
+-.PHONY: all doc qemu qemuasm chainboot clippy clean readelf objdump nm check
++.PHONY: all doc qemu chainboot clippy clean readelf objdump nm check
 
  all:
  	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(RUSTC_CMD)
-@@ -81,18 +79,15 @@
+@@ -82,18 +80,15 @@
  	$(DOC_CMD) --document-private-items --open
 
  ifeq ($(QEMU_MACHINE_TYPE),)

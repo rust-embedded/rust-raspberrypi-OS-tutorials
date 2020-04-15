@@ -3,11 +3,11 @@
     "editor.rulers": [
         100
     ],
-    "rust-analyzer.cargoFeatures.features": [
-        "bsp_rpi3"
-    ],
-    "rust-analyzer.cargo-watch.allTargets": false,
-    "rust-analyzer.cargo-watch.arguments": [
-        "--target=aarch64-unknown-none-softfloat"
+    "rust-analyzer.checkOnSave.overrideCommand": [
+        "cargo",
+        "check",
+        "--message-format=json",
+        "--target=aarch64-unknown-none-softfloat",
+        "--features=bsp_rpi3"
     ]
 }
