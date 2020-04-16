@@ -168,12 +168,11 @@ fn set_up_mair() {
     // Define the memory types being mapped.
     MAIR_EL1.write(
         // Attribute 1 - Cacheable normal DRAM.
-        MAIR_EL1::Attr1_HIGH::Memory_OuterWriteBack_NonTransient_ReadAlloc_WriteAlloc
-            + MAIR_EL1::Attr1_LOW_MEMORY::InnerWriteBack_NonTransient_ReadAlloc_WriteAlloc
+        MAIR_EL1::Attr1_Normal_Outer::WriteBack_NonTransient_ReadWriteAlloc +
+        MAIR_EL1::Attr1_Normal_Inner::WriteBack_NonTransient_ReadWriteAlloc +
 
-            // Attribute 0 - Device.
-            + MAIR_EL1::Attr0_HIGH::Device
-            + MAIR_EL1::Attr0_LOW_DEVICE::Device_nGnRE,
+        // Attribute 0 - Device.
+        MAIR_EL1::Attr0_Device::nonGathering_nonReordering_EarlyWriteAck,
     );
 }
 ```
@@ -228,13 +227,12 @@ Let's take a look again at the piece of code for setting up the `MAIR_EL1` regis
 fn set_up_mair() {
     // Define the memory types being mapped.
     MAIR_EL1.write(
-        // Attribute 1 - Cacheable normal DRAM
-        MAIR_EL1::Attr1_HIGH::Memory_OuterWriteBack_NonTransient_ReadAlloc_WriteAlloc
-            + MAIR_EL1::Attr1_LOW_MEMORY::InnerWriteBack_NonTransient_ReadAlloc_WriteAlloc
+        // Attribute 1 - Cacheable normal DRAM.
+        MAIR_EL1::Attr1_Normal_Outer::WriteBack_NonTransient_ReadWriteAlloc +
+        MAIR_EL1::Attr1_Normal_Inner::WriteBack_NonTransient_ReadWriteAlloc +
 
-            // Attribute 0 - Device
-            + MAIR_EL1::Attr0_HIGH::Device
-            + MAIR_EL1::Attr0_LOW_DEVICE::Device_nGnRE,
+        // Attribute 0 - Device.
+        MAIR_EL1::Attr0_Device::nonGathering_nonReordering_EarlyWriteAck,
     );
 }
 ```
@@ -300,7 +298,7 @@ Minipush 1.0
 diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_memory/src/_arch/aarch64/memory/mmu.rs
 --- 10_privilege_level/src/_arch/aarch64/memory/mmu.rs
 +++ 11_virtual_memory/src/_arch/aarch64/memory/mmu.rs
-@@ -0,0 +1,320 @@
+@@ -0,0 +1,319 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
@@ -530,12 +528,11 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_memory/s
 +    // Define the memory types being mapped.
 +    MAIR_EL1.write(
 +        // Attribute 1 - Cacheable normal DRAM.
-+        MAIR_EL1::Attr1_HIGH::Memory_OuterWriteBack_NonTransient_ReadAlloc_WriteAlloc
-+            + MAIR_EL1::Attr1_LOW_MEMORY::InnerWriteBack_NonTransient_ReadAlloc_WriteAlloc
++        MAIR_EL1::Attr1_Normal_Outer::WriteBack_NonTransient_ReadWriteAlloc +
++        MAIR_EL1::Attr1_Normal_Inner::WriteBack_NonTransient_ReadWriteAlloc +
 +
-+            // Attribute 0 - Device.
-+            + MAIR_EL1::Attr0_HIGH::Device
-+            + MAIR_EL1::Attr0_LOW_DEVICE::Device_nGnRE,
++        // Attribute 0 - Device.
++        MAIR_EL1::Attr0_Device::nonGathering_nonReordering_EarlyWriteAck,
 +    );
 +}
 +

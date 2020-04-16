@@ -13,4 +13,4 @@ bsp_rpi4 = ["cortex-a"]
 [dependencies]
 
 # Optional dependencies
-cortex-a = { version = "2.9.x", optional = true }
+cortex-a = { version = "3.0.x", optional = true }

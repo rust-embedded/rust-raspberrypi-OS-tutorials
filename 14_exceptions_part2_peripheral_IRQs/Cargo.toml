@@ -16,7 +16,7 @@ qemu-exit = "0.1.x"
 test-types = { path = "test-types" }
 
 # Optional dependencies
-cortex-a = { version = "2.9.x", optional = true }
+cortex-a = { version = "3.0.x", optional = true }
 register = { version = "0.5.x", features=["no_std_unit_tests"], optional = true }
 
 ##--------------------------------------------------------------------------------------------------
