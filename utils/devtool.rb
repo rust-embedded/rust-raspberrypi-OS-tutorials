@@ -26,7 +26,7 @@ class TutorialCrate
     def clean
         puts 'Cleaning '.light_blue + @folder
 
-        Dir.chdir(@folder) { FileUtils.rm_rf('target') }
+        Dir.chdir(@folder) { system('make clean') }
     end
 
     def clippy(bsp)
