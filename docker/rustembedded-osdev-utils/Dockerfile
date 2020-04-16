@@ -47,7 +47,7 @@ RUN set -ex;                                        \
     ./configure --target-list=aarch64-softmmu --enable-modules \
         --enable-tcg-interpreter --enable-debug-tcg            \
         --python=/usr/bin/python2.7;                           \
-    make;                                                      \
+    make -j8;                                                  \
     make install;                                              \
     cd ..;                                                     \
     rm -rf qemu;                                               \
@@ -56,7 +56,7 @@ RUN set -ex;                                        \
     cd openocd;                                                         \
     ./bootstrap;                                                        \
     ./configure --enable-ftdi;                                          \
-    make;                                                               \
+    make -j8;                                                           \
     make install;                                                       \
     # GDB
     wget -P ~ git.io/.gdbinit;                      \
