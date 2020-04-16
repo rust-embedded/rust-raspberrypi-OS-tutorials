@@ -886,16 +886,18 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
 
      DOCKER_CHAINBOOT = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_IMAGE)
      DOCKER_JTAGBOOT  = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_ARG_DIR_JTAG) $(DOCKER_IMAGE)
-@@ -78,7 +94,7 @@
+@@ -78,8 +94,8 @@
  EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
  EXEC_MINIPUSH = ruby ../utils/minipush.rb
 
--.PHONY: all doc qemu chainboot jtagboot openocd gdb gdb-opt0 clippy clean readelf objdump nm check
-+.PHONY: all doc qemu test chainboot jtagboot openocd gdb gdb-opt0 clippy clean readelf objdump nm check
+-.PHONY: all $(KERNEL_ELF) $(KERNEL_BIN) doc qemu chainboot jtagboot openocd gdb gdb-opt0  clippy \
+-    clean readelf objdump nm check
++.PHONY: all $(KERNEL_ELF) $(KERNEL_BIN) doc qemu test chainboot jtagboot openocd gdb gdb-opt0 \
++    clippy clean readelf objdump nm check
 
- all:
- 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(RUSTC_CMD)
-@@ -91,11 +107,26 @@
+ all: $(KERNEL_BIN)
+
+@@ -93,11 +109,26 @@
  	$(DOC_CMD) --document-private-items --open
 
  ifeq ($(QEMU_MACHINE_TYPE),)
@@ -904,8 +906,8 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
 +qemu test:
 +	@echo $(QEMU_MISSING_STRING)
  else
- qemu: all
- 	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(OUTPUT)
+ qemu: $(KERNEL_BIN)
+ 	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
 +
 +define KERNEL_TEST_RUNNER
 +    #!/usr/bin/env bash
@@ -923,7 +925,7 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
 +	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(TEST_CMD) $(TEST_ARG)
  endif
 
- chainboot: all
+ chainboot: $(KERNEL_BIN)
 
 diff -uNr 12_exceptions_part1_groundwork/src/_arch/aarch64/cpu.rs 13_integrated_testing/src/_arch/aarch64/cpu.rs
 --- 12_exceptions_part1_groundwork/src/_arch/aarch64/cpu.rs

@@ -55,7 +55,7 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
 +    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
  else ifeq ($(BSP),rpi4)
      TARGET            = aarch64-unknown-none-softfloat
-     OUTPUT            = kernel8.img
+     KERNEL_BIN        = kernel8.img
 @@ -28,8 +27,7 @@
      QEMU_MACHINE_TYPE =
      QEMU_RELEASE_ARGS = -serial stdio -display none
@@ -66,16 +66,17 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
  endif
 
  # Export for build.rs
-@@ -69,7 +67,7 @@
+@@ -69,8 +67,7 @@
  EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
  EXEC_MINIPUSH = ruby ../utils/minipush.rb
 
--.PHONY: all doc qemu qemuasm chainboot clippy clean readelf objdump nm check
-+.PHONY: all doc qemu chainboot clippy clean readelf objdump nm check
+-.PHONY: all $(KERNEL_ELF) $(KERNEL_BIN) doc qemu qemuasm chainboot clippy clean readelf objdump nm \
+-    check
++.PHONY: all $(KERNEL_ELF) $(KERNEL_BIN) doc qemu chainboot clippy clean readelf objdump nm check
 
- all:
- 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(RUSTC_CMD)
-@@ -82,18 +80,15 @@
+ all: $(KERNEL_BIN)
+
+@@ -84,18 +81,15 @@
  	$(DOC_CMD) --document-private-items --open
 
  ifeq ($(QEMU_MACHINE_TYPE),)
@@ -83,17 +84,17 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
 +qemu:
  	@echo "This board is not yet supported for QEMU."
  else
- qemu: all
- 	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(OUTPUT)
+ qemu: $(KERNEL_BIN)
+ 	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
 -
--qemuasm: all
--	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(OUTPUT) -d in_asm
+-qemuasm: $(KERNEL_BIN)
+-	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN) -d in_asm
  endif
 
 -chainboot:
 -	@$(DOCKER_CHAINBOOT) $(EXEC_MINIPUSH) $(DEV_SERIAL) $(CHAINBOOT_DEMO_PAYLOAD)
-+chainboot: all
-+	@$(DOCKER_CHAINBOOT) $(EXEC_MINIPUSH) $(DEV_SERIAL) $(OUTPUT)
++chainboot: $(KERNEL_BIN)
++	@$(DOCKER_CHAINBOOT) $(EXEC_MINIPUSH) $(DEV_SERIAL) $(KERNEL_BIN)
 
  clippy:
  	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD)

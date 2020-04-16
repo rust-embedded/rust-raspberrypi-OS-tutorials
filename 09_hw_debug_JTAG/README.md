@@ -323,7 +323,7 @@ diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
      LINKER_FILE       = src/bsp/raspberrypi/link.ld
      RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
  endif
-@@ -53,21 +57,28 @@
+@@ -53,21 +57,29 @@
  DOCKER_IMAGE         = rustembedded/osdev-utils
  DOCKER_CMD           = docker run -it --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
  DOCKER_ARG_DIR_UTILS = -v $(shell pwd)/../utils:/work/utils
@@ -348,14 +348,15 @@ diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
  EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
  EXEC_MINIPUSH = ruby ../utils/minipush.rb
 
--.PHONY: all doc qemu chainboot clippy clean readelf objdump nm check
-+.PHONY: all doc qemu chainboot jtagboot openocd gdb gdb-opt0 clippy clean readelf objdump nm check
+-.PHONY: all $(KERNEL_ELF) $(KERNEL_BIN) doc qemu chainboot clippy clean readelf objdump nm check
++.PHONY: all $(KERNEL_ELF) $(KERNEL_BIN) doc qemu chainboot jtagboot openocd gdb gdb-opt0  clippy \
++    clean readelf objdump nm check
 
- all:
- 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(RUSTC_CMD)
-@@ -90,6 +101,24 @@
- chainboot: all
- 	@$(DOCKER_CHAINBOOT) $(EXEC_MINIPUSH) $(DEV_SERIAL) $(OUTPUT)
+ all: $(KERNEL_BIN)
+
+@@ -91,6 +103,23 @@
+ chainboot: $(KERNEL_BIN)
+ 	@$(DOCKER_CHAINBOOT) $(EXEC_MINIPUSH) $(DEV_SERIAL) $(KERNEL_BIN)
 
 +jtagboot:
 +	@$(DOCKER_JTAGBOOT) $(EXEC_MINIPUSH) $(DEV_SERIAL) $(JTAG_BOOT_IMAGE)
@@ -364,9 +365,8 @@ diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
 +	@$(DOCKER_OPENOCD) openocd $(OPENOCD_ARG)
 +
 +define gen_gdb
-+    RUSTFLAGS="$(RUSTFLAGS_PEDANTIC) $1"  $(RUSTC_CMD)
-+    cp $(KERNEL_ELF) kernel_for_jtag
-+    @$(DOCKER_GDB) gdb-multiarch -q kernel_for_jtag
++    RUSTFLAGS="$(RUSTFLAGS_PEDANTIC) $1" $(RUSTC_CMD)
++    @$(DOCKER_GDB) gdb-multiarch -q $(KERNEL_ELF)
 +endef
 +
 +gdb:

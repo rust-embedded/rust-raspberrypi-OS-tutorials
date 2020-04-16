@@ -32,7 +32,7 @@ diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
 --- 02_runtime_init/Makefile
 +++ 03_hacky_hello_world/Makefile
 @@ -11,7 +11,7 @@
-     OUTPUT            = kernel8.img
+     KERNEL_BIN        = kernel8.img
      QEMU_BINARY       = qemu-system-aarch64
      QEMU_MACHINE_TYPE = raspi3
 -    QEMU_RELEASE_ARGS = -d in_asm -display none
@@ -41,7 +41,7 @@ diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
      RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
  else ifeq ($(BSP),rpi4)
 @@ -19,7 +19,7 @@
-     OUTPUT            = kernel8.img
+     KERNEL_BIN        = kernel8.img
      QEMU_BINARY       = qemu-system-aarch64
      QEMU_MACHINE_TYPE =
 -    QEMU_RELEASE_ARGS = -d in_asm -display none

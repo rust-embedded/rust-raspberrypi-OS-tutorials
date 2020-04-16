@@ -8,7 +8,7 @@ BSP ?= rpi3
 # BSP-specific arguments
 ifeq ($(BSP),rpi3)
     TARGET            = aarch64-unknown-none-softfloat
-    OUTPUT            = kernel8.img
+    KERNEL_BIN        = kernel8.img
     QEMU_BINARY       = qemu-system-aarch64
     QEMU_MACHINE_TYPE = raspi3
     QEMU_RELEASE_ARGS = -serial stdio -display none
@@ -16,7 +16,7 @@ ifeq ($(BSP),rpi3)
     RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
 else ifeq ($(BSP),rpi4)
     TARGET            = aarch64-unknown-none-softfloat
-    OUTPUT            = kernel8.img
+    KERNEL_BIN        = kernel8.img
     QEMU_BINARY       = qemu-system-aarch64
     QEMU_MACHINE_TYPE =
     QEMU_RELEASE_ARGS = -serial stdio -display none
@@ -51,14 +51,15 @@ DOCKER_QEMU = $(DOCKER_CMD) $(DOCKER_IMAGE)
 
 EXEC_QEMU = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
 
-.PHONY: all doc qemu clippy clean readelf objdump nm check
+.PHONY: all $(KERNEL_ELF) $(KERNEL_BIN) doc qemu clippy clean readelf objdump nm check
 
-all:
+all: $(KERNEL_BIN)
+
+$(KERNEL_ELF):
 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(RUSTC_CMD)
-	@if [ ! -f kernel ] || [ $(KERNEL_ELF) -nt kernel ]; then \
-	    cp $(KERNEL_ELF) .;                                   \
-	    $(OBJCOPY_CMD) kernel $(OUTPUT);                      \
-	fi
+
+$(KERNEL_BIN): $(KERNEL_ELF)
+	@$(OBJCOPY_CMD) $(KERNEL_ELF) $(KERNEL_BIN)
 
 doc:
 	$(DOC_CMD) --document-private-items --open
@@ -67,24 +68,24 @@ ifeq ($(QEMU_MACHINE_TYPE),)
 qemu:
 	@echo "This board is not yet supported for QEMU."
 else
-qemu: all
-	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(OUTPUT)
+qemu: $(KERNEL_BIN)
+	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
 endif
 
 clippy:
 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD)
 
 clean:
-	rm -rf target
+	rm -rf target $(KERNEL_BIN)
 
-readelf: all
+readelf: $(KERNEL_ELF)
 	readelf -a $(KERNEL_ELF)
 
-objdump: all
+objdump: $(KERNEL_ELF)
 	rust-objdump --arch-name aarch64 --disassemble --demangle --no-show-raw-insn \
 	    --print-imm-hex $(KERNEL_ELF)
 
-nm: all
+nm: $(KERNEL_ELF)
 	rust-nm --demangle --print-size $(KERNEL_ELF) | sort
 
 # For rust-analyzer
