@@ -826,11 +826,11 @@ diff -uNr 13_integrated_testing/src/_arch/aarch64/exception/asynchronous.rs 14_e
 +/// - Changes the HW state of the executing core.
 +#[inline(always)]
 +pub unsafe fn local_irq_unmask() {
-+    asm!("msr DAIFClr, $0"
-+        :                     // outputs
-+        : "i"(daif_bits::IRQ) // inputs
-+        :                     // clobbers
-+        : "volatile"          // options
++    llvm_asm!("msr DAIFClr, $0"
++            :                     // outputs
++            : "i"(daif_bits::IRQ) // inputs
++            :                     // clobbers
++            : "volatile"          // options
 +    );
 +}
 +
@@ -841,11 +841,11 @@ diff -uNr 13_integrated_testing/src/_arch/aarch64/exception/asynchronous.rs 14_e
 +/// - Changes the HW state of the executing core.
 +#[inline(always)]
 +pub unsafe fn local_irq_mask() {
-+    asm!("msr DAIFSet, $0"
-+        :                     // outputs
-+        : "i"(daif_bits::IRQ) // inputs
-+        :                     // clobbers
-+        : "volatile"          // options
++    llvm_asm!("msr DAIFSet, $0"
++            :                     // outputs
++            : "i"(daif_bits::IRQ) // inputs
++            :                     // clobbers
++            : "volatile"          // options
 +    );
 +}
 +
@@ -2568,11 +2568,10 @@ diff -uNr 13_integrated_testing/src/lib.rs 14_exceptions_part2_peripheral_IRQs/s
  //! [timer interface]: ../libkernel/time/interface/trait.TimeManager.html
  //!
  //! # Code organization and architecture
-@@ -107,8 +112,12 @@
+@@ -107,11 +112,15 @@
  //! - `crate::bsp::memory::*`
 
  #![allow(incomplete_features)]
-+#![feature(asm)]
 +#![feature(const_fn)]
  #![feature(const_generics)]
 -#![feature(custom_inner_attributes)]
@@ -2582,6 +2581,10 @@ diff -uNr 13_integrated_testing/src/lib.rs 14_exceptions_part2_peripheral_IRQs/s
  #![feature(format_args_nl)]
  #![feature(global_asm)]
  #![feature(linkage)]
++#![feature(llvm_asm)]
+ #![feature(naked_functions)]
+ #![feature(panic_info_message)]
+ #![feature(slice_ptr_range)]
 @@ -137,6 +146,7 @@
  pub mod exception;
  pub mod memory;

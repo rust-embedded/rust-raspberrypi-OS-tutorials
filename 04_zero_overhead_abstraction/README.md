@@ -94,13 +94,17 @@ diff -uNr 03_hacky_hello_world/src/_arch/aarch64/cpu.rs 04_zero_overhead_abstrac
 
  //--------------------------------------------------------------------------------------------------
  // Public Code
-@@ -14,9 +40,7 @@
+@@ -14,13 +40,7 @@
  /// Pause execution on the core.
  #[inline(always)]
  pub fn wait_forever() -> ! {
 -    unsafe {
 -        loop {
--            asm!("wfe" :::: "volatile")
+-            llvm_asm!("wfe"
+-                    :             // outputs
+-                    :             // inputs
+-                    :             // clobbers
+-                    : "volatile") // options
 -        }
 +    loop {
 +        asm::wfe()
@@ -190,13 +194,12 @@ diff -uNr 03_hacky_hello_world/src/cpu.rs 04_zero_overhead_abstraction/src/cpu.r
 diff -uNr 03_hacky_hello_world/src/main.rs 04_zero_overhead_abstraction/src/main.rs
 --- 03_hacky_hello_world/src/main.rs
 +++ 04_zero_overhead_abstraction/src/main.rs
-@@ -92,9 +92,8 @@
- //! - `crate::memory::*`
+@@ -93,8 +93,7 @@
  //! - `crate::bsp::memory::*`
 
--#![feature(asm)]
  #![feature(format_args_nl)]
 -#![feature(global_asm)]
+-#![feature(llvm_asm)]
 +#![feature(naked_functions)]
  #![feature(panic_info_message)]
  #![no_main]

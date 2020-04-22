@@ -77,11 +77,11 @@ pub fn is_local_irq_masked() -> bool {
 /// - Changes the HW state of the executing core.
 #[inline(always)]
 pub unsafe fn local_irq_unmask() {
-    asm!("msr DAIFClr, $0"
-        :                     // outputs
-        : "i"(daif_bits::IRQ) // inputs
-        :                     // clobbers
-        : "volatile"          // options
+    llvm_asm!("msr DAIFClr, $0"
+            :                     // outputs
+            : "i"(daif_bits::IRQ) // inputs
+            :                     // clobbers
+            : "volatile"          // options
     );
 }
 
@@ -92,11 +92,11 @@ pub unsafe fn local_irq_unmask() {
 /// - Changes the HW state of the executing core.
 #[inline(always)]
 pub unsafe fn local_irq_mask() {
-    asm!("msr DAIFSet, $0"
-        :                     // outputs
-        : "i"(daif_bits::IRQ) // inputs
-        :                     // clobbers
-        : "volatile"          // options
+    llvm_asm!("msr DAIFSet, $0"
+            :                     // outputs
+            : "i"(daif_bits::IRQ) // inputs
+            :                     // clobbers
+            : "volatile"          // options
     );
 }
 

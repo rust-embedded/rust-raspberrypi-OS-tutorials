@@ -139,12 +139,13 @@ diff -uNr 02_runtime_init/src/console.rs 03_hacky_hello_world/src/console.rs
 diff -uNr 02_runtime_init/src/main.rs 03_hacky_hello_world/src/main.rs
 --- 02_runtime_init/src/main.rs
 +++ 03_hacky_hello_world/src/main.rs
-@@ -93,7 +93,9 @@
+@@ -92,8 +92,10 @@
+ //! - `crate::memory::*`
  //! - `crate::bsp::memory::*`
 
- #![feature(asm)]
 +#![feature(format_args_nl)]
  #![feature(global_asm)]
+ #![feature(llvm_asm)]
 +#![feature(panic_info_message)]
  #![no_main]
  #![no_std]

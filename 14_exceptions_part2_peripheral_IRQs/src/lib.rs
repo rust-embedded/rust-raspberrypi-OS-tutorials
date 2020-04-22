@@ -112,7 +112,6 @@
 //! - `crate::bsp::memory::*`
 
 #![allow(incomplete_features)]
-#![feature(asm)]
 #![feature(const_fn)]
 #![feature(const_generics)]
 #![feature(const_if_match)]
@@ -121,6 +120,7 @@
 #![feature(format_args_nl)]
 #![feature(global_asm)]
 #![feature(linkage)]
+#![feature(llvm_asm)]
 #![feature(naked_functions)]
 #![feature(panic_info_message)]
 #![feature(slice_ptr_range)]
