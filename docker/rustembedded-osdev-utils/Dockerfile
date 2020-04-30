@@ -2,7 +2,7 @@
 ##
 ## Copyright (c) 2017-2020 Andre Richter <andre.o.richter@gmail.com>
 ## Copyright (c) 2019-2020 Nao Taco <naotaco@gmail.com>
-FROM ubuntu:19.10
+FROM ubuntu:20.04
 
 ARG VCS_REF
 
@@ -17,7 +17,9 @@ COPY Gemfile .
 RUN set -ex;                                        \
     tempPkgs='                                      \
         automake                                    \
+        bison                                       \
         build-essential                             \
+        flex                                        \
         git                                         \
         libtool                                     \
         pkg-config                                  \
@@ -33,7 +35,7 @@ RUN set -ex;                                        \
         libglib2.0-dev                              \
         libusb-1.0.0-dev                            \
         locales                                     \
-        python                                      \
+        python3                                     \
         ruby                                        \
         ruby-dev                                    \
     ;                                               \
@@ -43,10 +45,10 @@ RUN set -ex;                                        \
     # QEMU
     git clone git://git.qemu.org/qemu.git;                     \
     cd qemu;                                                   \
-    git checkout tags/v4.2.0;                                  \
+    git checkout tags/v5.0.0;                                  \
     ./configure --target-list=aarch64-softmmu --enable-modules \
         --enable-tcg-interpreter --enable-debug-tcg            \
-        --python=/usr/bin/python2.7;                           \
+        --python=/usr/bin/python3;                             \
     make -j8;                                                  \
     make install;                                              \
     cd ..;                                                     \
