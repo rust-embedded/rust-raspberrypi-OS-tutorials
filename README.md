@@ -68,7 +68,7 @@ other Unix flavors such as **macOS**, but this is only _experimental_.
 
 ```bash
 curl https://sh.rustup.rs -sSf | sh -s --  \
-    --default-toolchain nightly-2020-04-07 \
+    --default-toolchain nightly-2020-05-04 \
     --component llvm-tools-preview rustfmt
 
 source $HOME/.cargo/env
