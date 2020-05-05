@@ -29,6 +29,12 @@ class TutorialCrate
         Dir.chdir(@folder) { system('make clean') }
     end
 
+    def update
+        puts 'Updating '.light_blue + @folder
+
+        Dir.chdir(@folder) { system('cargo update') }
+    end
+
     def clippy(bsp)
         puts "Clippy #{@folder} - BSP: #{bsp}".light_blue
 
@@ -88,6 +94,10 @@ class DevTool
 
     def clean
         @crates.each(&:clean)
+    end
+
+    def update
+        @crates.each(&:update)
     end
 
     def clippy(bsp = nil)
