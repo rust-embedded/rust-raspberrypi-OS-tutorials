@@ -39,7 +39,7 @@ name = "kernel"
 version = "0.1.0"
 dependencies = [
  "cortex-a 3.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "qemu-exit 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "qemu-exit 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "register 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "test-macros 0.1.0",
  "test-types 0.1.0",
@@ -60,7 +60,7 @@ dependencies = [
 
 [[package]]
 name = "qemu-exit"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "x86_64 0.7.7 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -162,7 +162,7 @@ dependencies = [
 "checksum cortex-a 3.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "5fc6acdc0b04a6cabb709343ec396423e37b2e69b1018b69a7795177c157b490"
 "checksum nodrop 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)" = "72ef4a56884ca558e5ddb05a1d1e7e1bfd9a68d9ed024c21704cc98872dae1bb"
 "checksum proc-macro2 1.0.12 (registry+https://github.com/rust-lang/crates.io-index)" = "8872cf6f48eee44265156c111456a700ab3483686b3f96df4cf5481c89157319"
-"checksum qemu-exit 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "6eef8966dfa42074458b801f4ca70c0a070a84a500022584cc11d7a3c1fdb105"
+"checksum qemu-exit 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "c5781b3eb6b51aae8dad86f67885b7a7e55d14dcb47262c9f8f8bdc2622edfaa"
 "checksum quote 1.0.4 (registry+https://github.com/rust-lang/crates.io-index)" = "4c1f4b0efa5fc5e8ceb705136bfee52cfdb6a4e3509f770b478cd6ed434232a7"
 "checksum register 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "6e10c2ba523bc81270ecb9b6ca6704f42cd1efec89fddbfe0e520ad0e218f401"
 "checksum rustc_version 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "138e3e0acb6c9fb258b19b67cb8abd63c00679d2851805ea151465464fe9030a"
