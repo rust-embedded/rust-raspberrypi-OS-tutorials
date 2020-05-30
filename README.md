@@ -74,6 +74,7 @@ curl https://sh.rustup.rs -sSf | sh -s --  \
 source $HOME/.cargo/env
 rustup target add aarch64-unknown-none-softfloat
 cargo install cargo-binutils
+rustup component add llvm-tools-preview
 ```
 
 3. In case you use `Visual Studio Code`, I strongly recommend installing the [Rust Analyzer extension].
