@@ -64,7 +64,10 @@ other Unix flavors such as **macOS**, but this is only _experimental_.
 ### 🚀 The tl;dr Version
 
 1. [Install Docker][install_docker].
-2. Install a suitable `Rust` toolchain:
+2. Ensure your user account is in the [docker group].
+3. Install a suitable `Rust` toolchain:
+
+[docker group]: https://docs.docker.com/engine/install/linux-postinstall/
 
 ```bash
 curl https://sh.rustup.rs -sSf | sh -s --  \
@@ -109,7 +112,7 @@ accompanying container that has all the needed tools or dependencies pre-install
 pulled in automagically once it is needed. If you want to know more about Docker and peek at the
 provided container, please refer to the repository's [docker](docker) folder.
 
-[install_docker]: https://docs.docker.com/install
+[install_docker]: https://docs.docker.com/get-docker/
 
 ## 📟 USB Serial Output
 
