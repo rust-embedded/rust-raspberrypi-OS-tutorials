@@ -18,6 +18,7 @@ _带上我最诚挚的问候,<br>Andre ([@andre-richter])_
 
 [armv8-a 架构]: https://developer.arm.com/products/architecture/cpu-architecture/a-profile/docs
 [功能健全的]: https://en.wikipedia.org/wiki/Monolithic_kernel
+[@andre-richter]: https://github.com/andre-richter
 
 ## 📑 教程结构
 
