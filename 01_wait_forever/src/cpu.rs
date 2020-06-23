@@ -12,5 +12,4 @@ mod arch_cpu;
 #[path = "_arch/riscv32/cpu.rs"]
 mod arch_cpu;
 
-
 pub use arch_cpu::*;
