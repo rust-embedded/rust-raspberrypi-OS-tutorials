@@ -9,7 +9,7 @@ ENTRY(_start)
 
 SECTIONS
 {
-    /* Set current address to the value from which the RPi starts execution */
+    /* Set current address to the value from which the HiFive1 starts execution */
     . = 0x20400000;
 
     .text :
