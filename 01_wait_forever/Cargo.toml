@@ -9,5 +9,6 @@ edition = "2018"
 default = []
 bsp_rpi3 = []
 bsp_rpi4 = []
+bsp_hifive1 = []
 
 [dependencies]

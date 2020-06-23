@@ -19,12 +19,11 @@ executing the kernel code.
 ## Code to look at
 
 - Custom `link.ld` linker script.
-    - Load address at `0x80_000`
+    - Load address at `0x80_000` for RPi and `0x20400000` for HiFive1.
     - Only `.text` section.
 - `main.rs`: Important [inner attributes]:
     - `#![no_std]`, `#![no_main]`
-- `cpu.S`: Assembly `_start()` function that executes `wfe` (Wait For Event), halting all cores that
-  are executing `_start()`.
+- `cpu.S`: Assembly `_start()` function that executes `wfe` (Wait For Event) for RPi and `wfi` (Wait For Interrupt) for HiFive1, halting all cores that are executing `_start()`.
 - We (have to) define a `#[panic_handler]` function.
     - Just waits infinitely for a cpu event.
 

@@ -9,3 +9,9 @@ mod raspberrypi;
 
 #[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
 pub use raspberrypi::*;
+
+#[cfg(feature = "bsp_hifive1")]
+mod hifive1;
+
+#[cfg(feature = "bsp_hifive1")]
+pub use hifive1::*;

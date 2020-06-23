@@ -14,6 +14,8 @@ ifeq ($(BSP),rpi3)
     QEMU_RELEASE_ARGS = -d in_asm -display none
     LINKER_FILE       = src/bsp/raspberrypi/link.ld
     RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
+	CPU_ARCH          = aarch64
+	DOCKER_IMAGE      = rustembedded/osdev-utils
 else ifeq ($(BSP),rpi4)
     TARGET            = aarch64-unknown-none-softfloat
     KERNEL_BIN        = kernel8.img
@@ -22,6 +24,19 @@ else ifeq ($(BSP),rpi4)
     QEMU_RELEASE_ARGS = -d in_asm -display none
     LINKER_FILE       = src/bsp/raspberrypi/link.ld
     RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
+	CPU_ARCH          = aarch64
+	DOCKER_IMAGE      = rustembedded/osdev-utils
+else ifeq ($(BSP),hifive1)
+    TARGET            = riscv32imac-unknown-none-elf
+    KERNEL_BIN        = kernel8.img
+    QEMU_BINARY       = qemu-system-riscv32
+    QEMU_MACHINE_TYPE = sifive_e
+    QEMU_RELEASE_ARGS = -d in_asm -display none -bios none
+    LINKER_FILE       = src/bsp/hifive1/link.ld
+    RUSTC_MISC_ARGS   = -C target-cpu=generic-rv32
+	CPU_ARCH          = riscv32
+	# Use its own image until rustembedded/osdev-utils supports riscv32.
+	DOCKER_IMAGE      = imsuten/osdev-utils
 endif
 
 # Export for build.rs
@@ -44,8 +59,7 @@ OBJCOPY_CMD = rust-objcopy \
 
 KERNEL_ELF = target/$(TARGET)/release/kernel
 
-DOCKER_IMAGE         = rustembedded/osdev-utils
-DOCKER_CMD           = docker run -it --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
+DOCKER_CMD = docker run -it --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
 
 DOCKER_QEMU = $(DOCKER_CMD) $(DOCKER_IMAGE)
 
@@ -64,12 +78,15 @@ $(KERNEL_BIN): $(KERNEL_ELF)
 doc:
 	$(DOC_CMD) --document-private-items --open
 
-ifeq ($(QEMU_MACHINE_TYPE),)
-qemu:
-	@echo "This board is not yet supported for QEMU."
-else
+ifeq ($(BSP),rpi3)
 qemu: $(KERNEL_BIN)
 	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
+else ifeq ($(BSP),rpi4)
+qemu:
+	@echo "This board is not yet supported for QEMU."
+else ifeq ($(BSP),hifive1)
+qemu: $(KERNEL_ELF)
+	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_ELF)
 endif
 
 clippy:
@@ -82,7 +99,7 @@ readelf: $(KERNEL_ELF)
 	readelf -a $(KERNEL_ELF)
 
 objdump: $(KERNEL_ELF)
-	rust-objdump --arch-name aarch64 --disassemble --demangle --no-show-raw-insn \
+	rust-objdump --arch-name $(CPU_ARCH) --disassemble --demangle --no-show-raw-insn \
 	    --print-imm-hex $(KERNEL_ELF)
 
 nm: $(KERNEL_ELF)

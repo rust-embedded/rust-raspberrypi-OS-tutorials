@@ -9,3 +9,9 @@ docker_build:
 	docker build -t rustembedded/osdev-utils \
 	--build-arg VCS_REF=`git rev-parse --short HEAD` .
 	rm Gemfile
+
+docker_build_riscv:
+	cp ../../Gemfile .
+	docker build -t imsuten/osdev-utils \
+	--build-arg VCS_REF=`git rev-parse --short HEAD` .
+	rm Gemfile
