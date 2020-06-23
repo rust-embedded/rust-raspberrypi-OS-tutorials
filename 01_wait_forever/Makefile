@@ -14,8 +14,8 @@ ifeq ($(BSP),rpi3)
     QEMU_RELEASE_ARGS = -d in_asm -display none
     LINKER_FILE       = src/bsp/raspberrypi/link.ld
     RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
-	CPU_ARCH          = aarch64
-	DOCKER_IMAGE      = rustembedded/osdev-utils
+    CPU_ARCH          = aarch64
+    DOCKER_IMAGE      = rustembedded/osdev-utils
 else ifeq ($(BSP),rpi4)
     TARGET            = aarch64-unknown-none-softfloat
     KERNEL_BIN        = kernel8.img
@@ -24,8 +24,8 @@ else ifeq ($(BSP),rpi4)
     QEMU_RELEASE_ARGS = -d in_asm -display none
     LINKER_FILE       = src/bsp/raspberrypi/link.ld
     RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
-	CPU_ARCH          = aarch64
-	DOCKER_IMAGE      = rustembedded/osdev-utils
+    CPU_ARCH          = aarch64
+    DOCKER_IMAGE      = rustembedded/osdev-utils
 else ifeq ($(BSP),hifive1)
     TARGET            = riscv32imac-unknown-none-elf
     KERNEL_BIN        = kernel8.img
@@ -34,9 +34,9 @@ else ifeq ($(BSP),hifive1)
     QEMU_RELEASE_ARGS = -d in_asm -display none -bios none
     LINKER_FILE       = src/bsp/hifive1/link.ld
     RUSTC_MISC_ARGS   = -C target-cpu=generic-rv32
-	CPU_ARCH          = riscv32
-	# Use its own image until rustembedded/osdev-utils supports riscv32.
-	DOCKER_IMAGE      = imsuten/osdev-utils
+    CPU_ARCH          = riscv32
+    # Use its own image until rustembedded/osdev-utils supports riscv32.
+    DOCKER_IMAGE      = imsuten/osdev-utils
 endif
 
 # Export for build.rs
