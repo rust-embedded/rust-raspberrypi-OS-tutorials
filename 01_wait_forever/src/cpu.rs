@@ -12,4 +12,8 @@ mod arch_cpu;
 #[path = "_arch/riscv32/cpu.rs"]
 mod arch_cpu;
 
+#[cfg(target_arch = "riscv64")]
+#[path = "_arch/riscv64/cpu.rs"]
+mod arch_cpu;
+
 pub use arch_cpu::*;

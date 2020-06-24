@@ -15,3 +15,9 @@ mod hifive1;
 
 #[cfg(feature = "bsp_hifive1")]
 pub use hifive1::*;
+
+#[cfg(feature = "bsp_hifive_unleashed")]
+mod hifive_unleashed;
+
+#[cfg(feature = "bsp_hifive_unleashed")]
+pub use hifive_unleashed::*;

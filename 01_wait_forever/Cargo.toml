@@ -10,5 +10,6 @@ default = []
 bsp_rpi3 = []
 bsp_rpi4 = []
 bsp_hifive1 = []
+bsp_hifive_unleashed = []
 
 [dependencies]

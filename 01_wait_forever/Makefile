@@ -37,6 +37,17 @@ else ifeq ($(BSP),hifive1)
     CPU_ARCH          = riscv32
     # Use its own image until rustembedded/osdev-utils supports riscv32.
     DOCKER_IMAGE      = imsuten/osdev-utils
+else ifeq ($(BSP),hifive_unleashed)
+    TARGET            = riscv64gc-unknown-none-elf
+    KERNEL_BIN        = kernel8.img
+    QEMU_BINARY       = qemu-system-riscv64
+    QEMU_MACHINE_TYPE = sifive_u
+    QEMU_RELEASE_ARGS = -d in_asm -display none -bios none
+    LINKER_FILE       = src/bsp/hifive_unleashed/link.ld
+    RUSTC_MISC_ARGS   = -C target-cpu=generic-rv64
+    CPU_ARCH          = riscv64
+    # Use its own image until rustembedded/osdev-utils supports riscv32.
+    DOCKER_IMAGE      = imsuten/osdev-utils
 endif
 
 # Export for build.rs
@@ -85,6 +96,9 @@ else ifeq ($(BSP),rpi4)
 qemu:
 	@echo "This board is not yet supported for QEMU."
 else ifeq ($(BSP),hifive1)
+qemu: $(KERNEL_ELF)
+	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_ELF)
+else ifeq ($(BSP),hifive_unleashed)
 qemu: $(KERNEL_ELF)
 	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_ELF)
 endif
