@@ -4,7 +4,7 @@
 
 <br/>
 
-<img src="doc/header.jpg" height="390"> <img src="doc/minipush_demo_frontpage.gif" height="390">
+<img src="doc/header.jpg" height="379"> <img src="doc/minipush_demo_frontpage.gif" height="379">
 
 ## ℹ️ Introduction
 
