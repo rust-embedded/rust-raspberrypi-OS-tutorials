@@ -64,20 +64,27 @@ other Unix flavors such as **macOS**, but this is only _experimental_.
 ### 🚀 The tl;dr Version
 
 1. [Install Docker][install_docker].
-2. Ensure your user account is in the [docker group].
-3. Install a suitable `Rust` toolchain:
+1. Ensure your user account is in the [docker group].
+1. Install a suitable `Rust` toolchain:
+   1. If you already have a version of Rust installed:
+   ```bash
+   rustup toolchain add nightly-2020-06-28
+   rustup default nightly-2020-06-28
+   rustup component add llvm-tools-preview
+   rustup target add aarch64-unknown-none-softfloat
+   cargo install cargo-binutils
+   ```
 
-[docker group]: https://docs.docker.com/engine/install/linux-postinstall/
+   2. If you need a fresh install:
+   ```bash
+   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s --  \
+       --default-toolchain nightly-2020-06-28                            \
+       --component llvm-tools-preview
 
-```bash
-curl https://sh.rustup.rs -sSf | sh -s --  \
-    --default-toolchain nightly-2020-05-04 \
-    --component llvm-tools-preview rustfmt
-
-source $HOME/.cargo/env
-rustup target add aarch64-unknown-none-softfloat
-cargo install cargo-binutils
-```
+   source $HOME/.cargo/env
+   rustup target add aarch64-unknown-none-softfloat
+   cargo install cargo-binutils
+   ```
 
 3. In case you use `Visual Studio Code`, I strongly recommend installing the [Rust Analyzer extension].
 4. If you are **NOT** running Linux, some `Ruby` gems are needed as well:
@@ -87,6 +94,7 @@ sudo gem install bundler
 bundle install --path .vendor/bundle
 ```
 
+[docker group]: https://docs.docker.com/engine/install/linux-postinstall/
 [Rust Analyzer extension]: https://marketplace.visualstudio.com/items?itemName=matklad.rust-analyzer
 
 ### 🧰 The Long Version: Eliminating Toolchain Hassle
