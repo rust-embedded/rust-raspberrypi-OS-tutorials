@@ -16,11 +16,11 @@ global_asm!(include_str!("cpu.S"));
 pub fn wait_forever() -> ! {
     unsafe {
         loop {
-            llvm_asm!("wfe"
-                    :             // outputs
-                    :             // inputs
-                    :             // clobbers
-                    : "volatile") // options
+            #[rustfmt::skip]
+            asm!(
+                "wfe",
+                options(nomem, nostack, preserves_flags)
+            );
         }
     }
 }
