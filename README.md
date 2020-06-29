@@ -91,7 +91,8 @@ other Unix flavors such as **macOS**, but this is only _experimental_.
 
    ```bash
    sudo gem install bundler
-   bundle install --path .vendor/bundle
+   bundle config set path '.vendor/bundle'
+   bundle install
    ```
 
 [docker group]: https://docs.docker.com/engine/install/linux-postinstall/
