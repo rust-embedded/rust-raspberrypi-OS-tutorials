@@ -4,7 +4,7 @@
 
 <br/>
 
-<img src="doc/header.jpg" height="390"> <img src="doc/minipush_demo_frontpage.gif" height="390">
+<img src="doc/header.jpg" height="379"> <img src="doc/minipush_demo_frontpage.gif" height="379">
 
 ## ℹ️ 介绍
 
@@ -36,7 +36,7 @@ _带上我最诚挚的问候,<br>Andre ([@andre-richter])_
 
 ### `make doc` 的输出
 
-<img src="doc/make_doc.png" width="880">
+![make doc](doc/make_doc.png)
 
 [Visual Studio Code]: https://code.visualstudio.com
 [Rust Analyzer]: https://rust-analyzer.github.io

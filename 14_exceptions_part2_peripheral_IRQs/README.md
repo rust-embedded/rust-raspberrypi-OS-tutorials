@@ -8,7 +8,7 @@
 - Handling for our first peripheral IRQ is implemented: The `UART`'s receive IRQ - one IRQ per
   received character.
 
-<img src="../doc/14_header.png" width="880">
+![Header](../doc/14_header.png)
 
 ## Table of Contents
 
@@ -443,7 +443,7 @@ IRQs can be routed to _one core only_. In our case, we leave the default unchang
 everything is routed to the boot CPU core. The image below depicts the `struct diagram` of the
 driver implementation.
 
-<img src="../doc/14_BCM_driver.png" width="880">
+![BCM Driver](../doc/14_BCM_driver.png)
 
 We have a top-level driver, which implements the `IRQManager` trait. _Only the top-level driver_ is
 exposed to the rest of the `kernel`. The top-level itself has two members, representing the local
@@ -567,7 +567,7 @@ In summary, this means that any registers in the `GICD` that deal with the core-
 are banked. Since there is one `GICC` per CPU core, the whole thing is banked. This allows us to
 design the following `struct diagram` for our driver implementation:
 
-<img src="../doc/14_GICv2_driver.png" width="880">
+![GICv2 Driver](../doc/14_GICv2_driver.png)
 
 The top-level struct is composed of a `GICD`, a `GICC` and a `HandlerTable`. The latter is
 implemented identically as in the `Pi 3`.
