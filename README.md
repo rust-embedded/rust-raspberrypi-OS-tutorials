@@ -51,7 +51,7 @@ P.S.: In the future, Chinese :cn: versions of the tutorials will be maintained a
 
 ### Output of `make doc`
 
-<img src="doc/make_doc.png" width="880">
+![make doc](doc/make_doc.png)
 
 [Visual Studio Code]: https://code.visualstudio.com
 [Rust Analyzer]: https://rust-analyzer.github.io
