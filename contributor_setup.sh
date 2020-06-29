@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
 
 git config core.hooksPath .githooks
-bundle install --path .vendor/bundle
+bundle config set path '.vendor/bundle'
+bundle install
