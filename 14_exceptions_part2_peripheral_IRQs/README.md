@@ -2568,7 +2568,7 @@ diff -uNr 13_integrated_testing/src/lib.rs 14_exceptions_part2_peripheral_IRQs/s
  //! [timer interface]: ../libkernel/time/interface/trait.TimeManager.html
  //!
  //! # Code organization and architecture
-@@ -107,8 +112,12 @@
+@@ -107,8 +112,11 @@
  //! - `crate::bsp::memory::*`
 
  #![allow(incomplete_features)]
@@ -2576,13 +2576,12 @@ diff -uNr 13_integrated_testing/src/lib.rs 14_exceptions_part2_peripheral_IRQs/s
 +#![feature(const_fn)]
  #![feature(const_generics)]
 -#![feature(custom_inner_attributes)]
-+#![feature(const_if_match)]
 +#![feature(const_panic)]
 +#![feature(core_intrinsics)]
  #![feature(format_args_nl)]
  #![feature(global_asm)]
  #![feature(linkage)]
-@@ -137,6 +146,7 @@
+@@ -137,6 +145,7 @@
  pub mod exception;
  pub mod memory;
  pub mod print;

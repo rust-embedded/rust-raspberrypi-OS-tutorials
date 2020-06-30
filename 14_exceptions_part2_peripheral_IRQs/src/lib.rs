@@ -115,7 +115,6 @@
 #![feature(asm)]
 #![feature(const_fn)]
 #![feature(const_generics)]
-#![feature(const_if_match)]
 #![feature(const_panic)]
 #![feature(core_intrinsics)]
 #![feature(format_args_nl)]
