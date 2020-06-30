@@ -92,9 +92,9 @@
 //! - `crate::memory::*`
 //! - `crate::bsp::memory::*`
 
+#![feature(asm)]
 #![feature(format_args_nl)]
 #![feature(global_asm)]
-#![feature(llvm_asm)]
 #![feature(panic_info_message)]
 #![no_main]
 #![no_std]

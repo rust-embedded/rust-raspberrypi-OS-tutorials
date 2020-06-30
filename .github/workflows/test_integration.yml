@@ -39,7 +39,8 @@ jobs:
     - name: Set up Ruby
       run: |
         gem install bundler
-        bundle install --retry 3 --without uart
+        bundle config set without 'uart'
+        bundle install --retry 3
     - name: Make all
       run: |
         bundle exec ruby utils/devtool.rb test_integration

@@ -8,7 +8,7 @@
 - Handling for our first peripheral IRQ is implemented: The `UART`'s receive IRQ - one IRQ per
   received character.
 
-<img src="../doc/14_header.png" width="880">
+![Header](../doc/14_header.png)
 
 ## Table of Contents
 
@@ -443,7 +443,7 @@ IRQs can be routed to _one core only_. In our case, we leave the default unchang
 everything is routed to the boot CPU core. The image below depicts the `struct diagram` of the
 driver implementation.
 
-<img src="../doc/14_BCM_driver.png" width="880">
+![BCM Driver](../doc/14_BCM_driver.png)
 
 We have a top-level driver, which implements the `IRQManager` trait. _Only the top-level driver_ is
 exposed to the rest of the `kernel`. The top-level itself has two members, representing the local
@@ -567,7 +567,7 @@ In summary, this means that any registers in the `GICD` that deal with the core-
 are banked. Since there is one `GICC` per CPU core, the whole thing is banked. This allows us to
 design the following `struct diagram` for our driver implementation:
 
-<img src="../doc/14_GICv2_driver.png" width="880">
+![GICv2 Driver](../doc/14_GICv2_driver.png)
 
 The top-level struct is composed of a `GICD`, a `GICC` and a `HandlerTable`. The latter is
 implemented identically as in the `Pi 3`.
@@ -826,11 +826,11 @@ diff -uNr 13_integrated_testing/src/_arch/aarch64/exception/asynchronous.rs 14_e
 +/// - Changes the HW state of the executing core.
 +#[inline(always)]
 +pub unsafe fn local_irq_unmask() {
-+    llvm_asm!("msr DAIFClr, $0"
-+            :                     // outputs
-+            : "i"(daif_bits::IRQ) // inputs
-+            :                     // clobbers
-+            : "volatile"          // options
++    #[rustfmt::skip]
++    asm!(
++        "msr DAIFClr, {arg}",
++        arg = const daif_bits::IRQ,
++        options(nomem, nostack, preserves_flags)
 +    );
 +}
 +
@@ -841,11 +841,11 @@ diff -uNr 13_integrated_testing/src/_arch/aarch64/exception/asynchronous.rs 14_e
 +/// - Changes the HW state of the executing core.
 +#[inline(always)]
 +pub unsafe fn local_irq_mask() {
-+    llvm_asm!("msr DAIFSet, $0"
-+            :                     // outputs
-+            : "i"(daif_bits::IRQ) // inputs
-+            :                     // clobbers
-+            : "volatile"          // options
++    #[rustfmt::skip]
++    asm!(
++        "msr DAIFSet, {arg}",
++        arg = const daif_bits::IRQ,
++        options(nomem, nostack, preserves_flags)
 +    );
 +}
 +
@@ -2568,10 +2568,11 @@ diff -uNr 13_integrated_testing/src/lib.rs 14_exceptions_part2_peripheral_IRQs/s
  //! [timer interface]: ../libkernel/time/interface/trait.TimeManager.html
  //!
  //! # Code organization and architecture
-@@ -107,11 +112,15 @@
+@@ -107,8 +112,12 @@
  //! - `crate::bsp::memory::*`
 
  #![allow(incomplete_features)]
++#![feature(asm)]
 +#![feature(const_fn)]
  #![feature(const_generics)]
 -#![feature(custom_inner_attributes)]
@@ -2581,10 +2582,6 @@ diff -uNr 13_integrated_testing/src/lib.rs 14_exceptions_part2_peripheral_IRQs/s
  #![feature(format_args_nl)]
  #![feature(global_asm)]
  #![feature(linkage)]
-+#![feature(llvm_asm)]
- #![feature(naked_functions)]
- #![feature(panic_info_message)]
- #![feature(slice_ptr_range)]
 @@ -137,6 +146,7 @@
  pub mod exception;
  pub mod memory;

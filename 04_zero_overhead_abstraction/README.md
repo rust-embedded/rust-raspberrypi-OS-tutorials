@@ -100,11 +100,11 @@ diff -uNr 03_hacky_hello_world/src/_arch/aarch64/cpu.rs 04_zero_overhead_abstrac
  pub fn wait_forever() -> ! {
 -    unsafe {
 -        loop {
--            llvm_asm!("wfe"
--                    :             // outputs
--                    :             // inputs
--                    :             // clobbers
--                    : "volatile") // options
+-            #[rustfmt::skip]
+-            asm!(
+-                "wfe",
+-                options(nomem, nostack, preserves_flags)
+-            );
 -        }
 +    loop {
 +        asm::wfe()
@@ -194,12 +194,13 @@ diff -uNr 03_hacky_hello_world/src/cpu.rs 04_zero_overhead_abstraction/src/cpu.r
 diff -uNr 03_hacky_hello_world/src/main.rs 04_zero_overhead_abstraction/src/main.rs
 --- 03_hacky_hello_world/src/main.rs
 +++ 04_zero_overhead_abstraction/src/main.rs
-@@ -93,8 +93,7 @@
+@@ -92,9 +92,8 @@
+ //! - `crate::memory::*`
  //! - `crate::bsp::memory::*`
 
+-#![feature(asm)]
  #![feature(format_args_nl)]
 -#![feature(global_asm)]
--#![feature(llvm_asm)]
 +#![feature(naked_functions)]
  #![feature(panic_info_message)]
  #![no_main]

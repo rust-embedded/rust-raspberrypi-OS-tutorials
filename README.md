@@ -4,7 +4,7 @@
 
 <br/>
 
-<img src="doc/header.jpg" height="390"> <img src="doc/minipush_demo_frontpage.gif" height="390">
+<img src="doc/header.jpg" height="379"> <img src="doc/minipush_demo_frontpage.gif" height="379">
 
 ## ℹ️ Introduction
 
@@ -51,7 +51,7 @@ P.S.: In the future, Chinese :cn: versions of the tutorials will be maintained a
 
 ### Output of `make doc`
 
-<img src="doc/make_doc.png" width="880">
+![make doc](doc/make_doc.png)
 
 [Visual Studio Code]: https://code.visualstudio.com
 [Rust Analyzer]: https://rust-analyzer.github.io
@@ -64,26 +64,38 @@ other Unix flavors such as **macOS**, but this is only _experimental_.
 ### 🚀 The tl;dr Version
 
 1. [Install Docker][install_docker].
-2. Install a suitable `Rust` toolchain:
+1. Ensure your user account is in the [docker group].
+1. Install a suitable `Rust` toolchain:
+   1. If you already have a version of Rust installed:
+      ```bash
+      rustup toolchain add nightly-2020-06-28
+      rustup default nightly-2020-06-28
+      rustup component add llvm-tools-preview
+      rustup target add aarch64-unknown-none-softfloat
+      cargo install cargo-binutils
+      ```
 
-```bash
-curl https://sh.rustup.rs -sSf | sh -s --  \
-    --default-toolchain nightly-2020-05-04 \
-    --component llvm-tools-preview rustfmt
+   2. If you need a fresh install:
+      ```bash
+      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- \
+          --default-toolchain nightly-2020-06-28                           \
+          --component llvm-tools-preview
 
-source $HOME/.cargo/env
-rustup target add aarch64-unknown-none-softfloat
-cargo install cargo-binutils
-```
+      source $HOME/.cargo/env
+      rustup target add aarch64-unknown-none-softfloat
+      cargo install cargo-binutils
+      ```
 
 3. In case you use `Visual Studio Code`, I strongly recommend installing the [Rust Analyzer extension].
 4. If you are **NOT** running Linux, some `Ruby` gems are needed as well:
 
-```bash
-sudo gem install bundler
-bundle install --path .vendor/bundle
-```
+   ```bash
+   sudo gem install bundler
+   bundle config set path '.vendor/bundle'
+   bundle install
+   ```
 
+[docker group]: https://docs.docker.com/engine/install/linux-postinstall/
 [Rust Analyzer extension]: https://marketplace.visualstudio.com/items?itemName=matklad.rust-analyzer
 
 ### 🧰 The Long Version: Eliminating Toolchain Hassle
@@ -109,7 +121,7 @@ accompanying container that has all the needed tools or dependencies pre-install
 pulled in automagically once it is needed. If you want to know more about Docker and peek at the
 provided container, please refer to the repository's [docker](docker) folder.
 
-[install_docker]: https://docs.docker.com/install
+[install_docker]: https://docs.docker.com/get-docker/
 
 ## 📟 USB Serial Output
 
@@ -117,7 +129,7 @@ Since the kernel developed in the tutorials runs on the real hardware, it is hig
 get a USB serial debug cable to get the full experience. The cable also powers the Raspberry once
 you connect it, so you don't need extra power over the dedicated power-USB.
 
-- I use a bunch of [these serial cables].
+- You can find USB-to-serial cables that should work right away at [\[1\]] [\[2\]].
 - You connect it to the GPIO pins `14/15` as shown below.
 - [Tutorial 6](06_drivers_gpio_uart) is the first where you can use it. Check it out for
   instructions on how to prepare the SD card to boot your self-made kernel from it.
@@ -128,7 +140,8 @@ you connect it, so you don't need extra power over the dedicated power-USB.
 
 ![UART wiring diagram](doc/wiring.png)
 
-[these serial cables]: https://www.amazon.de/dp/B0757FQ5CX/ref=cm_sw_r_tw_dp_U_x_ozGRDbVTJAG4Q
+[\[1\]]: https://www.amazon.de/dp/B0757FQ5CX/ref=cm_sw_r_tw_dp_U_x_ozGRDbVTJAG4Q
+[\[2\]]: https://www.adafruit.com/product/954
 
 ## 🙌 Acknowledgements
 
