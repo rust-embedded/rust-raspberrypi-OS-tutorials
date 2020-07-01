@@ -4,7 +4,7 @@ The following text is a 1:1 copy of the documentation that can be found at the t
 main source code file in each tutorial. It describes the general structure of the source code, and
 tries to convey the philosophy behind the respective approach. Please read it to make yourself
 familiar with what you will encounter during the tutorials. It will help you to navigate the code
-better and understand the differences and additions beteween the separate tutorials.
+better and understand the differences and additions between the separate tutorials.
 
 Please also note that the following text will reference source code files (e.g. `**/memory.rs`) or
 functions that won't exist yet in the first bunch of the tutorials. They will be added gradually as
