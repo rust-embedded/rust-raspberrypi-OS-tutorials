@@ -21,7 +21,7 @@ cores/threads are mutating the data concurrently (it is a global, so everyone ca
 anywhere. The borrow checker can't help here).
 
 The solution to this problem is to wrap the global into a synchronization primitive. In our case, a
-variant of a *MUTual EXclusion* primivite. `Mutex` is introduced as a trait in `synchronization.rs`,
+variant of a *MUTual EXclusion* primitive. `Mutex` is introduced as a trait in `synchronization.rs`,
 and implemented by the `NullLock` in the same file. In order to make the code lean for teaching
 purposes, it leaves out the actual architecture-specific logic for protection against concurrent
 access, since we don't need it as long as the kernel only executes on a single core with interrupts
