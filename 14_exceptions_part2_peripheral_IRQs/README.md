@@ -242,13 +242,13 @@ impl exception::asynchronous::interface::IRQHandler for PL011Uart {
     fn handle(&self) -> Result<(), &'static str> {
         let mut r = &self.inner;
         r.lock(|inner| {
-            let pending = inner.RIS.extract();
+            let pending = inner.MIS.extract();
 
             // Clear all pending IRQs.
             inner.ICR.write(ICR::ALL::CLEAR);
 
             // Check for any kind of RX interrupt.
-            if pending.matches_any(RIS::RXRIS::SET + RIS::RTRIS::SET) {
+            if pending.matches_any(MIS::RXMIS::SET + MIS::RTMIS::SET) {
                 // Echo any received characters.
                 while let Some(c) = inner.read_char_converting(BlockingMode::NonBlocking) {
                     inner.write_char(c)
@@ -1857,7 +1857,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
  use core::{fmt, ops};
  use register::{mmio::*, register_bitfields, register_structs};
 
-@@ -106,6 +108,47 @@
+@@ -106,6 +108,48 @@
          ]
      ],
 
@@ -1876,9 +1876,9 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
 +
 +    /// Interrupt Mask Set Clear Register
 +    IMSC [
-+        // Receive timeout interrupt mask. A read returns the current mask for the UARTRTINTR
-+        // interrupt. On a write of 1, the mask of the interrupt is set. A write of 0 clears the
-+        // mask.
++        /// Receive timeout interrupt mask. A read returns the current mask for the UARTRTINTR
++        /// interrupt. On a write of 1, the mask of the interrupt is set. A write of 0 clears the
++        /// mask.
 +        RTIM OFFSET(6) NUMBITS(1) [
 +            Disabled = 0,
 +            Enabled = 1
@@ -1892,20 +1892,21 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
 +        ]
 +    ],
 +
-+    /// Raw Interrupt Status Register
-+    RIS [
-+        // Receive timeout interrupt status. Returns the raw interrupt state of the UARTRTINTR
-+        // interrupt.
-+        RTRIS OFFSET(6) NUMBITS(1) [],
++    /// Masked Interrupt Status Register
++    MIS [
++        /// Receive timeout masked interrupt status. Returns the masked interrupt state of the
++        /// UARTRTINTR interrupt.
++        RTMIS OFFSET(6) NUMBITS(1) [],
 +
-+        /// Receive interrupt status. Returns the raw interrupt state of the UARTRXINTR interrupt.
-+        RXRIS OFFSET(4) NUMBITS(1) []
++        /// Receive masked interrupt status. Returns the masked interrupt state of the UARTRXINTR
++        /// interrupt.
++        RXMIS OFFSET(4) NUMBITS(1) []
 +    ],
 +
      /// Interrupt Clear Register
      ICR [
          /// Meta field for all pending interrupts
-@@ -113,6 +156,12 @@
+@@ -113,6 +157,12 @@
      ]
  }
 
@@ -1918,18 +1919,19 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
  //--------------------------------------------------------------------------------------------------
  // Public Definitions
  //--------------------------------------------------------------------------------------------------
-@@ -128,7 +177,9 @@
+@@ -128,7 +178,10 @@
          (0x28 => FBRD: WriteOnly<u32, FBRD::Register>),
          (0x2c => LCRH: WriteOnly<u32, LCRH::Register>),
          (0x30 => CR: WriteOnly<u32, CR::Register>),
 -        (0x34 => _reserved3),
 +        (0x34 => IFLS: ReadWrite<u32, IFLS::Register>),
 +        (0x38 => IMSC: ReadWrite<u32, IMSC::Register>),
-+        (0x3C => RIS: ReadWrite<u32, RIS::Register>),
++        (0x3C => _reserved3),
++        (0x40 => MIS: ReadOnly<u32, MIS::Register>),
          (0x44 => ICR: WriteOnly<u32, ICR::Register>),
          (0x48 => @END),
      }
-@@ -145,7 +196,8 @@
+@@ -145,7 +198,8 @@
 
  /// Representation of the UART.
  pub struct PL011Uart {
@@ -1939,7 +1941,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -197,6 +249,8 @@
+@@ -197,6 +251,8 @@
          self.FBRD.write(FBRD::FBRD.val(2));
          self.LCRH
              .write(LCRH::WLEN::EightBit + LCRH::FEN::FifosEnabled); // 8N1 + Fifo on
@@ -1948,7 +1950,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
          self.CR
              .write(CR::UARTEN::Enabled + CR::TXE::Enabled + CR::RXE::Enabled);
      }
-@@ -218,6 +272,35 @@
+@@ -218,6 +274,35 @@
 
          self.chars_written += 1;
      }
@@ -1984,7 +1986,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
  }
 
  /// Implementing `core::fmt::Write` enables usage of the `format_args!` macros, which in turn are
-@@ -243,9 +326,10 @@
+@@ -243,9 +328,10 @@
      /// # Safety
      ///
      /// - The user must ensure to provide the correct `base_addr`.
@@ -1997,7 +1999,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
          }
      }
  }
-@@ -266,6 +350,21 @@
+@@ -266,6 +352,21 @@
 
          Ok(())
      }
@@ -2019,7 +2021,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
  }
 
  impl console::interface::Write for PL011Uart {
-@@ -297,25 +396,7 @@
+@@ -297,25 +398,7 @@
  impl console::interface::Read for PL011Uart {
      fn read_char(&self) -> char {
          let mut r = &self.inner;
@@ -2046,7 +2048,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
      }
 
      fn clear(&self) {
-@@ -340,3 +421,25 @@
+@@ -340,3 +423,25 @@
          r.lock(|inner| inner.chars_read)
      }
  }
@@ -2055,13 +2057,13 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
 +    fn handle(&self) -> Result<(), &'static str> {
 +        let mut r = &self.inner;
 +        r.lock(|inner| {
-+            let pending = inner.RIS.extract();
++            let pending = inner.MIS.extract();
 +
 +            // Clear all pending IRQs.
 +            inner.ICR.write(ICR::ALL::CLEAR);
 +
 +            // Check for any kind of RX interrupt.
-+            if pending.matches_any(RIS::RXRIS::SET + RIS::RTRIS::SET) {
++            if pending.matches_any(MIS::RXMIS::SET + MIS::RTMIS::SET) {
 +                // Echo any received characters.
 +                while let Some(c) = inner.read_char_converting(BlockingMode::NonBlocking) {
 +                    inner.write_char(c)

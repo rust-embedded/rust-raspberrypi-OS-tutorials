@@ -123,9 +123,9 @@ register_bitfields! {
 
     /// Interrupt Mask Set Clear Register
     IMSC [
-        // Receive timeout interrupt mask. A read returns the current mask for the UARTRTINTR
-        // interrupt. On a write of 1, the mask of the interrupt is set. A write of 0 clears the
-        // mask.
+        /// Receive timeout interrupt mask. A read returns the current mask for the UARTRTINTR
+        /// interrupt. On a write of 1, the mask of the interrupt is set. A write of 0 clears the
+        /// mask.
         RTIM OFFSET(6) NUMBITS(1) [
             Disabled = 0,
             Enabled = 1
@@ -139,14 +139,15 @@ register_bitfields! {
         ]
     ],
 
-    /// Raw Interrupt Status Register
-    RIS [
-        // Receive timeout interrupt status. Returns the raw interrupt state of the UARTRTINTR
-        // interrupt.
-        RTRIS OFFSET(6) NUMBITS(1) [],
+    /// Masked Interrupt Status Register
+    MIS [
+        /// Receive timeout masked interrupt status. Returns the masked interrupt state of the
+        /// UARTRTINTR interrupt.
+        RTMIS OFFSET(6) NUMBITS(1) [],
 
-        /// Receive interrupt status. Returns the raw interrupt state of the UARTRXINTR interrupt.
-        RXRIS OFFSET(4) NUMBITS(1) []
+        /// Receive masked interrupt status. Returns the masked interrupt state of the UARTRXINTR
+        /// interrupt.
+        RXMIS OFFSET(4) NUMBITS(1) []
     ],
 
     /// Interrupt Clear Register
@@ -179,7 +180,8 @@ register_structs! {
         (0x30 => CR: WriteOnly<u32, CR::Register>),
         (0x34 => IFLS: ReadWrite<u32, IFLS::Register>),
         (0x38 => IMSC: ReadWrite<u32, IMSC::Register>),
-        (0x3C => RIS: ReadWrite<u32, RIS::Register>),
+        (0x3C => _reserved3),
+        (0x40 => MIS: ReadOnly<u32, MIS::Register>),
         (0x44 => ICR: WriteOnly<u32, ICR::Register>),
         (0x48 => @END),
     }
@@ -426,13 +428,13 @@ impl exception::asynchronous::interface::IRQHandler for PL011Uart {
     fn handle(&self) -> Result<(), &'static str> {
         let mut r = &self.inner;
         r.lock(|inner| {
-            let pending = inner.RIS.extract();
+            let pending = inner.MIS.extract();
 
             // Clear all pending IRQs.
             inner.ICR.write(ICR::ALL::CLEAR);
 
             // Check for any kind of RX interrupt.
-            if pending.matches_any(RIS::RXRIS::SET + RIS::RTRIS::SET) {
+            if pending.matches_any(MIS::RXMIS::SET + MIS::RTMIS::SET) {
                 // Echo any received characters.
                 while let Some(c) = inner.read_char_converting(BlockingMode::NonBlocking) {
                     inner.write_char(c)
