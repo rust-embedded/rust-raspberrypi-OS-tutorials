@@ -5,8 +5,7 @@
 - We write `device drivers` for the two interrupt controllers on the **Raspberry Pi 3** (Broadcom
   custom controller) and **Pi 4** (ARM Generic Interrupt Controller v2, `GICv2`).
 - Modularity is ensured by interfacing everything through a trait named `IRQManager`.
-- Handling for our first peripheral IRQ is implemented: The `UART`'s receive IRQ - one IRQ per
-  received character.
+- Handling for our first peripheral IRQs is implemented: The `UART`'s receive IRQs.
 
 ![Header](../doc/14_header.png)
 
@@ -46,8 +45,8 @@ In this tutorial, we will add a first level of support for one of the three type
 exceptions that are defined for `AArch64`: `IRQs`. The overall goal for this tutorial is to get rid
 of the  busy-loop at the end of our current `kernel_main()` function, which actively polls the
 `UART` for newly received characters. Instead, we will let the processor idle and wait for the
-`UART`'s RX IRQ, which indicates that a new character was received. A respective `IRQ` service
-routine, provided by the `UART` driver, will run in response to the `IRQ` and print the character.
+`UART`'s RX IRQs, which indicate that new characters were received. A respective `IRQ` service
+routine, provided by the `UART` driver, will run in response to the `IRQ` and print the characters.
 
 ## Different Controllers: A Usecase for Abstraction
 
@@ -226,20 +225,33 @@ pub trait IRQHandler {
 ```
 
 The `PL011Uart` driver gets the honors for being our first driver to ever implement this trait. In
-this tutorial, only receive (RX) interrupts are enabled, and there will be one RX IRQ fired for each
-character that is received. In the handler, our standard scheme of echoing any received characters
-back to the host is used:
+this tutorial, the `RX IRQ` and the `RX Timeout IRQ` will be configured. This means that the
+`PL011Uart` will assert it's interrupt line when one of following conditions is met:
+
+1. `RX IRQ`: The RX FIFO fill level is equal or more than the configured trigger level (which will be 1/8 of
+   the total FIFO size in our case).
+1. `RX Timeout IRQ`: The RX FIFO fill level is greater than zero, but less than the configured fill
+   level, and the characters have not been pulled for a certain amount of time. The exact time is
+   not documented in the respective `PL011Uart` datasheet. Usually, it is a single-digit multiple of
+   the time it takes to receive or transmit one character on the serial line.
+
+ In the handler, our standard scheme of echoing any received characters back to the host is used:
 
 ```rust
 impl exception::asynchronous::interface::IRQHandler for PL011Uart {
     fn handle(&self) -> Result<(), &'static str> {
         let mut r = &self.inner;
         r.lock(|inner| {
-            // Echo any received characters.
-            loop {
-                match inner.read_char_converting(false) {
-                    None => break,
-                    Some(c) => inner.write_char(c),
+            let pending = inner.RIS.extract();
+
+            // Clear all pending IRQs.
+            inner.ICR.write(ICR::ALL::CLEAR);
+
+            // Check for any kind of RX interrupt.
+            if pending.matches_any(RIS::RXRIS::SET + RIS::RTRIS::SET) {
+                // Echo any received characters.
+                while let Some(c) = inner.read_char_converting(BlockingMode::NonBlocking) {
+                    inner.write_char(c)
                 }
             }
         });
@@ -630,22 +642,6 @@ sources.
 
 [this folder]: src/bsp/device_driver/arm
 
-## UART hack
-
-In the introduction, we stated that we want to set up the system such that the `UART` fires one IRQ
-per received character. As it turns out, this usually common mode of operation is not natively
-supported by the Raspberry's `PL011 UART` when receive FIFOs are activated. We can only set a
-relative FIFO fill level at which the first IRQ is fired. The lowest fill level is `1/8` of the RX
-FIFO size, which translates to `2 characters` for  the `Pi 3` and `4 characters` for the `Pi 4`.
-
-To circumvent this constraint, we added a hack to the `UART` driver that "abuses" debug facilities
-of the controller to always pre-fill the RX FIFOs to one character short of the `1/8` fill level.
-This enusres that the next real character received from the connected user will fire an IRQ.
-
-To make things even more convoluted, `QEMU` does not emulate the fill-level-based IRQ generation,
-but generates an IRQ on every received character. In the end, this whole situation adds a bit of
-conditional-compilation mumbo-jumbo to the `UART` driver. But hey, it works!
-
 ## Test it
 
 When you load the kernel, any keystroke results in echoing back the character by way of IRQ
@@ -747,18 +743,6 @@ Minipush 1.0
 ## Diff to previous
 ```diff
 
-diff -uNr 13_integrated_testing/Cargo.toml 14_exceptions_part2_peripheral_IRQs/Cargo.toml
---- 13_integrated_testing/Cargo.toml
-+++ 14_exceptions_part2_peripheral_IRQs/Cargo.toml
-@@ -9,6 +9,7 @@
- default = []
- bsp_rpi3 = ["cortex-a", "register"]
- bsp_rpi4 = ["cortex-a", "register"]
-+qemu-quirks = []
-
- [dependencies]
- qemu-exit = "0.1.x"
-
 diff -uNr 13_integrated_testing/Makefile 14_exceptions_part2_peripheral_IRQs/Makefile
 --- 13_integrated_testing/Makefile
 +++ 14_exceptions_part2_peripheral_IRQs/Makefile
@@ -773,22 +757,6 @@ diff -uNr 13_integrated_testing/Makefile 14_exceptions_part2_peripheral_IRQs/Mak
      --release
 
  RUSTC_CMD   = cargo rustc $(COMPILER_ARGS)
-@@ -108,6 +109,7 @@
- doc:
- 	$(DOC_CMD) --document-private-items --open
-
-+qemu: FEATURES += --features qemu-quirks
- ifeq ($(QEMU_MACHINE_TYPE),)
- qemu test:
- 	@echo $(QEMU_MISSING_STRING)
-@@ -124,6 +126,7 @@
- endef
-
- export KERNEL_TEST_RUNNER
-+test: FEATURES += --features qemu-quirks
- test:
- 	@mkdir -p target
- 	@echo "$$KERNEL_TEST_RUNNER" > target/kernel_test_runner.sh
 
 diff -uNr 13_integrated_testing/src/_arch/aarch64/exception/asynchronous.rs 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/exception/asynchronous.rs
 --- 13_integrated_testing/src/_arch/aarch64/exception/asynchronous.rs
@@ -1878,42 +1846,18 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 --- 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -3,8 +3,32 @@
- // Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
+@@ -4,7 +4,9 @@
 
  //! PL011 UART driver.
--
+
 -use crate::{console, cpu, driver, synchronization, synchronization::NullLock};
-+//!
-+//! # FIFO fill level IRQ hack
-+//!
-+//! For learning purposes, we want the UART to raise an IRQ on _every_ received character.
-+//! Unfortunately, this rather common mode of operation is not supported by the PL011 when operating
-+//! in FIFO mode. It is only possible to set a fill level fraction on which the IRQ is triggered.
-+//! The lowest fill level is 1/8.
-+//!
-+//! On the RPi3, the RX FIFO is 16 chars deep, so the IRQ would trigger after 2 chars have been
-+//! received. On the RPi4, the FIFO seems to be 32 chars deep, because experiments showed that the
-+//! RX IRQ triggers after receiving 4 chars.
-+//!
-+//! Fortunately, the PL011 has a test mode which allows to push characters into the FIFOs. We make
-+//! use of this testing facilities to employ a little hack that pushes (fill-level - 1) chars into
-+//! the RX FIFO by default. This way, we get an IRQ for the first received char that arrives from
-+//! external.
-+//!
-+//! To make things even more complicated, QEMU is not honoring the fill-level dependent IRQ
-+//! generation. Instead, QEMU creates an IRQ on every received char.
-+//!
-+//! We use conditional compilation to differentiate between the three modes of operation (RPi3,
-+//! RPI4, QEMU) respectively.
-+
 +use crate::{
 +    bsp, console, cpu, driver, exception, synchronization, synchronization::IRQSafeNullLock,
 +};
  use core::{fmt, ops};
  use register::{mmio::*, register_bitfields, register_structs};
 
-@@ -106,10 +130,45 @@
+@@ -106,6 +108,47 @@
          ]
      ],
 
@@ -1932,6 +1876,14 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
 +
 +    /// Interrupt Mask Set Clear Register
 +    IMSC [
++        // Receive timeout interrupt mask. A read returns the current mask for the UARTRTINTR
++        // interrupt. On a write of 1, the mask of the interrupt is set. A write of 0 clears the
++        // mask.
++        RTIM OFFSET(6) NUMBITS(1) [
++            Disabled = 0,
++            Enabled = 1
++        ],
++
 +        /// Receive interrupt mask. A read returns the current mask for the UARTRXINTR interrupt. On
 +        /// a write of 1, the mask of the interrupt is set. A write of 0 clears the mask.
 +        RXIM OFFSET(4) NUMBITS(1) [
@@ -1940,44 +1892,44 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
 +        ]
 +    ],
 +
++    /// Raw Interrupt Status Register
++    RIS [
++        // Receive timeout interrupt status. Returns the raw interrupt state of the UARTRTINTR
++        // interrupt.
++        RTRIS OFFSET(6) NUMBITS(1) [],
++
++        /// Receive interrupt status. Returns the raw interrupt state of the UARTRXINTR interrupt.
++        RXRIS OFFSET(4) NUMBITS(1) []
++    ],
++
      /// Interrupt Clear Register
      ICR [
          /// Meta field for all pending interrupts
-         ALL OFFSET(0) NUMBITS(11) []
-+    ],
-+
-+    /// Test Control Register
-+    ITCR [
-+        /// Test FIFO enable. When this bit it 1, a write to the Test Data Register, UART_DR writes
-+        /// data into the receive FIFO, and reads from the UART_DR register reads data out of the
-+        /// transmit FIFO. When this bit is 0, data cannot be read directly from the transmit FIFO
-+        /// or written directly to the receive FIFO (normal operation).
-+        ITCR1 OFFSET(1) NUMBITS(1) [
-+            Disabled = 0,
-+            Enabled = 1
-+        ]
+@@ -113,6 +156,12 @@
      ]
  }
 
-@@ -128,9 +187,15 @@
++#[derive(PartialEq)]
++enum BlockingMode {
++    Blocking,
++    NonBlocking,
++}
++
+ //--------------------------------------------------------------------------------------------------
+ // Public Definitions
+ //--------------------------------------------------------------------------------------------------
+@@ -128,7 +177,9 @@
          (0x28 => FBRD: WriteOnly<u32, FBRD::Register>),
          (0x2c => LCRH: WriteOnly<u32, LCRH::Register>),
          (0x30 => CR: WriteOnly<u32, CR::Register>),
 -        (0x34 => _reserved3),
 +        (0x34 => IFLS: ReadWrite<u32, IFLS::Register>),
 +        (0x38 => IMSC: ReadWrite<u32, IMSC::Register>),
-+        (0x3C => _reserved3),
++        (0x3C => RIS: ReadWrite<u32, RIS::Register>),
          (0x44 => ICR: WriteOnly<u32, ICR::Register>),
--        (0x48 => @END),
-+        (0x48 => _reserved4),
-+        (0x80 => ITCR: ReadWrite<u32, ITCR::Register>),
-+        (0x84 => _reserved5),
-+        (0x8c => TDR: ReadWrite<u32>),
-+        (0x90 => @END),
+         (0x48 => @END),
      }
- }
-
-@@ -145,7 +210,8 @@
+@@ -145,7 +196,8 @@
 
  /// Representation of the UART.
  pub struct PL011Uart {
@@ -1987,41 +1939,33 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -199,6 +265,14 @@
+@@ -197,6 +249,8 @@
+         self.FBRD.write(FBRD::FBRD.val(2));
+         self.LCRH
              .write(LCRH::WLEN::EightBit + LCRH::FEN::FifosEnabled); // 8N1 + Fifo on
++        self.IFLS.write(IFLS::RXIFLSEL::OneEigth); // RX FIFO fill level at 1/8
++        self.IMSC.write(IMSC::RXIM::Enabled + IMSC::RTIM::Enabled); // RX IRQ + RX timeout IRQ
          self.CR
              .write(CR::UARTEN::Enabled + CR::TXE::Enabled + CR::RXE::Enabled);
-+
-+        // Trigger the RX interrupt at 1/8 of the FIFO fill level (this is the lowest possible) and
-+        // enable RX interrupts.
-+        self.IFLS.write(IFLS::RXIFLSEL::OneEigth);
-+        self.IMSC.write(IMSC::RXIM::Enabled);
-+
-+        #[cfg(not(feature = "qemu-quirks"))]
-+        self.fill_hack_push();
      }
-
-     /// Return a pointer to the register block.
-@@ -218,6 +292,70 @@
+@@ -218,6 +272,35 @@
 
          self.chars_written += 1;
      }
 +
 +    /// Retrieve a character.
-+    fn read_char_converting(&mut self, blocking: bool) -> Option<char> {
-+        #[cfg(not(feature = "qemu-quirks"))]
-+        self.fill_hack_pop();
-+
-+        // If blocking, spin while RX FIFO empty is set, else return None.
-+        while self.FR.matches_all(FR::RXFE::SET) {
-+            if !blocking {
-+                #[cfg(not(feature = "qemu-quirks"))]
-+                self.fill_hack_push();
-+
++    fn read_char_converting(&mut self, blocking_mode: BlockingMode) -> Option<char> {
++        // If RX FIFO is empty,
++        if self.FR.matches_all(FR::RXFE::SET) {
++            // immediately return in non-blocking mode.
++            if blocking_mode == BlockingMode::NonBlocking {
 +                return None;
 +            }
 +
-+            cpu::nop();
++            // Otherwise, wait until a char was received.
++            while self.FR.matches_all(FR::RXFE::SET) {
++                cpu::nop();
++            }
 +        }
 +
 +        // Read one character.
@@ -2035,45 +1979,12 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
 +        // Update statistics.
 +        self.chars_read += 1;
 +
-+        #[cfg(not(feature = "qemu-quirks"))]
-+        self.fill_hack_push();
-+
 +        Some(ret)
-+    }
-+
-+    /// Push characters into the receive FIFO.
-+    ///
-+    /// See top level comments why this is needed.
-+    #[cfg(not(feature = "qemu-quirks"))]
-+    fn fill_hack_push(&mut self) {
-+        self.ITCR.write(ITCR::ITCR1::Enabled);
-+
-+        #[cfg(feature = "bsp_rpi4")]
-+        {
-+            self.TDR.set(b'X' as u32);
-+            self.TDR.set(b'Y' as u32);
-+        }
-+        self.TDR.set(b'Z' as u32);
-+
-+        self.ITCR.write(ITCR::ITCR1::Disabled);
-+    }
-+
-+    /// Pop characters from the receive FIFO.
-+    ///
-+    /// See top level comments why this is needed.
-+    #[cfg(not(feature = "qemu-quirks"))]
-+    fn fill_hack_pop(&mut self) {
-+        #[cfg(feature = "bsp_rpi4")]
-+        {
-+            self.DR.get();
-+            self.DR.get();
-+        }
-+        self.DR.get();
 +    }
  }
 
  /// Implementing `core::fmt::Write` enables usage of the `format_args!` macros, which in turn are
-@@ -243,9 +381,10 @@
+@@ -243,9 +326,10 @@
      /// # Safety
      ///
      /// - The user must ensure to provide the correct `base_addr`.
@@ -2086,7 +1997,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
          }
      }
  }
-@@ -266,6 +405,21 @@
+@@ -266,6 +350,21 @@
 
          Ok(())
      }
@@ -2108,7 +2019,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
  }
 
  impl console::interface::Write for PL011Uart {
-@@ -297,25 +451,7 @@
+@@ -297,25 +396,7 @@
  impl console::interface::Read for PL011Uart {
      fn read_char(&self) -> char {
          let mut r = &self.inner;
@@ -2131,11 +2042,11 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
 -
 -            ret
 -        })
-+        r.lock(|inner| inner.read_char_converting(true).unwrap())
++        r.lock(|inner| inner.read_char_converting(BlockingMode::Blocking).unwrap())
      }
 
      fn clear(&self) {
-@@ -340,3 +476,20 @@
+@@ -340,3 +421,25 @@
          r.lock(|inner| inner.chars_read)
      }
  }
@@ -2144,11 +2055,16 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
 +    fn handle(&self) -> Result<(), &'static str> {
 +        let mut r = &self.inner;
 +        r.lock(|inner| {
-+            // Echo any received characters.
-+            loop {
-+                match inner.read_char_converting(false) {
-+                    None => break,
-+                    Some(c) => inner.write_char(c),
++            let pending = inner.RIS.extract();
++
++            // Clear all pending IRQs.
++            inner.ICR.write(ICR::ALL::CLEAR);
++
++            // Check for any kind of RX interrupt.
++            if pending.matches_any(RIS::RXRIS::SET + RIS::RTRIS::SET) {
++                // Echo any received characters.
++                while let Some(c) = inner.read_char_converting(BlockingMode::NonBlocking) {
++                    inner.write_char(c)
 +                }
 +            }
 +        });

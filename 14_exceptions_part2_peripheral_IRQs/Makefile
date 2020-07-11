@@ -109,7 +109,6 @@ $(KERNEL_BIN): $(KERNEL_ELF)
 doc:
 	$(DOC_CMD) --document-private-items --open
 
-qemu: FEATURES += --features qemu-quirks
 ifeq ($(QEMU_MACHINE_TYPE),)
 qemu test:
 	@echo $(QEMU_MISSING_STRING)
@@ -126,7 +125,6 @@ define KERNEL_TEST_RUNNER
 endef
 
 export KERNEL_TEST_RUNNER
-test: FEATURES += --features qemu-quirks
 test:
 	@mkdir -p target
 	@echo "$$KERNEL_TEST_RUNNER" > target/kernel_test_runner.sh

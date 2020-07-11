@@ -9,7 +9,6 @@ edition = "2018"
 default = []
 bsp_rpi3 = ["cortex-a", "register"]
 bsp_rpi4 = ["cortex-a", "register"]
-qemu-quirks = []
 
 [dependencies]
 qemu-exit = "0.1.x"
