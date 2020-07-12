@@ -2580,7 +2580,7 @@ diff -uNr 13_integrated_testing/src/state.rs 14_exceptions_part2_peripheral_IRQs
 diff -uNr 13_integrated_testing/src/synchronization.rs 14_exceptions_part2_peripheral_IRQs/src/synchronization.rs
 --- 13_integrated_testing/src/synchronization.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/synchronization.rs
-@@ -42,6 +42,21 @@
+@@ -43,6 +43,21 @@
          /// Creates a critical section and grants temporary mutable access to the encapsulated data.
          fn lock<R>(&mut self, f: impl FnOnce(&mut Self::Data) -> R) -> R;
      }
@@ -2602,7 +2602,7 @@ diff -uNr 13_integrated_testing/src/synchronization.rs 14_exceptions_part2_perip
  }
 
  /// A pseudo-lock for teaching purposes.
-@@ -52,10 +67,17 @@
+@@ -53,10 +68,17 @@
  /// other cores to the contained data. This part is preserved for later lessons.
  ///
  /// The lock will only be used as long as it is safe to do so, i.e. as long as the kernel is
@@ -2622,7 +2622,7 @@ diff -uNr 13_integrated_testing/src/synchronization.rs 14_exceptions_part2_perip
      data: UnsafeCell<T>,
  }
 
-@@ -63,10 +85,20 @@
+@@ -64,10 +86,20 @@
  // Public Code
  //--------------------------------------------------------------------------------------------------
 
@@ -2646,7 +2646,7 @@ diff -uNr 13_integrated_testing/src/synchronization.rs 14_exceptions_part2_perip
      pub const fn new(data: T) -> Self {
          Self {
              data: UnsafeCell::new(data),
-@@ -77,8 +109,9 @@
+@@ -78,8 +110,9 @@
  //------------------------------------------------------------------------------
  // OS Interface Code
  //------------------------------------------------------------------------------
@@ -2657,7 +2657,7 @@ diff -uNr 13_integrated_testing/src/synchronization.rs 14_exceptions_part2_perip
      type Data = T;
 
      fn lock<R>(&mut self, f: impl FnOnce(&mut Self::Data) -> R) -> R {
-@@ -86,6 +119,32 @@
+@@ -87,6 +120,32 @@
          // mutable reference will ever only be given out once at a time.
          let data = unsafe { &mut *self.data.get() };
 

@@ -251,7 +251,7 @@ diff -uNr 04_zero_overhead_abstraction/src/main.rs 05_safe_globals/src/main.rs
 diff -uNr 04_zero_overhead_abstraction/src/synchronization.rs 05_safe_globals/src/synchronization.rs
 --- 04_zero_overhead_abstraction/src/synchronization.rs
 +++ 05_safe_globals/src/synchronization.rs
-@@ -0,0 +1,91 @@
+@@ -0,0 +1,92 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2020 Andre Richter <andre.o.richter@gmail.com>
@@ -270,16 +270,17 @@ diff -uNr 04_zero_overhead_abstraction/src/synchronization.rs 05_safe_globals/sr
 +    /// Any object implementing this trait guarantees exclusive access to the data contained within
 +    /// the Mutex for the duration of the provided closure.
 +    ///
-+    /// The trait follows the [Rust embedded WG's
-+    /// proposal](https://github.com/korken89/wg/blob/master/rfcs/0377-mutex-trait.md) and therefore
-+    /// provides some goodness such as [deadlock
-+    /// prevention](https://github.com/korken89/wg/blob/master/rfcs/0377-mutex-trait.md#design-decisions-and-compatibility).
++    /// The trait follows the [Rust embedded WG's proposal] and therefore provides some goodness
++    /// such as [deadlock prevention].
 +    ///
 +    /// # Example
 +    ///
 +    /// Since the lock function takes an `&mut self` to enable deadlock-prevention, the trait is
 +    /// best implemented **for a reference to a container struct**, and has a usage pattern that
 +    /// might feel strange at first:
++    ///
++    /// [Rust embedded WG's proposal]: https://github.com/rust-embedded/wg/blob/master/rfcs/0377-mutex-trait.md
++    /// [deadlock prevention]: https://github.com/rust-embedded/wg/blob/master/rfcs/0377-mutex-trait.md#design-decisions-and-compatibility
 +    ///
 +    /// ```
 +    /// static MUT: Mutex<RefCell<i32>> = Mutex::new(RefCell::new(0));
