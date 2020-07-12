@@ -20,3 +20,6 @@ Metrics/ClassLength:
 
 Metrics/MethodLength:
   Max: 20
+
+AllCops:
+  NewCops: enable
