@@ -10,7 +10,7 @@ following tutorials.
 ## Notable additions
 
 - `src/console.rs` introduces interface `Traits` for console commands.
-- `src/bsp/rpi.rs` implements the interface for QEMU's emulated UART.
+- `src/bsp/raspberrypi/console.rs` implements the interface for QEMU's emulated UART.
 - The panic handler makes use of the new `print!()` to display user error messages.
 
 ## Test it
