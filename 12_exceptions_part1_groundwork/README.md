@@ -883,26 +883,6 @@ diff -uNr 11_virtual_memory/src/_arch/aarch64/exception.S 12_exceptions_part1_gr
 +
 +    eret
 
-diff -uNr 11_virtual_memory/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 12_exceptions_part1_groundwork/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
---- 11_virtual_memory/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-+++ 12_exceptions_part1_groundwork/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -118,7 +118,6 @@
- //--------------------------------------------------------------------------------------------------
-
- register_structs! {
--    #[allow(missing_docs)]
-     #[allow(non_snake_case)]
-     pub RegisterBlock {
-         (0x00 => DR: ReadWrite<u32>),
-@@ -135,7 +134,6 @@
-     }
- }
-
--#[allow(missing_docs)]
- pub struct PL011UartInner {
-     base_addr: usize,
-     chars_written: usize,
-
 diff -uNr 11_virtual_memory/src/bsp/raspberrypi/memory/mmu.rs 12_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs
 --- 11_virtual_memory/src/bsp/raspberrypi/memory/mmu.rs
 +++ 12_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs

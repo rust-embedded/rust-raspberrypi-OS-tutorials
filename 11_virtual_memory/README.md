@@ -619,26 +619,6 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_memory/s
 +    }
 +}
 
-diff -uNr 10_privilege_level/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 11_virtual_memory/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
---- 10_privilege_level/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-+++ 11_virtual_memory/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -118,6 +118,7 @@
- //--------------------------------------------------------------------------------------------------
-
- register_structs! {
-+    #[allow(missing_docs)]
-     #[allow(non_snake_case)]
-     pub RegisterBlock {
-         (0x00 => DR: ReadWrite<u32>),
-@@ -134,6 +135,7 @@
-     }
- }
-
-+#[allow(missing_docs)]
- pub struct PL011UartInner {
-     base_addr: usize,
-     chars_written: usize,
-
 diff -uNr 10_privilege_level/src/bsp/raspberrypi/link.ld 11_virtual_memory/src/bsp/raspberrypi/link.ld
 --- 10_privilege_level/src/bsp/raspberrypi/link.ld
 +++ 11_virtual_memory/src/bsp/raspberrypi/link.ld

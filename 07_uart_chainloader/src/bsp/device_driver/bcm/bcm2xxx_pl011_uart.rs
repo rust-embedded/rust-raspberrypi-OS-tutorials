@@ -4,8 +4,11 @@
 
 //! PL011 UART driver.
 
-use crate::{console, cpu, driver, synchronization, synchronization::NullLock};
-use core::{fmt, ops};
+use crate::{
+    bsp::device_driver::common::MMIODerefWrapper, console, cpu, driver, synchronization,
+    synchronization::NullLock,
+};
+use core::fmt;
 use register::{mmio::*, register_bitfields, register_structs};
 
 //--------------------------------------------------------------------------------------------------
@@ -113,10 +116,6 @@ register_bitfields! {
     ]
 }
 
-//--------------------------------------------------------------------------------------------------
-// Public Definitions
-//--------------------------------------------------------------------------------------------------
-
 register_structs! {
     #[allow(non_snake_case)]
     pub RegisterBlock {
@@ -134,8 +133,15 @@ register_structs! {
     }
 }
 
+/// Abstraction for the associated MMIO registers.
+type Registers = MMIODerefWrapper<RegisterBlock>;
+
+//--------------------------------------------------------------------------------------------------
+// Public Definitions
+//--------------------------------------------------------------------------------------------------
+
 pub struct PL011UartInner {
-    base_addr: usize,
+    registers: Registers,
     chars_written: usize,
     chars_read: usize,
 }
@@ -152,24 +158,6 @@ pub struct PL011Uart {
 // Public Code
 //--------------------------------------------------------------------------------------------------
 
-/// Deref to RegisterBlock.
-///
-/// Allows writing
-/// ```
-/// self.DR.read()
-/// ```
-/// instead of something along the lines of
-/// ```
-/// unsafe { (*PL011UartInner::ptr()).DR.read() }
-/// ```
-impl ops::Deref for PL011UartInner {
-    type Target = RegisterBlock;
-
-    fn deref(&self) -> &Self::Target {
-        unsafe { &*self.ptr() }
-    }
-}
-
 impl PL011UartInner {
     /// Create an instance.
     ///
@@ -178,7 +166,7 @@ impl PL011UartInner {
     /// - The user must ensure to provide the correct `base_addr`.
     pub const unsafe fn new(base_addr: usize) -> Self {
         Self {
-            base_addr,
+            registers: Registers::new(base_addr),
             chars_written: 0,
             chars_read: 0,
         }
@@ -190,31 +178,28 @@ impl PL011UartInner {
     /// firmware).
     pub fn init(&mut self) {
         // Turn it off temporarily.
-        self.CR.set(0);
+        self.registers.CR.set(0);
 
-        self.ICR.write(ICR::ALL::CLEAR);
-        self.IBRD.write(IBRD::IBRD.val(13));
-        self.FBRD.write(FBRD::FBRD.val(2));
-        self.LCRH
+        self.registers.ICR.write(ICR::ALL::CLEAR);
+        self.registers.IBRD.write(IBRD::IBRD.val(13));
+        self.registers.FBRD.write(FBRD::FBRD.val(2));
+        self.registers
+            .LCRH
             .write(LCRH::WLEN::EightBit + LCRH::FEN::FifosEnabled); // 8N1 + Fifo on
-        self.CR
+        self.registers
+            .CR
             .write(CR::UARTEN::Enabled + CR::TXE::Enabled + CR::RXE::Enabled);
-    }
-
-    /// Return a pointer to the register block.
-    fn ptr(&self) -> *const RegisterBlock {
-        self.base_addr as *const _
     }
 
     /// Send a character.
     fn write_char(&mut self, c: char) {
         // Spin while TX FIFO full is set, waiting for an empty slot.
-        while self.FR.matches_all(FR::TXFF::SET) {
+        while self.registers.FR.matches_all(FR::TXFF::SET) {
             cpu::nop();
         }
 
         // Write the character to the buffer.
-        self.DR.set(c as u32);
+        self.registers.DR.set(c as u32);
 
         self.chars_written += 1;
     }
@@ -287,7 +272,7 @@ impl console::interface::Write for PL011Uart {
         // Spin until TX FIFO empty is set.
         let mut r = &self.inner;
         r.lock(|inner| {
-            while !inner.FR.matches_all(FR::TXFE::SET) {
+            while !inner.registers.FR.matches_all(FR::TXFE::SET) {
                 cpu::nop();
             }
         });
@@ -299,7 +284,7 @@ impl console::interface::Read for PL011Uart {
         let mut r = &self.inner;
         r.lock(|inner| {
             // Spin while RX FIFO empty is set.
-            while inner.FR.matches_all(FR::RXFE::SET) {
+            while inner.registers.FR.matches_all(FR::RXFE::SET) {
                 cpu::nop();
             }
 
@@ -307,7 +292,7 @@ impl console::interface::Read for PL011Uart {
             inner.chars_read += 1;
 
             // Read one character.
-            inner.DR.get() as u8 as char
+            inner.registers.DR.get() as u8 as char
         })
     }
 
@@ -315,8 +300,8 @@ impl console::interface::Read for PL011Uart {
         let mut r = &self.inner;
         r.lock(|inner| {
             // Read from the RX FIFO until it is indicating empty.
-            while !inner.FR.matches_all(FR::RXFE::SET) {
-                inner.DR.get();
+            while !inner.registers.FR.matches_all(FR::RXFE::SET) {
+                inner.registers.DR.get();
             }
         })
     }

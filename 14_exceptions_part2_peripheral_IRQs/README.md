@@ -242,10 +242,10 @@ impl exception::asynchronous::interface::IRQHandler for PL011Uart {
     fn handle(&self) -> Result<(), &'static str> {
         let mut r = &self.inner;
         r.lock(|inner| {
-            let pending = inner.MIS.extract();
+            let pending = inner.registers.MIS.extract();
 
             // Clear all pending IRQs.
-            inner.ICR.write(ICR::ALL::CLEAR);
+            inner.registers.ICR.write(ICR::ALL::CLEAR);
 
             // Check for any kind of RX interrupt.
             if pending.matches_any(MIS::RXMIS::SET + MIS::RTMIS::SET) {
@@ -874,15 +874,14 @@ diff -uNr 13_integrated_testing/src/_arch/aarch64/exception.rs 14_exceptions_par
 diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2/gicc.rs 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gicc.rs
 --- 13_integrated_testing/src/bsp/device_driver/arm/gicv2/gicc.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gicc.rs
-@@ -0,0 +1,146 @@
+@@ -0,0 +1,137 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2020 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! GICC Driver - GIC CPU interface.
 +
-+use crate::exception;
-+use core::ops;
++use crate::{bsp::device_driver::common::MMIODerefWrapper, exception};
 +use register::{mmio::*, register_bitfields, register_structs};
 +
 +//--------------------------------------------------------------------------------------------------
@@ -913,10 +912,6 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2/gicc.rs 14_excep
 +    ]
 +}
 +
-+//--------------------------------------------------------------------------------------------------
-+// Public Definitions
-+//--------------------------------------------------------------------------------------------------
-+
 +register_structs! {
 +    #[allow(non_snake_case)]
 +    pub RegisterBlock {
@@ -929,22 +924,21 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2/gicc.rs 14_excep
 +    }
 +}
 +
++/// Abstraction for the associated MMIO registers.
++type Registers = MMIODerefWrapper<RegisterBlock>;
++
++//--------------------------------------------------------------------------------------------------
++// Public Definitions
++//--------------------------------------------------------------------------------------------------
++
 +/// Representation of the GIC CPU interface.
 +pub struct GICC {
-+    base_addr: usize,
++    registers: Registers,
 +}
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Code
 +//--------------------------------------------------------------------------------------------------
-+
-+impl ops::Deref for GICC {
-+    type Target = RegisterBlock;
-+
-+    fn deref(&self) -> &Self::Target {
-+        unsafe { &*self.ptr() }
-+    }
-+}
 +
 +impl GICC {
 +    /// Create an instance.
@@ -953,12 +947,9 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2/gicc.rs 14_excep
 +    ///
 +    /// - The user must ensure to provide the correct `base_addr`.
 +    pub const unsafe fn new(base_addr: usize) -> Self {
-+        Self { base_addr }
-+    }
-+
-+    /// Return a pointer to the associated MMIO register block.
-+    fn ptr(&self) -> *const RegisterBlock {
-+        self.base_addr as *const _
++        Self {
++            registers: Registers::new(base_addr),
++        }
 +    }
 +
 +    /// Accept interrupts of any priority.
@@ -973,7 +964,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2/gicc.rs 14_excep
 +    /// - GICC MMIO registers are banked per CPU core. It is therefore safe to have `&self` instead
 +    ///   of `&mut self`.
 +    pub fn priority_accept_all(&self) {
-+        self.PMR.write(PMR::Priority.val(255)); // Comment in arch spec.
++        self.registers.PMR.write(PMR::Priority.val(255)); // Comment in arch spec.
 +    }
 +
 +    /// Enable the interface - start accepting IRQs.
@@ -983,7 +974,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2/gicc.rs 14_excep
 +    /// - GICC MMIO registers are banked per CPU core. It is therefore safe to have `&self` instead
 +    ///   of `&mut self`.
 +    pub fn enable(&self) {
-+        self.CTLR.write(CTLR::Enable::SET);
++        self.registers.CTLR.write(CTLR::Enable::SET);
 +    }
 +
 +    /// Extract the number of the highest-priority pending IRQ.
@@ -999,7 +990,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2/gicc.rs 14_excep
 +        &self,
 +        _ic: &exception::asynchronous::IRQContext<'irq_context>,
 +    ) -> usize {
-+        self.IAR.read(IAR::InterruptID) as usize
++        self.registers.IAR.read(IAR::InterruptID) as usize
 +    }
 +
 +    /// Complete handling of the currently active IRQ.
@@ -1018,7 +1009,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2/gicc.rs 14_excep
 +        irq_number: u32,
 +        _ic: &exception::asynchronous::IRQContext<'irq_context>,
 +    ) {
-+        self.EOIR.write(EOIR::EOIINTID.val(irq_number));
++        self.registers.EOIR.write(EOIR::EOIINTID.val(irq_number));
 +    }
 +}
 
@@ -1092,10 +1083,10 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2/gicd.rs 14_excep
 +}
 +
 +/// Abstraction for the non-banked parts of the associated MMIO registers.
-+type SharedRegs = MMIODerefWrapper<SharedRegisterBlock>;
++type SharedRegisters = MMIODerefWrapper<SharedRegisterBlock>;
 +
 +/// Abstraction for the banked parts of the associated MMIO registers.
-+type BankedRegs = MMIODerefWrapper<BankedRegisterBlock>;
++type BankedRegisters = MMIODerefWrapper<BankedRegisterBlock>;
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Definitions
@@ -1104,17 +1095,17 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2/gicd.rs 14_excep
 +/// Representation of the GIC Distributor.
 +pub struct GICD {
 +    /// Access to shared registers is guarded with a lock.
-+    shared_regs: IRQSafeNullLock<SharedRegs>,
++    shared_registers: IRQSafeNullLock<SharedRegisters>,
 +
 +    /// Access to banked registers is unguarded.
-+    banked_regs: BankedRegs,
++    banked_registers: BankedRegisters,
 +}
 +
 +//--------------------------------------------------------------------------------------------------
 +// Private Code
 +//--------------------------------------------------------------------------------------------------
 +
-+impl SharedRegs {
++impl SharedRegisters {
 +    /// Return the number of IRQs that this HW implements.
 +    #[inline(always)]
 +    fn num_irqs(&mut self) -> usize {
@@ -1131,7 +1122,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2/gicd.rs 14_excep
 +
 +        // Calculate the max index of the shared ITARGETSR array.
 +        //
-+        // The first 32 IRQs are private, so not included in `shared_regs`. Each ITARGETS
++        // The first 32 IRQs are private, so not included in `shared_registers`. Each ITARGETS
 +        // register has four entries, so shift right by two. Subtract one because we start
 +        // counting at zero.
 +        let spi_itargetsr_max_index = ((self.num_irqs() - 32) >> 2) - 1;
@@ -1154,8 +1145,8 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2/gicd.rs 14_excep
 +    /// - The user must ensure to provide the correct `base_addr`.
 +    pub const unsafe fn new(base_addr: usize) -> Self {
 +        Self {
-+            shared_regs: IRQSafeNullLock::new(SharedRegs::new(base_addr)),
-+            banked_regs: BankedRegs::new(base_addr),
++            shared_registers: IRQSafeNullLock::new(SharedRegisters::new(base_addr)),
++            banked_registers: BankedRegisters::new(base_addr),
 +        }
 +    }
 +
@@ -1166,7 +1157,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2/gicd.rs 14_excep
 +    ///   "GICD_ITARGETSR0 to GICD_ITARGETSR7 are read-only, and each field returns a value that
 +    ///    corresponds only to the processor reading the register."
 +    fn local_gic_target_mask(&self) -> u32 {
-+        self.banked_regs.ITARGETSR[0].read(ITARGETSR::Offset0)
++        self.banked_registers.ITARGETSR[0].read(ITARGETSR::Offset0)
 +    }
 +
 +    /// Route all SPIs to the boot core and enable the distributor.
@@ -1179,7 +1170,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2/gicd.rs 14_excep
 +        // Target all SPIs to the boot core only.
 +        let mask = self.local_gic_target_mask();
 +
-+        let mut r = &self.shared_regs;
++        let mut r = &self.shared_registers;
 +        r.lock(|regs| {
 +            for i in regs.implemented_itargets_slice().iter() {
 +                i.write(
@@ -1207,14 +1198,14 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2/gicd.rs 14_excep
 +        match irq_num {
 +            // Private.
 +            0..=31 => {
-+                let enable_reg = &self.banked_regs.ISENABLER;
++                let enable_reg = &self.banked_registers.ISENABLER;
 +                enable_reg.set(enable_reg.get() | enable_bit);
 +            }
 +            // Shared.
 +            _ => {
 +                let enable_reg_index_shared = enable_reg_index - 1;
 +
-+                let mut r = &self.shared_regs;
++                let mut r = &self.shared_registers;
 +                r.lock(|regs| {
 +                    let enable_reg = &regs.ISENABLER[enable_reg_index_shared];
 +                    enable_reg.set(enable_reg.get() | enable_bit);
@@ -1468,69 +1459,30 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/arm.rs 14_exceptions_part2
 diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
 --- 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
-@@ -4,8 +4,10 @@
+@@ -6,7 +6,7 @@
 
- //! GPIO Driver.
-
--use crate::{cpu, driver, synchronization, synchronization::NullLock};
--use core::ops;
-+use crate::{
-+    bsp::device_driver::common::MMIODerefWrapper, cpu, driver, synchronization,
+ use crate::{
+     bsp::device_driver::common::MMIODerefWrapper, cpu, driver, synchronization,
+-    synchronization::NullLock,
 +    synchronization::IRQSafeNullLock,
-+};
+ };
  use register::{mmio::*, register_bitfields, register_structs};
 
- //--------------------------------------------------------------------------------------------------
-@@ -70,9 +72,8 @@
-     }
- }
-
--struct GPIOInner {
--    base_addr: usize,
--}
-+/// Abstraction for the associated MMIO registers.
-+type Regs = MMIODerefWrapper<RegisterBlock>;
-
- //--------------------------------------------------------------------------------------------------
- // Public Definitions
-@@ -80,30 +81,7 @@
+@@ -81,7 +81,7 @@
 
  /// Representation of the GPIO HW.
  pub struct GPIO {
--    inner: NullLock<GPIOInner>,
--}
--
--//--------------------------------------------------------------------------------------------------
--// Private Code
--//--------------------------------------------------------------------------------------------------
--
--impl ops::Deref for GPIOInner {
--    type Target = RegisterBlock;
--
--    fn deref(&self) -> &Self::Target {
--        unsafe { &*self.ptr() }
--    }
--}
--
--impl GPIOInner {
--    const fn new(base_addr: usize) -> Self {
--        Self { base_addr }
--    }
--
--    /// Return a pointer to the associated MMIO register block.
--    fn ptr(&self) -> *const RegisterBlock {
--        self.base_addr as *const _
--    }
-+    inner: IRQSafeNullLock<Regs>,
+-    registers: NullLock<Registers>,
++    registers: IRQSafeNullLock<Registers>,
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -118,7 +96,7 @@
+@@ -96,7 +96,7 @@
      /// - The user must ensure to provide the correct `base_addr`.
      pub const unsafe fn new(base_addr: usize) -> Self {
          Self {
--            inner: NullLock::new(GPIOInner::new(base_addr)),
-+            inner: IRQSafeNullLock::new(Regs::new(base_addr)),
+-            registers: NullLock::new(Registers::new(base_addr)),
++            registers: IRQSafeNullLock::new(Registers::new(base_addr)),
          }
      }
 
@@ -1578,10 +1530,10 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 +}
 +
 +/// Abstraction for the WriteOnly parts of the associated MMIO registers.
-+type WriteOnlyRegs = MMIODerefWrapper<WORegisterBlock>;
++type WriteOnlyRegisters = MMIODerefWrapper<WORegisterBlock>;
 +
 +/// Abstraction for the ReadOnly parts of the associated MMIO registers.
-+type ReadOnlyRegs = MMIODerefWrapper<RORegisterBlock>;
++type ReadOnlyRegisters = MMIODerefWrapper<RORegisterBlock>;
 +
 +type HandlerTable =
 +    [Option<exception::asynchronous::IRQDescriptor>; InterruptController::NUM_PERIPHERAL_IRQS];
@@ -1593,10 +1545,10 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 +/// Representation of the peripheral interrupt regsler.
 +pub struct PeripheralIC {
 +    /// Access to write registers is guarded with a lock.
-+    wo_regs: IRQSafeNullLock<WriteOnlyRegs>,
++    wo_registers: IRQSafeNullLock<WriteOnlyRegisters>,
 +
 +    /// Register read access is unguarded.
-+    ro_regs: ReadOnlyRegs,
++    ro_registers: ReadOnlyRegisters,
 +
 +    /// Stores registered IRQ handlers. Writable only during kernel init. RO afterwards.
 +    handler_table: InitStateLock<HandlerTable>,
@@ -1614,16 +1566,16 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 +    /// - The user must ensure to provide the correct `base_addr`.
 +    pub const unsafe fn new(base_addr: usize) -> Self {
 +        Self {
-+            wo_regs: IRQSafeNullLock::new(WriteOnlyRegs::new(base_addr)),
-+            ro_regs: ReadOnlyRegs::new(base_addr),
++            wo_registers: IRQSafeNullLock::new(WriteOnlyRegisters::new(base_addr)),
++            ro_registers: ReadOnlyRegisters::new(base_addr),
 +            handler_table: InitStateLock::new([None; InterruptController::NUM_PERIPHERAL_IRQS]),
 +        }
 +    }
 +
 +    /// Query the list of pending IRQs.
 +    fn get_pending(&self) -> PendingIRQs {
-+        let pending_mask: u64 = (u64::from(self.ro_regs.PENDING_2.get()) << 32)
-+            | u64::from(self.ro_regs.PENDING_1.get());
++        let pending_mask: u64 = (u64::from(self.ro_registers.PENDING_2.get()) << 32)
++            | u64::from(self.ro_registers.PENDING_1.get());
 +
 +        PendingIRQs::new(pending_mask)
 +    }
@@ -1657,7 +1609,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 +    }
 +
 +    fn enable(&self, irq: Self::IRQNumberType) {
-+        let mut r = &self.wo_regs;
++        let mut r = &self.wo_registers;
 +        r.lock(|regs| {
 +            let enable_reg = if irq.get() <= 31 {
 +                &regs.ENABLE_1
@@ -1846,18 +1798,18 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 --- 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -4,7 +4,9 @@
-
+@@ -5,8 +5,8 @@
  //! PL011 UART driver.
 
--use crate::{console, cpu, driver, synchronization, synchronization::NullLock};
-+use crate::{
-+    bsp, console, cpu, driver, exception, synchronization, synchronization::IRQSafeNullLock,
-+};
- use core::{fmt, ops};
+ use crate::{
+-    bsp::device_driver::common::MMIODerefWrapper, console, cpu, driver, synchronization,
+-    synchronization::NullLock,
++    bsp, bsp::device_driver::common::MMIODerefWrapper, console, cpu, driver, exception,
++    synchronization, synchronization::IRQSafeNullLock,
+ };
+ use core::fmt;
  use register::{mmio::*, register_bitfields, register_structs};
-
-@@ -106,6 +108,48 @@
+@@ -109,6 +109,48 @@
          ]
      ],
 
@@ -1906,20 +1858,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
      /// Interrupt Clear Register
      ICR [
          /// Meta field for all pending interrupts
-@@ -113,6 +157,12 @@
-     ]
- }
-
-+#[derive(PartialEq)]
-+enum BlockingMode {
-+    Blocking,
-+    NonBlocking,
-+}
-+
- //--------------------------------------------------------------------------------------------------
- // Public Definitions
- //--------------------------------------------------------------------------------------------------
-@@ -128,7 +178,10 @@
+@@ -127,7 +169,10 @@
          (0x28 => FBRD: WriteOnly<u32, FBRD::Register>),
          (0x2c => LCRH: WriteOnly<u32, LCRH::Register>),
          (0x30 => CR: WriteOnly<u32, CR::Register>),
@@ -1931,7 +1870,20 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
          (0x44 => ICR: WriteOnly<u32, ICR::Register>),
          (0x48 => @END),
      }
-@@ -145,7 +198,8 @@
+@@ -136,6 +181,12 @@
+ /// Abstraction for the associated MMIO registers.
+ type Registers = MMIODerefWrapper<RegisterBlock>;
+
++#[derive(PartialEq)]
++enum BlockingMode {
++    Blocking,
++    NonBlocking,
++}
++
+ //--------------------------------------------------------------------------------------------------
+ // Public Definitions
+ //--------------------------------------------------------------------------------------------------
+@@ -151,7 +202,8 @@
 
  /// Representation of the UART.
  pub struct PL011Uart {
@@ -1941,16 +1893,18 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -197,6 +251,8 @@
-         self.FBRD.write(FBRD::FBRD.val(2));
-         self.LCRH
+@@ -186,6 +238,10 @@
+         self.registers
+             .LCRH
              .write(LCRH::WLEN::EightBit + LCRH::FEN::FifosEnabled); // 8N1 + Fifo on
-+        self.IFLS.write(IFLS::RXIFLSEL::OneEigth); // RX FIFO fill level at 1/8
-+        self.IMSC.write(IMSC::RXIM::Enabled + IMSC::RTIM::Enabled); // RX IRQ + RX timeout IRQ
-         self.CR
++        self.registers.IFLS.write(IFLS::RXIFLSEL::OneEigth); // RX FIFO fill level at 1/8
++        self.registers
++            .IMSC
++            .write(IMSC::RXIM::Enabled + IMSC::RTIM::Enabled); // RX IRQ + RX timeout IRQ
+         self.registers
+             .CR
              .write(CR::UARTEN::Enabled + CR::TXE::Enabled + CR::RXE::Enabled);
-     }
-@@ -218,6 +274,35 @@
+@@ -203,6 +259,35 @@
 
          self.chars_written += 1;
      }
@@ -1958,20 +1912,20 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
 +    /// Retrieve a character.
 +    fn read_char_converting(&mut self, blocking_mode: BlockingMode) -> Option<char> {
 +        // If RX FIFO is empty,
-+        if self.FR.matches_all(FR::RXFE::SET) {
++        if self.registers.FR.matches_all(FR::RXFE::SET) {
 +            // immediately return in non-blocking mode.
 +            if blocking_mode == BlockingMode::NonBlocking {
 +                return None;
 +            }
 +
 +            // Otherwise, wait until a char was received.
-+            while self.FR.matches_all(FR::RXFE::SET) {
++            while self.registers.FR.matches_all(FR::RXFE::SET) {
 +                cpu::nop();
 +            }
 +        }
 +
 +        // Read one character.
-+        let mut ret = self.DR.get() as u8 as char;
++        let mut ret = self.registers.DR.get() as u8 as char;
 +
 +        // Convert carrige return to newline.
 +        if ret == '\r' {
@@ -1986,7 +1940,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
  }
 
  /// Implementing `core::fmt::Write` enables usage of the `format_args!` macros, which in turn are
-@@ -243,9 +328,10 @@
+@@ -228,9 +313,10 @@
      /// # Safety
      ///
      /// - The user must ensure to provide the correct `base_addr`.
@@ -1999,7 +1953,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
          }
      }
  }
-@@ -266,6 +352,21 @@
+@@ -251,6 +337,21 @@
 
          Ok(())
      }
@@ -2021,18 +1975,18 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
  }
 
  impl console::interface::Write for PL011Uart {
-@@ -297,25 +398,7 @@
+@@ -282,25 +383,7 @@
  impl console::interface::Read for PL011Uart {
      fn read_char(&self) -> char {
          let mut r = &self.inner;
 -        r.lock(|inner| {
 -            // Spin while RX FIFO empty is set.
--            while inner.FR.matches_all(FR::RXFE::SET) {
+-            while inner.registers.FR.matches_all(FR::RXFE::SET) {
 -                cpu::nop();
 -            }
 -
 -            // Read one character.
--            let mut ret = inner.DR.get() as u8 as char;
+-            let mut ret = inner.registers.DR.get() as u8 as char;
 -
 -            // Convert carrige return to newline.
 -            if ret == '\r' {
@@ -2048,7 +2002,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
      }
 
      fn clear(&self) {
-@@ -340,3 +423,25 @@
+@@ -325,3 +408,25 @@
          r.lock(|inner| inner.chars_read)
      }
  }
@@ -2057,10 +2011,10 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
 +    fn handle(&self) -> Result<(), &'static str> {
 +        let mut r = &self.inner;
 +        r.lock(|inner| {
-+            let pending = inner.MIS.extract();
++            let pending = inner.registers.MIS.extract();
 +
 +            // Clear all pending IRQs.
-+            inner.ICR.write(ICR::ALL::CLEAR);
++            inner.registers.ICR.write(ICR::ALL::CLEAR);
 +
 +            // Check for any kind of RX interrupt.
 +            if pending.matches_any(MIS::RXMIS::SET + MIS::RTMIS::SET) {
@@ -2091,50 +2045,10 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm.rs 14_exceptions_part2
 +pub use bcm2xxx_interrupt_controller::*;
  pub use bcm2xxx_pl011_uart::*;
 
-diff -uNr 13_integrated_testing/src/bsp/device_driver/common.rs 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/common.rs
---- 13_integrated_testing/src/bsp/device_driver/common.rs
-+++ 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/common.rs
-@@ -0,0 +1,35 @@
-+// SPDX-License-Identifier: MIT OR Apache-2.0
-+//
-+// Copyright (c) 2020 Andre Richter <andre.o.richter@gmail.com>
-+
-+//! Common device driver code.
-+
-+use core::{marker::PhantomData, ops};
-+
-+pub struct MMIODerefWrapper<T> {
-+    base_addr: usize,
-+    phantom: PhantomData<T>,
-+}
-+
-+impl<T> MMIODerefWrapper<T> {
-+    /// Create an instance.
-+    pub const unsafe fn new(base_addr: usize) -> Self {
-+        Self {
-+            base_addr,
-+            phantom: PhantomData,
-+        }
-+    }
-+
-+    /// Return a pointer to the associated MMIO register block.
-+    fn ptr(&self) -> *const T {
-+        self.base_addr as *const _
-+    }
-+}
-+
-+impl<T> ops::Deref for MMIODerefWrapper<T> {
-+    type Target = T;
-+
-+    fn deref(&self) -> &Self::Target {
-+        unsafe { &*self.ptr() }
-+    }
-+}
-
 diff -uNr 13_integrated_testing/src/bsp/device_driver.rs 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver.rs
 --- 13_integrated_testing/src/bsp/device_driver.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver.rs
-@@ -4,8 +4,13 @@
+@@ -4,9 +4,13 @@
 
  //! Device driver.
 
@@ -2142,7 +2056,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver.rs 14_exceptions_part2_per
 +mod arm;
  #[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
  mod bcm;
-+mod common;
+ mod common;
 
 +#[cfg(feature = "bsp_rpi4")]
 +pub use arm::*;

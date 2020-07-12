@@ -132,15 +132,17 @@ diff -uNr 05_safe_globals/src/_arch/aarch64/cpu.rs 06_drivers_gpio_uart/src/_arc
 diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
 --- 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
 +++ 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
-@@ -0,0 +1,160 @@
+@@ -0,0 +1,138 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! GPIO Driver.
 +
-+use crate::{cpu, driver, synchronization, synchronization::NullLock};
-+use core::ops;
++use crate::{
++    bsp::device_driver::common::MMIODerefWrapper, cpu, driver, synchronization,
++    synchronization::NullLock,
++};
 +use register::{mmio::*, register_bitfields, register_structs};
 +
 +//--------------------------------------------------------------------------------------------------
@@ -205,9 +207,8 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 06_drivers_g
 +    }
 +}
 +
-+struct GPIOInner {
-+    base_addr: usize,
-+}
++/// Abstraction for the associated MMIO registers.
++type Registers = MMIODerefWrapper<RegisterBlock>;
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Definitions
@@ -215,30 +216,7 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 06_drivers_g
 +
 +/// Representation of the GPIO HW.
 +pub struct GPIO {
-+    inner: NullLock<GPIOInner>,
-+}
-+
-+//--------------------------------------------------------------------------------------------------
-+// Private Code
-+//--------------------------------------------------------------------------------------------------
-+
-+impl ops::Deref for GPIOInner {
-+    type Target = RegisterBlock;
-+
-+    fn deref(&self) -> &Self::Target {
-+        unsafe { &*self.ptr() }
-+    }
-+}
-+
-+impl GPIOInner {
-+    const fn new(base_addr: usize) -> Self {
-+        Self { base_addr }
-+    }
-+
-+    /// Return a pointer to the associated MMIO register block.
-+    fn ptr(&self) -> *const RegisterBlock {
-+        self.base_addr as *const _
-+    }
++    registers: NullLock<Registers>,
 +}
 +
 +//--------------------------------------------------------------------------------------------------
@@ -253,7 +231,7 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 06_drivers_g
 +    /// - The user must ensure to provide the correct `base_addr`.
 +    pub const unsafe fn new(base_addr: usize) -> Self {
 +        Self {
-+            inner: NullLock::new(GPIOInner::new(base_addr)),
++            registers: NullLock::new(Registers::new(base_addr)),
 +        }
 +    }
 +
@@ -262,23 +240,23 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 06_drivers_g
 +    /// TX to pin 14
 +    /// RX to pin 15
 +    pub fn map_pl011_uart(&self) {
-+        let mut r = &self.inner;
-+        r.lock(|inner| {
++        let mut r = &self.registers;
++        r.lock(|registers| {
 +            // Map to pins.
-+            inner
++            registers
 +                .GPFSEL1
 +                .modify(GPFSEL1::FSEL14::AltFunc0 + GPFSEL1::FSEL15::AltFunc0);
 +
 +            // Enable pins 14 and 15.
-+            inner.GPPUD.set(0);
++            registers.GPPUD.set(0);
 +            cpu::spin_for_cycles(150);
 +
-+            inner
++            registers
 +                .GPPUDCLK0
 +                .write(GPPUDCLK0::PUDCLK14::AssertClock + GPPUDCLK0::PUDCLK15::AssertClock);
 +            cpu::spin_for_cycles(150);
 +
-+            inner.GPPUDCLK0.set(0);
++            registers.GPPUDCLK0.set(0);
 +        })
 +    }
 +}
@@ -297,15 +275,18 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 06_drivers_g
 diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 --- 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -0,0 +1,322 @@
+@@ -0,0 +1,307 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! PL011 UART driver.
 +
-+use crate::{console, cpu, driver, synchronization, synchronization::NullLock};
-+use core::{fmt, ops};
++use crate::{
++    bsp::device_driver::common::MMIODerefWrapper, console, cpu, driver, synchronization,
++    synchronization::NullLock,
++};
++use core::fmt;
 +use register::{mmio::*, register_bitfields, register_structs};
 +
 +//--------------------------------------------------------------------------------------------------
@@ -413,10 +394,6 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 06_dri
 +    ]
 +}
 +
-+//--------------------------------------------------------------------------------------------------
-+// Public Definitions
-+//--------------------------------------------------------------------------------------------------
-+
 +register_structs! {
 +    #[allow(non_snake_case)]
 +    pub RegisterBlock {
@@ -434,8 +411,15 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 06_dri
 +    }
 +}
 +
++/// Abstraction for the associated MMIO registers.
++type Registers = MMIODerefWrapper<RegisterBlock>;
++
++//--------------------------------------------------------------------------------------------------
++// Public Definitions
++//--------------------------------------------------------------------------------------------------
++
 +pub struct PL011UartInner {
-+    base_addr: usize,
++    registers: Registers,
 +    chars_written: usize,
 +    chars_read: usize,
 +}
@@ -452,24 +436,6 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 06_dri
 +// Public Code
 +//--------------------------------------------------------------------------------------------------
 +
-+/// Deref to RegisterBlock.
-+///
-+/// Allows writing
-+/// ```
-+/// self.DR.read()
-+/// ```
-+/// instead of something along the lines of
-+/// ```
-+/// unsafe { (*PL011UartInner::ptr()).DR.read() }
-+/// ```
-+impl ops::Deref for PL011UartInner {
-+    type Target = RegisterBlock;
-+
-+    fn deref(&self) -> &Self::Target {
-+        unsafe { &*self.ptr() }
-+    }
-+}
-+
 +impl PL011UartInner {
 +    /// Create an instance.
 +    ///
@@ -478,7 +444,7 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 06_dri
 +    /// - The user must ensure to provide the correct `base_addr`.
 +    pub const unsafe fn new(base_addr: usize) -> Self {
 +        Self {
-+            base_addr,
++            registers: Registers::new(base_addr),
 +            chars_written: 0,
 +            chars_read: 0,
 +        }
@@ -490,31 +456,28 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 06_dri
 +    /// firmware).
 +    pub fn init(&mut self) {
 +        // Turn it off temporarily.
-+        self.CR.set(0);
++        self.registers.CR.set(0);
 +
-+        self.ICR.write(ICR::ALL::CLEAR);
-+        self.IBRD.write(IBRD::IBRD.val(13));
-+        self.FBRD.write(FBRD::FBRD.val(2));
-+        self.LCRH
++        self.registers.ICR.write(ICR::ALL::CLEAR);
++        self.registers.IBRD.write(IBRD::IBRD.val(13));
++        self.registers.FBRD.write(FBRD::FBRD.val(2));
++        self.registers
++            .LCRH
 +            .write(LCRH::WLEN::EightBit + LCRH::FEN::FifosEnabled); // 8N1 + Fifo on
-+        self.CR
++        self.registers
++            .CR
 +            .write(CR::UARTEN::Enabled + CR::TXE::Enabled + CR::RXE::Enabled);
-+    }
-+
-+    /// Return a pointer to the register block.
-+    fn ptr(&self) -> *const RegisterBlock {
-+        self.base_addr as *const _
 +    }
 +
 +    /// Send a character.
 +    fn write_char(&mut self, c: char) {
 +        // Spin while TX FIFO full is set, waiting for an empty slot.
-+        while self.FR.matches_all(FR::TXFF::SET) {
++        while self.registers.FR.matches_all(FR::TXFF::SET) {
 +            cpu::nop();
 +        }
 +
 +        // Write the character to the buffer.
-+        self.DR.set(c as u32);
++        self.registers.DR.set(c as u32);
 +
 +        self.chars_written += 1;
 +    }
@@ -589,12 +552,12 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 06_dri
 +        let mut r = &self.inner;
 +        r.lock(|inner| {
 +            // Spin while RX FIFO empty is set.
-+            while inner.FR.matches_all(FR::RXFE::SET) {
++            while inner.registers.FR.matches_all(FR::RXFE::SET) {
 +                cpu::nop();
 +            }
 +
 +            // Read one character.
-+            let mut ret = inner.DR.get() as u8 as char;
++            let mut ret = inner.registers.DR.get() as u8 as char;
 +
 +            // Convert carrige return to newline.
 +            if ret == '\r' {
@@ -637,10 +600,50 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/bcm.rs 06_drivers_gpio_uart/src/
 +pub use bcm2xxx_gpio::*;
 +pub use bcm2xxx_pl011_uart::*;
 
+diff -uNr 05_safe_globals/src/bsp/device_driver/common.rs 06_drivers_gpio_uart/src/bsp/device_driver/common.rs
+--- 05_safe_globals/src/bsp/device_driver/common.rs
++++ 06_drivers_gpio_uart/src/bsp/device_driver/common.rs
+@@ -0,0 +1,35 @@
++// SPDX-License-Identifier: MIT OR Apache-2.0
++//
++// Copyright (c) 2020 Andre Richter <andre.o.richter@gmail.com>
++
++//! Common device driver code.
++
++use core::{marker::PhantomData, ops};
++
++pub struct MMIODerefWrapper<T> {
++    base_addr: usize,
++    phantom: PhantomData<T>,
++}
++
++impl<T> MMIODerefWrapper<T> {
++    /// Create an instance.
++    pub const unsafe fn new(base_addr: usize) -> Self {
++        Self {
++            base_addr,
++            phantom: PhantomData,
++        }
++    }
++
++    /// Return a pointer to the associated MMIO register block.
++    fn ptr(&self) -> *const T {
++        self.base_addr as *const _
++    }
++}
++
++impl<T> ops::Deref for MMIODerefWrapper<T> {
++    type Target = T;
++
++    fn deref(&self) -> &Self::Target {
++        unsafe { &*self.ptr() }
++    }
++}
+
 diff -uNr 05_safe_globals/src/bsp/device_driver.rs 06_drivers_gpio_uart/src/bsp/device_driver.rs
 --- 05_safe_globals/src/bsp/device_driver.rs
 +++ 06_drivers_gpio_uart/src/bsp/device_driver.rs
-@@ -0,0 +1,11 @@
+@@ -0,0 +1,12 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
@@ -649,6 +652,7 @@ diff -uNr 05_safe_globals/src/bsp/device_driver.rs 06_drivers_gpio_uart/src/bsp/
 +
 +#[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
 +mod bcm;
++mod common;
 +
 +#[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
 +pub use bcm::*;

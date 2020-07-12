@@ -4,8 +4,7 @@
 
 //! GICC Driver - GIC CPU interface.
 
-use crate::exception;
-use core::ops;
+use crate::{bsp::device_driver::common::MMIODerefWrapper, exception};
 use register::{mmio::*, register_bitfields, register_structs};
 
 //--------------------------------------------------------------------------------------------------
@@ -36,10 +35,6 @@ register_bitfields! {
     ]
 }
 
-//--------------------------------------------------------------------------------------------------
-// Public Definitions
-//--------------------------------------------------------------------------------------------------
-
 register_structs! {
     #[allow(non_snake_case)]
     pub RegisterBlock {
@@ -52,22 +47,21 @@ register_structs! {
     }
 }
 
+/// Abstraction for the associated MMIO registers.
+type Registers = MMIODerefWrapper<RegisterBlock>;
+
+//--------------------------------------------------------------------------------------------------
+// Public Definitions
+//--------------------------------------------------------------------------------------------------
+
 /// Representation of the GIC CPU interface.
 pub struct GICC {
-    base_addr: usize,
+    registers: Registers,
 }
 
 //--------------------------------------------------------------------------------------------------
 // Public Code
 //--------------------------------------------------------------------------------------------------
-
-impl ops::Deref for GICC {
-    type Target = RegisterBlock;
-
-    fn deref(&self) -> &Self::Target {
-        unsafe { &*self.ptr() }
-    }
-}
 
 impl GICC {
     /// Create an instance.
@@ -76,12 +70,9 @@ impl GICC {
     ///
     /// - The user must ensure to provide the correct `base_addr`.
     pub const unsafe fn new(base_addr: usize) -> Self {
-        Self { base_addr }
-    }
-
-    /// Return a pointer to the associated MMIO register block.
-    fn ptr(&self) -> *const RegisterBlock {
-        self.base_addr as *const _
+        Self {
+            registers: Registers::new(base_addr),
+        }
     }
 
     /// Accept interrupts of any priority.
@@ -96,7 +87,7 @@ impl GICC {
     /// - GICC MMIO registers are banked per CPU core. It is therefore safe to have `&self` instead
     ///   of `&mut self`.
     pub fn priority_accept_all(&self) {
-        self.PMR.write(PMR::Priority.val(255)); // Comment in arch spec.
+        self.registers.PMR.write(PMR::Priority.val(255)); // Comment in arch spec.
     }
 
     /// Enable the interface - start accepting IRQs.
@@ -106,7 +97,7 @@ impl GICC {
     /// - GICC MMIO registers are banked per CPU core. It is therefore safe to have `&self` instead
     ///   of `&mut self`.
     pub fn enable(&self) {
-        self.CTLR.write(CTLR::Enable::SET);
+        self.registers.CTLR.write(CTLR::Enable::SET);
     }
 
     /// Extract the number of the highest-priority pending IRQ.
@@ -122,7 +113,7 @@ impl GICC {
         &self,
         _ic: &exception::asynchronous::IRQContext<'irq_context>,
     ) -> usize {
-        self.IAR.read(IAR::InterruptID) as usize
+        self.registers.IAR.read(IAR::InterruptID) as usize
     }
 
     /// Complete handling of the currently active IRQ.
@@ -141,6 +132,6 @@ impl GICC {
         irq_number: u32,
         _ic: &exception::asynchronous::IRQContext<'irq_context>,
     ) {
-        self.EOIR.write(EOIR::EOIINTID.val(irq_number));
+        self.registers.EOIR.write(EOIR::EOIINTID.val(irq_number));
     }
 }

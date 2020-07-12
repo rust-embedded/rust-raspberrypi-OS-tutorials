@@ -197,7 +197,7 @@ diff -uNr 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs 07_uart_chainloader/src/
 diff -uNr 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 --- 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -282,6 +282,16 @@
+@@ -267,6 +267,16 @@
          let mut r = &self.inner;
          r.lock(|inner| fmt::Write::write_fmt(inner, args))
      }
@@ -206,7 +206,7 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 0
 +        // Spin until TX FIFO empty is set.
 +        let mut r = &self.inner;
 +        r.lock(|inner| {
-+            while !inner.FR.matches_all(FR::TXFE::SET) {
++            while !inner.registers.FR.matches_all(FR::TXFE::SET) {
 +                cpu::nop();
 +            }
 +        });
@@ -214,12 +214,12 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 0
  }
 
  impl console::interface::Read for PL011Uart {
-@@ -293,18 +303,21 @@
+@@ -278,18 +288,21 @@
                  cpu::nop();
              }
 
 -            // Read one character.
--            let mut ret = inner.DR.get() as u8 as char;
+-            let mut ret = inner.registers.DR.get() as u8 as char;
 -
 -            // Convert carrige return to newline.
 -            if ret == '\r' {
@@ -231,7 +231,7 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 0
 
 -            ret
 +            // Read one character.
-+            inner.DR.get() as u8 as char
++            inner.registers.DR.get() as u8 as char
 +        })
 +    }
 +
@@ -239,8 +239,8 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 0
 +        let mut r = &self.inner;
 +        r.lock(|inner| {
 +            // Read from the RX FIFO until it is indicating empty.
-+            while !inner.FR.matches_all(FR::RXFE::SET) {
-+                inner.DR.get();
++            while !inner.registers.FR.matches_all(FR::RXFE::SET) {
++                inner.registers.DR.get();
 +            }
          })
      }

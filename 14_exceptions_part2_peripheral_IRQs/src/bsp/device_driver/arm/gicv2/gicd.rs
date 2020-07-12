@@ -64,10 +64,10 @@ register_structs! {
 }
 
 /// Abstraction for the non-banked parts of the associated MMIO registers.
-type SharedRegs = MMIODerefWrapper<SharedRegisterBlock>;
+type SharedRegisters = MMIODerefWrapper<SharedRegisterBlock>;
 
 /// Abstraction for the banked parts of the associated MMIO registers.
-type BankedRegs = MMIODerefWrapper<BankedRegisterBlock>;
+type BankedRegisters = MMIODerefWrapper<BankedRegisterBlock>;
 
 //--------------------------------------------------------------------------------------------------
 // Public Definitions
@@ -76,17 +76,17 @@ type BankedRegs = MMIODerefWrapper<BankedRegisterBlock>;
 /// Representation of the GIC Distributor.
 pub struct GICD {
     /// Access to shared registers is guarded with a lock.
-    shared_regs: IRQSafeNullLock<SharedRegs>,
+    shared_registers: IRQSafeNullLock<SharedRegisters>,
 
     /// Access to banked registers is unguarded.
-    banked_regs: BankedRegs,
+    banked_registers: BankedRegisters,
 }
 
 //--------------------------------------------------------------------------------------------------
 // Private Code
 //--------------------------------------------------------------------------------------------------
 
-impl SharedRegs {
+impl SharedRegisters {
     /// Return the number of IRQs that this HW implements.
     #[inline(always)]
     fn num_irqs(&mut self) -> usize {
@@ -103,7 +103,7 @@ impl SharedRegs {
 
         // Calculate the max index of the shared ITARGETSR array.
         //
-        // The first 32 IRQs are private, so not included in `shared_regs`. Each ITARGETS
+        // The first 32 IRQs are private, so not included in `shared_registers`. Each ITARGETS
         // register has four entries, so shift right by two. Subtract one because we start
         // counting at zero.
         let spi_itargetsr_max_index = ((self.num_irqs() - 32) >> 2) - 1;
@@ -126,8 +126,8 @@ impl GICD {
     /// - The user must ensure to provide the correct `base_addr`.
     pub const unsafe fn new(base_addr: usize) -> Self {
         Self {
-            shared_regs: IRQSafeNullLock::new(SharedRegs::new(base_addr)),
-            banked_regs: BankedRegs::new(base_addr),
+            shared_registers: IRQSafeNullLock::new(SharedRegisters::new(base_addr)),
+            banked_registers: BankedRegisters::new(base_addr),
         }
     }
 
@@ -138,7 +138,7 @@ impl GICD {
     ///   "GICD_ITARGETSR0 to GICD_ITARGETSR7 are read-only, and each field returns a value that
     ///    corresponds only to the processor reading the register."
     fn local_gic_target_mask(&self) -> u32 {
-        self.banked_regs.ITARGETSR[0].read(ITARGETSR::Offset0)
+        self.banked_registers.ITARGETSR[0].read(ITARGETSR::Offset0)
     }
 
     /// Route all SPIs to the boot core and enable the distributor.
@@ -151,7 +151,7 @@ impl GICD {
         // Target all SPIs to the boot core only.
         let mask = self.local_gic_target_mask();
 
-        let mut r = &self.shared_regs;
+        let mut r = &self.shared_registers;
         r.lock(|regs| {
             for i in regs.implemented_itargets_slice().iter() {
                 i.write(
@@ -179,14 +179,14 @@ impl GICD {
         match irq_num {
             // Private.
             0..=31 => {
-                let enable_reg = &self.banked_regs.ISENABLER;
+                let enable_reg = &self.banked_registers.ISENABLER;
                 enable_reg.set(enable_reg.get() | enable_bit);
             }
             // Shared.
             _ => {
                 let enable_reg_index_shared = enable_reg_index - 1;
 
-                let mut r = &self.shared_regs;
+                let mut r = &self.shared_registers;
                 r.lock(|regs| {
                     let enable_reg = &regs.ISENABLER[enable_reg_index_shared];
                     enable_reg.set(enable_reg.get() | enable_bit);

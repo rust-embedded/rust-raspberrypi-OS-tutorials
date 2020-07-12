@@ -4,8 +4,10 @@
 
 //! GPIO Driver.
 
-use crate::{cpu, driver, synchronization, synchronization::NullLock};
-use core::ops;
+use crate::{
+    bsp::device_driver::common::MMIODerefWrapper, cpu, driver, synchronization,
+    synchronization::NullLock,
+};
 use register::{mmio::*, register_bitfields, register_structs};
 
 //--------------------------------------------------------------------------------------------------
@@ -70,9 +72,8 @@ register_structs! {
     }
 }
 
-struct GPIOInner {
-    base_addr: usize,
-}
+/// Abstraction for the associated MMIO registers.
+type Registers = MMIODerefWrapper<RegisterBlock>;
 
 //--------------------------------------------------------------------------------------------------
 // Public Definitions
@@ -80,30 +81,7 @@ struct GPIOInner {
 
 /// Representation of the GPIO HW.
 pub struct GPIO {
-    inner: NullLock<GPIOInner>,
-}
-
-//--------------------------------------------------------------------------------------------------
-// Private Code
-//--------------------------------------------------------------------------------------------------
-
-impl ops::Deref for GPIOInner {
-    type Target = RegisterBlock;
-
-    fn deref(&self) -> &Self::Target {
-        unsafe { &*self.ptr() }
-    }
-}
-
-impl GPIOInner {
-    const fn new(base_addr: usize) -> Self {
-        Self { base_addr }
-    }
-
-    /// Return a pointer to the associated MMIO register block.
-    fn ptr(&self) -> *const RegisterBlock {
-        self.base_addr as *const _
-    }
+    registers: NullLock<Registers>,
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -118,7 +96,7 @@ impl GPIO {
     /// - The user must ensure to provide the correct `base_addr`.
     pub const unsafe fn new(base_addr: usize) -> Self {
         Self {
-            inner: NullLock::new(GPIOInner::new(base_addr)),
+            registers: NullLock::new(Registers::new(base_addr)),
         }
     }
 
@@ -127,23 +105,23 @@ impl GPIO {
     /// TX to pin 14
     /// RX to pin 15
     pub fn map_pl011_uart(&self) {
-        let mut r = &self.inner;
-        r.lock(|inner| {
+        let mut r = &self.registers;
+        r.lock(|registers| {
             // Map to pins.
-            inner
+            registers
                 .GPFSEL1
                 .modify(GPFSEL1::FSEL14::AltFunc0 + GPFSEL1::FSEL15::AltFunc0);
 
             // Enable pins 14 and 15.
-            inner.GPPUD.set(0);
+            registers.GPPUD.set(0);
             cpu::spin_for_cycles(150);
 
-            inner
+            registers
                 .GPPUDCLK0
                 .write(GPPUDCLK0::PUDCLK14::AssertClock + GPPUDCLK0::PUDCLK15::AssertClock);
             cpu::spin_for_cycles(150);
 
-            inner.GPPUDCLK0.set(0);
+            registers.GPPUDCLK0.set(0);
         })
     }
 }

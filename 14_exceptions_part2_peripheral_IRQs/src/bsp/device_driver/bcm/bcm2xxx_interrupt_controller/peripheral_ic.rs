@@ -37,10 +37,10 @@ register_structs! {
 }
 
 /// Abstraction for the WriteOnly parts of the associated MMIO registers.
-type WriteOnlyRegs = MMIODerefWrapper<WORegisterBlock>;
+type WriteOnlyRegisters = MMIODerefWrapper<WORegisterBlock>;
 
 /// Abstraction for the ReadOnly parts of the associated MMIO registers.
-type ReadOnlyRegs = MMIODerefWrapper<RORegisterBlock>;
+type ReadOnlyRegisters = MMIODerefWrapper<RORegisterBlock>;
 
 type HandlerTable =
     [Option<exception::asynchronous::IRQDescriptor>; InterruptController::NUM_PERIPHERAL_IRQS];
@@ -52,10 +52,10 @@ type HandlerTable =
 /// Representation of the peripheral interrupt regsler.
 pub struct PeripheralIC {
     /// Access to write registers is guarded with a lock.
-    wo_regs: IRQSafeNullLock<WriteOnlyRegs>,
+    wo_registers: IRQSafeNullLock<WriteOnlyRegisters>,
 
     /// Register read access is unguarded.
-    ro_regs: ReadOnlyRegs,
+    ro_registers: ReadOnlyRegisters,
 
     /// Stores registered IRQ handlers. Writable only during kernel init. RO afterwards.
     handler_table: InitStateLock<HandlerTable>,
@@ -73,16 +73,16 @@ impl PeripheralIC {
     /// - The user must ensure to provide the correct `base_addr`.
     pub const unsafe fn new(base_addr: usize) -> Self {
         Self {
-            wo_regs: IRQSafeNullLock::new(WriteOnlyRegs::new(base_addr)),
-            ro_regs: ReadOnlyRegs::new(base_addr),
+            wo_registers: IRQSafeNullLock::new(WriteOnlyRegisters::new(base_addr)),
+            ro_registers: ReadOnlyRegisters::new(base_addr),
             handler_table: InitStateLock::new([None; InterruptController::NUM_PERIPHERAL_IRQS]),
         }
     }
 
     /// Query the list of pending IRQs.
     fn get_pending(&self) -> PendingIRQs {
-        let pending_mask: u64 = (u64::from(self.ro_regs.PENDING_2.get()) << 32)
-            | u64::from(self.ro_regs.PENDING_1.get());
+        let pending_mask: u64 = (u64::from(self.ro_registers.PENDING_2.get()) << 32)
+            | u64::from(self.ro_registers.PENDING_1.get());
 
         PendingIRQs::new(pending_mask)
     }
@@ -116,7 +116,7 @@ impl exception::asynchronous::interface::IRQManager for PeripheralIC {
     }
 
     fn enable(&self, irq: Self::IRQNumberType) {
-        let mut r = &self.wo_regs;
+        let mut r = &self.wo_registers;
         r.lock(|regs| {
             let enable_reg = if irq.get() <= 31 {
                 &regs.ENABLE_1
