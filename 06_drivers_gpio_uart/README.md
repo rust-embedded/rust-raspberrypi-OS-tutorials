@@ -21,7 +21,7 @@ serious embedded hackers do!
     - We introduce the `GPIO` driver, which pinmuxes the RPi's PL011 UART.
     - Most importantly, the `PL011Uart` driver: It implements the `console::interface::*` traits and
       is from now on used as the main system console output.
-- `BSP`s now contain a memory map in `src/bsp/memory.rs`. In the specific case, they contain the
+- `BSP`s now contain a memory map in `src/bsp/raspberrypi/memory.rs`. In the specific case, they contain the
   Raspberry's `MMIO` addresses which are used to instantiate the respectivedevice drivers.
 - We also modify the `panic!` handler, so that it does not anymore rely on `println!`, which uses
   the globally-shared instance of the `UART` that might be locked when an error is encountered (for
