@@ -460,7 +460,7 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 06_dri
 +
 +        self.registers.ICR.write(ICR::ALL::CLEAR);
 +        self.registers.IBRD.write(IBRD::IBRD.val(13));
-+        self.registers.FBRD.write(FBRD::FBRD.val(2));
++        self.registers.FBRD.write(FBRD::FBRD.val(1));
 +        self.registers
 +            .LCRH
 +            .write(LCRH::WLEN::EightBit + LCRH::FEN::FifosEnabled); // 8N1 + Fifo on
