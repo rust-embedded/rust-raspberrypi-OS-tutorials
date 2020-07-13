@@ -247,7 +247,8 @@ class DevTool
     def copyright_source_files
         extensions = ['.S', '.rs', '.rb']
 
-        files = tracked_files.select do |f|
+        # Note: The selection result is the return value of the function.
+        tracked_files.select do |f|
             next unless File.exist?(f)
             next if f.include?('build.rs')
 
@@ -255,8 +256,6 @@ class DevTool
                 f.include?('Dockerfile') ||
                 extensions.include?(File.extname(f))
         end
-
-        files
     end
 end
 
