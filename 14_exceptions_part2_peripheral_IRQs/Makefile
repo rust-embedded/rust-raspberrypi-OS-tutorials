@@ -159,7 +159,7 @@ clean:
 	rm -rf target $(KERNEL_BIN)
 
 readelf: $(KERNEL_ELF)
-	readelf -a $(KERNEL_ELF)
+	readelf --headers $(KERNEL_ELF)
 
 objdump: $(KERNEL_ELF)
 	rust-objdump --arch-name aarch64 --disassemble --demangle --no-show-raw-insn \
