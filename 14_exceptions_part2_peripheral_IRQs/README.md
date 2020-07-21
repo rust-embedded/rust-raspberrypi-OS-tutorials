@@ -1893,7 +1893,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -186,6 +238,10 @@
+@@ -190,6 +242,10 @@
          self.registers
              .LCRH
              .write(LCRH::WLEN::EightBit + LCRH::FEN::FifosEnabled); // 8N1 + Fifo on
@@ -1904,7 +1904,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
          self.registers
              .CR
              .write(CR::UARTEN::Enabled + CR::TXE::Enabled + CR::RXE::Enabled);
-@@ -203,6 +259,35 @@
+@@ -207,6 +263,35 @@
 
          self.chars_written += 1;
      }
@@ -1940,7 +1940,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
  }
 
  /// Implementing `core::fmt::Write` enables usage of the `format_args!` macros, which in turn are
-@@ -228,9 +313,10 @@
+@@ -232,9 +317,10 @@
      /// # Safety
      ///
      /// - The user must ensure to provide the correct `base_addr`.
@@ -1953,7 +1953,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
          }
      }
  }
-@@ -251,6 +337,21 @@
+@@ -255,6 +341,21 @@
 
          Ok(())
      }
@@ -1975,7 +1975,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
  }
 
  impl console::interface::Write for PL011Uart {
-@@ -282,25 +383,7 @@
+@@ -286,25 +387,7 @@
  impl console::interface::Read for PL011Uart {
      fn read_char(&self) -> char {
          let mut r = &self.inner;
@@ -2002,7 +2002,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
      }
 
      fn clear(&self) {
-@@ -325,3 +408,25 @@
+@@ -329,3 +412,25 @@
          r.lock(|inner| inner.chars_read)
      }
  }

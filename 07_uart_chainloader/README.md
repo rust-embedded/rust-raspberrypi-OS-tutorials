@@ -197,7 +197,7 @@ diff -uNr 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs 07_uart_chainloader/src/
 diff -uNr 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 --- 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -267,6 +267,16 @@
+@@ -271,6 +271,16 @@
          let mut r = &self.inner;
          r.lock(|inner| fmt::Write::write_fmt(inner, args))
      }
@@ -214,7 +214,7 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 0
  }
 
  impl console::interface::Read for PL011Uart {
-@@ -278,18 +288,21 @@
+@@ -282,18 +292,21 @@
                  cpu::nop();
              }
 

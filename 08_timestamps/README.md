@@ -227,7 +227,7 @@ diff -uNr 07_uart_chainloader/src/_arch/aarch64/time.rs 08_timestamps/src/_arch/
 diff -uNr 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 08_timestamps/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 --- 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 08_timestamps/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -288,11 +288,18 @@
+@@ -292,11 +292,18 @@
                  cpu::nop();
              }
 

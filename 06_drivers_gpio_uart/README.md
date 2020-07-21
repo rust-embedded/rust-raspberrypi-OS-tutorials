@@ -275,7 +275,7 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 06_drivers_g
 diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 --- 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -0,0 +1,307 @@
+@@ -0,0 +1,311 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
@@ -452,8 +452,12 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 06_dri
 +
 +    /// Set up baud rate and characteristics.
 +    ///
-+    /// Results in 8N1 and 230400 baud (if the clk has been previously set to 48 MHz by the
-+    /// firmware).
++    /// The calculation for the BRD given a target rate of 2300400 and a clock set to 48 MHz is:
++    /// `(48_000_000/16)/230400 = 13,02083`. `13` goes to the `IBRD` (integer field). The `FBRD`
++    /// (fractional field) is only 6 bits so `0,0208*64 = 1,3312 rounded to 1` will give the best
++    /// approximation we can get. A 5 modulo error margin is acceptable for UART and we're now at 0,01 modulo.
++    ///
++    /// This results in 8N1 and 230400 baud (we set the clock to 48 MHz in config.txt).
 +    pub fn init(&mut self) {
 +        // Turn it off temporarily.
 +        self.registers.CR.set(0);
