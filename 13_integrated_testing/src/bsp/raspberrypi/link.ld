@@ -14,6 +14,11 @@ SECTIONS
         *(.text._start) *(.text*)
     }
 
+    .exception_vectors :
+    {
+        *(.exception_vectors*)
+    }
+
     .rodata :
     {
         *(.rodata*)

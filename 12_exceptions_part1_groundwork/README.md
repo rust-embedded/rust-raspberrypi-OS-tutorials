@@ -883,6 +883,22 @@ diff -uNr 11_virtual_memory/src/_arch/aarch64/exception.S 12_exceptions_part1_gr
 +
 +    eret
 
+diff -uNr 11_virtual_memory/src/bsp/raspberrypi/link.ld 12_exceptions_part1_groundwork/src/bsp/raspberrypi/link.ld
+--- 11_virtual_memory/src/bsp/raspberrypi/link.ld
++++ 12_exceptions_part1_groundwork/src/bsp/raspberrypi/link.ld
+@@ -14,6 +14,11 @@
+         *(.text._start) *(.text*)
+     }
+
++    .exception_vectors :
++    {
++        *(.exception_vectors*)
++    }
++
+     .rodata :
+     {
+         *(.rodata*)
+
 diff -uNr 11_virtual_memory/src/bsp/raspberrypi/memory/mmu.rs 12_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs
 --- 11_virtual_memory/src/bsp/raspberrypi/memory/mmu.rs
 +++ 12_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs
