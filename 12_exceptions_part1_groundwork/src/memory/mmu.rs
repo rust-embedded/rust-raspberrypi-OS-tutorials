@@ -12,7 +12,7 @@
 //! function.
 //!
 //! The `MMU` driver of the `arch` code uses `bsp::memory::mmu::virt_mem_layout()` to compile and
-//! install respective page tables.
+//! install respective translation tables.
 
 #[cfg(target_arch = "aarch64")]
 #[path = "../_arch/aarch64/memory/mmu.rs"]
@@ -30,7 +30,7 @@ pub mod interface {
 
     /// MMU functions.
     pub trait MMU {
-        /// Called by the kernel during early init. Supposed to take the page tables from the
+        /// Called by the kernel during early init. Supposed to take the translation tables from the
         /// `BSP`-supplied `virt_mem_layout()` and install/activate them for the respective MMU.
         ///
         /// # Safety
@@ -166,7 +166,7 @@ impl<const NUM_SPECIAL_RANGES: usize> KernelVirtualLayout<{ NUM_SPECIAL_RANGES }
     ///
     /// If the address is not found in `inner`, return an identity mapped default with normal
     /// cacheable DRAM attributes.
-    pub fn get_virt_addr_properties(
+    pub fn virt_addr_properties(
         &self,
         virt_addr: usize,
     ) -> Result<(usize, AttributeFields), &'static str> {

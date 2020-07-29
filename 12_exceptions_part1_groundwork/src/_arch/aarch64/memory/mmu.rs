@@ -4,7 +4,7 @@
 
 //! Memory Management Unit Driver.
 //!
-//! Static page tables, compiled on boot; Everything 64 KiB granule.
+//! Static translation tables, compiled on boot; Everything 64 KiB granule.
 
 use super::{AccessPermissions, AttributeFields, MemAttributes};
 use crate::{bsp, memory};
@@ -16,10 +16,10 @@ use register::register_bitfields;
 // Private Definitions
 //--------------------------------------------------------------------------------------------------
 
-// A table descriptor, as per ARMv8-A Architecture Reference Manual Figure D4-15.
+// A table descriptor, as per ARMv8-A Architecture Reference Manual Figure D5-15.
 register_bitfields! {u64,
     STAGE1_TABLE_DESCRIPTOR [
-        /// Physical address of the next page table.
+        /// Physical address of the next descriptor.
         NEXT_LEVEL_TABLE_ADDR_64KiB OFFSET(16) NUMBITS(32) [], // [47:16]
 
         TYPE  OFFSET(1) NUMBITS(1) [
@@ -34,7 +34,7 @@ register_bitfields! {u64,
     ]
 }
 
-// A level 3 page descriptor, as per ARMv8-A Architecture Reference Manual Figure D4-17.
+// A level 3 page descriptor, as per ARMv8-A Architecture Reference Manual Figure D5-17.
 register_bitfields! {u64,
     STAGE1_PAGE_DESCRIPTOR [
         /// Privileged execute-never.
@@ -43,7 +43,7 @@ register_bitfields! {u64,
             True = 1
         ],
 
-        /// Physical address of the next page table (lvl2) or the page descriptor (lvl3).
+        /// Physical address of the next table descriptor (lvl2) or the page descriptor (lvl3).
         OUTPUT_ADDR_64KiB OFFSET(16) NUMBITS(32) [], // [47:16]
 
         /// Access flag.
@@ -98,11 +98,11 @@ struct TableDescriptor(u64);
 #[repr(transparent)]
 struct PageDescriptor(u64);
 
-/// Big monolithic struct for storing the page tables. Individual levels must be 64 KiB aligned,
-/// hence the "reverse" order of appearance.
+/// Big monolithic struct for storing the translation tables. Individual levels must be 64 KiB
+/// aligned, hence the "reverse" order of appearance.
 #[repr(C)]
 #[repr(align(65536))]
-struct PageTables<const N: usize> {
+struct TranslationTables<const N: usize> {
     /// Page descriptors, covering 64 KiB windows per entry.
     lvl3: [[PageDescriptor; 8192]; N],
 
@@ -113,12 +113,12 @@ struct PageTables<const N: usize> {
 /// Usually evaluates to 1 GiB for RPi3 and 4 GiB for RPi 4.
 const ENTRIES_512_MIB: usize = bsp::memory::mmu::addr_space_size() >> FIVETWELVE_MIB_SHIFT;
 
-/// The page tables.
+/// The translation tables.
 ///
 /// # Safety
 ///
 /// - Supposed to land in `.bss`. Therefore, ensure that they boil down to all "0" entries.
-static mut TABLES: PageTables<{ ENTRIES_512_MIB }> = PageTables {
+static mut TABLES: TranslationTables<{ ENTRIES_512_MIB }> = TranslationTables {
     lvl3: [[PageDescriptor(0); 8192]; ENTRIES_512_MIB],
     lvl2: [TableDescriptor(0); ENTRIES_512_MIB],
 };
@@ -235,12 +235,12 @@ fn set_up_mair() {
     );
 }
 
-/// Iterates over all static page table entries and fills them at once.
+/// Iterates over all static translation table entries and fills them at once.
 ///
 /// # Safety
 ///
 /// - Modifies a `static mut`. Ensure it only happens from here.
-unsafe fn populate_pt_entries() -> Result<(), &'static str> {
+unsafe fn populate_tt_entries() -> Result<(), &'static str> {
     for (l2_nr, l2_entry) in TABLES.lvl2.iter_mut().enumerate() {
         *l2_entry = TABLES.lvl3[l2_nr].base_addr_usize().into();
 
@@ -248,7 +248,7 @@ unsafe fn populate_pt_entries() -> Result<(), &'static str> {
             let virt_addr = (l2_nr << FIVETWELVE_MIB_SHIFT) + (l3_nr << SIXTYFOUR_KIB_SHIFT);
 
             let (output_addr, attribute_fields) =
-                bsp::memory::mmu::virt_mem_layout().get_virt_addr_properties(virt_addr)?;
+                bsp::memory::mmu::virt_mem_layout().virt_addr_properties(virt_addr)?;
 
             *l3_entry = PageDescriptor::new(output_addr, attribute_fields);
         }
@@ -295,8 +295,8 @@ impl memory::mmu::interface::MMU for MemoryManagementUnit {
         // Prepare the memory attribute indirection register.
         set_up_mair();
 
-        // Populate page tables.
-        populate_pt_entries()?;
+        // Populate translation tables.
+        populate_tt_entries()?;
 
         // Set the "Translation Table Base Register".
         TTBR0_EL1.set_baddr(TABLES.lvl2.base_addr_u64());

@@ -182,7 +182,7 @@ impl exception::asynchronous::interface::IRQManager for GICv2 {
     ) {
         // Extract the highest priority pending IRQ number from the Interrupt Acknowledge Register
         // (IAR).
-        let irq_number = self.gicc.get_pending_number(ic);
+        let irq_number = self.gicc.pending_irq_number(ic);
 
         // Guard against spurious interrupts.
         if irq_number > GICv2::MAX_IRQ_NUMBER {

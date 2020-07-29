@@ -109,7 +109,7 @@ impl GICC {
     /// - GICC MMIO registers are banked per CPU core. It is therefore safe to have `&self` instead
     ///   of `&mut self`.
     #[allow(clippy::trivially_copy_pass_by_ref)]
-    pub fn get_pending_number<'irq_context>(
+    pub fn pending_irq_number<'irq_context>(
         &self,
         _ic: &exception::asynchronous::IRQContext<'irq_context>,
     ) -> usize {
@@ -120,7 +120,7 @@ impl GICC {
     ///
     /// Can only be called from IRQ context, which is ensured by taking an `IRQContext` token.
     ///
-    /// To be called after `get_pending_number()`.
+    /// To be called after `pending_irq_number()`.
     ///
     /// # Safety
     ///

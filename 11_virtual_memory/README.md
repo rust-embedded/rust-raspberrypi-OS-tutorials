@@ -2,7 +2,7 @@
 
 ## tl;dr
 
-The `MMU` is turned on; A simple scheme is used: static `64 KiB` page tables; For educational
+The `MMU` is turned on; A simple scheme is used: static `64 KiB` translation tables; For educational
 purposes, we write to a remapped `UART`.
 
 ## Table of Contents
@@ -23,7 +23,8 @@ purposes, we write to a remapped `UART`.
 ## Introduction
 
 Virtual memory is an immensely complex, but important and powerful topic. In this tutorial, we start
-slow and easy by switching on the `MMU`, using static page tables and mapping everything at once.
+slow and easy by switching on the `MMU`, using static translation tables and mapping everything at
+once.
 
 ## MMU and paging theory
 
@@ -90,7 +91,7 @@ RangeDescriptor {
 `KernelVirtualLayout` itself implements the following method:
 
 ```rust
-pub fn get_virt_addr_properties(
+pub fn virt_addr_properties(
     &self,
     virt_addr: usize,
 ) -> Result<(usize, AttributeFields), &'static str>
@@ -106,10 +107,10 @@ Due to this default return, it is technicall not needed to define normal cacheab
 
 ### AArch64: `_arch/aarch64/memory/mmu.rs`
 
-This file contains the `AArch64` `MMU` driver. The paging granule is hardcoded here (`64 KiB` page
+This file contains the `AArch64` `MMU` driver. The granule is hardcoded here (`64 KiB` page
 descriptors).
 
-The actual page tables are stored in a global instance of the `PageTables` struct:
+The actual translation tables are stored in a global instance of the `TranslationTables` struct:
 
 ```rust
 /// A table descriptor for 64 KiB aperture.
@@ -126,11 +127,11 @@ struct TableDescriptor(u64);
 #[repr(transparent)]
 struct PageDescriptor(u64);
 
-/// Big monolithic struct for storing the page tables. Individual levels must be 64 KiB aligned,
-/// hence the "reverse" order of appearance.
+/// Big monolithic struct for storing the translation tables. Individual levels must be 64 KiB
+/// aligned, hence the "reverse" order of appearance.
 #[repr(C)]
 #[repr(align(65536))]
-struct PageTables<const N: usize> {
+struct TranslationTables<const N: usize> {
     /// Page descriptors, covering 64 KiB windows per entry.
     lvl3: [[PageDescriptor; 8192]; N],
 
@@ -141,24 +142,24 @@ struct PageTables<const N: usize> {
 /// Usually evaluates to 1 GiB for RPi3 and 4 GiB for RPi 4.
 const ENTRIES_512_MIB: usize = bsp::memory::mmu::addr_space_size() >> FIVETWELVE_MIB_SHIFT;
 
-/// The page tables.
+/// The translation tables.
 ///
 /// # Safety
 ///
 /// - Supposed to land in `.bss`. Therefore, ensure that they boil down to all "0" entries.
-static mut TABLES: PageTables<{ ENTRIES_512_MIB }> = PageTables {
+static mut TABLES: TranslationTables<{ ENTRIES_512_MIB }> = TranslationTables {
     lvl3: [[PageDescriptor(0); 8192]; ENTRIES_512_MIB],
     lvl2: [TableDescriptor(0); ENTRIES_512_MIB],
 };
 ```
 
-They are populated using `bsp::memory::mmu::virt_mem_layout().get_virt_addr_properties()` and a
-bunch of utility functions that convert our own descriptors to the actual `64 bit` integer entries
-needed by the `MMU` hardware for the page table arrays.
+They are populated using `bsp::memory::mmu::virt_mem_layout().virt_addr_properties()` and a bunch of
+utility functions that convert our own descriptors to the actual `64 bit` integer entries needed by
+the `MMU` hardware for the translation table arrays.
 
-Each page table has an entry (`AttrIndex`) that indexes into the [MAIR_EL1] register, which holds
-information about the cacheability of the respective page. We currently define normal cacheable
-memory and device memory (which is not cached).
+Each page descriptor has an entry (`AttrIndex`) that indexes into the [MAIR_EL1] register, which
+holds information about the cacheability of the respective page. We currently define normal
+cacheable memory and device memory (which is not cached).
 
 [MAIR_EL1]: http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ddi0500d/CIHDHJBB.html
 
@@ -305,7 +306,7 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_memory/s
 +
 +//! Memory Management Unit Driver.
 +//!
-+//! Static page tables, compiled on boot; Everything 64 KiB granule.
++//! Static translation tables, compiled on boot; Everything 64 KiB granule.
 +
 +use super::{AccessPermissions, AttributeFields, MemAttributes};
 +use crate::{bsp, memory};
@@ -317,10 +318,10 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_memory/s
 +// Private Definitions
 +//--------------------------------------------------------------------------------------------------
 +
-+// A table descriptor, as per ARMv8-A Architecture Reference Manual Figure D4-15.
++// A table descriptor, as per ARMv8-A Architecture Reference Manual Figure D5-15.
 +register_bitfields! {u64,
 +    STAGE1_TABLE_DESCRIPTOR [
-+        /// Physical address of the next page table.
++        /// Physical address of the next descriptor.
 +        NEXT_LEVEL_TABLE_ADDR_64KiB OFFSET(16) NUMBITS(32) [], // [47:16]
 +
 +        TYPE  OFFSET(1) NUMBITS(1) [
@@ -335,7 +336,7 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_memory/s
 +    ]
 +}
 +
-+// A level 3 page descriptor, as per ARMv8-A Architecture Reference Manual Figure D4-17.
++// A level 3 page descriptor, as per ARMv8-A Architecture Reference Manual Figure D5-17.
 +register_bitfields! {u64,
 +    STAGE1_PAGE_DESCRIPTOR [
 +        /// Privileged execute-never.
@@ -344,7 +345,7 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_memory/s
 +            True = 1
 +        ],
 +
-+        /// Physical address of the next page table (lvl2) or the page descriptor (lvl3).
++        /// Physical address of the next table descriptor (lvl2) or the page descriptor (lvl3).
 +        OUTPUT_ADDR_64KiB OFFSET(16) NUMBITS(32) [], // [47:16]
 +
 +        /// Access flag.
@@ -399,11 +400,11 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_memory/s
 +#[repr(transparent)]
 +struct PageDescriptor(u64);
 +
-+/// Big monolithic struct for storing the page tables. Individual levels must be 64 KiB aligned,
-+/// hence the "reverse" order of appearance.
++/// Big monolithic struct for storing the translation tables. Individual levels must be 64 KiB
++/// aligned, hence the "reverse" order of appearance.
 +#[repr(C)]
 +#[repr(align(65536))]
-+struct PageTables<const N: usize> {
++struct TranslationTables<const N: usize> {
 +    /// Page descriptors, covering 64 KiB windows per entry.
 +    lvl3: [[PageDescriptor; 8192]; N],
 +
@@ -414,12 +415,12 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_memory/s
 +/// Usually evaluates to 1 GiB for RPi3 and 4 GiB for RPi 4.
 +const ENTRIES_512_MIB: usize = bsp::memory::mmu::addr_space_size() >> FIVETWELVE_MIB_SHIFT;
 +
-+/// The page tables.
++/// The translation tables.
 +///
 +/// # Safety
 +///
 +/// - Supposed to land in `.bss`. Therefore, ensure that they boil down to all "0" entries.
-+static mut TABLES: PageTables<{ ENTRIES_512_MIB }> = PageTables {
++static mut TABLES: TranslationTables<{ ENTRIES_512_MIB }> = TranslationTables {
 +    lvl3: [[PageDescriptor(0); 8192]; ENTRIES_512_MIB],
 +    lvl2: [TableDescriptor(0); ENTRIES_512_MIB],
 +};
@@ -536,12 +537,12 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_memory/s
 +    );
 +}
 +
-+/// Iterates over all static page table entries and fills them at once.
++/// Iterates over all static translation table entries and fills them at once.
 +///
 +/// # Safety
 +///
 +/// - Modifies a `static mut`. Ensure it only happens from here.
-+unsafe fn populate_pt_entries() -> Result<(), &'static str> {
++unsafe fn populate_tt_entries() -> Result<(), &'static str> {
 +    for (l2_nr, l2_entry) in TABLES.lvl2.iter_mut().enumerate() {
 +        *l2_entry = TABLES.lvl3[l2_nr].base_addr_usize().into();
 +
@@ -549,7 +550,7 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_memory/s
 +            let virt_addr = (l2_nr << FIVETWELVE_MIB_SHIFT) + (l3_nr << SIXTYFOUR_KIB_SHIFT);
 +
 +            let (output_addr, attribute_fields) =
-+                bsp::memory::mmu::virt_mem_layout().get_virt_addr_properties(virt_addr)?;
++                bsp::memory::mmu::virt_mem_layout().virt_addr_properties(virt_addr)?;
 +
 +            *l3_entry = PageDescriptor::new(output_addr, attribute_fields);
 +        }
@@ -596,8 +597,8 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_memory/s
 +        // Prepare the memory attribute indirection register.
 +        set_up_mair();
 +
-+        // Populate page tables.
-+        populate_pt_entries()?;
++        // Populate translation tables.
++        populate_tt_entries()?;
 +
 +        // Set the "Translation Table Base Register".
 +        TTBR0_EL1.set_baddr(TABLES.lvl2.base_addr_u64());
@@ -880,7 +881,7 @@ diff -uNr 10_privilege_level/src/memory/mmu.rs 11_virtual_memory/src/memory/mmu.
 +//! function.
 +//!
 +//! The `MMU` driver of the `arch` code uses `bsp::memory::mmu::virt_mem_layout()` to compile and
-+//! install respective page tables.
++//! install respective translation tables.
 +
 +#[cfg(target_arch = "aarch64")]
 +#[path = "../_arch/aarch64/memory/mmu.rs"]
@@ -898,7 +899,7 @@ diff -uNr 10_privilege_level/src/memory/mmu.rs 11_virtual_memory/src/memory/mmu.
 +
 +    /// MMU functions.
 +    pub trait MMU {
-+        /// Called by the kernel during early init. Supposed to take the page tables from the
++        /// Called by the kernel during early init. Supposed to take the translation tables from the
 +        /// `BSP`-supplied `virt_mem_layout()` and install/activate them for the respective MMU.
 +        ///
 +        /// # Safety
@@ -1033,7 +1034,7 @@ diff -uNr 10_privilege_level/src/memory/mmu.rs 11_virtual_memory/src/memory/mmu.
 +    ///
 +    /// If the address is not found in `inner`, return an identity mapped default with normal
 +    /// cacheable DRAM attributes.
-+    pub fn get_virt_addr_properties(
++    pub fn virt_addr_properties(
 +        &self,
 +        virt_addr: usize,
 +    ) -> Result<(usize, AttributeFields), &'static str> {

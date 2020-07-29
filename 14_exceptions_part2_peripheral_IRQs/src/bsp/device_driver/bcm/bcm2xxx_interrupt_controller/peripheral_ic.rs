@@ -80,7 +80,7 @@ impl PeripheralIC {
     }
 
     /// Query the list of pending IRQs.
-    fn get_pending(&self) -> PendingIRQs {
+    fn pending_irqs(&self) -> PendingIRQs {
         let pending_mask: u64 = (u64::from(self.ro_registers.PENDING_2.get()) << 32)
             | u64::from(self.ro_registers.PENDING_1.get());
 
@@ -138,7 +138,7 @@ impl exception::asynchronous::interface::IRQManager for PeripheralIC {
     ) {
         let mut r = &self.handler_table;
         r.read(|table| {
-            for irq_number in self.get_pending() {
+            for irq_number in self.pending_irqs() {
                 match table[irq_number] {
                     None => panic!("No handler registered for IRQ {}", irq_number),
                     Some(descriptor) => {

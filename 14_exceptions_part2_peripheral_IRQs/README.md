@@ -986,7 +986,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2/gicc.rs 14_excep
 +    /// - GICC MMIO registers are banked per CPU core. It is therefore safe to have `&self` instead
 +    ///   of `&mut self`.
 +    #[allow(clippy::trivially_copy_pass_by_ref)]
-+    pub fn get_pending_number<'irq_context>(
++    pub fn pending_irq_number<'irq_context>(
 +        &self,
 +        _ic: &exception::asynchronous::IRQContext<'irq_context>,
 +    ) -> usize {
@@ -997,7 +997,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2/gicc.rs 14_excep
 +    ///
 +    /// Can only be called from IRQ context, which is ensured by taking an `IRQContext` token.
 +    ///
-+    /// To be called after `get_pending_number()`.
++    /// To be called after `pending_irq_number()`.
 +    ///
 +    /// # Safety
 +    ///
@@ -1403,7 +1403,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2.rs 14_exceptions
 +    ) {
 +        // Extract the highest priority pending IRQ number from the Interrupt Acknowledge Register
 +        // (IAR).
-+        let irq_number = self.gicc.get_pending_number(ic);
++        let irq_number = self.gicc.pending_irq_number(ic);
 +
 +        // Guard against spurious interrupts.
 +        if irq_number > GICv2::MAX_IRQ_NUMBER {
@@ -1573,7 +1573,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 +    }
 +
 +    /// Query the list of pending IRQs.
-+    fn get_pending(&self) -> PendingIRQs {
++    fn pending_irqs(&self) -> PendingIRQs {
 +        let pending_mask: u64 = (u64::from(self.ro_registers.PENDING_2.get()) << 32)
 +            | u64::from(self.ro_registers.PENDING_1.get());
 +
@@ -1631,7 +1631,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 +    ) {
 +        let mut r = &self.handler_table;
 +        r.read(|table| {
-+            for irq_number in self.get_pending() {
++            for irq_number in self.pending_irqs() {
 +                match table[irq_number] {
 +                    None => panic!("No handler registered for IRQ {}", irq_number),
 +                    Some(descriptor) => {

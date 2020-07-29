@@ -788,7 +788,7 @@ diff -uNr 12_exceptions_part1_groundwork/Cargo.toml 13_integrated_testing/Cargo.
  # Optional dependencies
  cortex-a = { version = "3.0.x", optional = true }
 -register = { version = "0.5.x", optional = true }
-+register = { version = "0.5.x", features=["no_std_unit_tests"], optional = true }
++register = { version = "0.5.x", features = ["no_std_unit_tests"], optional = true }
 +
 +##--------------------------------------------------------------------------------------------------
 +## Testing
