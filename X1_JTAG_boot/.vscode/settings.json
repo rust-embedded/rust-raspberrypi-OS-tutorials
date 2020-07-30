@@ -4,10 +4,11 @@
         100
     ],
     "rust-analyzer.checkOnSave.overrideCommand": [
-        "cargo",
-        "check",
-        "--message-format=json",
-        "--target=aarch64-unknown-none-softfloat",
-        "--features=bsp_rpi3"
+        "make",
+        "check"
+    ],
+    "rust-analyzer.cargo.target": "aarch64-unknown-none-softfloat",
+    "rust-analyzer.cargo.features": [
+        "bsp_rpi3"
     ]
 }

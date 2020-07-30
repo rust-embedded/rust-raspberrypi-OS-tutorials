@@ -84,7 +84,7 @@ diff -uNr 03_hacky_hello_world/src/_arch/aarch64/cpu.rs 04_zero_overhead_abstrac
 +
 +    // Expect the boot core to start in EL2.
 +    if bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id() {
-+        SP.set(bsp::cpu::BOOT_CORE_STACK_START);
++        SP.set(bsp::memory::BOOT_CORE_STACK_START as u64);
 +        runtime_init::runtime_init()
 +    } else {
 +        // If not core0, infinitely wait for events.
@@ -140,7 +140,7 @@ diff -uNr 03_hacky_hello_world/src/_arch/aarch64/cpu.S 04_zero_overhead_abstract
 diff -uNr 03_hacky_hello_world/src/bsp/raspberrypi/cpu.rs 04_zero_overhead_abstraction/src/bsp/raspberrypi/cpu.rs
 --- 03_hacky_hello_world/src/bsp/raspberrypi/cpu.rs
 +++ 04_zero_overhead_abstraction/src/bsp/raspberrypi/cpu.rs
-@@ -0,0 +1,15 @@
+@@ -0,0 +1,12 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
@@ -153,18 +153,33 @@ diff -uNr 03_hacky_hello_world/src/bsp/raspberrypi/cpu.rs 04_zero_overhead_abstr
 +
 +/// Used by `arch` code to find the early boot core.
 +pub const BOOT_CORE_ID: usize = 0;
+
+diff -uNr 03_hacky_hello_world/src/bsp/raspberrypi/memory.rs 04_zero_overhead_abstraction/src/bsp/raspberrypi/memory.rs
+--- 03_hacky_hello_world/src/bsp/raspberrypi/memory.rs
++++ 04_zero_overhead_abstraction/src/bsp/raspberrypi/memory.rs
+@@ -0,0 +1,12 @@
++// SPDX-License-Identifier: MIT OR Apache-2.0
++//
++// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
++
++//! BSP Memory Management.
++
++//--------------------------------------------------------------------------------------------------
++// Public Definitions
++//--------------------------------------------------------------------------------------------------
 +
 +/// The early boot core's stack address.
-+pub const BOOT_CORE_STACK_START: u64 = 0x80_000;
++pub const BOOT_CORE_STACK_START: usize = 0x80_000;
 
 diff -uNr 03_hacky_hello_world/src/bsp/raspberrypi.rs 04_zero_overhead_abstraction/src/bsp/raspberrypi.rs
 --- 03_hacky_hello_world/src/bsp/raspberrypi.rs
 +++ 04_zero_overhead_abstraction/src/bsp/raspberrypi.rs
-@@ -5,3 +5,4 @@
+@@ -5,3 +5,5 @@
  //! Top-level BSP file for the Raspberry Pi 3 and 4.
 
  pub mod console;
 +pub mod cpu;
++pub mod memory;
 
 diff -uNr 03_hacky_hello_world/src/cpu/smp.rs 04_zero_overhead_abstraction/src/cpu/smp.rs
 --- 03_hacky_hello_world/src/cpu/smp.rs

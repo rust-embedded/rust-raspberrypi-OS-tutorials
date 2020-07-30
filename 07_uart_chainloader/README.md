@@ -187,7 +187,7 @@ diff -uNr 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs 07_uart_chainloader/src/
 
      // Expect the boot core to start in EL2.
      if bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id() {
-         SP.set(bsp::cpu::BOOT_CORE_STACK_START);
+         SP.set(bsp::memory::BOOT_CORE_STACK_START as u64);
 -        runtime_init::runtime_init()
 +        relocate::relocate_self::<u64>()
      } else {
@@ -246,17 +246,6 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 0
      }
  }
 
-diff -uNr 06_drivers_gpio_uart/src/bsp/raspberrypi/cpu.rs 07_uart_chainloader/src/bsp/raspberrypi/cpu.rs
---- 06_drivers_gpio_uart/src/bsp/raspberrypi/cpu.rs
-+++ 07_uart_chainloader/src/bsp/raspberrypi/cpu.rs
-@@ -13,3 +13,6 @@
-
- /// The early boot core's stack address.
- pub const BOOT_CORE_STACK_START: u64 = 0x80_000;
-+
-+/// The address on which the Raspberry firmware loads every binary by default.
-+pub const BOARD_DEFAULT_LOAD_ADDRESS: usize = 0x80_000;
-
 diff -uNr 06_drivers_gpio_uart/src/bsp/raspberrypi/link.ld 07_uart_chainloader/src/bsp/raspberrypi/link.ld
 --- 06_drivers_gpio_uart/src/bsp/raspberrypi/link.ld
 +++ 07_uart_chainloader/src/bsp/raspberrypi/link.ld
@@ -288,6 +277,20 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/raspberrypi/link.ld 07_uart_chainloader/s
 +
      /DISCARD/ : { *(.comment*) }
  }
+
+diff -uNr 06_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs 07_uart_chainloader/src/bsp/raspberrypi/memory.rs
+--- 06_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs
++++ 07_uart_chainloader/src/bsp/raspberrypi/memory.rs
+@@ -11,6 +11,9 @@
+ /// The early boot core's stack address.
+ pub const BOOT_CORE_STACK_START: usize = 0x80_000;
+
++/// The address on which the Raspberry firmware loads every binary by default.
++pub const BOARD_DEFAULT_LOAD_ADDRESS: usize = 0x80_000;
++
+ /// The board's memory map.
+ #[rustfmt::skip]
+ pub(super) mod map {
 
 diff -uNr 06_drivers_gpio_uart/src/console.rs 07_uart_chainloader/src/console.rs
 --- 06_drivers_gpio_uart/src/console.rs
@@ -376,7 +379,7 @@ diff -uNr 06_drivers_gpio_uart/src/main.rs 07_uart_chainloader/src/main.rs
 +    console().write_char('O');
 +    console().write_char('K');
 +
-+    let kernel_addr: *mut u8 = bsp::cpu::BOARD_DEFAULT_LOAD_ADDRESS as *mut u8;
++    let kernel_addr: *mut u8 = bsp::memory::BOARD_DEFAULT_LOAD_ADDRESS as *mut u8;
 +    unsafe {
 +        // Read the kernel byte by byte.
 +        for i in 0..size {
@@ -450,7 +453,7 @@ diff -uNr 06_drivers_gpio_uart/src/relocate.rs 07_uart_chainloader/src/relocate.
 +    let mut reloc_dst_addr: *mut T = binary_start_addr as *mut T;
 +
 +    // The address of where the previous firmware loaded us.
-+    let mut src_addr: *const T = bsp::cpu::BOARD_DEFAULT_LOAD_ADDRESS as *const _;
++    let mut src_addr: *const T = bsp::memory::BOARD_DEFAULT_LOAD_ADDRESS as *const _;
 +
 +    // Copy the whole binary.
 +    //

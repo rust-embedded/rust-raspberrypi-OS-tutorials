@@ -10,6 +10,9 @@ pub mod mmu;
 // Public Definitions
 //--------------------------------------------------------------------------------------------------
 
+/// The early boot core's stack address.
+pub const BOOT_CORE_STACK_START: usize = 0x80_000;
+
 /// The board's memory map.
 #[rustfmt::skip]
 pub(super) mod map {

@@ -110,19 +110,18 @@
 #![no_std]
 
 // `mod cpu` provides the `_start()` function, the first function to run. `_start()` then calls
-// `runtime_init()`, which jumps to `kernel_init()` (defined in `main.rs`).
+// `runtime_init()`, which jumps to `kernel_init()`.
 
+mod bsp;
+mod console;
+mod cpu;
+mod driver;
+mod memory;
 mod panic_wait;
+mod print;
 mod runtime_init;
 mod synchronization;
-
-pub mod bsp;
-pub mod console;
-pub mod cpu;
-pub mod driver;
-pub mod memory;
-pub mod print;
-pub mod time;
+mod time;
 
 /// Early init code.
 ///

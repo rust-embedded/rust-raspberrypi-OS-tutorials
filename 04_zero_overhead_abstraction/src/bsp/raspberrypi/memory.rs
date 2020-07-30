@@ -2,11 +2,11 @@
 //
 // Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 
-//! BSP Processor code.
+//! BSP Memory Management.
 
 //--------------------------------------------------------------------------------------------------
 // Public Definitions
 //--------------------------------------------------------------------------------------------------
 
-/// Used by `arch` code to find the early boot core.
-pub const BOOT_CORE_ID: usize = 0;
+/// The early boot core's stack address.
+pub const BOOT_CORE_STACK_START: usize = 0x80_000;

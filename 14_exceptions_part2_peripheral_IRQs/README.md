@@ -2063,17 +2063,6 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver.rs 14_exceptions_part2_per
  #[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
  pub use bcm::*;
 
-diff -uNr 13_integrated_testing/src/bsp/raspberrypi/cpu.rs 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/cpu.rs
---- 13_integrated_testing/src/bsp/raspberrypi/cpu.rs
-+++ 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/cpu.rs
-@@ -13,3 +13,6 @@
-
- /// The early boot core's stack address.
- pub const BOOT_CORE_STACK_START: u64 = 0x80_000;
-+
-+/// The number of processor cores.
-+pub const NUM_CORES: usize = 4;
-
 diff -uNr 13_integrated_testing/src/bsp/raspberrypi/driver.rs 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/driver.rs
 --- 13_integrated_testing/src/bsp/raspberrypi/driver.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/driver.rs
@@ -2156,24 +2145,50 @@ diff -uNr 13_integrated_testing/src/bsp/raspberrypi/exception.rs 14_exceptions_p
 diff -uNr 13_integrated_testing/src/bsp/raspberrypi/memory.rs 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs
 --- 13_integrated_testing/src/bsp/raspberrypi/memory.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs
-@@ -24,8 +24,10 @@
+@@ -16,20 +16,22 @@
+ /// The board's memory map.
+ #[rustfmt::skip]
+ pub(super) mod map {
+-    pub const END_INCLUSIVE:       usize =        0xFFFF_FFFF;
++    pub const END_INCLUSIVE:                            usize =        0xFFFF_FFFF;
+
+-    pub const GPIO_OFFSET:         usize =        0x0020_0000;
+-    pub const UART_OFFSET:         usize =        0x0020_1000;
++    pub const GPIO_OFFSET:                              usize =        0x0020_0000;
++    pub const UART_OFFSET:                              usize =        0x0020_1000;
+
+     /// Physical devices.
+     #[cfg(feature = "bsp_rpi3")]
+     pub mod mmio {
          use super::*;
 
-         pub const BASE:                                 usize =        0x3F00_0000;
+-        pub const BASE:            usize =        0x3F00_0000;
+-        pub const GPIO_BASE:       usize = BASE + GPIO_OFFSET;
+-        pub const PL011_UART_BASE: usize = BASE + UART_OFFSET;
+-        pub const END_INCLUSIVE:   usize =        0x4000_FFFF;
++        pub const BASE:                                 usize =        0x3F00_0000;
 +        pub const PERIPHERAL_INTERRUPT_CONTROLLER_BASE: usize = BASE + 0x0000_B200;
-         pub const GPIO_BASE:                            usize = BASE + GPIO_OFFSET;
-         pub const PL011_UART_BASE:                      usize = BASE + UART_OFFSET;
++        pub const GPIO_BASE:                            usize = BASE + GPIO_OFFSET;
++        pub const PL011_UART_BASE:                      usize = BASE + UART_OFFSET;
 +        pub const LOCAL_INTERRUPT_CONTROLLER_BASE:      usize =        0x4000_0000;
-         pub const END_INCLUSIVE:                        usize =        0x4000_FFFF;
++        pub const END_INCLUSIVE:                        usize =        0x4000_FFFF;
      }
 
-@@ -37,6 +39,8 @@
-         pub const BASE:                                 usize =        0xFE00_0000;
-         pub const GPIO_BASE:                            usize = BASE + GPIO_OFFSET;
-         pub const PL011_UART_BASE:                      usize = BASE + UART_OFFSET;
+     /// Physical devices.
+@@ -37,9 +39,11 @@
+     pub mod mmio {
+         use super::*;
+
+-        pub const BASE:            usize =        0xFE00_0000;
+-        pub const GPIO_BASE:       usize = BASE + GPIO_OFFSET;
+-        pub const PL011_UART_BASE: usize = BASE + UART_OFFSET;
+-        pub const END_INCLUSIVE:   usize =        0xFF84_FFFF;
++        pub const BASE:                                 usize =        0xFE00_0000;
++        pub const GPIO_BASE:                            usize = BASE + GPIO_OFFSET;
++        pub const PL011_UART_BASE:                      usize = BASE + UART_OFFSET;
 +        pub const GICD_BASE:                            usize =        0xFF84_1000;
 +        pub const GICC_BASE:                            usize =        0xFF84_2000;
-         pub const END_INCLUSIVE:                        usize =        0xFF84_FFFF;
++        pub const END_INCLUSIVE:                        usize =        0xFF84_FFFF;
      }
  }
 
@@ -2216,6 +2231,23 @@ diff -uNr 13_integrated_testing/src/bsp/raspberrypi.rs 14_exceptions_part2_perip
 
  //--------------------------------------------------------------------------------------------------
  // Public Code
+
+diff -uNr 13_integrated_testing/src/common.rs 14_exceptions_part2_peripheral_IRQs/src/common.rs
+--- 13_integrated_testing/src/common.rs
++++ 14_exceptions_part2_peripheral_IRQs/src/common.rs
+@@ -0,0 +1,12 @@
++// SPDX-License-Identifier: MIT OR Apache-2.0
++//
++// Copyright (c) 2020 Andre Richter <andre.o.richter@gmail.com>
++
++//! General purpose stuff.
++
++/// Downard alignment of the input data.
++pub const fn align_down(value: u64, align: u64) -> u64 {
++    assert!(align.is_power_of_two());
++
++    value & (!(align - 1))
++}
 
 diff -uNr 13_integrated_testing/src/driver.rs 14_exceptions_part2_peripheral_IRQs/src/driver.rs
 --- 13_integrated_testing/src/driver.rs

@@ -177,7 +177,7 @@ fn kernel_main() -> ! {
     console().write_char('O');
     console().write_char('K');
 
-    let kernel_addr: *mut u8 = bsp::cpu::BOARD_DEFAULT_LOAD_ADDRESS as *mut u8;
+    let kernel_addr: *mut u8 = bsp::memory::BOARD_DEFAULT_LOAD_ADDRESS as *mut u8;
     unsafe {
         // Read the kernel byte by byte.
         for i in 0..size {

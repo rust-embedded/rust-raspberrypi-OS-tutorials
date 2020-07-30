@@ -31,7 +31,7 @@ pub unsafe fn relocate_self<T>() -> ! {
     let mut reloc_dst_addr: *mut T = binary_start_addr as *mut T;
 
     // The address of where the previous firmware loaded us.
-    let mut src_addr: *const T = bsp::cpu::BOARD_DEFAULT_LOAD_ADDRESS as *const _;
+    let mut src_addr: *const T = bsp::memory::BOARD_DEFAULT_LOAD_ADDRESS as *const _;
 
     // Copy the whole binary.
     //

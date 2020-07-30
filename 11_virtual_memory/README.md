@@ -755,28 +755,28 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory.rs 11_virtual_memory/src
  //--------------------------------------------------------------------------------------------------
  // Public Definitions
  //--------------------------------------------------------------------------------------------------
-@@ -11,6 +13,8 @@
+@@ -14,6 +16,8 @@
  /// The board's memory map.
  #[rustfmt::skip]
  pub(super) mod map {
-+    pub const END_INCLUSIVE:                            usize =        0xFFFF_FFFF;
++    pub const END_INCLUSIVE:       usize =        0xFFFF_FFFF;
 +
-     pub const GPIO_OFFSET:                              usize =        0x0020_0000;
-     pub const UART_OFFSET:                              usize =        0x0020_1000;
+     pub const GPIO_OFFSET:         usize =        0x0020_0000;
+     pub const UART_OFFSET:         usize =        0x0020_1000;
 
-@@ -22,6 +26,7 @@
-         pub const BASE:                                 usize =        0x3F00_0000;
-         pub const GPIO_BASE:                            usize = BASE + GPIO_OFFSET;
-         pub const PL011_UART_BASE:                      usize = BASE + UART_OFFSET;
-+        pub const END_INCLUSIVE:                        usize =        0x4000_FFFF;
+@@ -25,6 +29,7 @@
+         pub const BASE:            usize =        0x3F00_0000;
+         pub const GPIO_BASE:       usize = BASE + GPIO_OFFSET;
+         pub const PL011_UART_BASE: usize = BASE + UART_OFFSET;
++        pub const END_INCLUSIVE:   usize =        0x4000_FFFF;
      }
 
      /// Physical devices.
-@@ -32,5 +37,6 @@
-         pub const BASE:                                 usize =        0xFE00_0000;
-         pub const GPIO_BASE:                            usize = BASE + GPIO_OFFSET;
-         pub const PL011_UART_BASE:                      usize = BASE + UART_OFFSET;
-+        pub const END_INCLUSIVE:                        usize =        0xFF84_FFFF;
+@@ -35,5 +40,6 @@
+         pub const BASE:            usize =        0xFE00_0000;
+         pub const GPIO_BASE:       usize = BASE + GPIO_OFFSET;
+         pub const PL011_UART_BASE: usize = BASE + UART_OFFSET;
++        pub const END_INCLUSIVE:   usize =        0xFF84_FFFF;
      }
  }
 

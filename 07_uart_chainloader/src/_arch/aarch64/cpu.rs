@@ -25,7 +25,7 @@ pub unsafe extern "C" fn _start() -> ! {
 
     // Expect the boot core to start in EL2.
     if bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id() {
-        SP.set(bsp::cpu::BOOT_CORE_STACK_START);
+        SP.set(bsp::memory::BOOT_CORE_STACK_START as u64);
         relocate::relocate_self::<u64>()
     } else {
         // If not core0, infinitely wait for events.
