@@ -40,6 +40,7 @@ Some steps for preparing the SD card differ between RPi3 and RPi4, so be careful
 2. On the card, generate a file named `config.txt` with the following contents:
 
 ```txt
+arm_64bit=1
 init_uart_clock=48000000
 ```
 ### Pi 3
