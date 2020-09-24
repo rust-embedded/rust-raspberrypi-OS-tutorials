@@ -3,5 +3,4 @@
 **/kernel8.img
 
 Gemfile.lock
-.bundle
 .vendor
