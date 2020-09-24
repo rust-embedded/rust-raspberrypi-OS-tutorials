@@ -2232,23 +2232,6 @@ diff -uNr 13_integrated_testing/src/bsp/raspberrypi.rs 14_exceptions_part2_perip
  //--------------------------------------------------------------------------------------------------
  // Public Code
 
-diff -uNr 13_integrated_testing/src/common.rs 14_exceptions_part2_peripheral_IRQs/src/common.rs
---- 13_integrated_testing/src/common.rs
-+++ 14_exceptions_part2_peripheral_IRQs/src/common.rs
-@@ -0,0 +1,12 @@
-+// SPDX-License-Identifier: MIT OR Apache-2.0
-+//
-+// Copyright (c) 2020 Andre Richter <andre.o.richter@gmail.com>
-+
-+//! General purpose stuff.
-+
-+/// Downard alignment of the input data.
-+pub const fn align_down(value: u64, align: u64) -> u64 {
-+    assert!(align.is_power_of_two());
-+
-+    value & (!(align - 1))
-+}
-
 diff -uNr 13_integrated_testing/src/driver.rs 14_exceptions_part2_peripheral_IRQs/src/driver.rs
 --- 13_integrated_testing/src/driver.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/driver.rs
