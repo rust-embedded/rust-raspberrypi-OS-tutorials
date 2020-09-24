@@ -52,7 +52,7 @@ class MiniPush
         @target_serial.sync = true
     rescue Errno::EACCES => e
         puts
-        puts '[MP] 🚫 ' + e.message + " - Maybe try with 'sudo'"
+        puts "[MP] 🚫 #{e.message} - Maybe try with 'sudo'"
         exit
     else
         puts
@@ -148,7 +148,7 @@ class MiniPush
         connetion_reset
 
         puts
-        puts '[MP] ⚡ ' + 'Connection Error: Reinsert the USB serial again'.light_red
+        puts "[MP] ⚡ #{'Connection Error: Reinsert the USB serial again'.light_red}"
     end
 
     # When the serial is still powered.
@@ -156,7 +156,7 @@ class MiniPush
         connetion_reset
 
         puts
-        puts '[MP] ⚡ ' + 'Protocol Error: Remove and insert the USB serial again'.light_red
+        puts "[MP] ⚡ #{'Protocol Error: Remove and insert the USB serial again'.light_red}"
         sleep(1) while serial_connected?
     end
 
@@ -164,7 +164,7 @@ class MiniPush
         connetion_reset
 
         puts
-        puts '[MP] ⚡ ' + "Unexpected Error: #{error.inspect}".light_red
+        puts "[MP] ⚡ #{"Unexpected Error: #{error.inspect}".light_red}"
     end
 
     public

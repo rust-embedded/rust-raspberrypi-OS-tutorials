@@ -79,7 +79,7 @@ class TutorialCrate
     private
 
     def testable?
-        Dir.exist?(@folder + '/tests')
+        Dir.exist?("#{@folder}/tests")
     end
 end
 
@@ -120,14 +120,14 @@ class DevTool
         end
     end
 
-    def fmt(check = false)
+    def fmt(check: false)
         args = '-- --check' if check
 
         @crates.each { |c| c.fmt(args) }
     end
 
     def fmt_check
-        fmt(true)
+        fmt(check: true)
     end
 
     def make(bsp = nil)
@@ -214,7 +214,7 @@ class DevTool
 
         return nil if folders.empty?
 
-        crates = folders.map { |d| d + '/Cargo.toml' }.sort
+        crates = folders.map { |d| "#{d}/Cargo.toml" }.sort
         crates.each do |c|
             unless File.exist?(c)
                 puts "Crate not found: #{c}"

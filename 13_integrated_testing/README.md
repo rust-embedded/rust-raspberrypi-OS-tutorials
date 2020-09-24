@@ -1871,7 +1871,7 @@ diff -uNr 12_exceptions_part1_groundwork/tests/panic_exit_success/mod.rs 13_inte
 diff -uNr 12_exceptions_part1_groundwork/tests/runner.rb 13_integrated_testing/tests/runner.rb
 --- 12_exceptions_part1_groundwork/tests/runner.rb
 +++ 13_integrated_testing/tests/runner.rb
-@@ -0,0 +1,139 @@
+@@ -0,0 +1,143 @@
 +#!/usr/bin/env ruby
 +# frozen_string_literal: true
 +
@@ -1906,7 +1906,7 @@ diff -uNr 12_exceptions_part1_groundwork/tests/runner.rb 13_integrated_testing/t
 +        puts "#{INDENT}-------------------------------------------------------------------"
 +        print INDENT
 +        print '🦀 '
-+        print @output.join('').gsub("\n", "\n" + INDENT)
++        print @output.join('').gsub("\n", "\n#{INDENT}")
 +    end
 +
 +    def finish(error)
@@ -1927,6 +1927,8 @@ diff -uNr 12_exceptions_part1_groundwork/tests/runner.rb 13_integrated_testing/t
 +# Executes tests with console I/O.
 +class ConsoleTest < Test
 +    def initialize(binary, qemu_cmd, test_name, console_subtests)
++        super()
++
 +        @binary = binary
 +        @qemu_cmd = qemu_cmd
 +        @test_name = test_name
@@ -1937,7 +1939,7 @@ diff -uNr 12_exceptions_part1_groundwork/tests/runner.rb 13_integrated_testing/t
 +    end
 +
 +    def format_test_name(number, name)
-+        formatted_name = number.to_s.rjust(3) + '. ' + name
++        formatted_name = "#{number.to_s.rjust(3)}. #{name}"
 +        formatted_name.ljust(63, '.')
 +    end
 +
@@ -1970,6 +1972,8 @@ diff -uNr 12_exceptions_part1_groundwork/tests/runner.rb 13_integrated_testing/t
 +    MAX_WAIT_SECS = 5
 +
 +    def initialize(binary, qemu_cmd, test_name)
++        super()
++
 +        @binary = binary
 +        @qemu_cmd = qemu_cmd
 +        @test_name = test_name
@@ -1999,7 +2003,7 @@ diff -uNr 12_exceptions_part1_groundwork/tests/runner.rb 13_integrated_testing/t
 +##--------------------------------------------------------------------------------------------------
 +binary = ARGV.last
 +test_name = binary.gsub(modulor{.*deps/}, '').split('-')[0]
-+console_test_file = 'tests/' + test_name + '.rb'
++console_test_file = "tests/#{test_name}.rb"
 +qemu_cmd = ARGV.join(' ')
 +
 +test_runner = if File.exist?(console_test_file)

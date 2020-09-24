@@ -32,7 +32,7 @@ class Test
         puts "#{INDENT}-------------------------------------------------------------------"
         print INDENT
         print '🦀 '
-        print @output.join('').gsub("\n", "\n" + INDENT)
+        print @output.join('').gsub("\n", "\n#{INDENT}")
     end
 
     def finish(error)
@@ -53,6 +53,8 @@ end
 # Executes tests with console I/O.
 class ConsoleTest < Test
     def initialize(binary, qemu_cmd, test_name, console_subtests)
+        super()
+
         @binary = binary
         @qemu_cmd = qemu_cmd
         @test_name = test_name
@@ -63,7 +65,7 @@ class ConsoleTest < Test
     end
 
     def format_test_name(number, name)
-        formatted_name = number.to_s.rjust(3) + '. ' + name
+        formatted_name = "#{number.to_s.rjust(3)}. #{name}"
         formatted_name.ljust(63, '.')
     end
 
@@ -96,6 +98,8 @@ class RawTest < Test
     MAX_WAIT_SECS = 5
 
     def initialize(binary, qemu_cmd, test_name)
+        super()
+
         @binary = binary
         @qemu_cmd = qemu_cmd
         @test_name = test_name
@@ -125,7 +129,7 @@ end
 ##--------------------------------------------------------------------------------------------------
 binary = ARGV.last
 test_name = binary.gsub(%r{.*deps/}, '').split('-')[0]
-console_test_file = 'tests/' + test_name + '.rb'
+console_test_file = "tests/#{test_name}.rb"
 qemu_cmd = ARGV.join(' ')
 
 test_runner = if File.exist?(console_test_file)
