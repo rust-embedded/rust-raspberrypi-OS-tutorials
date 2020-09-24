@@ -68,8 +68,8 @@ other Unix flavors such as **macOS**, but this is only _experimental_.
 1. Install a suitable `Rust` toolchain:
    1. If you already have a version of Rust installed:
       ```bash
-      rustup toolchain add nightly-2020-06-30
-      rustup default nightly-2020-06-30
+      rustup toolchain add nightly-2020-09-24
+      rustup default nightly-2020-09-24
       rustup component add llvm-tools-preview
       rustup target add aarch64-unknown-none-softfloat
       cargo install cargo-binutils
@@ -78,7 +78,7 @@ other Unix flavors such as **macOS**, but this is only _experimental_.
    2. If you need a fresh install:
       ```bash
       curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- \
-          --default-toolchain nightly-2020-06-30                           \
+          --default-toolchain nightly-2020-09-24                           \
           --component llvm-tools-preview
 
       source $HOME/.cargo/env
