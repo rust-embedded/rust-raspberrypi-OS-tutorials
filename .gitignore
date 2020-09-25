@@ -2,5 +2,8 @@
 **/.gdb_history
 **/kernel8.img
 
-Gemfile.lock
+node_modules
 .vendor
+
+Gemfile.lock
+package-lock.json

@@ -1,0 +1,8 @@
+**/*
+!**/*/
+
+**/target/*
+.vendor
+
+!*.json
+!*.yml
