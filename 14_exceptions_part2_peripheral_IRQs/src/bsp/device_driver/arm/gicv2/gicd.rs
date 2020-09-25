@@ -144,7 +144,7 @@ impl GICD {
     /// Route all SPIs to the boot core and enable the distributor.
     pub fn boot_core_init(&self) {
         assert!(
-            state::state_manager().state() == state::State::Init,
+            state::state_manager().is_init(),
             "Only allowed during kernel init phase"
         );
 

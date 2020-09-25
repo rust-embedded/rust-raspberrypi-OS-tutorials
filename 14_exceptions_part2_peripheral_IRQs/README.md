@@ -1163,7 +1163,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2/gicd.rs 14_excep
 +    /// Route all SPIs to the boot core and enable the distributor.
 +    pub fn boot_core_init(&self) {
 +        assert!(
-+            state::state_manager().state() == state::State::Init,
++            state::state_manager().is_init(),
 +            "Only allowed during kernel init phase"
 +        );
 +
@@ -2507,7 +2507,7 @@ diff -uNr 13_integrated_testing/src/main.rs 14_exceptions_part2_peripheral_IRQs/
 diff -uNr 13_integrated_testing/src/state.rs 14_exceptions_part2_peripheral_IRQs/src/state.rs
 --- 13_integrated_testing/src/state.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/state.rs
-@@ -0,0 +1,83 @@
+@@ -0,0 +1,92 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2020 Andre Richter <andre.o.richter@gmail.com>
@@ -2517,12 +2517,12 @@ diff -uNr 13_integrated_testing/src/state.rs 14_exceptions_part2_peripheral_IRQs
 +use core::sync::atomic::{AtomicU8, Ordering};
 +
 +//--------------------------------------------------------------------------------------------------
-+// Public Definitions
++// Private Definitions
 +//--------------------------------------------------------------------------------------------------
 +
 +/// Different stages in the kernel execution.
 +#[derive(Copy, Clone, Eq, PartialEq)]
-+pub enum State {
++enum State {
 +    /// The kernel starts booting in this state.
 +    Init,
 +
@@ -2534,6 +2534,10 @@ diff -uNr 13_integrated_testing/src/state.rs 14_exceptions_part2_peripheral_IRQs
 +    /// exectution mode to symmetric multiprocessing (SMP).
 +    MultiCoreMain,
 +}
++
++//--------------------------------------------------------------------------------------------------
++// Public Definitions
++//--------------------------------------------------------------------------------------------------
 +
 +/// Maintains the kernel state and state transitions.
 +pub struct StateManager(AtomicU8);
@@ -2564,7 +2568,7 @@ diff -uNr 13_integrated_testing/src/state.rs 14_exceptions_part2_peripheral_IRQs
 +    }
 +
 +    /// Return the current state.
-+    pub fn state(&self) -> State {
++    fn state(&self) -> State {
 +        let state = self.0.load(Ordering::Acquire);
 +
 +        match state {
@@ -2573,6 +2577,11 @@ diff -uNr 13_integrated_testing/src/state.rs 14_exceptions_part2_peripheral_IRQs
 +            Self::MULTI_CORE_MAIN => State::MultiCoreMain,
 +            _ => panic!("Invalid KERNEL_STATE"),
 +        }
++    }
++
++    /// Return if the kernel is still in an init state.
++    pub fn is_init(&self) -> bool {
++        self.state() == State::Init
 +    }
 +
 +    /// Transition from Init to SingleCoreMain.
@@ -2686,7 +2695,7 @@ diff -uNr 13_integrated_testing/src/synchronization.rs 14_exceptions_part2_perip
 +
 +    fn write<R>(&mut self, f: impl FnOnce(&mut Self::Data) -> R) -> R {
 +        assert!(
-+            state::state_manager().state() == state::State::Init,
++            state::state_manager().is_init(),
 +            "InitStateLock::write called after kernel init phase"
 +        );
 +        assert!(

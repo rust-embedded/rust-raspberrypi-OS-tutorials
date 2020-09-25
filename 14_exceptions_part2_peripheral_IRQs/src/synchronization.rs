@@ -130,7 +130,7 @@ impl<T> interface::ReadWriteEx for &InitStateLock<T> {
 
     fn write<R>(&mut self, f: impl FnOnce(&mut Self::Data) -> R) -> R {
         assert!(
-            state::state_manager().state() == state::State::Init,
+            state::state_manager().is_init(),
             "InitStateLock::write called after kernel init phase"
         );
         assert!(
