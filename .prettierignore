@@ -1,8 +1,9 @@
 **/*
 !**/*/
 
-**/target/*
-.vendor
+**/target/
+node_modules/
+.vendor/
 
 !*.json
 !*.yml
