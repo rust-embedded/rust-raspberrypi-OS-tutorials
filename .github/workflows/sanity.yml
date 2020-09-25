@@ -11,10 +11,10 @@ on:
 jobs:
   build:
     name: Various Sanity Checks
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - name: Set up Node
         uses: actions/setup-node@v1
         with:
@@ -22,7 +22,7 @@ jobs:
       - name: Set up Ruby 2.x
         uses: actions/setup-ruby@v1
         with:
-          ruby-version: 2.x
+          ruby-version: "2.7"
       - name: Set up Bundler
         run: |
           gem install bundler
