@@ -5,18 +5,18 @@ on:
     branches:
       - master
     paths-ignore:
-      - 'utils/**'
-      - 'doc/**'
-      - 'docker/**'
+      - "utils/**"
+      - "doc/**"
+      - "docker/**"
   pull_request:
     branches:
       - master
     paths-ignore:
-      - 'utils/**'
-      - 'doc/**'
-      - 'docker/**'
+      - "utils/**"
+      - "doc/**"
+      - "docker/**"
   schedule:
-    - cron: '0 5 * * *'
+    - cron: "0 5 * * *"
 
 jobs:
   build:
@@ -24,23 +24,23 @@ jobs:
     runs-on: ubuntu-18.04
 
     steps:
-    - uses: actions/checkout@v1
-    - name: Set up Ruby 2.x
-      uses: actions/setup-ruby@v1
-      with:
-        ruby-version: 2.x
-    - name: Set up Rust nightly
-      run: |
+      - uses: actions/checkout@v1
+      - name: Set up Ruby 2.x
+        uses: actions/setup-ruby@v1
+        with:
+          ruby-version: 2.x
+      - name: Set up Rust nightly
+        run: |
           rustup self update
           rustup toolchain install nightly --component llvm-tools-preview
           rustup default nightly
           rustup target add aarch64-unknown-none-softfloat
           cargo install cargo-binutils
-    - name: Set up Ruby
-      run: |
-        gem install bundler
-        bundle config set without 'uart'
-        bundle install --retry 3
-    - name: Make
-      run: |
-        BSP=rpi3 bundle exec ruby utils/devtool.rb make
+      - name: Set up Ruby
+        run: |
+          gem install bundler
+          bundle config set without 'uart'
+          bundle install --retry 3
+      - name: Make
+        run: |
+          BSP=rpi3 bundle exec ruby utils/devtool.rb make

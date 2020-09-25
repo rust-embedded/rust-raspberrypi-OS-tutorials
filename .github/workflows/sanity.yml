@@ -14,31 +14,31 @@ jobs:
     runs-on: ubuntu-18.04
 
     steps:
-    - uses: actions/checkout@v1
-    - name: Set up Ruby 2.x
-      uses: actions/setup-ruby@v1
-      with:
-        ruby-version: 2.x
-    - name: Set up Rust nightly
-      run: |
+      - uses: actions/checkout@v1
+      - name: Set up Ruby 2.x
+        uses: actions/setup-ruby@v1
+        with:
+          ruby-version: 2.x
+      - name: Set up Rust nightly
+        run: |
           rustup self update
           rustup toolchain install nightly --component rustfmt clippy
           rustup default nightly
           rustup target add aarch64-unknown-none-softfloat
-    - name: Set up Ruby
-      run: |
-        gem install bundler
-        bundle config set without 'uart'
-        bundle install --retry 3
-    - name: Setup misspell
-      run: |
-        curl -L -o ./install-misspell.sh https://git.io/misspell
-        sh ./install-misspell.sh -b ~/bin
-    - name: Run checks
-      run: |
-        BSP=rpi3 bundle exec ruby utils/devtool.rb clippy
-        BSP=rpi4 bundle exec ruby utils/devtool.rb clippy
-        bundle exec ruby utils/devtool.rb copyright
-        bundle exec ruby utils/devtool.rb fmt_check
-        bundle exec ruby utils/devtool.rb misspell
-        bundle exec ruby utils/devtool.rb rubocop
+      - name: Set up Ruby
+        run: |
+          gem install bundler
+          bundle config set without 'uart'
+          bundle install --retry 3
+      - name: Setup misspell
+        run: |
+          curl -L -o ./install-misspell.sh https://git.io/misspell
+          sh ./install-misspell.sh -b ~/bin
+      - name: Run checks
+        run: |
+          BSP=rpi3 bundle exec ruby utils/devtool.rb clippy
+          BSP=rpi4 bundle exec ruby utils/devtool.rb clippy
+          bundle exec ruby utils/devtool.rb copyright
+          bundle exec ruby utils/devtool.rb fmt_check
+          bundle exec ruby utils/devtool.rb misspell
+          bundle exec ruby utils/devtool.rb rubocop

@@ -1,6 +1,4 @@
 {
-    "editor.formatOnSave": true,
-    "editor.rulers": [
-        100
-    ],
+  "editor.formatOnSave": true,
+  "editor.rulers": [100]
 }
