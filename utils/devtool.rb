@@ -41,8 +41,8 @@ class TutorialCrate
         Dir.chdir(@folder) { exit(1) unless system("BSP=#{bsp} make clippy") }
     end
 
-    def fmt(args)
-        print 'Format '.light_blue
+    def fmt_cargo_rust(args)
+        print 'Rust cargo fmt '.light_blue
         print "#{args} ".light_blue unless args.nil?
         puts @folder
 
@@ -86,6 +86,7 @@ end
 # Forks commands to all applicable receivers
 class DevTool
     def initialize
+        @user_has_supplied_crates = false
         @bsp = bsp_from_env || SUPPORTED_BSPS.first
 
         cl = user_supplied_crate_list || Dir['*/Cargo.toml'].sort
@@ -120,14 +121,16 @@ class DevTool
         end
     end
 
-    def fmt(check: false)
-        args = '-- --check' if check
-
-        @crates.each { |c| c.fmt(args) }
+    def fmt
+        fmt_cargo_rust(check: false)
+        puts
+        fmt_prettier(check: false)
     end
 
     def fmt_check
-        fmt(check: true)
+        fmt_cargo_rust(check: true)
+        puts
+        fmt_prettier(check: true)
     end
 
     def make(bsp = nil)
@@ -166,7 +169,7 @@ class DevTool
 
     def rubocop
         puts 'Rubocop'.light_blue
-        exit(1) unless system('rubocop')
+        exit(1) unless system('bundle exec rubocop')
     end
 
     def ready_for_publish
@@ -177,6 +180,7 @@ class DevTool
         clippy('rpi4')
         clippy('rpi3')
         copyright
+        diff
 
         clean
         make('rpi4')
@@ -184,7 +188,6 @@ class DevTool
         make_xtra
         test_unit
         test_integration
-        diff
         clean
     end
 
@@ -207,6 +210,29 @@ class DevTool
         return bsp if SUPPORTED_BSPS.include?(bsp)
 
         nil
+    end
+
+    def fmt_cargo_rust(check: false)
+        args = '-- --check' if check
+
+        @crates.each { |c| c.fmt_cargo_rust(args) }
+    end
+
+    def fmt_prettier(check: false)
+        args = if check
+                   '--check'
+               else
+                   '--write'
+               end
+
+        args += if @user_has_supplied_crates
+                    " #{@crates.map(&:folder).join(' ')}"
+                else
+                    ' .'
+                end
+
+        puts 'Prettier:'.light_blue
+        exit(1) unless system("./node_modules/.bin/prettier #{args}")
     end
 
     def user_supplied_crate_list

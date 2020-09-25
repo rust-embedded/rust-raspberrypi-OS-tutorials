@@ -9,15 +9,33 @@ require 'rubygems'
 require 'bundler/setup'
 require_relative '../utils/devtool/copyright'
 
-source_files_exts = ['.S', '.rs', '.rb']
+def copyright_check(staged_files)
+    source_files_exts = ['.S', '.rs', '.rb']
 
-staged_files = `git --no-pager diff --name-only --cached --diff-filter=d`.split(/\n/)
-staged_files.select! do |f|
-    next if f.include?('build.rs')
+    staged_files = staged_files.select do |f|
+        next if f.include?('build.rs')
 
-    f.include?('Makefile') ||
-        f.include?('Dockerfile') ||
-        source_files_exts.include?(File.extname(f))
+        f.include?('Makefile') ||
+            f.include?('Dockerfile') ||
+            source_files_exts.include?(File.extname(f))
+    end
+    return true if staged_files.empty?
+
+    copyright_check_files(staged_files)
 end
 
-exit(1) unless copyright_check_files(staged_files)
+##--------------------------------------------------------------------------------------------------
+## Execution starts here
+##--------------------------------------------------------------------------------------------------
+staged_files = `git --no-pager diff --name-only --cached --diff-filter=d`.split(/\n/)
+root_dir = `git rev-parse --show-toplevel`.strip
+
+# Copyright must be fixed manually.
+exit(1) unless copyright_check(staged_files)
+
+# Brute-force format. Don't care if it affects non-staged files as well, since we only add back the
+# staged ones.
+Dir.chdir(root_dir) { system('ruby utils/devtool.rb fmt') }
+
+staged_files.each { |f| system("git add #{f}") }
+exit(0)
