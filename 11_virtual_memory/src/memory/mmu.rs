@@ -75,10 +75,10 @@ pub struct AttributeFields {
 
 /// Architecture agnostic descriptor for a memory range.
 #[allow(missing_docs)]
-pub struct RangeDescriptor {
+pub struct TranslationDescriptor {
     pub name: &'static str,
     pub virtual_range: fn() -> RangeInclusive<usize>,
-    pub translation: Translation,
+    pub physical_range_translation: Translation,
     pub attribute_fields: AttributeFields,
 }
 
@@ -88,7 +88,7 @@ pub struct KernelVirtualLayout<const NUM_SPECIAL_RANGES: usize> {
     max_virt_addr_inclusive: usize,
 
     /// Array of descriptors for non-standard (normal cacheable DRAM) memory regions.
-    inner: [RangeDescriptor; NUM_SPECIAL_RANGES],
+    inner: [TranslationDescriptor; NUM_SPECIAL_RANGES],
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -105,8 +105,8 @@ impl Default for AttributeFields {
     }
 }
 
-/// Human-readable output of a RangeDescriptor.
-impl fmt::Display for RangeDescriptor {
+/// Human-readable output of a TranslationDescriptor.
+impl fmt::Display for TranslationDescriptor {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // Call the function to which self.range points, and dereference the result, which causes
         // Rust to copy the value.
@@ -154,14 +154,15 @@ impl fmt::Display for RangeDescriptor {
 
 impl<const NUM_SPECIAL_RANGES: usize> KernelVirtualLayout<{ NUM_SPECIAL_RANGES }> {
     /// Create a new instance.
-    pub const fn new(max: usize, layout: [RangeDescriptor; NUM_SPECIAL_RANGES]) -> Self {
+    pub const fn new(max: usize, layout: [TranslationDescriptor; NUM_SPECIAL_RANGES]) -> Self {
         Self {
             max_virt_addr_inclusive: max,
             inner: layout,
         }
     }
 
-    /// For a virtual address, find and return the output address and corresponding attributes.
+    /// For a virtual address, find and return the physical output address and corresponding
+    /// attributes.
     ///
     /// If the address is not found in `inner`, return an identity mapped default with normal
     /// cacheable DRAM attributes.
@@ -175,7 +176,7 @@ impl<const NUM_SPECIAL_RANGES: usize> KernelVirtualLayout<{ NUM_SPECIAL_RANGES }
 
         for i in self.inner.iter() {
             if (i.virtual_range)().contains(&virt_addr) {
-                let output_addr = match i.translation {
+                let output_addr = match i.physical_range_translation {
                     Translation::Identity => virt_addr,
                     Translation::Offset(a) => a + (virt_addr - (i.virtual_range)().start()),
                 };

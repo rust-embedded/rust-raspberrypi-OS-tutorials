@@ -157,29 +157,30 @@ diff -uNr 03_hacky_hello_world/src/bsp/raspberrypi/cpu.rs 04_zero_overhead_abstr
 diff -uNr 03_hacky_hello_world/src/bsp/raspberrypi/memory.rs 04_zero_overhead_abstraction/src/bsp/raspberrypi/memory.rs
 --- 03_hacky_hello_world/src/bsp/raspberrypi/memory.rs
 +++ 04_zero_overhead_abstraction/src/bsp/raspberrypi/memory.rs
-@@ -0,0 +1,12 @@
-+// SPDX-License-Identifier: MIT OR Apache-2.0
-+//
-+// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
-+
-+//! BSP Memory Management.
-+
-+//--------------------------------------------------------------------------------------------------
+@@ -17,6 +17,13 @@
+ }
+
+ //--------------------------------------------------------------------------------------------------
 +// Public Definitions
 +//--------------------------------------------------------------------------------------------------
 +
 +/// The early boot core's stack address.
 +pub const BOOT_CORE_STACK_START: usize = 0x80_000;
++
++//--------------------------------------------------------------------------------------------------
+ // Public Code
+ //--------------------------------------------------------------------------------------------------
+
 
 diff -uNr 03_hacky_hello_world/src/bsp/raspberrypi.rs 04_zero_overhead_abstraction/src/bsp/raspberrypi.rs
 --- 03_hacky_hello_world/src/bsp/raspberrypi.rs
 +++ 04_zero_overhead_abstraction/src/bsp/raspberrypi.rs
-@@ -5,3 +5,5 @@
+@@ -5,4 +5,5 @@
  //! Top-level BSP file for the Raspberry Pi 3 and 4.
 
  pub mod console;
 +pub mod cpu;
-+pub mod memory;
+ pub mod memory;
 
 diff -uNr 03_hacky_hello_world/src/cpu/smp.rs 04_zero_overhead_abstraction/src/cpu/smp.rs
 --- 03_hacky_hello_world/src/cpu/smp.rs
@@ -235,7 +236,7 @@ diff -uNr 03_hacky_hello_world/src/main.rs 04_zero_overhead_abstraction/src/main
 diff -uNr 03_hacky_hello_world/src/runtime_init.rs 04_zero_overhead_abstraction/src/runtime_init.rs
 --- 03_hacky_hello_world/src/runtime_init.rs
 +++ 04_zero_overhead_abstraction/src/runtime_init.rs
-@@ -50,8 +50,7 @@
+@@ -30,8 +30,7 @@
  /// # Safety
  ///
  /// - Only a single core must be active and running this function.

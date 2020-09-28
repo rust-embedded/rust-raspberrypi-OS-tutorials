@@ -105,12 +105,12 @@ diff -uNr 02_runtime_init/src/bsp/raspberrypi/console.rs 03_hacky_hello_world/sr
 diff -uNr 02_runtime_init/src/bsp/raspberrypi.rs 03_hacky_hello_world/src/bsp/raspberrypi.rs
 --- 02_runtime_init/src/bsp/raspberrypi.rs
 +++ 03_hacky_hello_world/src/bsp/raspberrypi.rs
-@@ -4,4 +4,4 @@
+@@ -4,4 +4,5 @@
 
  //! Top-level BSP file for the Raspberry Pi 3 and 4.
 
--// Coming soon.
 +pub mod console;
+ pub mod memory;
 
 diff -uNr 02_runtime_init/src/console.rs 03_hacky_hello_world/src/console.rs
 --- 02_runtime_init/src/console.rs

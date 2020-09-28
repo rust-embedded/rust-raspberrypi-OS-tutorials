@@ -284,7 +284,7 @@ diff -uNr 07_uart_chainloader/src/bsp/raspberrypi/link.ld 08_timestamps/src/bsp/
 diff -uNr 07_uart_chainloader/src/bsp/raspberrypi/memory.rs 08_timestamps/src/bsp/raspberrypi/memory.rs
 --- 07_uart_chainloader/src/bsp/raspberrypi/memory.rs
 +++ 08_timestamps/src/bsp/raspberrypi/memory.rs
-@@ -11,9 +11,6 @@
+@@ -23,9 +23,6 @@
  /// The early boot core's stack address.
  pub const BOOT_CORE_STACK_START: usize = 0x80_000;
 
@@ -543,8 +543,8 @@ diff -uNr 07_uart_chainloader/src/relocate.rs 08_timestamps/src/relocate.rs
 diff -uNr 07_uart_chainloader/src/runtime_init.rs 08_timestamps/src/runtime_init.rs
 --- 07_uart_chainloader/src/runtime_init.rs
 +++ 08_timestamps/src/runtime_init.rs
-@@ -8,43 +8,9 @@
- use core::ops::Range;
+@@ -7,43 +7,9 @@
+ use crate::{bsp, memory};
 
  //--------------------------------------------------------------------------------------------------
 -// Private Definitions
@@ -584,10 +584,10 @@ diff -uNr 07_uart_chainloader/src/runtime_init.rs 08_timestamps/src/runtime_init
 
 -impl RunTimeInit for Traitor {}
 -
- /// Return the range spanning the .bss section.
+ /// Zero out the .bss section.
  ///
  /// # Safety
-@@ -78,7 +44,14 @@
+@@ -58,7 +24,14 @@
  // Public Code
  //--------------------------------------------------------------------------------------------------
 

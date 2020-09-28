@@ -2145,7 +2145,7 @@ diff -uNr 13_integrated_testing/src/bsp/raspberrypi/exception.rs 14_exceptions_p
 diff -uNr 13_integrated_testing/src/bsp/raspberrypi/memory.rs 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs
 --- 13_integrated_testing/src/bsp/raspberrypi/memory.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs
-@@ -16,20 +16,22 @@
+@@ -30,20 +30,22 @@
  /// The board's memory map.
  #[rustfmt::skip]
  pub(super) mod map {
@@ -2175,7 +2175,7 @@ diff -uNr 13_integrated_testing/src/bsp/raspberrypi/memory.rs 14_exceptions_part
      }
 
      /// Physical devices.
-@@ -37,9 +39,11 @@
+@@ -51,10 +53,12 @@
      pub mod mmio {
          use super::*;
 
@@ -2191,6 +2191,7 @@ diff -uNr 13_integrated_testing/src/bsp/raspberrypi/memory.rs 14_exceptions_part
 +        pub const END_INCLUSIVE:                        usize =        0xFF84_FFFF;
      }
  }
+
 
 diff -uNr 13_integrated_testing/src/bsp/raspberrypi.rs 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi.rs
 --- 13_integrated_testing/src/bsp/raspberrypi.rs

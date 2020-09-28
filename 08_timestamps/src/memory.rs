@@ -10,7 +10,7 @@ use core::ops::Range;
 // Public Code
 //--------------------------------------------------------------------------------------------------
 
-/// Zero out a memory region.
+/// Zero out a memory range.
 ///
 /// # Safety
 ///

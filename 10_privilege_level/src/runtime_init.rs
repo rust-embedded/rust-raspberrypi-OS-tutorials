@@ -4,31 +4,11 @@
 
 //! Rust runtime initialization code.
 
-use crate::memory;
-use core::ops::Range;
+use crate::{bsp, memory};
 
 //--------------------------------------------------------------------------------------------------
 // Private Code
 //--------------------------------------------------------------------------------------------------
-
-/// Return the range spanning the .bss section.
-///
-/// # Safety
-///
-/// - The symbol-provided addresses must be valid.
-/// - The symbol-provided addresses must be usize aligned.
-unsafe fn bss_range() -> Range<*mut usize> {
-    extern "C" {
-        // Boundaries of the .bss section, provided by linker script symbols.
-        static mut __bss_start: usize;
-        static mut __bss_end: usize;
-    }
-
-    Range {
-        start: &mut __bss_start,
-        end: &mut __bss_end,
-    }
-}
 
 /// Zero out the .bss section.
 ///
@@ -37,7 +17,7 @@ unsafe fn bss_range() -> Range<*mut usize> {
 /// - Must only be called pre `kernel_init()`.
 #[inline(always)]
 unsafe fn zero_bss() {
-    memory::zero_volatile(bss_range());
+    memory::zero_volatile(bsp::memory::bss_range());
 }
 
 //--------------------------------------------------------------------------------------------------

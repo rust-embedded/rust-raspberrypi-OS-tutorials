@@ -6,6 +6,20 @@
 
 pub mod mmu;
 
+use core::ops::Range;
+
+//--------------------------------------------------------------------------------------------------
+// Private Definitions
+//--------------------------------------------------------------------------------------------------
+
+// Symbols from the linker script.
+extern "C" {
+    static __ro_start: usize;
+    static __ro_end: usize;
+    static __bss_start: usize;
+    static __bss_end: usize;
+}
+
 //--------------------------------------------------------------------------------------------------
 // Public Definitions
 //--------------------------------------------------------------------------------------------------
@@ -41,5 +55,48 @@ pub(super) mod map {
         pub const GPIO_BASE:       usize = BASE + GPIO_OFFSET;
         pub const PL011_UART_BASE: usize = BASE + UART_OFFSET;
         pub const END_INCLUSIVE:   usize =        0xFF84_FFFF;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// Private Code
+//--------------------------------------------------------------------------------------------------
+
+/// Start address of the Read-Only (RO) range.
+///
+/// # Safety
+///
+/// - Value is provided by the linker script and must be trusted as-is.
+#[inline(always)]
+fn ro_start() -> usize {
+    unsafe { &__ro_start as *const _ as usize }
+}
+
+/// Size of the Read-Only (RO) range of the kernel binary.
+///
+/// # Safety
+///
+/// - Value is provided by the linker script and must be trusted as-is.
+#[inline(always)]
+fn ro_end() -> usize {
+    unsafe { &__ro_end as *const _ as usize }
+}
+
+//--------------------------------------------------------------------------------------------------
+// Public Code
+//--------------------------------------------------------------------------------------------------
+
+/// Return the range spanning the .bss section.
+///
+/// # Safety
+///
+/// - Values are provided by the linker script and must be trusted as-is.
+/// - The linker-provided addresses must be u64 aligned.
+pub fn bss_range() -> Range<*mut u64> {
+    unsafe {
+        Range {
+            start: &__bss_start as *const _ as *mut u64,
+            end: &__bss_end as *const _ as *mut u64,
+        }
     }
 }

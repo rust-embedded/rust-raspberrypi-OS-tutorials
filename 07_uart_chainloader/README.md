@@ -281,7 +281,7 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/raspberrypi/link.ld 07_uart_chainloader/s
 diff -uNr 06_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs 07_uart_chainloader/src/bsp/raspberrypi/memory.rs
 --- 06_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs
 +++ 07_uart_chainloader/src/bsp/raspberrypi/memory.rs
-@@ -11,6 +11,9 @@
+@@ -23,6 +23,9 @@
  /// The early boot core's stack address.
  pub const BOOT_CORE_STACK_START: usize = 0x80_000;
 
@@ -476,8 +476,8 @@ diff -uNr 06_drivers_gpio_uart/src/relocate.rs 07_uart_chainloader/src/relocate.
 diff -uNr 06_drivers_gpio_uart/src/runtime_init.rs 07_uart_chainloader/src/runtime_init.rs
 --- 06_drivers_gpio_uart/src/runtime_init.rs
 +++ 07_uart_chainloader/src/runtime_init.rs
-@@ -8,9 +8,43 @@
- use core::ops::Range;
+@@ -7,9 +7,43 @@
+ use crate::{bsp, memory};
 
  //--------------------------------------------------------------------------------------------------
 +// Private Definitions
@@ -517,10 +517,10 @@ diff -uNr 06_drivers_gpio_uart/src/runtime_init.rs 07_uart_chainloader/src/runti
 
 +impl RunTimeInit for Traitor {}
 +
- /// Return the range spanning the .bss section.
+ /// Zero out the .bss section.
  ///
  /// # Safety
-@@ -44,14 +78,7 @@
+@@ -24,14 +58,7 @@
  // Public Code
  //--------------------------------------------------------------------------------------------------
 

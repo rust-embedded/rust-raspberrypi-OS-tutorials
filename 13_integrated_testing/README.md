@@ -1000,7 +1000,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/bsp/raspberrypi/console.rs 13_integ
 diff -uNr 12_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs 13_integrated_testing/src/bsp/raspberrypi/memory/mmu.rs
 --- 12_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs
 +++ 13_integrated_testing/src/bsp/raspberrypi/memory/mmu.rs
-@@ -82,3 +82,28 @@
+@@ -71,3 +71,28 @@
  pub fn virt_mem_layout() -> &'static KernelVirtualLayout<{ NUM_MEM_RANGES }> {
      &LAYOUT
  }
@@ -1462,13 +1462,13 @@ diff -uNr 12_exceptions_part1_groundwork/src/memory/mmu.rs 13_integrated_testing
  #[derive(Copy, Clone)]
  pub enum Translation {
      Identity,
-@@ -196,4 +195,9 @@
+@@ -197,4 +196,9 @@
              info!("{}", i);
          }
      }
 +
 +    #[cfg(test)]
-+    pub fn inner(&self) -> &[RangeDescriptor; NUM_SPECIAL_RANGES] {
++    pub fn inner(&self) -> &[TranslationDescriptor; NUM_SPECIAL_RANGES] {
 +        &self.inner
 +    }
  }
@@ -1551,7 +1551,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/panic_wait.rs 13_integrated_testing
 diff -uNr 12_exceptions_part1_groundwork/src/runtime_init.rs 13_integrated_testing/src/runtime_init.rs
 --- 12_exceptions_part1_groundwork/src/runtime_init.rs
 +++ 13_integrated_testing/src/runtime_init.rs
-@@ -51,7 +51,33 @@
+@@ -31,7 +31,33 @@
  ///
  /// - Only a single core must be active and running this function.
  pub unsafe fn runtime_init() -> ! {
@@ -1577,8 +1577,8 @@ diff -uNr 12_exceptions_part1_groundwork/src/runtime_init.rs 13_integrated_testi
 +    fn bss_section_is_sane() {
 +        use core::mem;
 +
-+        let start = unsafe { bss_range().start } as *const _ as usize;
-+        let end = unsafe { bss_range().end } as *const _ as usize;
++        let start = bsp::memory::bss_range().start as *const _ as usize;
++        let end = bsp::memory::bss_range().end as *const _ as usize;
 
 -    crate::kernel_init()
 +        assert_eq!(start modulo mem::size_of::<usize>(), 0);

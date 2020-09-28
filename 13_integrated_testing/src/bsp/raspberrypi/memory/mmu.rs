@@ -21,45 +21,20 @@ const NUM_MEM_RANGES: usize = 2;
 pub static LAYOUT: KernelVirtualLayout<{ NUM_MEM_RANGES }> = KernelVirtualLayout::new(
     memory_map::END_INCLUSIVE,
     [
-        RangeDescriptor {
+        TranslationDescriptor {
             name: "Kernel code and RO data",
-            virtual_range: || {
-                // Using the linker script, we ensure that the RO area is consecutive and 64 KiB
-                // aligned, and we export the boundaries via symbols:
-                //
-                // [__ro_start, __ro_end)
-                extern "C" {
-                    // The inclusive start of the read-only area, aka the address of the first
-                    // byte of the area.
-                    static __ro_start: usize;
-
-                    // The exclusive end of the read-only area, aka the address of the first
-                    // byte _after_ the RO area.
-                    static __ro_end: usize;
-                }
-
-                unsafe {
-                    // Notice the subtraction to turn the exclusive end into an inclusive end.
-                    #[allow(clippy::range_minus_one)]
-                    RangeInclusive::new(
-                        &__ro_start as *const _ as usize,
-                        &__ro_end as *const _ as usize - 1,
-                    )
-                }
-            },
-            translation: Translation::Identity,
+            virtual_range: ro_range_inclusive,
+            physical_range_translation: Translation::Identity,
             attribute_fields: AttributeFields {
                 mem_attributes: MemAttributes::CacheableDRAM,
                 acc_perms: AccessPermissions::ReadOnly,
                 execute_never: false,
             },
         },
-        RangeDescriptor {
+        TranslationDescriptor {
             name: "Device MMIO",
-            virtual_range: || {
-                RangeInclusive::new(memory_map::mmio::BASE, memory_map::mmio::END_INCLUSIVE)
-            },
-            translation: Translation::Identity,
+            virtual_range: mmio_range_inclusive,
+            physical_range_translation: Translation::Identity,
             attribute_fields: AttributeFields {
                 mem_attributes: MemAttributes::Device,
                 acc_perms: AccessPermissions::ReadWrite,
@@ -68,6 +43,20 @@ pub static LAYOUT: KernelVirtualLayout<{ NUM_MEM_RANGES }> = KernelVirtualLayout
         },
     ],
 );
+
+//--------------------------------------------------------------------------------------------------
+// Private Code
+//--------------------------------------------------------------------------------------------------
+
+fn ro_range_inclusive() -> RangeInclusive<usize> {
+    // Notice the subtraction to turn the exclusive end into an inclusive end.
+    #[allow(clippy::range_minus_one)]
+    RangeInclusive::new(super::ro_start(), super::ro_end() - 1)
+}
+
+fn mmio_range_inclusive() -> RangeInclusive<usize> {
+    RangeInclusive::new(memory_map::mmio::BASE, memory_map::mmio::END_INCLUSIVE)
+}
 
 //--------------------------------------------------------------------------------------------------
 // Public Code

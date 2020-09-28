@@ -74,6 +74,57 @@ diff -uNr 01_wait_forever/src/bsp/raspberrypi/link.ld 02_runtime_init/src/bsp/ra
      /DISCARD/ : { *(.comment*) }
  }
 
+diff -uNr 01_wait_forever/src/bsp/raspberrypi/memory.rs 02_runtime_init/src/bsp/raspberrypi/memory.rs
+--- 01_wait_forever/src/bsp/raspberrypi/memory.rs
++++ 02_runtime_init/src/bsp/raspberrypi/memory.rs
+@@ -0,0 +1,36 @@
++// SPDX-License-Identifier: MIT OR Apache-2.0
++//
++// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
++
++//! BSP Memory Management.
++
++use core::ops::Range;
++
++//--------------------------------------------------------------------------------------------------
++// Private Definitions
++//--------------------------------------------------------------------------------------------------
++
++// Symbols from the linker script.
++extern "C" {
++    static __bss_start: usize;
++    static __bss_end: usize;
++}
++
++//--------------------------------------------------------------------------------------------------
++// Public Code
++//--------------------------------------------------------------------------------------------------
++
++/// Return the range spanning the .bss section.
++///
++/// # Safety
++///
++/// - Values are provided by the linker script and must be trusted as-is.
++/// - The linker-provided addresses must be u64 aligned.
++pub fn bss_range() -> Range<*mut u64> {
++    unsafe {
++        Range {
++            start: &__bss_start as *const _ as *mut u64,
++            end: &__bss_end as *const _ as *mut u64,
++        }
++    }
++}
+
+diff -uNr 01_wait_forever/src/bsp/raspberrypi.rs 02_runtime_init/src/bsp/raspberrypi.rs
+--- 01_wait_forever/src/bsp/raspberrypi.rs
++++ 02_runtime_init/src/bsp/raspberrypi.rs
+@@ -4,4 +4,4 @@
+
+ //! Top-level BSP file for the Raspberry Pi 3 and 4.
+
+-// Coming soon.
++pub mod memory;
+
 diff -uNr 01_wait_forever/src/main.rs 02_runtime_init/src/main.rs
 --- 01_wait_forever/src/main.rs
 +++ 02_runtime_init/src/main.rs
@@ -117,7 +168,7 @@ diff -uNr 01_wait_forever/src/memory.rs 02_runtime_init/src/memory.rs
 +// Public Code
 +//--------------------------------------------------------------------------------------------------
 +
-+/// Zero out a memory region.
++/// Zero out a memory range.
 +///
 +/// # Safety
 +///
@@ -138,38 +189,18 @@ diff -uNr 01_wait_forever/src/memory.rs 02_runtime_init/src/memory.rs
 diff -uNr 01_wait_forever/src/runtime_init.rs 02_runtime_init/src/runtime_init.rs
 --- 01_wait_forever/src/runtime_init.rs
 +++ 02_runtime_init/src/runtime_init.rs
-@@ -0,0 +1,58 @@
+@@ -0,0 +1,38 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Rust runtime initialization code.
 +
-+use crate::memory;
-+use core::ops::Range;
++use crate::{bsp, memory};
 +
 +//--------------------------------------------------------------------------------------------------
 +// Private Code
 +//--------------------------------------------------------------------------------------------------
-+
-+/// Return the range spanning the .bss section.
-+///
-+/// # Safety
-+///
-+/// - The symbol-provided addresses must be valid.
-+/// - The symbol-provided addresses must be usize aligned.
-+unsafe fn bss_range() -> Range<*mut usize> {
-+    extern "C" {
-+        // Boundaries of the .bss section, provided by linker script symbols.
-+        static mut __bss_start: usize;
-+        static mut __bss_end: usize;
-+    }
-+
-+    Range {
-+        start: &mut __bss_start,
-+        end: &mut __bss_end,
-+    }
-+}
 +
 +/// Zero out the .bss section.
 +///
@@ -178,7 +209,7 @@ diff -uNr 01_wait_forever/src/runtime_init.rs 02_runtime_init/src/runtime_init.r
 +/// - Must only be called pre `kernel_init()`.
 +#[inline(always)]
 +unsafe fn zero_bss() {
-+    memory::zero_volatile(bss_range());
++    memory::zero_volatile(bsp::memory::bss_range());
 +}
 +
 +//--------------------------------------------------------------------------------------------------

@@ -911,26 +911,35 @@ diff -uNr 11_virtual_memory/src/bsp/raspberrypi/memory/mmu.rs 12_exceptions_part
 
  /// The virtual memory layout.
  ///
-@@ -55,19 +55,6 @@
+@@ -32,16 +32,6 @@
              },
          },
-         RangeDescriptor {
+         TranslationDescriptor {
 -            name: "Remapped Device MMIO",
--            virtual_range: || {
--                // The last 64 KiB slot in the first 512 MiB
--                RangeInclusive::new(0x1FFF_0000, 0x1FFF_FFFF)
--            },
--            translation: Translation::Offset(memory_map::mmio::BASE + 0x20_0000),
+-            virtual_range: remapped_mmio_range_inclusive,
+-            physical_range_translation: Translation::Offset(memory_map::mmio::BASE + 0x20_0000),
 -            attribute_fields: AttributeFields {
 -                mem_attributes: MemAttributes::Device,
 -                acc_perms: AccessPermissions::ReadWrite,
 -                execute_never: true,
 -            },
 -        },
--        RangeDescriptor {
+-        TranslationDescriptor {
              name: "Device MMIO",
-             virtual_range: || {
-                 RangeInclusive::new(memory_map::mmio::BASE, memory_map::mmio::END_INCLUSIVE)
+             virtual_range: mmio_range_inclusive,
+             physical_range_translation: Translation::Identity,
+@@ -64,11 +54,6 @@
+     RangeInclusive::new(super::ro_start(), super::ro_end() - 1)
+ }
+
+-fn remapped_mmio_range_inclusive() -> RangeInclusive<usize> {
+-    // The last 64 KiB slot in the first 512 MiB
+-    RangeInclusive::new(0x1FFF_0000, 0x1FFF_FFFF)
+-}
+-
+ fn mmio_range_inclusive() -> RangeInclusive<usize> {
+     RangeInclusive::new(memory_map::mmio::BASE, memory_map::mmio::END_INCLUSIVE)
+ }
 
 diff -uNr 11_virtual_memory/src/bsp.rs 12_exceptions_part1_groundwork/src/bsp.rs
 --- 11_virtual_memory/src/bsp.rs

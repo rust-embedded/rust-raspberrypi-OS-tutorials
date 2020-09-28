@@ -46,7 +46,7 @@ Back from reading `Chapter 12` already? Good job :+1:!
    for composing a high-level data structure that describes the kernel's virtual memory layout:
    `memory::mmu::KernelVirtualLayout`.
 2. The `BSP` part: `src/bsp/raspberrypi/memory/mmu.rs` contains a static instance of
-   `KernelVirtualLayout` and makes it accessible throug the function
+   `KernelVirtualLayout` and makes it accessible through the function
    `bsp::memory::mmu::virt_mem_layout()`.
 3. The `aarch64` part: `src/_arch/aarch64/memory/mmu.rs` contains the actual `MMU` driver. It picks
    up the `BSP`'s high-level `KernelVirtualLayout` and maps it using a `64 KiB` granule.
@@ -54,7 +54,7 @@ Back from reading `Chapter 12` already? Good job :+1:!
 ### Generic Kernel code: `memory/mmu.rs`
 
 The descriptor types provided in this file are building blocks which help to describe attributes of
-different memory regions. For example, R/W, no-execute, cached/uncached, and so on.
+different memory regions. For example, `R/W`, `no-execute`, `cached/uncached`, and so on.
 
 The descriptors are agnostic of the hardware `MMU`'s actual descriptors. Different `BSP`s can use
 these types to produce a high-level description of the kernel's virtual memory layout. The actual
@@ -74,12 +74,10 @@ nothing prevents you from defining those too if you wish to. Here is an example 
 region:
 
 ```rust
-RangeDescriptor {
+TranslationDescriptor {
     name: "Device MMIO",
-    virtual_range: || {
-        RangeInclusive::new(memory::map::mmio::BASE, memory::map::mmio::END_INCLUSIVE)
-    },
-    translation: Translation::Identity,
+    virtual_range: mmio_range_inclusive,
+    physical_range_translation: Translation::Identity,
     attribute_fields: AttributeFields {
         mem_attributes: MemAttributes::Device,
         acc_perms: AccessPermissions::ReadWrite,
@@ -98,10 +96,11 @@ pub fn virt_addr_properties(
 ```
 
 It will be used by the `_arch/aarch64`'s `MMU` code to request attributes for a virtual address and
-the translation of the address. The function scans for a descriptor that contains the queried
-address, and returns the respective findings for the first entry that is a hit. If no entry is
-found, it returns default attributes for normal chacheable DRAM and the input address, hence telling
-the `MMU` code that the requested address should be `identity mapped`.
+the translation, which delivers the physical output address (the `usize` in the return-tuple). The
+function scans for a descriptor that contains the queried address, and returns the respective
+findings for the first entry that is a hit. If no entry is found, it returns default attributes for
+normal chacheable DRAM and the input address, hence telling the `MMU` code that the requested
+address should be `identity mapped`.
 
 Due to this default return, it is technicall not needed to define normal cacheable DRAM regions.
 
@@ -644,7 +643,7 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/link.ld 11_virtual_memory/src/b
 diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory/mmu.rs 11_virtual_memory/src/bsp/raspberrypi/memory/mmu.rs
 --- 10_privilege_level/src/bsp/raspberrypi/memory/mmu.rs
 +++ 11_virtual_memory/src/bsp/raspberrypi/memory/mmu.rs
-@@ -0,0 +1,97 @@
+@@ -0,0 +1,88 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
@@ -668,58 +667,30 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory/mmu.rs 11_virtual_memory
 +pub static LAYOUT: KernelVirtualLayout<{ NUM_MEM_RANGES }> = KernelVirtualLayout::new(
 +    memory_map::END_INCLUSIVE,
 +    [
-+        RangeDescriptor {
++        TranslationDescriptor {
 +            name: "Kernel code and RO data",
-+            virtual_range: || {
-+                // Using the linker script, we ensure that the RO area is consecutive and 64 KiB
-+                // aligned, and we export the boundaries via symbols:
-+                //
-+                // [__ro_start, __ro_end)
-+                extern "C" {
-+                    // The inclusive start of the read-only area, aka the address of the first
-+                    // byte of the area.
-+                    static __ro_start: usize;
-+
-+                    // The exclusive end of the read-only area, aka the address of the first
-+                    // byte _after_ the RO area.
-+                    static __ro_end: usize;
-+                }
-+
-+                unsafe {
-+                    // Notice the subtraction to turn the exclusive end into an inclusive end.
-+                    #[allow(clippy::range_minus_one)]
-+                    RangeInclusive::new(
-+                        &__ro_start as *const _ as usize,
-+                        &__ro_end as *const _ as usize - 1,
-+                    )
-+                }
-+            },
-+            translation: Translation::Identity,
++            virtual_range: ro_range_inclusive,
++            physical_range_translation: Translation::Identity,
 +            attribute_fields: AttributeFields {
 +                mem_attributes: MemAttributes::CacheableDRAM,
 +                acc_perms: AccessPermissions::ReadOnly,
 +                execute_never: false,
 +            },
 +        },
-+        RangeDescriptor {
++        TranslationDescriptor {
 +            name: "Remapped Device MMIO",
-+            virtual_range: || {
-+                // The last 64 KiB slot in the first 512 MiB
-+                RangeInclusive::new(0x1FFF_0000, 0x1FFF_FFFF)
-+            },
-+            translation: Translation::Offset(memory_map::mmio::BASE + 0x20_0000),
++            virtual_range: remapped_mmio_range_inclusive,
++            physical_range_translation: Translation::Offset(memory_map::mmio::BASE + 0x20_0000),
 +            attribute_fields: AttributeFields {
 +                mem_attributes: MemAttributes::Device,
 +                acc_perms: AccessPermissions::ReadWrite,
 +                execute_never: true,
 +            },
 +        },
-+        RangeDescriptor {
++        TranslationDescriptor {
 +            name: "Device MMIO",
-+            virtual_range: || {
-+                RangeInclusive::new(memory_map::mmio::BASE, memory_map::mmio::END_INCLUSIVE)
-+            },
-+            translation: Translation::Identity,
++            virtual_range: mmio_range_inclusive,
++            physical_range_translation: Translation::Identity,
 +            attribute_fields: AttributeFields {
 +                mem_attributes: MemAttributes::Device,
 +                acc_perms: AccessPermissions::ReadWrite,
@@ -728,6 +699,25 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory/mmu.rs 11_virtual_memory
 +        },
 +    ],
 +);
++
++//--------------------------------------------------------------------------------------------------
++// Private Code
++//--------------------------------------------------------------------------------------------------
++
++fn ro_range_inclusive() -> RangeInclusive<usize> {
++    // Notice the subtraction to turn the exclusive end into an inclusive end.
++    #[allow(clippy::range_minus_one)]
++    RangeInclusive::new(super::ro_start(), super::ro_end() - 1)
++}
++
++fn remapped_mmio_range_inclusive() -> RangeInclusive<usize> {
++    // The last 64 KiB slot in the first 512 MiB
++    RangeInclusive::new(0x1FFF_0000, 0x1FFF_FFFF)
++}
++
++fn mmio_range_inclusive() -> RangeInclusive<usize> {
++    RangeInclusive::new(memory_map::mmio::BASE, memory_map::mmio::END_INCLUSIVE)
++}
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Code
@@ -752,10 +742,19 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory.rs 11_virtual_memory/src
 
 +pub mod mmu;
 +
+ use core::ops::Range;
+
  //--------------------------------------------------------------------------------------------------
- // Public Definitions
- //--------------------------------------------------------------------------------------------------
-@@ -14,6 +16,8 @@
+@@ -12,6 +14,8 @@
+
+ // Symbols from the linker script.
+ extern "C" {
++    static __ro_start: usize;
++    static __ro_end: usize;
+     static __bss_start: usize;
+     static __bss_end: usize;
+ }
+@@ -26,6 +30,8 @@
  /// The board's memory map.
  #[rustfmt::skip]
  pub(super) mod map {
@@ -764,7 +763,7 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory.rs 11_virtual_memory/src
      pub const GPIO_OFFSET:         usize =        0x0020_0000;
      pub const UART_OFFSET:         usize =        0x0020_1000;
 
-@@ -25,6 +29,7 @@
+@@ -37,6 +43,7 @@
          pub const BASE:            usize =        0x3F00_0000;
          pub const GPIO_BASE:       usize = BASE + GPIO_OFFSET;
          pub const PL011_UART_BASE: usize = BASE + UART_OFFSET;
@@ -772,13 +771,42 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory.rs 11_virtual_memory/src
      }
 
      /// Physical devices.
-@@ -35,5 +40,6 @@
+@@ -47,10 +54,35 @@
          pub const BASE:            usize =        0xFE00_0000;
          pub const GPIO_BASE:       usize = BASE + GPIO_OFFSET;
          pub const PL011_UART_BASE: usize = BASE + UART_OFFSET;
 +        pub const END_INCLUSIVE:   usize =        0xFF84_FFFF;
      }
  }
+
+ //--------------------------------------------------------------------------------------------------
++// Private Code
++//--------------------------------------------------------------------------------------------------
++
++/// Start address of the Read-Only (RO) range.
++///
++/// # Safety
++///
++/// - Value is provided by the linker script and must be trusted as-is.
++#[inline(always)]
++fn ro_start() -> usize {
++    unsafe { &__ro_start as *const _ as usize }
++}
++
++/// Size of the Read-Only (RO) range of the kernel binary.
++///
++/// # Safety
++///
++/// - Value is provided by the linker script and must be trusted as-is.
++#[inline(always)]
++fn ro_end() -> usize {
++    unsafe { &__ro_end as *const _ as usize }
++}
++
++//--------------------------------------------------------------------------------------------------
+ // Public Code
+ //--------------------------------------------------------------------------------------------------
+
 
 diff -uNr 10_privilege_level/src/bsp.rs 11_virtual_memory/src/bsp.rs
 --- 10_privilege_level/src/bsp.rs
@@ -866,7 +894,7 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_memory/src/main.rs
 diff -uNr 10_privilege_level/src/memory/mmu.rs 11_virtual_memory/src/memory/mmu.rs
 --- 10_privilege_level/src/memory/mmu.rs
 +++ 11_virtual_memory/src/memory/mmu.rs
-@@ -0,0 +1,198 @@
+@@ -0,0 +1,199 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2020 Andre Richter <andre.o.richter@gmail.com>
@@ -944,10 +972,10 @@ diff -uNr 10_privilege_level/src/memory/mmu.rs 11_virtual_memory/src/memory/mmu.
 +
 +/// Architecture agnostic descriptor for a memory range.
 +#[allow(missing_docs)]
-+pub struct RangeDescriptor {
++pub struct TranslationDescriptor {
 +    pub name: &'static str,
 +    pub virtual_range: fn() -> RangeInclusive<usize>,
-+    pub translation: Translation,
++    pub physical_range_translation: Translation,
 +    pub attribute_fields: AttributeFields,
 +}
 +
@@ -957,7 +985,7 @@ diff -uNr 10_privilege_level/src/memory/mmu.rs 11_virtual_memory/src/memory/mmu.
 +    max_virt_addr_inclusive: usize,
 +
 +    /// Array of descriptors for non-standard (normal cacheable DRAM) memory regions.
-+    inner: [RangeDescriptor; NUM_SPECIAL_RANGES],
++    inner: [TranslationDescriptor; NUM_SPECIAL_RANGES],
 +}
 +
 +//--------------------------------------------------------------------------------------------------
@@ -974,8 +1002,8 @@ diff -uNr 10_privilege_level/src/memory/mmu.rs 11_virtual_memory/src/memory/mmu.
 +    }
 +}
 +
-+/// Human-readable output of a RangeDescriptor.
-+impl fmt::Display for RangeDescriptor {
++/// Human-readable output of a TranslationDescriptor.
++impl fmt::Display for TranslationDescriptor {
 +    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 +        // Call the function to which self.range points, and dereference the result, which causes
 +        // Rust to copy the value.
@@ -1023,14 +1051,15 @@ diff -uNr 10_privilege_level/src/memory/mmu.rs 11_virtual_memory/src/memory/mmu.
 +
 +impl<const NUM_SPECIAL_RANGES: usize> KernelVirtualLayout<{ NUM_SPECIAL_RANGES }> {
 +    /// Create a new instance.
-+    pub const fn new(max: usize, layout: [RangeDescriptor; NUM_SPECIAL_RANGES]) -> Self {
++    pub const fn new(max: usize, layout: [TranslationDescriptor; NUM_SPECIAL_RANGES]) -> Self {
 +        Self {
 +            max_virt_addr_inclusive: max,
 +            inner: layout,
 +        }
 +    }
 +
-+    /// For a virtual address, find and return the output address and corresponding attributes.
++    /// For a virtual address, find and return the physical output address and corresponding
++    /// attributes.
 +    ///
 +    /// If the address is not found in `inner`, return an identity mapped default with normal
 +    /// cacheable DRAM attributes.
@@ -1044,7 +1073,7 @@ diff -uNr 10_privilege_level/src/memory/mmu.rs 11_virtual_memory/src/memory/mmu.
 +
 +        for i in self.inner.iter() {
 +            if (i.virtual_range)().contains(&virt_addr) {
-+                let output_addr = match i.translation {
++                let output_addr = match i.physical_range_translation {
 +                    Translation::Identity => virt_addr,
 +                    Translation::Offset(a) => a + (virt_addr - (i.virtual_range)().start()),
 +                };
