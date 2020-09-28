@@ -10,7 +10,7 @@ use super::{AccessPermissions, AttributeFields, MemAttributes};
 use crate::{bsp, memory};
 use core::convert;
 use cortex_a::{barrier, regs::*};
-use register::register_bitfields;
+use register::{register_bitfields, InMemoryRegister};
 
 //--------------------------------------------------------------------------------------------------
 // Private Definitions
@@ -89,39 +89,30 @@ const FIVETWELVE_MIB_SHIFT: usize = 29; // log2(512 * 1024 * 1024)
 /// The output points to the next table.
 #[derive(Copy, Clone)]
 #[repr(transparent)]
-struct TableDescriptor(u64);
+struct TableDescriptor(InMemoryRegister<u64, STAGE1_TABLE_DESCRIPTOR::Register>);
 
 /// A page descriptor with 64 KiB aperture.
 ///
 /// The output points to physical memory.
 #[derive(Copy, Clone)]
 #[repr(transparent)]
-struct PageDescriptor(u64);
+struct PageDescriptor(InMemoryRegister<u64, STAGE1_PAGE_DESCRIPTOR::Register>);
 
 /// Big monolithic struct for storing the translation tables. Individual levels must be 64 KiB
 /// aligned, hence the "reverse" order of appearance.
 #[repr(C)]
 #[repr(align(65536))]
-struct TranslationTables<const N: usize> {
+struct FixedSizeTranslationTable<const NUM_TABLES: usize> {
     /// Page descriptors, covering 64 KiB windows per entry.
-    lvl3: [[PageDescriptor; 8192]; N],
+    lvl3: [[PageDescriptor; 8192]; NUM_TABLES],
 
     /// Table descriptors, covering 512 MiB windows.
-    lvl2: [TableDescriptor; N],
+    lvl2: [TableDescriptor; NUM_TABLES],
 }
 
 /// Usually evaluates to 1 GiB for RPi3 and 4 GiB for RPi 4.
-const ENTRIES_512_MIB: usize = bsp::memory::mmu::addr_space_size() >> FIVETWELVE_MIB_SHIFT;
-
-/// The translation tables.
-///
-/// # Safety
-///
-/// - Supposed to land in `.bss`. Therefore, ensure that they boil down to all "0" entries.
-static mut TABLES: TranslationTables<{ ENTRIES_512_MIB }> = TranslationTables {
-    lvl3: [[PageDescriptor(0); 8192]; ENTRIES_512_MIB],
-    lvl2: [TableDescriptor(0); ENTRIES_512_MIB],
-};
+const NUM_LVL2_TABLES: usize = bsp::memory::mmu::addr_space_size() >> FIVETWELVE_MIB_SHIFT;
+type ArchTranslationTable = FixedSizeTranslationTable<NUM_LVL2_TABLES>;
 
 trait BaseAddr {
     fn base_addr_u64(&self) -> u64;
@@ -135,16 +126,19 @@ mod mair {
     pub const NORMAL: u64 = 1;
 }
 
-//--------------------------------------------------------------------------------------------------
-// Public Definitions
-//--------------------------------------------------------------------------------------------------
-
 /// Memory Management Unit type.
-pub struct MemoryManagementUnit;
+struct MemoryManagementUnit;
 
 //--------------------------------------------------------------------------------------------------
 // Global instances
 //--------------------------------------------------------------------------------------------------
+
+/// The translation tables.
+///
+/// # Safety
+///
+/// - Supposed to land in `.bss`. Therefore, ensure that they boil down to all "0" entries.
+static mut TABLES: ArchTranslationTable = ArchTranslationTable::new();
 
 static MMU: MemoryManagementUnit = MemoryManagementUnit;
 
@@ -158,23 +152,26 @@ impl<T, const N: usize> BaseAddr for [T; N] {
     }
 
     fn base_addr_usize(&self) -> usize {
-        self as *const T as usize
+        self as *const _ as usize
     }
 }
 
 impl convert::From<usize> for TableDescriptor {
     fn from(next_lvl_table_addr: usize) -> Self {
+        let val = InMemoryRegister::<u64, STAGE1_TABLE_DESCRIPTOR::Register>::new(0);
+
         let shifted = next_lvl_table_addr >> SIXTYFOUR_KIB_SHIFT;
-        let val = (STAGE1_TABLE_DESCRIPTOR::VALID::True
-            + STAGE1_TABLE_DESCRIPTOR::TYPE::Table
-            + STAGE1_TABLE_DESCRIPTOR::NEXT_LEVEL_TABLE_ADDR_64KiB.val(shifted as u64))
-        .value;
+        val.write(
+            STAGE1_TABLE_DESCRIPTOR::VALID::True
+                + STAGE1_TABLE_DESCRIPTOR::TYPE::Table
+                + STAGE1_TABLE_DESCRIPTOR::NEXT_LEVEL_TABLE_ADDR_64KiB.val(shifted as u64),
+        );
 
         TableDescriptor(val)
     }
 }
 
-/// Convert the kernel's generic memory range attributes to HW-specific attributes of the MMU.
+/// Convert the kernel's generic memory attributes to HW-specific attributes of the MMU.
 impl convert::From<AttributeFields>
     for register::FieldValue<u64, STAGE1_PAGE_DESCRIPTOR::Register>
 {
@@ -209,16 +206,32 @@ impl convert::From<AttributeFields>
 }
 
 impl PageDescriptor {
+    /// Create an instance.
     fn new(output_addr: usize, attribute_fields: AttributeFields) -> Self {
-        let shifted = output_addr >> SIXTYFOUR_KIB_SHIFT;
-        let val = (STAGE1_PAGE_DESCRIPTOR::VALID::True
-            + STAGE1_PAGE_DESCRIPTOR::AF::True
-            + attribute_fields.into()
-            + STAGE1_PAGE_DESCRIPTOR::TYPE::Table
-            + STAGE1_PAGE_DESCRIPTOR::OUTPUT_ADDR_64KiB.val(shifted as u64))
-        .value;
+        let val = InMemoryRegister::<u64, STAGE1_PAGE_DESCRIPTOR::Register>::new(0);
+
+        let shifted = output_addr as u64 >> SIXTYFOUR_KIB_SHIFT;
+        val.write(
+            STAGE1_PAGE_DESCRIPTOR::VALID::True
+                + STAGE1_PAGE_DESCRIPTOR::AF::True
+                + attribute_fields.into()
+                + STAGE1_PAGE_DESCRIPTOR::TYPE::Table
+                + STAGE1_PAGE_DESCRIPTOR::OUTPUT_ADDR_64KiB.val(shifted),
+        );
 
         Self(val)
+    }
+}
+
+impl<const NUM_TABLES: usize> FixedSizeTranslationTable<{ NUM_TABLES }> {
+    /// Create an instance.
+    pub const fn new() -> Self {
+        assert!(NUM_TABLES > 0);
+
+        Self {
+            lvl3: [[PageDescriptor(InMemoryRegister::new(0)); 8192]; NUM_TABLES],
+            lvl2: [TableDescriptor(InMemoryRegister::new(0)); NUM_TABLES],
+        }
     }
 }
 
@@ -260,6 +273,7 @@ unsafe fn populate_tt_entries() -> Result<(), &'static str> {
 /// Configure various settings of stage 1 of the EL1 translation regime.
 fn configure_translation_control() {
     let ips = ID_AA64MMFR0_EL1.read(ID_AA64MMFR0_EL1::PARange);
+
     TCR_EL1.write(
         TCR_EL1::TBI0::Ignored
             + TCR_EL1::IPS.val(ips)
@@ -289,7 +303,7 @@ impl memory::mmu::interface::MMU for MemoryManagementUnit {
     unsafe fn init(&self) -> Result<(), &'static str> {
         // Fail early if translation granule is not supported. Both RPis support it, though.
         if !ID_AA64MMFR0_EL1.matches_all(ID_AA64MMFR0_EL1::TGran64::Supported) {
-            return Err("64 KiB translation granule not supported");
+            return Err("Translation granule not supported in HW");
         }
 
         // Prepare the memory attribute indirection register.

@@ -108,6 +108,7 @@
 
 #![allow(incomplete_features)]
 #![feature(const_generics)]
+#![feature(const_panic)]
 #![feature(custom_inner_attributes)]
 #![feature(format_args_nl)]
 #![feature(global_asm)]

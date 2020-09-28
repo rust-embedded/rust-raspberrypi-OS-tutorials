@@ -957,15 +957,15 @@ diff -uNr 11_virtual_memory/src/bsp.rs 12_exceptions_part1_groundwork/src/bsp.rs
 diff -uNr 11_virtual_memory/src/main.rs 12_exceptions_part1_groundwork/src/main.rs
 --- 11_virtual_memory/src/main.rs
 +++ 12_exceptions_part1_groundwork/src/main.rs
-@@ -107,6 +107,7 @@
- #![allow(incomplete_features)]
+@@ -108,6 +108,7 @@
  #![feature(const_generics)]
+ #![feature(const_panic)]
  #![feature(format_args_nl)]
 +#![feature(global_asm)]
  #![feature(naked_functions)]
  #![feature(panic_info_message)]
  #![feature(trait_alias)]
-@@ -142,6 +143,8 @@
+@@ -143,6 +144,8 @@
      use driver::interface::DriverManager;
      use memory::mmu::interface::MMU;
 
@@ -974,7 +974,7 @@ diff -uNr 11_virtual_memory/src/main.rs 12_exceptions_part1_groundwork/src/main.
      if let Err(string) = memory::mmu::mmu().init() {
          panic!("MMU: {}", string);
      }
-@@ -193,13 +196,28 @@
+@@ -194,13 +197,28 @@
      info!("Timer test, spinning for 1 second");
      time::time_manager().spin_for(Duration::from_secs(1));
 

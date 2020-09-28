@@ -106,6 +106,7 @@
 
 #![allow(incomplete_features)]
 #![feature(const_generics)]
+#![feature(const_panic)]
 #![feature(format_args_nl)]
 #![feature(global_asm)]
 #![feature(naked_functions)]
