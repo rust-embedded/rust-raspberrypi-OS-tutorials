@@ -134,11 +134,11 @@ impl GICv2 {
 use synchronization::interface::ReadWriteEx;
 
 impl driver::interface::DeviceDriver for GICv2 {
-    fn compatible(&self) -> &str {
+    fn compatible(&self) -> &'static str {
         "GICv2 (ARM Generic Interrupt Controller v2)"
     }
 
-    fn init(&self) -> Result<(), ()> {
+    unsafe fn init(&self) -> Result<(), &'static str> {
         if cpu::smp::core_id::<usize>() == bsp::cpu::BOOT_CORE_ID {
             self.gicd.boot_core_init();
         }

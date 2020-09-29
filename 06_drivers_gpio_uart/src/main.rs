@@ -130,8 +130,8 @@ unsafe fn kernel_init() -> ! {
     use driver::interface::DriverManager;
 
     for i in bsp::driver::driver_manager().all_device_drivers().iter() {
-        if i.init().is_err() {
-            panic!("Error loading driver: {}", i.compatible())
+        if let Err(x) = i.init() {
+            panic!("Error loading driver: {}: {}", i.compatible(), x);
         }
     }
     bsp::driver::driver_manager().post_device_driver_init();

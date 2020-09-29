@@ -15,6 +15,28 @@ use core::{fmt, marker::PhantomData};
 // Public Definitions
 //--------------------------------------------------------------------------------------------------
 
+/// Interrupt descriptor.
+#[derive(Copy, Clone)]
+pub struct IRQDescriptor {
+    /// Descriptive name.
+    pub name: &'static str,
+
+    /// Reference to handler trait object.
+    pub handler: &'static (dyn interface::IRQHandler + Sync),
+}
+
+/// IRQContext token.
+///
+/// An instance of this type indicates that the local core is currently executing in IRQ
+/// context, aka executing an interrupt vector or subcalls of it.
+///
+/// Concept and implementation derived from the `CriticalSection` introduced in
+/// https://github.com/rust-embedded/bare-metal
+#[derive(Clone, Copy)]
+pub struct IRQContext<'irq_context> {
+    _0: PhantomData<&'irq_context ()>,
+}
+
 /// Asynchronous exception handling interfaces.
 pub mod interface {
 
@@ -58,28 +80,6 @@ pub mod interface {
         /// Print list of registered handlers.
         fn print_handler(&self);
     }
-}
-
-/// Interrupt descriptor.
-#[derive(Copy, Clone)]
-pub struct IRQDescriptor {
-    /// Descriptive name.
-    pub name: &'static str,
-
-    /// Reference to handler trait object.
-    pub handler: &'static (dyn interface::IRQHandler + Sync),
-}
-
-/// IRQContext token.
-///
-/// An instance of this type indicates that the local core is currently executing in IRQ
-/// context, aka executing an interrupt vector or subcalls of it.
-///
-/// Concept and implementation derived from the `CriticalSection` introduced in
-/// https://github.com/rust-embedded/bare-metal
-#[derive(Clone, Copy)]
-pub struct IRQContext<'irq_context> {
-    _0: PhantomData<&'irq_context ()>,
 }
 
 /// A wrapper type for IRQ numbers with integrated range sanity check.

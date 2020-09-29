@@ -84,7 +84,7 @@ diff -uNr 03_hacky_hello_world/src/_arch/aarch64/cpu.rs 04_zero_overhead_abstrac
 +
 +    // Expect the boot core to start in EL2.
 +    if bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id() {
-+        SP.set(bsp::memory::BOOT_CORE_STACK_START as u64);
++        SP.set(bsp::memory::boot_core_stack_end() as u64);
 +        runtime_init::runtime_init()
 +    } else {
 +        // If not core0, infinitely wait for events.
@@ -157,20 +157,32 @@ diff -uNr 03_hacky_hello_world/src/bsp/raspberrypi/cpu.rs 04_zero_overhead_abstr
 diff -uNr 03_hacky_hello_world/src/bsp/raspberrypi/memory.rs 04_zero_overhead_abstraction/src/bsp/raspberrypi/memory.rs
 --- 03_hacky_hello_world/src/bsp/raspberrypi/memory.rs
 +++ 04_zero_overhead_abstraction/src/bsp/raspberrypi/memory.rs
-@@ -17,6 +17,13 @@
+@@ -17,9 +17,25 @@
  }
 
  //--------------------------------------------------------------------------------------------------
 +// Public Definitions
 +//--------------------------------------------------------------------------------------------------
 +
-+/// The early boot core's stack address.
-+pub const BOOT_CORE_STACK_START: usize = 0x80_000;
++/// The board's memory map.
++#[rustfmt::skip]
++pub(super) mod map {
++    pub const BOOT_CORE_STACK_END: usize = 0x8_0000;
++}
 +
 +//--------------------------------------------------------------------------------------------------
  // Public Code
  //--------------------------------------------------------------------------------------------------
 
++/// Exclusive end address of the boot core's stack.
++#[inline(always)]
++pub fn boot_core_stack_end() -> usize {
++    map::BOOT_CORE_STACK_END
++}
++
+ /// Return the range spanning the .bss section.
+ ///
+ /// # Safety
 
 diff -uNr 03_hacky_hello_world/src/bsp/raspberrypi.rs 04_zero_overhead_abstraction/src/bsp/raspberrypi.rs
 --- 03_hacky_hello_world/src/bsp/raspberrypi.rs

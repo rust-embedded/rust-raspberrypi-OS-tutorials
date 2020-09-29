@@ -68,7 +68,7 @@ unsafe fn el2_to_el1_transition() -> ! {
     ELR_EL2.set(runtime_init::runtime_init as *const () as u64);
 
     // Set up SP_EL1 (stack pointer), which will be used by EL1 once we "return" to it.
-    SP_EL1.set(bsp::memory::BOOT_CORE_STACK_START as u64);
+    SP_EL1.set(bsp::memory::boot_core_stack_end() as u64);
 
     // Use `eret` to "return" to EL1. This results in execution of runtime_init() in EL1.
     asm::eret()

@@ -132,7 +132,7 @@ impl GPIO {
 use synchronization::interface::Mutex;
 
 impl driver::interface::DeviceDriver for GPIO {
-    fn compatible(&self) -> &str {
+    fn compatible(&self) -> &'static str {
         "BCM GPIO"
     }
 }

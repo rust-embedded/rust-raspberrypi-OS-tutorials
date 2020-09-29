@@ -81,7 +81,7 @@ mod tests {
     use super::*;
     use test_macros::kernel_test;
 
-    /// Check 64 KiB alignment of the kernel's virtual memory layout sections.
+    /// Check alignment of the kernel's virtual memory layout sections.
     #[kernel_test]
     fn virt_mem_layout_sections_are_64KiB_aligned() {
         const SIXTYFOUR_KIB: usize = 65536;
@@ -93,6 +93,24 @@ mod tests {
             assert_eq!(start % SIXTYFOUR_KIB, 0);
             assert_eq!(end % SIXTYFOUR_KIB, 0);
             assert!(end >= start);
+        }
+    }
+
+    /// Ensure the kernel's virtual memory layout is free of overlaps.
+    #[kernel_test]
+    fn virt_mem_layout_has_no_overlaps() {
+        let layout = virt_mem_layout().inner();
+
+        for (i, first) in layout.iter().enumerate() {
+            for second in layout.iter().skip(i + 1) {
+                let first_range = first.virtual_range;
+                let second_range = second.virtual_range;
+
+                assert!(!first_range().contains(second_range().start()));
+                assert!(!first_range().contains(second_range().end()));
+                assert!(!second_range().contains(first_range().start()));
+                assert!(!second_range().contains(first_range().end()));
+            }
         }
     }
 }

@@ -187,7 +187,7 @@ diff -uNr 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs 07_uart_chainloader/src/
 
      // Expect the boot core to start in EL2.
      if bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id() {
-         SP.set(bsp::memory::BOOT_CORE_STACK_START as u64);
+         SP.set(bsp::memory::boot_core_stack_end() as u64);
 -        runtime_init::runtime_init()
 +        relocate::relocate_self::<u64>()
      } else {
@@ -281,16 +281,60 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/raspberrypi/link.ld 07_uart_chainloader/s
 diff -uNr 06_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs 07_uart_chainloader/src/bsp/raspberrypi/memory.rs
 --- 06_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs
 +++ 07_uart_chainloader/src/bsp/raspberrypi/memory.rs
-@@ -23,6 +23,9 @@
- /// The early boot core's stack address.
- pub const BOOT_CORE_STACK_START: usize = 0x80_000;
-
-+/// The address on which the Raspberry firmware loads every binary by default.
-+pub const BOARD_DEFAULT_LOAD_ADDRESS: usize = 0x80_000;
-+
+@@ -23,19 +23,21 @@
  /// The board's memory map.
  #[rustfmt::skip]
  pub(super) mod map {
+-    pub const BOOT_CORE_STACK_END: usize =        0x8_0000;
++    pub const BOOT_CORE_STACK_END:        usize =        0x8_0000;
+
+-    pub const GPIO_OFFSET:         usize =        0x0020_0000;
+-    pub const UART_OFFSET:         usize =        0x0020_1000;
++    pub const BOARD_DEFAULT_LOAD_ADDRESS: usize =        0x8_0000;
++
++    pub const GPIO_OFFSET:                usize =        0x0020_0000;
++    pub const UART_OFFSET:                usize =        0x0020_1000;
+
+     /// Physical devices.
+     #[cfg(feature = "bsp_rpi3")]
+     pub mod mmio {
+         use super::*;
+
+-        pub const BASE:            usize =        0x3F00_0000;
+-        pub const GPIO_BASE:       usize = BASE + GPIO_OFFSET;
+-        pub const PL011_UART_BASE: usize = BASE + UART_OFFSET;
++        pub const BASE:                   usize =        0x3F00_0000;
++        pub const GPIO_BASE:              usize = BASE + GPIO_OFFSET;
++        pub const PL011_UART_BASE:        usize = BASE + UART_OFFSET;
+     }
+
+     /// Physical devices.
+@@ -43,9 +45,9 @@
+     pub mod mmio {
+         use super::*;
+
+-        pub const BASE:            usize =        0xFE00_0000;
+-        pub const GPIO_BASE:       usize = BASE + GPIO_OFFSET;
+-        pub const PL011_UART_BASE: usize = BASE + UART_OFFSET;
++        pub const BASE:                   usize =        0xFE00_0000;
++        pub const GPIO_BASE:              usize = BASE + GPIO_OFFSET;
++        pub const PL011_UART_BASE:        usize = BASE + UART_OFFSET;
+     }
+ }
+
+@@ -59,6 +61,12 @@
+     map::BOOT_CORE_STACK_END
+ }
+
++/// The address on which the Raspberry firmware loads every binary by default.
++#[inline(always)]
++pub fn board_default_load_addr() -> usize {
++    map::BOARD_DEFAULT_LOAD_ADDRESS
++}
++
+ /// Return the range spanning the .bss section.
+ ///
+ /// # Safety
 
 diff -uNr 06_drivers_gpio_uart/src/console.rs 07_uart_chainloader/src/console.rs
 --- 06_drivers_gpio_uart/src/console.rs
@@ -379,7 +423,7 @@ diff -uNr 06_drivers_gpio_uart/src/main.rs 07_uart_chainloader/src/main.rs
 +    console().write_char('O');
 +    console().write_char('K');
 +
-+    let kernel_addr: *mut u8 = bsp::memory::BOARD_DEFAULT_LOAD_ADDRESS as *mut u8;
++    let kernel_addr: *mut u8 = bsp::memory::board_default_load_addr() as *mut u8;
 +    unsafe {
 +        // Read the kernel byte by byte.
 +        for i in 0..size {
@@ -453,7 +497,7 @@ diff -uNr 06_drivers_gpio_uart/src/relocate.rs 07_uart_chainloader/src/relocate.
 +    let mut reloc_dst_addr: *mut T = binary_start_addr as *mut T;
 +
 +    // The address of where the previous firmware loaded us.
-+    let mut src_addr: *const T = bsp::memory::BOARD_DEFAULT_LOAD_ADDRESS as *const _;
++    let mut src_addr: *const T = bsp::memory::board_default_load_addr() as *const _;
 +
 +    // Copy the whole binary.
 +    //

@@ -10,14 +10,17 @@
 
 /// Driver interfaces.
 pub mod interface {
-
     /// Device Driver functions.
     pub trait DeviceDriver {
         /// Return a compatibility string for identifying the driver.
-        fn compatible(&self) -> &str;
+        fn compatible(&self) -> &'static str;
 
         /// Called by the kernel to bring up the device.
-        fn init(&self) -> Result<(), ()> {
+        ///
+        /// # Safety
+        ///
+        /// - During init, drivers might do stuff with system-wide impact.
+        unsafe fn init(&self) -> Result<(), &'static str> {
             Ok(())
         }
     }

@@ -26,7 +26,7 @@ pub type LocalIRQ =
 pub type PeripheralIRQ =
     exception::asynchronous::IRQNumber<{ InterruptController::MAX_PERIPHERAL_IRQ_NUMBER }>;
 
-/// Used for the associated type of trait  [`exception::asynchronous::interface::IRQManager`].
+/// Used for the associated type of trait [`exception::asynchronous::interface::IRQManager`].
 #[derive(Copy, Clone)]
 pub enum IRQNumber {
     Local(LocalIRQ),
@@ -91,7 +91,7 @@ impl InterruptController {
 //------------------------------------------------------------------------------
 
 impl driver::interface::DeviceDriver for InterruptController {
-    fn compatible(&self) -> &str {
+    fn compatible(&self) -> &'static str {
         "BCM Interrupt Controller"
     }
 }

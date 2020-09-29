@@ -268,7 +268,7 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 06_drivers_g
 +use synchronization::interface::Mutex;
 +
 +impl driver::interface::DeviceDriver for GPIO {
-+    fn compatible(&self) -> &str {
++    fn compatible(&self) -> &'static str {
 +        "BCM GPIO"
 +    }
 +}
@@ -524,11 +524,11 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 06_dri
 +use synchronization::interface::Mutex;
 +
 +impl driver::interface::DeviceDriver for PL011Uart {
-+    fn compatible(&self) -> &str {
++    fn compatible(&self) -> &'static str {
 +        "BCM PL011 UART"
 +    }
 +
-+    fn init(&self) -> Result<(), ()> {
++    unsafe fn init(&self) -> Result<(), &'static str> {
 +        let mut r = &self.inner;
 +        r.lock(|inner| inner.init());
 +
@@ -608,7 +608,7 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/bcm.rs 06_drivers_gpio_uart/src/
 diff -uNr 05_safe_globals/src/bsp/device_driver/common.rs 06_drivers_gpio_uart/src/bsp/device_driver/common.rs
 --- 05_safe_globals/src/bsp/device_driver/common.rs
 +++ 06_drivers_gpio_uart/src/bsp/device_driver/common.rs
-@@ -0,0 +1,35 @@
+@@ -0,0 +1,38 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2020 Andre Richter <andre.o.richter@gmail.com>
@@ -617,23 +617,26 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/common.rs 06_drivers_gpio_uart/s
 +
 +use core::{marker::PhantomData, ops};
 +
++//--------------------------------------------------------------------------------------------------
++// Public Definitions
++//--------------------------------------------------------------------------------------------------
++
 +pub struct MMIODerefWrapper<T> {
-+    base_addr: usize,
++    start_addr: usize,
 +    phantom: PhantomData<T>,
 +}
 +
++//--------------------------------------------------------------------------------------------------
++// Public Code
++//--------------------------------------------------------------------------------------------------
++
 +impl<T> MMIODerefWrapper<T> {
 +    /// Create an instance.
-+    pub const unsafe fn new(base_addr: usize) -> Self {
++    pub const unsafe fn new(start_addr: usize) -> Self {
 +        Self {
-+            base_addr,
++            start_addr,
 +            phantom: PhantomData,
 +        }
-+    }
-+
-+    /// Return a pointer to the associated MMIO register block.
-+    fn ptr(&self) -> *const T {
-+        self.base_addr as *const _
 +    }
 +}
 +
@@ -641,7 +644,7 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/common.rs 06_drivers_gpio_uart/s
 +    type Target = T;
 +
 +    fn deref(&self) -> &Self::Target {
-+        unsafe { &*self.ptr() }
++        unsafe { &*(self.start_addr as *const _) }
 +    }
 +}
 
@@ -807,11 +810,11 @@ diff -uNr 05_safe_globals/src/bsp/raspberrypi/driver.rs 06_drivers_gpio_uart/src
 +use crate::driver;
 +
 +//--------------------------------------------------------------------------------------------------
-+// Public Definitions
++// Private Definitions
 +//--------------------------------------------------------------------------------------------------
 +
 +/// Device Driver Manager type.
-+pub struct BSPDriverManager {
++struct BSPDriverManager {
 +    device_drivers: [&'static (dyn DeviceDriver + Sync); 2],
 +}
 +
@@ -851,13 +854,13 @@ diff -uNr 05_safe_globals/src/bsp/raspberrypi/driver.rs 06_drivers_gpio_uart/src
 diff -uNr 05_safe_globals/src/bsp/raspberrypi/memory.rs 06_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs
 --- 05_safe_globals/src/bsp/raspberrypi/memory.rs
 +++ 06_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs
-@@ -23,6 +23,33 @@
- /// The early boot core's stack address.
- pub const BOOT_CORE_STACK_START: usize = 0x80_000;
-
-+/// The board's memory map.
-+#[rustfmt::skip]
-+pub(super) mod map {
+@@ -23,7 +23,30 @@
+ /// The board's memory map.
+ #[rustfmt::skip]
+ pub(super) mod map {
+-    pub const BOOT_CORE_STACK_END: usize = 0x8_0000;
++    pub const BOOT_CORE_STACK_END: usize =        0x8_0000;
++
 +    pub const GPIO_OFFSET:         usize =        0x0020_0000;
 +    pub const UART_OFFSET:         usize =        0x0020_1000;
 +
@@ -880,10 +883,8 @@ diff -uNr 05_safe_globals/src/bsp/raspberrypi/memory.rs 06_drivers_gpio_uart/src
 +        pub const GPIO_BASE:       usize = BASE + GPIO_OFFSET;
 +        pub const PL011_UART_BASE: usize = BASE + UART_OFFSET;
 +    }
-+}
-+
- //--------------------------------------------------------------------------------------------------
- // Public Code
+ }
+
  //--------------------------------------------------------------------------------------------------
 
 diff -uNr 05_safe_globals/src/bsp/raspberrypi.rs 06_drivers_gpio_uart/src/bsp/raspberrypi.rs
@@ -980,7 +981,7 @@ diff -uNr 05_safe_globals/src/console.rs 06_drivers_gpio_uart/src/console.rs
 diff -uNr 05_safe_globals/src/driver.rs 06_drivers_gpio_uart/src/driver.rs
 --- 05_safe_globals/src/driver.rs
 +++ 06_drivers_gpio_uart/src/driver.rs
-@@ -0,0 +1,41 @@
+@@ -0,0 +1,44 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
@@ -993,14 +994,17 @@ diff -uNr 05_safe_globals/src/driver.rs 06_drivers_gpio_uart/src/driver.rs
 +
 +/// Driver interfaces.
 +pub mod interface {
-+
 +    /// Device Driver functions.
 +    pub trait DeviceDriver {
 +        /// Return a compatibility string for identifying the driver.
-+        fn compatible(&self) -> &str;
++        fn compatible(&self) -> &'static str;
 +
 +        /// Called by the kernel to bring up the device.
-+        fn init(&self) -> Result<(), ()> {
++        ///
++        /// # Safety
++        ///
++        /// - During init, drivers might do stuff with system-wide impact.
++        unsafe fn init(&self) -> Result<(), &'static str> {
 +            Ok(())
 +        }
 +    }
@@ -1059,8 +1063,8 @@ diff -uNr 05_safe_globals/src/main.rs 06_drivers_gpio_uart/src/main.rs
 +    use driver::interface::DriverManager;
 +
 +    for i in bsp::driver::driver_manager().all_device_drivers().iter() {
-+        if i.init().is_err() {
-+            panic!("Error loading driver: {}", i.compatible())
++        if let Err(x) = i.init() {
++            panic!("Error loading driver: {}: {}", i.compatible(), x);
 +        }
 +    }
 +    bsp::driver::driver_manager().post_device_driver_init();

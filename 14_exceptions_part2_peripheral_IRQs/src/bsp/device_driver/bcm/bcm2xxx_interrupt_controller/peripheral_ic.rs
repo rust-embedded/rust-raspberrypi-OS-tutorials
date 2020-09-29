@@ -49,7 +49,7 @@ type HandlerTable =
 // Public Definitions
 //--------------------------------------------------------------------------------------------------
 
-/// Representation of the peripheral interrupt regsler.
+/// Representation of the peripheral interrupt controller.
 pub struct PeripheralIC {
     /// Access to write registers is guarded with a lock.
     wo_registers: IRQSafeNullLock<WriteOnlyRegisters>,

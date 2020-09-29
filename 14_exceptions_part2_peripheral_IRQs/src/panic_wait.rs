@@ -4,7 +4,7 @@
 
 //! A panic handler that infinitely waits.
 
-use crate::{bsp, cpu};
+use crate::{bsp, cpu, exception};
 use core::{fmt, panic::PanicInfo};
 
 //--------------------------------------------------------------------------------------------------
@@ -46,6 +46,8 @@ macro_rules! panic_println {
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
+    unsafe { exception::asynchronous::local_irq_mask() };
+
     if let Some(args) = info.message() {
         panic_println!("\nKernel panic: {}", args);
     } else {

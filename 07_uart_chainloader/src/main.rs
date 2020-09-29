@@ -132,8 +132,8 @@ unsafe fn kernel_init() -> ! {
     use driver::interface::DriverManager;
 
     for i in bsp::driver::driver_manager().all_device_drivers().iter() {
-        if i.init().is_err() {
-            panic!("Error loading driver: {}", i.compatible())
+        if let Err(x) = i.init() {
+            panic!("Error loading driver: {}: {}", i.compatible(), x);
         }
     }
     bsp::driver::driver_manager().post_device_driver_init();
@@ -177,7 +177,7 @@ fn kernel_main() -> ! {
     console().write_char('O');
     console().write_char('K');
 
-    let kernel_addr: *mut u8 = bsp::memory::BOARD_DEFAULT_LOAD_ADDRESS as *mut u8;
+    let kernel_addr: *mut u8 = bsp::memory::board_default_load_addr() as *mut u8;
     unsafe {
         // Read the kernel byte by byte.
         for i in 0..size {

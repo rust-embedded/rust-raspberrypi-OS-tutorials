@@ -137,7 +137,7 @@ struct MemoryManagementUnit;
 ///
 /// # Safety
 ///
-/// - Supposed to land in `.bss`. Therefore, ensure that they boil down to all "0" entries.
+/// - Supposed to land in `.bss`. Therefore, ensure that all initial member values boil down to "0".
 static mut TABLES: ArchTranslationTable = ArchTranslationTable::new();
 
 static MMU: MemoryManagementUnit = MemoryManagementUnit;
@@ -290,7 +290,7 @@ fn configure_translation_control() {
 // Public Code
 //--------------------------------------------------------------------------------------------------
 
-/// Return a reference to the MMU.
+/// Return a reference to the MMU instance.
 pub fn mmu() -> &'static impl memory::mmu::interface::MMU {
     &MMU
 }

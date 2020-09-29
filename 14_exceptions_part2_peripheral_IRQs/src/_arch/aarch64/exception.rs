@@ -43,7 +43,7 @@ struct EsrEL1;
 // Private Code
 //--------------------------------------------------------------------------------------------------
 
-/// Print verbose information about the exception and the panic.
+/// Prints verbose information about the exception and then panics.
 fn default_exception_handler(e: &ExceptionContext) {
     panic!(
         "\n\nCPU Exception!\n\

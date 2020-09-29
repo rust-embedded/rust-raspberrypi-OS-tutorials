@@ -245,11 +245,11 @@ impl PL011Uart {
 use synchronization::interface::Mutex;
 
 impl driver::interface::DeviceDriver for PL011Uart {
-    fn compatible(&self) -> &str {
+    fn compatible(&self) -> &'static str {
         "BCM PL011 UART"
     }
 
-    fn init(&self) -> Result<(), ()> {
+    unsafe fn init(&self) -> Result<(), &'static str> {
         let mut r = &self.inner;
         r.lock(|inner| inner.init());
 

@@ -1000,7 +1000,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/bsp/raspberrypi/console.rs 13_integ
 diff -uNr 12_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs 13_integrated_testing/src/bsp/raspberrypi/memory/mmu.rs
 --- 12_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs
 +++ 13_integrated_testing/src/bsp/raspberrypi/memory/mmu.rs
-@@ -71,3 +71,28 @@
+@@ -71,3 +71,46 @@
  pub fn virt_mem_layout() -> &'static KernelVirtualLayout<{ NUM_MEM_RANGES }> {
      &LAYOUT
  }
@@ -1014,7 +1014,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs 13_in
 +    use super::*;
 +    use test_macros::kernel_test;
 +
-+    /// Check 64 KiB alignment of the kernel's virtual memory layout sections.
++    /// Check alignment of the kernel's virtual memory layout sections.
 +    #[kernel_test]
 +    fn virt_mem_layout_sections_are_64KiB_aligned() {
 +        const SIXTYFOUR_KIB: usize = 65536;
@@ -1028,29 +1028,11 @@ diff -uNr 12_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs 13_in
 +            assert!(end >= start);
 +        }
 +    }
-+}
-
-diff -uNr 12_exceptions_part1_groundwork/src/bsp.rs 13_integrated_testing/src/bsp.rs
---- 12_exceptions_part1_groundwork/src/bsp.rs
-+++ 13_integrated_testing/src/bsp.rs
-@@ -11,3 +11,31 @@
-
- #[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
- pub use raspberrypi::*;
-+
-+//--------------------------------------------------------------------------------------------------
-+// Testing
-+//--------------------------------------------------------------------------------------------------
-+
-+#[cfg(test)]
-+mod tests {
-+    use super::*;
-+    use test_macros::kernel_test;
 +
 +    /// Ensure the kernel's virtual memory layout is free of overlaps.
 +    #[kernel_test]
 +    fn virt_mem_layout_has_no_overlaps() {
-+        let layout = memory::mmu::virt_mem_layout().inner();
++        let layout = virt_mem_layout().inner();
 +
 +        for (i, first) in layout.iter().enumerate() {
 +            for second in layout.iter().skip(i + 1) {

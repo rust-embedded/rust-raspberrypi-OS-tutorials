@@ -20,12 +20,21 @@ extern "C" {
 // Public Definitions
 //--------------------------------------------------------------------------------------------------
 
-/// The early boot core's stack address.
-pub const BOOT_CORE_STACK_START: usize = 0x80_000;
+/// The board's memory map.
+#[rustfmt::skip]
+pub(super) mod map {
+    pub const BOOT_CORE_STACK_END: usize = 0x8_0000;
+}
 
 //--------------------------------------------------------------------------------------------------
 // Public Code
 //--------------------------------------------------------------------------------------------------
+
+/// Exclusive end address of the boot core's stack.
+#[inline(always)]
+pub fn boot_core_stack_end() -> usize {
+    map::BOOT_CORE_STACK_END
+}
 
 /// Return the range spanning the .bss section.
 ///

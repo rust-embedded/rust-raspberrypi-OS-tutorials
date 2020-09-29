@@ -525,7 +525,7 @@ diff -uNr 11_virtual_memory/src/_arch/aarch64/exception.rs 12_exceptions_part1_g
 +// Private Code
 +//--------------------------------------------------------------------------------------------------
 +
-+/// Print verbose information about the exception and the panic.
++/// Prints verbose information about the exception and then panics.
 +fn default_exception_handler(e: &ExceptionContext) {
 +    panic!(
 +        "\n\nCPU Exception!\n\

@@ -197,7 +197,7 @@ diff -uNr 02_runtime_init/src/panic_wait.rs 03_hacky_hello_world/src/panic_wait.
 diff -uNr 02_runtime_init/src/print.rs 03_hacky_hello_world/src/print.rs
 --- 02_runtime_init/src/print.rs
 +++ 03_hacky_hello_world/src/print.rs
-@@ -0,0 +1,42 @@
+@@ -0,0 +1,38 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
@@ -208,7 +208,7 @@ diff -uNr 02_runtime_init/src/print.rs 03_hacky_hello_world/src/print.rs
 +use core::fmt;
 +
 +//--------------------------------------------------------------------------------------------------
-+// Private Code
++// Public Code
 +//--------------------------------------------------------------------------------------------------
 +
 +#[doc(hidden)]
@@ -217,10 +217,6 @@ diff -uNr 02_runtime_init/src/print.rs 03_hacky_hello_world/src/print.rs
 +
 +    bsp::console::console().write_fmt(args).unwrap();
 +}
-+
-+//--------------------------------------------------------------------------------------------------
-+// Public Code
-+//--------------------------------------------------------------------------------------------------
 +
 +/// Prints without a newline.
 +///

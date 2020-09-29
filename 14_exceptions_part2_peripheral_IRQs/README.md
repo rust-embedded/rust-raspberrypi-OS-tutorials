@@ -1355,11 +1355,11 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2.rs 14_exceptions
 +use synchronization::interface::ReadWriteEx;
 +
 +impl driver::interface::DeviceDriver for GICv2 {
-+    fn compatible(&self) -> &str {
++    fn compatible(&self) -> &'static str {
 +        "GICv2 (ARM Generic Interrupt Controller v2)"
 +    }
 +
-+    fn init(&self) -> Result<(), ()> {
++    unsafe fn init(&self) -> Result<(), &'static str> {
 +        if cpu::smp::core_id::<usize>() == bsp::cpu::BOOT_CORE_ID {
 +            self.gicd.boot_core_init();
 +        }
@@ -1542,7 +1542,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 +// Public Definitions
 +//--------------------------------------------------------------------------------------------------
 +
-+/// Representation of the peripheral interrupt regsler.
++/// Representation of the peripheral interrupt controller.
 +pub struct PeripheralIC {
 +    /// Access to write registers is guarded with a lock.
 +    wo_registers: IRQSafeNullLock<WriteOnlyRegisters>,
@@ -1691,7 +1691,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 +pub type PeripheralIRQ =
 +    exception::asynchronous::IRQNumber<{ InterruptController::MAX_PERIPHERAL_IRQ_NUMBER }>;
 +
-+/// Used for the associated type of trait  [`exception::asynchronous::interface::IRQManager`].
++/// Used for the associated type of trait [`exception::asynchronous::interface::IRQManager`].
 +#[derive(Copy, Clone)]
 +pub enum IRQNumber {
 +    Local(LocalIRQ),
@@ -1756,7 +1756,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 +//------------------------------------------------------------------------------
 +
 +impl driver::interface::DeviceDriver for InterruptController {
-+    fn compatible(&self) -> &str {
++    fn compatible(&self) -> &'static str {
 +        "BCM Interrupt Controller"
 +    }
 +}
@@ -2069,7 +2069,7 @@ diff -uNr 13_integrated_testing/src/bsp/raspberrypi/driver.rs 14_exceptions_part
 @@ -12,7 +12,7 @@
 
  /// Device Driver Manager type.
- pub struct BSPDriverManager {
+ struct BSPDriverManager {
 -    device_drivers: [&'static (dyn DeviceDriver + Sync); 2],
 +    device_drivers: [&'static (dyn DeviceDriver + Sync); 3],
  }
@@ -2145,12 +2145,15 @@ diff -uNr 13_integrated_testing/src/bsp/raspberrypi/exception.rs 14_exceptions_p
 diff -uNr 13_integrated_testing/src/bsp/raspberrypi/memory.rs 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs
 --- 13_integrated_testing/src/bsp/raspberrypi/memory.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs
-@@ -30,20 +30,22 @@
+@@ -27,22 +27,24 @@
  /// The board's memory map.
  #[rustfmt::skip]
  pub(super) mod map {
 -    pub const END_INCLUSIVE:       usize =        0xFFFF_FFFF;
 +    pub const END_INCLUSIVE:                            usize =        0xFFFF_FFFF;
+
+-    pub const BOOT_CORE_STACK_END: usize =        0x8_0000;
++    pub const BOOT_CORE_STACK_END:                      usize =        0x8_0000;
 
 -    pub const GPIO_OFFSET:         usize =        0x0020_0000;
 -    pub const UART_OFFSET:         usize =        0x0020_1000;
@@ -2175,7 +2178,7 @@ diff -uNr 13_integrated_testing/src/bsp/raspberrypi/memory.rs 14_exceptions_part
      }
 
      /// Physical devices.
-@@ -51,10 +53,12 @@
+@@ -50,10 +52,12 @@
      pub mod mmio {
          use super::*;
 
@@ -2236,8 +2239,8 @@ diff -uNr 13_integrated_testing/src/bsp/raspberrypi.rs 14_exceptions_part2_perip
 diff -uNr 13_integrated_testing/src/driver.rs 14_exceptions_part2_peripheral_IRQs/src/driver.rs
 --- 13_integrated_testing/src/driver.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/driver.rs
-@@ -20,6 +20,14 @@
-         fn init(&self) -> Result<(), ()> {
+@@ -23,6 +23,14 @@
+         unsafe fn init(&self) -> Result<(), &'static str> {
              Ok(())
          }
 +
@@ -2265,6 +2268,28 @@ diff -uNr 13_integrated_testing/src/exception/asynchronous.rs 14_exceptions_part
 +//--------------------------------------------------------------------------------------------------
 +// Public Definitions
 +//--------------------------------------------------------------------------------------------------
++
++/// Interrupt descriptor.
++#[derive(Copy, Clone)]
++pub struct IRQDescriptor {
++    /// Descriptive name.
++    pub name: &'static str,
++
++    /// Reference to handler trait object.
++    pub handler: &'static (dyn interface::IRQHandler + Sync),
++}
++
++/// IRQContext token.
++///
++/// An instance of this type indicates that the local core is currently executing in IRQ
++/// context, aka executing an interrupt vector or subcalls of it.
++///
++/// Concept and implementation derived from the `CriticalSection` introduced in
++/// https://github.com/rust-embedded/bare-metal
++#[derive(Clone, Copy)]
++pub struct IRQContext<'irq_context> {
++    _0: PhantomData<&'irq_context ()>,
++}
 +
 +/// Asynchronous exception handling interfaces.
 +pub mod interface {
@@ -2309,28 +2334,6 @@ diff -uNr 13_integrated_testing/src/exception/asynchronous.rs 14_exceptions_part
 +        /// Print list of registered handlers.
 +        fn print_handler(&self);
 +    }
-+}
-+
-+/// Interrupt descriptor.
-+#[derive(Copy, Clone)]
-+pub struct IRQDescriptor {
-+    /// Descriptive name.
-+    pub name: &'static str,
-+
-+    /// Reference to handler trait object.
-+    pub handler: &'static (dyn interface::IRQHandler + Sync),
-+}
-+
-+/// IRQContext token.
-+///
-+/// An instance of this type indicates that the local core is currently executing in IRQ
-+/// context, aka executing an interrupt vector or subcalls of it.
-+///
-+/// Concept and implementation derived from the `CriticalSection` introduced in
-+/// https://github.com/rust-embedded/bare-metal
-+#[derive(Clone, Copy)]
-+pub struct IRQContext<'irq_context> {
-+    _0: PhantomData<&'irq_context ()>,
 +}
 +
 +/// A wrapper type for IRQ numbers with integrated range sanity check.
@@ -2504,6 +2507,28 @@ diff -uNr 13_integrated_testing/src/main.rs 14_exceptions_part2_peripheral_IRQs/
 -    }
 +    cpu::wait_forever();
  }
+
+diff -uNr 13_integrated_testing/src/panic_wait.rs 14_exceptions_part2_peripheral_IRQs/src/panic_wait.rs
+--- 13_integrated_testing/src/panic_wait.rs
++++ 14_exceptions_part2_peripheral_IRQs/src/panic_wait.rs
+@@ -4,7 +4,7 @@
+
+ //! A panic handler that infinitely waits.
+
+-use crate::{bsp, cpu};
++use crate::{bsp, cpu, exception};
+ use core::{fmt, panic::PanicInfo};
+
+ //--------------------------------------------------------------------------------------------------
+@@ -46,6 +46,8 @@
+
+ #[panic_handler]
+ fn panic(info: &PanicInfo) -> ! {
++    unsafe { exception::asynchronous::local_irq_mask() };
++
+     if let Some(args) = info.message() {
+         panic_println!("\nKernel panic: {}", args);
+     } else {
 
 diff -uNr 13_integrated_testing/src/state.rs 14_exceptions_part2_peripheral_IRQs/src/state.rs
 --- 13_integrated_testing/src/state.rs

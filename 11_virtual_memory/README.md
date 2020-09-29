@@ -440,7 +440,7 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_memory/s
 +///
 +/// # Safety
 +///
-+/// - Supposed to land in `.bss`. Therefore, ensure that they boil down to all "0" entries.
++/// - Supposed to land in `.bss`. Therefore, ensure that all initial member values boil down to "0".
 +static mut TABLES: ArchTranslationTable = ArchTranslationTable::new();
 +
 +static MMU: MemoryManagementUnit = MemoryManagementUnit;
@@ -593,7 +593,7 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_memory/s
 +// Public Code
 +//--------------------------------------------------------------------------------------------------
 +
-+/// Return a reference to the MMU.
++/// Return a reference to the MMU instance.
 +pub fn mmu() -> &'static impl memory::mmu::interface::MMU {
 +    &MMU
 +}
@@ -770,16 +770,16 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory.rs 11_virtual_memory/src
      static __bss_start: usize;
      static __bss_end: usize;
  }
-@@ -26,6 +30,8 @@
+@@ -23,6 +27,8 @@
  /// The board's memory map.
  #[rustfmt::skip]
  pub(super) mod map {
 +    pub const END_INCLUSIVE:       usize =        0xFFFF_FFFF;
 +
-     pub const GPIO_OFFSET:         usize =        0x0020_0000;
-     pub const UART_OFFSET:         usize =        0x0020_1000;
+     pub const BOOT_CORE_STACK_END: usize =        0x8_0000;
 
-@@ -37,6 +43,7 @@
+     pub const GPIO_OFFSET:         usize =        0x0020_0000;
+@@ -36,6 +42,7 @@
          pub const BASE:            usize =        0x3F00_0000;
          pub const GPIO_BASE:       usize = BASE + GPIO_OFFSET;
          pub const PL011_UART_BASE: usize = BASE + UART_OFFSET;
@@ -787,7 +787,7 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory.rs 11_virtual_memory/src
      }
 
      /// Physical devices.
-@@ -47,10 +54,35 @@
+@@ -46,10 +53,35 @@
          pub const BASE:            usize =        0xFE00_0000;
          pub const GPIO_BASE:       usize = BASE + GPIO_OFFSET;
          pub const PL011_UART_BASE: usize = BASE + UART_OFFSET;
@@ -882,7 +882,7 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_memory/src/main.rs
 +    }
 
      for i in bsp::driver::driver_manager().all_device_drivers().iter() {
-         if i.init().is_err() {
+         if let Err(x) = i.init() {
 @@ -154,6 +168,9 @@
 
      info!("Booting on: {}", bsp::board_name());

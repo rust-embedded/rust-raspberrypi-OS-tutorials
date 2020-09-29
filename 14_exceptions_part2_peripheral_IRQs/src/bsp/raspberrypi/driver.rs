@@ -7,11 +7,11 @@
 use crate::driver;
 
 //--------------------------------------------------------------------------------------------------
-// Public Definitions
+// Private Definitions
 //--------------------------------------------------------------------------------------------------
 
 /// Device Driver Manager type.
-pub struct BSPDriverManager {
+struct BSPDriverManager {
     device_drivers: [&'static (dyn DeviceDriver + Sync); 3],
 }
 
