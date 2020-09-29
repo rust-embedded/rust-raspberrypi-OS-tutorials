@@ -99,13 +99,16 @@ pub fn wait_forever() -> ! {
 //--------------------------------------------------------------------------------------------------
 // Testing
 //--------------------------------------------------------------------------------------------------
+use qemu_exit::QEMUExit;
+
+const QEMU_EXIT_HANDLE: qemu_exit::AArch64 = qemu_exit::AArch64::new();
 
 /// Make the host QEMU binary execute `exit(1)`.
 pub fn qemu_exit_failure() -> ! {
-    qemu_exit::aarch64::exit_failure()
+    QEMU_EXIT_HANDLE.exit_failure()
 }
 
 /// Make the host QEMU binary execute `exit(0)`.
 pub fn qemu_exit_success() -> ! {
-    qemu_exit::aarch64::exit_success()
+    QEMU_EXIT_HANDLE.exit_success()
 }

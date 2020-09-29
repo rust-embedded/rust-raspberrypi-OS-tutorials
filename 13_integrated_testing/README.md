@@ -283,11 +283,26 @@ have that one for our `aarch64` system because it is not compatible.
 
 In our case, we can leverage the ARM [semihosting] emulation of `QEMU` and do a `SYS_EXIT`
 semihosting call with an additional parameter for the exit code. I've written a separate crate,
-[qemu-exit], to do this, so let us import it. Specifically, the following two functions:
+[qemu-exit], to do this. So let us import it and utilize it in `_arch/aarch64/cpu.rs` to provide the
+following exit calls for the kernel:
 
 ```rust
-qemu_exit::aarch64::exit_success() // QEMU binary executes `exit(0)`.
-qemu_exit::aarch64::exit_failure() // QEMU binary executes `exit(1)`.
+//--------------------------------------------------------------------------------------------------
+// Testing
+//--------------------------------------------------------------------------------------------------
+use qemu_exit::QEMUExit;
+
+const QEMU_EXIT_HANDLE: qemu_exit::AArch64 = qemu_exit::AArch64::new();
+
+/// Make the host QEMU binary execute `exit(1)`.
+pub fn qemu_exit_failure() -> ! {
+    QEMU_EXIT_HANDLE.exit_failure()
+}
+
+/// Make the host QEMU binary execute `exit(0)`.
+pub fn qemu_exit_success() -> ! {
+    QEMU_EXIT_HANDLE.exit_success()
+}
 ```
 
 [Click here] in case you are interested in the implementation. Note that for the functions to work,
@@ -782,7 +797,7 @@ diff -uNr 12_exceptions_part1_groundwork/Cargo.toml 13_integrated_testing/Cargo.
  bsp_rpi4 = ["cortex-a", "register"]
 
  [dependencies]
-+qemu-exit = "0.1.x"
++qemu-exit = "1.0.x"
 +test-types = { path = "test-types" }
 
  # Optional dependencies
@@ -930,7 +945,7 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
 diff -uNr 12_exceptions_part1_groundwork/src/_arch/aarch64/cpu.rs 13_integrated_testing/src/_arch/aarch64/cpu.rs
 --- 12_exceptions_part1_groundwork/src/_arch/aarch64/cpu.rs
 +++ 13_integrated_testing/src/_arch/aarch64/cpu.rs
-@@ -95,3 +95,17 @@
+@@ -95,3 +95,20 @@
          asm::wfe()
      }
  }
@@ -938,15 +953,18 @@ diff -uNr 12_exceptions_part1_groundwork/src/_arch/aarch64/cpu.rs 13_integrated_
 +//--------------------------------------------------------------------------------------------------
 +// Testing
 +//--------------------------------------------------------------------------------------------------
++use qemu_exit::QEMUExit;
++
++const QEMU_EXIT_HANDLE: qemu_exit::AArch64 = qemu_exit::AArch64::new();
 +
 +/// Make the host QEMU binary execute `exit(1)`.
 +pub fn qemu_exit_failure() -> ! {
-+    qemu_exit::aarch64::exit_failure()
++    QEMU_EXIT_HANDLE.exit_failure()
 +}
 +
 +/// Make the host QEMU binary execute `exit(0)`.
 +pub fn qemu_exit_success() -> ! {
-+    qemu_exit::aarch64::exit_success()
++    QEMU_EXIT_HANDLE.exit_success()
 +}
 
 diff -uNr 12_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs 13_integrated_testing/src/_arch/aarch64/exception.rs
