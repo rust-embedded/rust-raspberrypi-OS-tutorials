@@ -113,7 +113,6 @@
 
 #![allow(incomplete_features)]
 #![feature(asm)]
-#![feature(const_fn)]
 #![feature(const_generics)]
 #![feature(const_panic)]
 #![feature(core_intrinsics)]
@@ -122,11 +121,11 @@
 #![feature(linkage)]
 #![feature(naked_functions)]
 #![feature(panic_info_message)]
-#![feature(slice_ptr_range)]
 #![feature(trait_alias)]
 #![no_std]
 // Testing
 #![cfg_attr(test, no_main)]
+#![cfg_attr(test, feature(slice_ptr_range))]
 #![feature(custom_test_frameworks)]
 #![reexport_test_harness_main = "test_main"]
 #![test_runner(crate::test_runner)]
