@@ -16,11 +16,11 @@ pub mod memory;
 use super::device_driver;
 
 static GPIO: device_driver::GPIO =
-    unsafe { device_driver::GPIO::new(memory::map::mmio::GPIO_BASE) };
+    unsafe { device_driver::GPIO::new(memory::map::mmio::GPIO_START) };
 
 static PL011_UART: device_driver::PL011Uart = unsafe {
     device_driver::PL011Uart::new(
-        memory::map::mmio::PL011_UART_BASE,
+        memory::map::mmio::PL011_UART_START,
         exception::asynchronous::irq_map::PL011_UART,
     )
 };
@@ -28,14 +28,14 @@ static PL011_UART: device_driver::PL011Uart = unsafe {
 #[cfg(feature = "bsp_rpi3")]
 static INTERRUPT_CONTROLLER: device_driver::InterruptController = unsafe {
     device_driver::InterruptController::new(
-        memory::map::mmio::LOCAL_INTERRUPT_CONTROLLER_BASE,
-        memory::map::mmio::PERIPHERAL_INTERRUPT_CONTROLLER_BASE,
+        memory::map::mmio::LOCAL_INTERRUPT_CONTROLLER_START,
+        memory::map::mmio::PERIPHERAL_INTERRUPT_CONTROLLER_START,
     )
 };
 
 #[cfg(feature = "bsp_rpi4")]
 static INTERRUPT_CONTROLLER: device_driver::GICv2 = unsafe {
-    device_driver::GICv2::new(memory::map::mmio::GICD_BASE, memory::map::mmio::GICC_BASE)
+    device_driver::GICv2::new(memory::map::mmio::GICD_START, memory::map::mmio::GICC_START)
 };
 
 //--------------------------------------------------------------------------------------------------

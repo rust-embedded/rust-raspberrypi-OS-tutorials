@@ -78,10 +78,10 @@ impl InterruptController {
     ///
     /// # Safety
     ///
-    /// - The user must ensure to provide the correct `base_addr`.
-    pub const unsafe fn new(_local_base_addr: usize, periph_base_addr: usize) -> Self {
+    /// - The user must ensure to provide a correct MMIO start address.
+    pub const unsafe fn new(_local_mmio_start_addr: usize, periph_mmio_start_addr: usize) -> Self {
         Self {
-            periph: peripheral_ic::PeripheralIC::new(periph_base_addr),
+            periph: peripheral_ic::PeripheralIC::new(periph_mmio_start_addr),
         }
     }
 }

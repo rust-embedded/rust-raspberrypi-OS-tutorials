@@ -118,11 +118,11 @@ impl GICv2 {
     ///
     /// # Safety
     ///
-    /// - The user must ensure to provide the correct `base_addr`.
-    pub const unsafe fn new(gicd_base_addr: usize, gicc_base_addr: usize) -> Self {
+    /// - The user must ensure to provide a correct MMIO start address.
+    pub const unsafe fn new(gicd_mmio_start_addr: usize, gicc_mmio_start_addr: usize) -> Self {
         Self {
-            gicd: gicd::GICD::new(gicd_base_addr),
-            gicc: gicc::GICC::new(gicc_base_addr),
+            gicd: gicd::GICD::new(gicd_mmio_start_addr),
+            gicc: gicc::GICC::new(gicc_mmio_start_addr),
             handler_table: InitStateLock::new([None; Self::NUM_IRQS]),
         }
     }

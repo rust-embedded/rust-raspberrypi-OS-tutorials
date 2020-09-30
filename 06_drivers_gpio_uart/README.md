@@ -133,7 +133,7 @@ diff -uNr 05_safe_globals/src/_arch/aarch64/cpu.rs 06_drivers_gpio_uart/src/_arc
 diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
 --- 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
 +++ 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
-@@ -0,0 +1,138 @@
+@@ -0,0 +1,161 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
@@ -215,24 +215,31 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 06_drivers_g
 +// Public Definitions
 +//--------------------------------------------------------------------------------------------------
 +
++pub struct GPIOInner {
++    registers: Registers,
++}
++
++// Export the inner struct so that BSPs can use it for the panic handler.
++pub use GPIOInner as PanicGPIO;
++
 +/// Representation of the GPIO HW.
 +pub struct GPIO {
-+    registers: NullLock<Registers>,
++    inner: NullLock<GPIOInner>,
 +}
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Code
 +//--------------------------------------------------------------------------------------------------
 +
-+impl GPIO {
++impl GPIOInner {
 +    /// Create an instance.
 +    ///
 +    /// # Safety
 +    ///
-+    /// - The user must ensure to provide the correct `base_addr`.
-+    pub const unsafe fn new(base_addr: usize) -> Self {
++    /// - The user must ensure to provide a correct MMIO start address.
++    pub const unsafe fn new(mmio_start_addr: usize) -> Self {
 +        Self {
-+            registers: NullLock::new(Registers::new(base_addr)),
++            registers: Registers::new(mmio_start_addr),
 +        }
 +    }
 +
@@ -240,25 +247,41 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 06_drivers_g
 +    ///
 +    /// TX to pin 14
 +    /// RX to pin 15
++    pub fn map_pl011_uart(&mut self) {
++        // Map to pins.
++        self.registers
++            .GPFSEL1
++            .modify(GPFSEL1::FSEL14::AltFunc0 + GPFSEL1::FSEL15::AltFunc0);
++
++        // Enable pins 14 and 15.
++        self.registers.GPPUD.set(0);
++        cpu::spin_for_cycles(150);
++
++        self.registers
++            .GPPUDCLK0
++            .write(GPPUDCLK0::PUDCLK14::AssertClock + GPPUDCLK0::PUDCLK15::AssertClock);
++        cpu::spin_for_cycles(150);
++
++        self.registers.GPPUDCLK0.set(0);
++    }
++}
++
++impl GPIO {
++    /// Create an instance.
++    ///
++    /// # Safety
++    ///
++    /// - The user must ensure to provide a correct MMIO start address.
++    pub const unsafe fn new(mmio_start_addr: usize) -> Self {
++        Self {
++            inner: NullLock::new(GPIOInner::new(mmio_start_addr)),
++        }
++    }
++
++    /// Concurrency safe version of `GPIOInner.map_pl011_uart()`
 +    pub fn map_pl011_uart(&self) {
-+        let mut r = &self.registers;
-+        r.lock(|registers| {
-+            // Map to pins.
-+            registers
-+                .GPFSEL1
-+                .modify(GPFSEL1::FSEL14::AltFunc0 + GPFSEL1::FSEL15::AltFunc0);
-+
-+            // Enable pins 14 and 15.
-+            registers.GPPUD.set(0);
-+            cpu::spin_for_cycles(150);
-+
-+            registers
-+                .GPPUDCLK0
-+                .write(GPPUDCLK0::PUDCLK14::AssertClock + GPPUDCLK0::PUDCLK15::AssertClock);
-+            cpu::spin_for_cycles(150);
-+
-+            registers.GPPUDCLK0.set(0);
-+        })
++        let mut r = &self.inner;
++        r.lock(|inner| inner.map_pl011_uart())
 +    }
 +}
 +
@@ -442,10 +465,10 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 06_dri
 +    ///
 +    /// # Safety
 +    ///
-+    /// - The user must ensure to provide the correct `base_addr`.
-+    pub const unsafe fn new(base_addr: usize) -> Self {
++    /// - The user must ensure to provide a correct MMIO start address.
++    pub const unsafe fn new(mmio_start_addr: usize) -> Self {
 +        Self {
-+            registers: Registers::new(base_addr),
++            registers: Registers::new(mmio_start_addr),
 +            chars_written: 0,
 +            chars_read: 0,
 +        }
@@ -510,10 +533,10 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 06_dri
 +impl PL011Uart {
 +    /// # Safety
 +    ///
-+    /// - The user must ensure to provide the correct `base_addr`.
-+    pub const unsafe fn new(base_addr: usize) -> Self {
++    /// - The user must ensure to provide a correct MMIO start address.
++    pub const unsafe fn new(mmio_start_addr: usize) -> Self {
 +        Self {
-+            inner: NullLock::new(PL011UartInner::new(base_addr)),
++            inner: NullLock::new(PL011UartInner::new(mmio_start_addr)),
 +        }
 +    }
 +}
@@ -668,7 +691,7 @@ diff -uNr 05_safe_globals/src/bsp/device_driver.rs 06_drivers_gpio_uart/src/bsp/
 diff -uNr 05_safe_globals/src/bsp/raspberrypi/console.rs 06_drivers_gpio_uart/src/bsp/raspberrypi/console.rs
 --- 05_safe_globals/src/bsp/raspberrypi/console.rs
 +++ 06_drivers_gpio_uart/src/bsp/raspberrypi/console.rs
-@@ -4,115 +4,27 @@
+@@ -4,115 +4,34 @@
 
  //! BSP console facilities.
 
@@ -679,10 +702,13 @@ diff -uNr 05_safe_globals/src/bsp/raspberrypi/console.rs 06_drivers_gpio_uart/sr
 
  //--------------------------------------------------------------------------------------------------
 -// Private Definitions
--//--------------------------------------------------------------------------------------------------
--
++// Public Code
+ //--------------------------------------------------------------------------------------------------
+
 -/// A mystical, magical device for generating QEMU output out of the void.
--///
++/// In case of a panic, the panic handler uses this function to take a last shot at printing
++/// something before the system is halted.
+ ///
 -/// The mutex protected part.
 -struct QEMUOutputInner {
 -    chars_written: usize,
@@ -705,9 +731,8 @@ diff -uNr 05_safe_globals/src/bsp/raspberrypi/console.rs 06_drivers_gpio_uart/sr
 -
 -//--------------------------------------------------------------------------------------------------
 -// Private Code
-+// Public Code
- //--------------------------------------------------------------------------------------------------
-
+-//--------------------------------------------------------------------------------------------------
+-
 -impl QEMUOutputInner {
 -    const fn new() -> QEMUOutputInner {
 -        QEMUOutputInner { chars_written: 0 }
@@ -726,8 +751,9 @@ diff -uNr 05_safe_globals/src/bsp/raspberrypi/console.rs 06_drivers_gpio_uart/sr
 -/// Implementing `core::fmt::Write` enables usage of the `format_args!` macros, which in turn are
 -/// used to implement the `kernel`'s `print!` and `println!` macros. By implementing `write_str()`,
 -/// we get `write_fmt()` automatically.
-+/// In case of a panic, the panic handler uses this function to take a last shot at printing
-+/// something before the system is halted.
++/// We try to init panic-versions of the GPIO and the UART. The panic versions are not protected
++/// with synchronization primitives, which increases chances that we get to print something, even
++/// when the kernel's default GPIO or UART instances happen to be locked at the time of the panic.
  ///
 -/// The function takes an `&mut self`, so it must be implemented for the inner struct.
 +/// # Safety
@@ -763,9 +789,12 @@ diff -uNr 05_safe_globals/src/bsp/raspberrypi/console.rs 06_drivers_gpio_uart/sr
 -    }
 +/// - Use only for printing during a panic.
 +pub unsafe fn panic_console_out() -> impl fmt::Write {
-+    let mut uart = device_driver::PanicUart::new(memory::map::mmio::PL011_UART_BASE);
-+    uart.init();
-+    uart
++    let mut panic_gpio = device_driver::PanicGPIO::new(memory::map::mmio::GPIO_START);
++    let mut panic_uart = device_driver::PanicUart::new(memory::map::mmio::PL011_UART_START);
++
++    panic_gpio.map_pl011_uart();
++    panic_uart.init();
++    panic_uart
  }
 
  /// Return a reference to the console.
@@ -854,24 +883,22 @@ diff -uNr 05_safe_globals/src/bsp/raspberrypi/driver.rs 06_drivers_gpio_uart/src
 diff -uNr 05_safe_globals/src/bsp/raspberrypi/memory.rs 06_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs
 --- 05_safe_globals/src/bsp/raspberrypi/memory.rs
 +++ 06_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs
-@@ -23,7 +23,30 @@
- /// The board's memory map.
+@@ -24,6 +24,29 @@
  #[rustfmt::skip]
  pub(super) mod map {
--    pub const BOOT_CORE_STACK_END: usize = 0x8_0000;
-+    pub const BOOT_CORE_STACK_END: usize =        0x8_0000;
+     pub const BOOT_CORE_STACK_END: usize = 0x8_0000;
 +
-+    pub const GPIO_OFFSET:         usize =        0x0020_0000;
-+    pub const UART_OFFSET:         usize =        0x0020_1000;
++    pub const GPIO_OFFSET:         usize = 0x0020_0000;
++    pub const UART_OFFSET:         usize = 0x0020_1000;
 +
 +    /// Physical devices.
 +    #[cfg(feature = "bsp_rpi3")]
 +    pub mod mmio {
 +        use super::*;
 +
-+        pub const BASE:            usize =        0x3F00_0000;
-+        pub const GPIO_BASE:       usize = BASE + GPIO_OFFSET;
-+        pub const PL011_UART_BASE: usize = BASE + UART_OFFSET;
++        pub const START:            usize =         0x3F00_0000;
++        pub const GPIO_START:       usize = START + GPIO_OFFSET;
++        pub const PL011_UART_START: usize = START + UART_OFFSET;
 +    }
 +
 +    /// Physical devices.
@@ -879,9 +906,9 @@ diff -uNr 05_safe_globals/src/bsp/raspberrypi/memory.rs 06_drivers_gpio_uart/src
 +    pub mod mmio {
 +        use super::*;
 +
-+        pub const BASE:            usize =        0xFE00_0000;
-+        pub const GPIO_BASE:       usize = BASE + GPIO_OFFSET;
-+        pub const PL011_UART_BASE: usize = BASE + UART_OFFSET;
++        pub const START:            usize =         0xFE00_0000;
++        pub const GPIO_START:       usize = START + GPIO_OFFSET;
++        pub const PL011_UART_START: usize = START + UART_OFFSET;
 +    }
  }
 
@@ -903,10 +930,10 @@ diff -uNr 05_safe_globals/src/bsp/raspberrypi.rs 06_drivers_gpio_uart/src/bsp/ra
 +use super::device_driver;
 +
 +static GPIO: device_driver::GPIO =
-+    unsafe { device_driver::GPIO::new(memory::map::mmio::GPIO_BASE) };
++    unsafe { device_driver::GPIO::new(memory::map::mmio::GPIO_START) };
 +
 +static PL011_UART: device_driver::PL011Uart =
-+    unsafe { device_driver::PL011Uart::new(memory::map::mmio::PL011_UART_BASE) };
++    unsafe { device_driver::PL011Uart::new(memory::map::mmio::PL011_UART_START) };
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Code

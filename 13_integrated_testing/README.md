@@ -138,6 +138,7 @@ In `lib.rs`, we add the following headers to get started with `custom_test_frame
 ```rust
 // Testing
 #![cfg_attr(test, no_main)]
+#![cfg_attr(test, feature(slice_ptr_range))]
 #![feature(custom_test_frameworks)]
 #![reexport_test_harness_main = "test_main"]
 #![test_runner(crate::test_runner)]
@@ -1000,7 +1001,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs 13_integ
 diff -uNr 12_exceptions_part1_groundwork/src/bsp/raspberrypi/console.rs 13_integrated_testing/src/bsp/raspberrypi/console.rs
 --- 12_exceptions_part1_groundwork/src/bsp/raspberrypi/console.rs
 +++ 13_integrated_testing/src/bsp/raspberrypi/console.rs
-@@ -28,3 +28,13 @@
+@@ -35,3 +35,13 @@
  pub fn console() -> &'static impl console::interface::All {
      &super::PL011_UART
  }

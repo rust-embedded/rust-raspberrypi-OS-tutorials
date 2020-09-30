@@ -524,7 +524,7 @@ impl<T> interface::ReadWriteEx for &InitStateLock<T> {
 
     fn write<R>(&mut self, f: impl FnOnce(&mut Self::Data) -> R) -> R {
         assert!(
-            state::state_manager().state() == state::State::Init,
+            state::state_manager().is_init(),
             "InitStateLock::write called after kernel init phase"
         );
         assert!(
@@ -620,7 +620,7 @@ register_structs! {
         (0x104 => ISENABLER: [ReadWrite<u32>; 31]),
         (0x108 => _reserved2),
         (0x820 => ITARGETSR: [ReadWrite<u32, ITARGETSR::Register>; 248]),
-        (0xBFC => @END),
+        (0x824 => @END),
     }
 }
 
@@ -631,7 +631,7 @@ register_structs! {
         (0x100 => ISENABLER: ReadWrite<u32>),
         (0x104 => _reserved2),
         (0x800 => ITARGETSR: [ReadOnly<u32, ITARGETSR::Register>; 8]),
-        (0xBFC => @END),
+        (0x804 => @END),
     }
 }
 ```
@@ -945,10 +945,10 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2/gicc.rs 14_excep
 +    ///
 +    /// # Safety
 +    ///
-+    /// - The user must ensure to provide the correct `base_addr`.
-+    pub const unsafe fn new(base_addr: usize) -> Self {
++    /// - The user must ensure to provide a correct MMIO start address.
++    pub const unsafe fn new(mmio_start_addr: usize) -> Self {
 +        Self {
-+            registers: Registers::new(base_addr),
++            registers: Registers::new(mmio_start_addr),
 +        }
 +    }
 +
@@ -1067,7 +1067,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2/gicd.rs 14_excep
 +        (0x104 => ISENABLER: [ReadWrite<u32>; 31]),
 +        (0x108 => _reserved2),
 +        (0x820 => ITARGETSR: [ReadWrite<u32, ITARGETSR::Register>; 248]),
-+        (0xBFC => @END),
++        (0x824 => @END),
 +    }
 +}
 +
@@ -1078,7 +1078,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2/gicd.rs 14_excep
 +        (0x100 => ISENABLER: ReadWrite<u32>),
 +        (0x104 => _reserved2),
 +        (0x800 => ITARGETSR: [ReadOnly<u32, ITARGETSR::Register>; 8]),
-+        (0xBFC => @END),
++        (0x804 => @END),
 +    }
 +}
 +
@@ -1142,11 +1142,11 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2/gicd.rs 14_excep
 +    ///
 +    /// # Safety
 +    ///
-+    /// - The user must ensure to provide the correct `base_addr`.
-+    pub const unsafe fn new(base_addr: usize) -> Self {
++    /// - The user must ensure to provide a correct MMIO start address.
++    pub const unsafe fn new(mmio_start_addr: usize) -> Self {
 +        Self {
-+            shared_registers: IRQSafeNullLock::new(SharedRegisters::new(base_addr)),
-+            banked_registers: BankedRegisters::new(base_addr),
++            shared_registers: IRQSafeNullLock::new(SharedRegisters::new(mmio_start_addr)),
++            banked_registers: BankedRegisters::new(mmio_start_addr),
 +        }
 +    }
 +
@@ -1339,11 +1339,11 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2.rs 14_exceptions
 +    ///
 +    /// # Safety
 +    ///
-+    /// - The user must ensure to provide the correct `base_addr`.
-+    pub const unsafe fn new(gicd_base_addr: usize, gicc_base_addr: usize) -> Self {
++    /// - The user must ensure to provide a correct MMIO start address.
++    pub const unsafe fn new(gicd_mmio_start_addr: usize, gicc_mmio_start_addr: usize) -> Self {
 +        Self {
-+            gicd: gicd::GICD::new(gicd_base_addr),
-+            gicc: gicc::GICC::new(gicc_base_addr),
++            gicd: gicd::GICD::new(gicd_mmio_start_addr),
++            gicc: gicc::GICC::new(gicc_mmio_start_addr),
 +            handler_table: InitStateLock::new([None; Self::NUM_IRQS]),
 +        }
 +    }
@@ -1468,21 +1468,21 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 14_exc
  };
  use register::{mmio::*, register_bitfields, register_structs};
 
-@@ -81,7 +81,7 @@
+@@ -88,7 +88,7 @@
 
  /// Representation of the GPIO HW.
  pub struct GPIO {
--    registers: NullLock<Registers>,
-+    registers: IRQSafeNullLock<Registers>,
+-    inner: NullLock<GPIOInner>,
++    inner: IRQSafeNullLock<GPIOInner>,
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -96,7 +96,7 @@
-     /// - The user must ensure to provide the correct `base_addr`.
-     pub const unsafe fn new(base_addr: usize) -> Self {
+@@ -138,7 +138,7 @@
+     /// - The user must ensure to provide a correct MMIO start address.
+     pub const unsafe fn new(mmio_start_addr: usize) -> Self {
          Self {
--            registers: NullLock::new(Registers::new(base_addr)),
-+            registers: IRQSafeNullLock::new(Registers::new(base_addr)),
+-            inner: NullLock::new(GPIOInner::new(mmio_start_addr)),
++            inner: IRQSafeNullLock::new(GPIOInner::new(mmio_start_addr)),
          }
      }
 
@@ -1563,11 +1563,11 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 +    ///
 +    /// # Safety
 +    ///
-+    /// - The user must ensure to provide the correct `base_addr`.
-+    pub const unsafe fn new(base_addr: usize) -> Self {
++    /// - The user must ensure to provide a correct MMIO start address.
++    pub const unsafe fn new(mmio_start_addr: usize) -> Self {
 +        Self {
-+            wo_registers: IRQSafeNullLock::new(WriteOnlyRegisters::new(base_addr)),
-+            ro_registers: ReadOnlyRegisters::new(base_addr),
++            wo_registers: IRQSafeNullLock::new(WriteOnlyRegisters::new(mmio_start_addr)),
++            ro_registers: ReadOnlyRegisters::new(mmio_start_addr),
 +            handler_table: InitStateLock::new([None; InterruptController::NUM_PERIPHERAL_IRQS]),
 +        }
 +    }
@@ -1743,10 +1743,10 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 +    ///
 +    /// # Safety
 +    ///
-+    /// - The user must ensure to provide the correct `base_addr`.
-+    pub const unsafe fn new(_local_base_addr: usize, periph_base_addr: usize) -> Self {
++    /// - The user must ensure to provide a correct MMIO start address.
++    pub const unsafe fn new(_local_mmio_start_addr: usize, periph_mmio_start_addr: usize) -> Self {
 +        Self {
-+            periph: peripheral_ic::PeripheralIC::new(periph_base_addr),
++            periph: peripheral_ic::PeripheralIC::new(periph_mmio_start_addr),
 +        }
 +    }
 +}
@@ -1940,20 +1940,28 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
  }
 
  /// Implementing `core::fmt::Write` enables usage of the `format_args!` macros, which in turn are
-@@ -232,9 +317,10 @@
+@@ -229,12 +314,18 @@
+ }
+
+ impl PL011Uart {
++    /// Create an instance.
++    ///
      /// # Safety
      ///
-     /// - The user must ensure to provide the correct `base_addr`.
--    pub const unsafe fn new(base_addr: usize) -> Self {
-+    pub const unsafe fn new(base_addr: usize, irq_number: bsp::device_driver::IRQNumber) -> Self {
+     /// - The user must ensure to provide a correct MMIO start address.
+-    pub const unsafe fn new(mmio_start_addr: usize) -> Self {
++    pub const unsafe fn new(
++        mmio_start_addr: usize,
++        irq_number: bsp::device_driver::IRQNumber,
++    ) -> Self {
          Self {
--            inner: NullLock::new(PL011UartInner::new(base_addr)),
-+            inner: IRQSafeNullLock::new(PL011UartInner::new(base_addr)),
+-            inner: NullLock::new(PL011UartInner::new(mmio_start_addr)),
++            inner: IRQSafeNullLock::new(PL011UartInner::new(mmio_start_addr)),
 +            irq_number,
          }
      }
  }
-@@ -255,6 +341,21 @@
+@@ -255,6 +346,21 @@
 
          Ok(())
      }
@@ -1975,7 +1983,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
  }
 
  impl console::interface::Write for PL011Uart {
-@@ -286,25 +387,7 @@
+@@ -286,25 +392,7 @@
  impl console::interface::Read for PL011Uart {
      fn read_char(&self) -> char {
          let mut r = &self.inner;
@@ -2002,7 +2010,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
      }
 
      fn clear(&self) {
-@@ -329,3 +412,25 @@
+@@ -329,3 +417,25 @@
          r.lock(|inner| inner.chars_read)
      }
  }
@@ -2145,56 +2153,32 @@ diff -uNr 13_integrated_testing/src/bsp/raspberrypi/exception.rs 14_exceptions_p
 diff -uNr 13_integrated_testing/src/bsp/raspberrypi/memory.rs 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs
 --- 13_integrated_testing/src/bsp/raspberrypi/memory.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs
-@@ -27,22 +27,24 @@
- /// The board's memory map.
- #[rustfmt::skip]
- pub(super) mod map {
--    pub const END_INCLUSIVE:       usize =        0xFFFF_FFFF;
-+    pub const END_INCLUSIVE:                            usize =        0xFFFF_FFFF;
-
--    pub const BOOT_CORE_STACK_END: usize =        0x8_0000;
-+    pub const BOOT_CORE_STACK_END:                      usize =        0x8_0000;
-
--    pub const GPIO_OFFSET:         usize =        0x0020_0000;
--    pub const UART_OFFSET:         usize =        0x0020_1000;
-+    pub const GPIO_OFFSET:                              usize =        0x0020_0000;
-+    pub const UART_OFFSET:                              usize =        0x0020_1000;
-
-     /// Physical devices.
-     #[cfg(feature = "bsp_rpi3")]
+@@ -39,10 +39,12 @@
      pub mod mmio {
          use super::*;
 
--        pub const BASE:            usize =        0x3F00_0000;
--        pub const GPIO_BASE:       usize = BASE + GPIO_OFFSET;
--        pub const PL011_UART_BASE: usize = BASE + UART_OFFSET;
--        pub const END_INCLUSIVE:   usize =        0x4000_FFFF;
-+        pub const BASE:                                 usize =        0x3F00_0000;
-+        pub const PERIPHERAL_INTERRUPT_CONTROLLER_BASE: usize = BASE + 0x0000_B200;
-+        pub const GPIO_BASE:                            usize = BASE + GPIO_OFFSET;
-+        pub const PL011_UART_BASE:                      usize = BASE + UART_OFFSET;
-+        pub const LOCAL_INTERRUPT_CONTROLLER_BASE:      usize =        0x4000_0000;
-+        pub const END_INCLUSIVE:                        usize =        0x4000_FFFF;
+-        pub const START:            usize =         0x3F00_0000;
+-        pub const GPIO_START:       usize = START + GPIO_OFFSET;
+-        pub const PL011_UART_START: usize = START + UART_OFFSET;
+-        pub const END_INCLUSIVE:    usize =         0x4000_FFFF;
++        pub const START:                                 usize =         0x3F00_0000;
++        pub const PERIPHERAL_INTERRUPT_CONTROLLER_START: usize = START + 0x0000_B200;
++        pub const GPIO_START:                            usize = START + GPIO_OFFSET;
++        pub const PL011_UART_START:                      usize = START + UART_OFFSET;
++        pub const LOCAL_INTERRUPT_CONTROLLER_START:      usize =         0x4000_0000;
++        pub const END_INCLUSIVE:                         usize =         0x4000_FFFF;
      }
 
      /// Physical devices.
-@@ -50,10 +52,12 @@
-     pub mod mmio {
-         use super::*;
-
--        pub const BASE:            usize =        0xFE00_0000;
--        pub const GPIO_BASE:       usize = BASE + GPIO_OFFSET;
--        pub const PL011_UART_BASE: usize = BASE + UART_OFFSET;
--        pub const END_INCLUSIVE:   usize =        0xFF84_FFFF;
-+        pub const BASE:                                 usize =        0xFE00_0000;
-+        pub const GPIO_BASE:                            usize = BASE + GPIO_OFFSET;
-+        pub const PL011_UART_BASE:                      usize = BASE + UART_OFFSET;
-+        pub const GICD_BASE:                            usize =        0xFF84_1000;
-+        pub const GICC_BASE:                            usize =        0xFF84_2000;
-+        pub const END_INCLUSIVE:                        usize =        0xFF84_FFFF;
+@@ -53,6 +55,8 @@
+         pub const START:            usize =         0xFE00_0000;
+         pub const GPIO_START:       usize = START + GPIO_OFFSET;
+         pub const PL011_UART_START: usize = START + UART_OFFSET;
++        pub const GICD_START:       usize =         0xFF84_1000;
++        pub const GICC_START:       usize =         0xFF84_2000;
+         pub const END_INCLUSIVE:    usize =         0xFF84_FFFF;
      }
  }
-
 
 diff -uNr 13_integrated_testing/src/bsp/raspberrypi.rs 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi.rs
 --- 13_integrated_testing/src/bsp/raspberrypi.rs
@@ -2209,13 +2193,13 @@ diff -uNr 13_integrated_testing/src/bsp/raspberrypi.rs 14_exceptions_part2_perip
  //--------------------------------------------------------------------------------------------------
 @@ -17,8 +18,25 @@
  static GPIO: device_driver::GPIO =
-     unsafe { device_driver::GPIO::new(memory::map::mmio::GPIO_BASE) };
+     unsafe { device_driver::GPIO::new(memory::map::mmio::GPIO_START) };
 
 -static PL011_UART: device_driver::PL011Uart =
--    unsafe { device_driver::PL011Uart::new(memory::map::mmio::PL011_UART_BASE) };
+-    unsafe { device_driver::PL011Uart::new(memory::map::mmio::PL011_UART_START) };
 +static PL011_UART: device_driver::PL011Uart = unsafe {
 +    device_driver::PL011Uart::new(
-+        memory::map::mmio::PL011_UART_BASE,
++        memory::map::mmio::PL011_UART_START,
 +        exception::asynchronous::irq_map::PL011_UART,
 +    )
 +};
@@ -2223,14 +2207,14 @@ diff -uNr 13_integrated_testing/src/bsp/raspberrypi.rs 14_exceptions_part2_perip
 +#[cfg(feature = "bsp_rpi3")]
 +static INTERRUPT_CONTROLLER: device_driver::InterruptController = unsafe {
 +    device_driver::InterruptController::new(
-+        memory::map::mmio::LOCAL_INTERRUPT_CONTROLLER_BASE,
-+        memory::map::mmio::PERIPHERAL_INTERRUPT_CONTROLLER_BASE,
++        memory::map::mmio::LOCAL_INTERRUPT_CONTROLLER_START,
++        memory::map::mmio::PERIPHERAL_INTERRUPT_CONTROLLER_START,
 +    )
 +};
 +
 +#[cfg(feature = "bsp_rpi4")]
 +static INTERRUPT_CONTROLLER: device_driver::GICv2 = unsafe {
-+    device_driver::GICv2::new(memory::map::mmio::GICD_BASE, memory::map::mmio::GICC_BASE)
++    device_driver::GICv2::new(memory::map::mmio::GICD_START, memory::map::mmio::GICC_START)
 +};
 
  //--------------------------------------------------------------------------------------------------

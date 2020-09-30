@@ -35,9 +35,9 @@ pub(super) mod map {
     pub mod mmio {
         use super::*;
 
-        pub const BASE:                   usize =        0x3F00_0000;
-        pub const GPIO_BASE:              usize = BASE + GPIO_OFFSET;
-        pub const PL011_UART_BASE:        usize = BASE + UART_OFFSET;
+        pub const START:            usize =         0x3F00_0000;
+        pub const GPIO_START:       usize = START + GPIO_OFFSET;
+        pub const PL011_UART_START: usize = START + UART_OFFSET;
     }
 
     /// Physical devices.
@@ -45,9 +45,9 @@ pub(super) mod map {
     pub mod mmio {
         use super::*;
 
-        pub const BASE:                   usize =        0xFE00_0000;
-        pub const GPIO_BASE:              usize = BASE + GPIO_OFFSET;
-        pub const PL011_UART_BASE:        usize = BASE + UART_OFFSET;
+        pub const START:            usize =         0xFE00_0000;
+        pub const GPIO_START:       usize = START + GPIO_OFFSET;
+        pub const PL011_UART_START: usize = START + UART_OFFSET;
     }
 }
 

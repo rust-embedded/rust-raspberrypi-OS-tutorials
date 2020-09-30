@@ -70,11 +70,11 @@ impl PeripheralIC {
     ///
     /// # Safety
     ///
-    /// - The user must ensure to provide the correct `base_addr`.
-    pub const unsafe fn new(base_addr: usize) -> Self {
+    /// - The user must ensure to provide a correct MMIO start address.
+    pub const unsafe fn new(mmio_start_addr: usize) -> Self {
         Self {
-            wo_registers: IRQSafeNullLock::new(WriteOnlyRegisters::new(base_addr)),
-            ro_registers: ReadOnlyRegisters::new(base_addr),
+            wo_registers: IRQSafeNullLock::new(WriteOnlyRegisters::new(mmio_start_addr)),
+            ro_registers: ReadOnlyRegisters::new(mmio_start_addr),
             handler_table: InitStateLock::new([None; InterruptController::NUM_PERIPHERAL_IRQS]),
         }
     }

@@ -55,7 +55,7 @@ fn ro_range_inclusive() -> RangeInclusive<usize> {
 }
 
 fn mmio_range_inclusive() -> RangeInclusive<usize> {
-    RangeInclusive::new(memory_map::mmio::BASE, memory_map::mmio::END_INCLUSIVE)
+    RangeInclusive::new(memory_map::mmio::START, memory_map::mmio::END_INCLUSIVE)
 }
 
 //--------------------------------------------------------------------------------------------------

@@ -696,7 +696,7 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory/mmu.rs 11_virtual_memory
 +        TranslationDescriptor {
 +            name: "Remapped Device MMIO",
 +            virtual_range: remapped_mmio_range_inclusive,
-+            physical_range_translation: Translation::Offset(memory_map::mmio::BASE + 0x20_0000),
++            physical_range_translation: Translation::Offset(memory_map::mmio::START + 0x20_0000),
 +            attribute_fields: AttributeFields {
 +                mem_attributes: MemAttributes::Device,
 +                acc_perms: AccessPermissions::ReadWrite,
@@ -732,7 +732,7 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory/mmu.rs 11_virtual_memory
 +}
 +
 +fn mmio_range_inclusive() -> RangeInclusive<usize> {
-+    RangeInclusive::new(memory_map::mmio::BASE, memory_map::mmio::END_INCLUSIVE)
++    RangeInclusive::new(memory_map::mmio::START, memory_map::mmio::END_INCLUSIVE)
 +}
 +
 +//--------------------------------------------------------------------------------------------------
@@ -774,24 +774,24 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory.rs 11_virtual_memory/src
  /// The board's memory map.
  #[rustfmt::skip]
  pub(super) mod map {
-+    pub const END_INCLUSIVE:       usize =        0xFFFF_FFFF;
++    pub const END_INCLUSIVE:       usize = 0xFFFF_FFFF;
 +
-     pub const BOOT_CORE_STACK_END: usize =        0x8_0000;
+     pub const BOOT_CORE_STACK_END: usize = 0x8_0000;
 
-     pub const GPIO_OFFSET:         usize =        0x0020_0000;
+     pub const GPIO_OFFSET:         usize = 0x0020_0000;
 @@ -36,6 +42,7 @@
-         pub const BASE:            usize =        0x3F00_0000;
-         pub const GPIO_BASE:       usize = BASE + GPIO_OFFSET;
-         pub const PL011_UART_BASE: usize = BASE + UART_OFFSET;
-+        pub const END_INCLUSIVE:   usize =        0x4000_FFFF;
+         pub const START:            usize =         0x3F00_0000;
+         pub const GPIO_START:       usize = START + GPIO_OFFSET;
+         pub const PL011_UART_START: usize = START + UART_OFFSET;
++        pub const END_INCLUSIVE:    usize =         0x4000_FFFF;
      }
 
      /// Physical devices.
 @@ -46,10 +53,35 @@
-         pub const BASE:            usize =        0xFE00_0000;
-         pub const GPIO_BASE:       usize = BASE + GPIO_OFFSET;
-         pub const PL011_UART_BASE: usize = BASE + UART_OFFSET;
-+        pub const END_INCLUSIVE:   usize =        0xFF84_FFFF;
+         pub const START:            usize =         0xFE00_0000;
+         pub const GPIO_START:       usize = START + GPIO_OFFSET;
+         pub const PL011_UART_START: usize = START + UART_OFFSET;
++        pub const END_INCLUSIVE:    usize =         0xFF84_FFFF;
      }
  }
 

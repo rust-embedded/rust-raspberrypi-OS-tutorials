@@ -79,24 +79,31 @@ type Registers = MMIODerefWrapper<RegisterBlock>;
 // Public Definitions
 //--------------------------------------------------------------------------------------------------
 
+pub struct GPIOInner {
+    registers: Registers,
+}
+
+// Export the inner struct so that BSPs can use it for the panic handler.
+pub use GPIOInner as PanicGPIO;
+
 /// Representation of the GPIO HW.
 pub struct GPIO {
-    registers: IRQSafeNullLock<Registers>,
+    inner: IRQSafeNullLock<GPIOInner>,
 }
 
 //--------------------------------------------------------------------------------------------------
 // Public Code
 //--------------------------------------------------------------------------------------------------
 
-impl GPIO {
+impl GPIOInner {
     /// Create an instance.
     ///
     /// # Safety
     ///
-    /// - The user must ensure to provide the correct `base_addr`.
-    pub const unsafe fn new(base_addr: usize) -> Self {
+    /// - The user must ensure to provide a correct MMIO start address.
+    pub const unsafe fn new(mmio_start_addr: usize) -> Self {
         Self {
-            registers: IRQSafeNullLock::new(Registers::new(base_addr)),
+            registers: Registers::new(mmio_start_addr),
         }
     }
 
@@ -104,25 +111,41 @@ impl GPIO {
     ///
     /// TX to pin 14
     /// RX to pin 15
+    pub fn map_pl011_uart(&mut self) {
+        // Map to pins.
+        self.registers
+            .GPFSEL1
+            .modify(GPFSEL1::FSEL14::AltFunc0 + GPFSEL1::FSEL15::AltFunc0);
+
+        // Enable pins 14 and 15.
+        self.registers.GPPUD.set(0);
+        cpu::spin_for_cycles(150);
+
+        self.registers
+            .GPPUDCLK0
+            .write(GPPUDCLK0::PUDCLK14::AssertClock + GPPUDCLK0::PUDCLK15::AssertClock);
+        cpu::spin_for_cycles(150);
+
+        self.registers.GPPUDCLK0.set(0);
+    }
+}
+
+impl GPIO {
+    /// Create an instance.
+    ///
+    /// # Safety
+    ///
+    /// - The user must ensure to provide a correct MMIO start address.
+    pub const unsafe fn new(mmio_start_addr: usize) -> Self {
+        Self {
+            inner: IRQSafeNullLock::new(GPIOInner::new(mmio_start_addr)),
+        }
+    }
+
+    /// Concurrency safe version of `GPIOInner.map_pl011_uart()`
     pub fn map_pl011_uart(&self) {
-        let mut r = &self.registers;
-        r.lock(|registers| {
-            // Map to pins.
-            registers
-                .GPFSEL1
-                .modify(GPFSEL1::FSEL14::AltFunc0 + GPFSEL1::FSEL15::AltFunc0);
-
-            // Enable pins 14 and 15.
-            registers.GPPUD.set(0);
-            cpu::spin_for_cycles(150);
-
-            registers
-                .GPPUDCLK0
-                .write(GPPUDCLK0::PUDCLK14::AssertClock + GPPUDCLK0::PUDCLK15::AssertClock);
-            cpu::spin_for_cycles(150);
-
-            registers.GPPUDCLK0.set(0);
-        })
+        let mut r = &self.inner;
+        r.lock(|inner| inner.map_pl011_uart())
     }
 }
 

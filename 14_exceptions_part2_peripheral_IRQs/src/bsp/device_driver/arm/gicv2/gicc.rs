@@ -68,10 +68,10 @@ impl GICC {
     ///
     /// # Safety
     ///
-    /// - The user must ensure to provide the correct `base_addr`.
-    pub const unsafe fn new(base_addr: usize) -> Self {
+    /// - The user must ensure to provide a correct MMIO start address.
+    pub const unsafe fn new(mmio_start_addr: usize) -> Self {
         Self {
-            registers: Registers::new(base_addr),
+            registers: Registers::new(mmio_start_addr),
         }
     }
 

@@ -48,7 +48,7 @@ register_structs! {
         (0x104 => ISENABLER: [ReadWrite<u32>; 31]),
         (0x108 => _reserved2),
         (0x820 => ITARGETSR: [ReadWrite<u32, ITARGETSR::Register>; 248]),
-        (0xBFC => @END),
+        (0x824 => @END),
     }
 }
 
@@ -59,7 +59,7 @@ register_structs! {
         (0x100 => ISENABLER: ReadWrite<u32>),
         (0x104 => _reserved2),
         (0x800 => ITARGETSR: [ReadOnly<u32, ITARGETSR::Register>; 8]),
-        (0xBFC => @END),
+        (0x804 => @END),
     }
 }
 
@@ -123,11 +123,11 @@ impl GICD {
     ///
     /// # Safety
     ///
-    /// - The user must ensure to provide the correct `base_addr`.
-    pub const unsafe fn new(base_addr: usize) -> Self {
+    /// - The user must ensure to provide a correct MMIO start address.
+    pub const unsafe fn new(mmio_start_addr: usize) -> Self {
         Self {
-            shared_registers: IRQSafeNullLock::new(SharedRegisters::new(base_addr)),
-            banked_registers: BankedRegisters::new(base_addr),
+            shared_registers: IRQSafeNullLock::new(SharedRegisters::new(mmio_start_addr)),
+            banked_registers: BankedRegisters::new(mmio_start_addr),
         }
     }
 

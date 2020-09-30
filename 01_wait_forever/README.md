@@ -19,7 +19,7 @@ executing the kernel code.
 ## Code to look at
 
 - Custom `link.ld` linker script.
-    - Load address at `0x80_000`
+    - Load address at `0x8_0000`
     - Only `.text` section.
 - `main.rs`: Important [inner attributes]:
     - `#![no_std]`, `#![no_main]`
