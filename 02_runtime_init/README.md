@@ -2,9 +2,9 @@
 
 ## tl;dr
 
-We extend `cpu.S` to call into Rust code for the first time. There,we zero the [bss] section before
-execution is halted with a call to `panic()`. Check out `make qemu` again to see the additional code
-run.
+- We extend `cpu.S` to call into Rust code for the first time. There, we zero the [bss] section
+  before execution is halted with a call to `panic()`.
+- Check out `make qemu` again to see the additional code run.
 
 ## Notable additions
 

@@ -2,8 +2,8 @@
 
 ## tl;dr
 
-The project skeleton is set up; A small piece of assembly code runs that just halts all CPU cores
-executing the kernel code.
+- The project skeleton is set up.
+- A small piece of assembly code runs that just halts all CPU cores executing the kernel code.
 
 ## Building
 

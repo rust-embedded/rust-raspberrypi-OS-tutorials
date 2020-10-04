@@ -2,8 +2,8 @@
 
 ## tl;dr
 
-In early boot code, we transition from the `Hypervisor` privilege level (`EL2` in AArch64) to the
-`Kernel` (`EL1`) privilege level.
+- In early boot code, we transition from the `Hypervisor` privilege level (`EL2` in AArch64) to the
+  `Kernel` (`EL1`) privilege level.
 
 ## Table of Contents
 

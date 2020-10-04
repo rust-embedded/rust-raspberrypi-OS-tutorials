@@ -2,12 +2,11 @@
 
 ## tl;dr
 
-We lay the groundwork for all the architectural `CPU exceptions`. For now, only print an elaborate
-system state through a `panic!` call, and halt execution; This will help finding bugs during
-development and runtime.
-
-For demo purposes, MMU `page faults` are used to demonstrate (i) returning from an exception and
-(ii) the default `panic!` behavior.
+- We lay the groundwork for all the architectural `CPU exceptions`. For now, only print an elaborate
+  system state through a `panic!` call, and halt execution
+- This will help finding bugs during development and runtime.
+- For demo purposes, MMU `page faults` are used to demonstrate (i) returning from an exception and
+  (ii) the default `panic!` behavior.
 
 ## Table of Contents
 
@@ -479,8 +478,8 @@ General purpose register:
 ## Diff to previous
 ```diff
 
-diff -uNr 11_virtual_memory_part1_identity_mapping/src/_arch/aarch64/exception.rs 12_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs
---- 11_virtual_memory_part1_identity_mapping/src/_arch/aarch64/exception.rs
+diff -uNr 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 12_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs
+--- 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs
 +++ 12_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs
 @@ -4,7 +4,230 @@
 
@@ -740,8 +739,8 @@ diff -uNr 11_virtual_memory_part1_identity_mapping/src/_arch/aarch64/exception.r
 +    barrier::isb(barrier::SY);
 +}
 
-diff -uNr 11_virtual_memory_part1_identity_mapping/src/_arch/aarch64/exception.S 12_exceptions_part1_groundwork/src/_arch/aarch64/exception.S
---- 11_virtual_memory_part1_identity_mapping/src/_arch/aarch64/exception.S
+diff -uNr 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.S 12_exceptions_part1_groundwork/src/_arch/aarch64/exception.S
+--- 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.S
 +++ 12_exceptions_part1_groundwork/src/_arch/aarch64/exception.S
 @@ -0,0 +1,138 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
@@ -883,8 +882,8 @@ diff -uNr 11_virtual_memory_part1_identity_mapping/src/_arch/aarch64/exception.S
 +
 +    eret
 
-diff -uNr 11_virtual_memory_part1_identity_mapping/src/bsp/raspberrypi/link.ld 12_exceptions_part1_groundwork/src/bsp/raspberrypi/link.ld
---- 11_virtual_memory_part1_identity_mapping/src/bsp/raspberrypi/link.ld
+diff -uNr 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/link.ld 12_exceptions_part1_groundwork/src/bsp/raspberrypi/link.ld
+--- 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/link.ld
 +++ 12_exceptions_part1_groundwork/src/bsp/raspberrypi/link.ld
 @@ -14,6 +14,11 @@
          *(.text._start) *(.text*)
@@ -899,8 +898,8 @@ diff -uNr 11_virtual_memory_part1_identity_mapping/src/bsp/raspberrypi/link.ld 1
      {
          *(.rodata*)
 
-diff -uNr 11_virtual_memory_part1_identity_mapping/src/bsp/raspberrypi/memory/mmu.rs 12_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs
---- 11_virtual_memory_part1_identity_mapping/src/bsp/raspberrypi/memory/mmu.rs
+diff -uNr 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory/mmu.rs 12_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs
+--- 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory/mmu.rs
 +++ 12_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs
 @@ -12,7 +12,7 @@
  // Public Definitions
@@ -941,8 +940,8 @@ diff -uNr 11_virtual_memory_part1_identity_mapping/src/bsp/raspberrypi/memory/mm
      RangeInclusive::new(memory_map::mmio::START, memory_map::mmio::END_INCLUSIVE)
  }
 
-diff -uNr 11_virtual_memory_part1_identity_mapping/src/bsp.rs 12_exceptions_part1_groundwork/src/bsp.rs
---- 11_virtual_memory_part1_identity_mapping/src/bsp.rs
+diff -uNr 11_virtual_mem_part1_identity_mapping/src/bsp.rs 12_exceptions_part1_groundwork/src/bsp.rs
+--- 11_virtual_mem_part1_identity_mapping/src/bsp.rs
 +++ 12_exceptions_part1_groundwork/src/bsp.rs
 @@ -4,7 +4,7 @@
 
@@ -954,8 +953,8 @@ diff -uNr 11_virtual_memory_part1_identity_mapping/src/bsp.rs 12_exceptions_part
  #[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
  mod raspberrypi;
 
-diff -uNr 11_virtual_memory_part1_identity_mapping/src/main.rs 12_exceptions_part1_groundwork/src/main.rs
---- 11_virtual_memory_part1_identity_mapping/src/main.rs
+diff -uNr 11_virtual_mem_part1_identity_mapping/src/main.rs 12_exceptions_part1_groundwork/src/main.rs
+--- 11_virtual_mem_part1_identity_mapping/src/main.rs
 +++ 12_exceptions_part1_groundwork/src/main.rs
 @@ -108,6 +108,7 @@
  #![feature(const_generics)]
@@ -1010,8 +1009,8 @@ diff -uNr 11_virtual_memory_part1_identity_mapping/src/main.rs 12_exceptions_par
      loop {
          let c = bsp::console::console().read_char();
 
-diff -uNr 11_virtual_memory_part1_identity_mapping/src/memory/mmu.rs 12_exceptions_part1_groundwork/src/memory/mmu.rs
---- 11_virtual_memory_part1_identity_mapping/src/memory/mmu.rs
+diff -uNr 11_virtual_mem_part1_identity_mapping/src/memory/mmu.rs 12_exceptions_part1_groundwork/src/memory/mmu.rs
+--- 11_virtual_mem_part1_identity_mapping/src/memory/mmu.rs
 +++ 12_exceptions_part1_groundwork/src/memory/mmu.rs
 @@ -42,6 +42,7 @@
 

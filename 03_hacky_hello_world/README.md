@@ -2,10 +2,10 @@
 
 ## tl;dr
 
-Introducing global `print!()` macros to enable "printf debugging" at the earliest; To keep tutorial
-length reasonable, printing functions for now "abuse" a QEMU property that lets us use the RPi's
-`UART` without setting it up properly; Using  the real hardware `UART` is enabled step-by-step in
-following tutorials.
+- Introducing global `print!()` macros to enable "printf debugging" at the earliest.
+- To keep tutorial length reasonable, printing functions for now "abuse" a QEMU property that lets
+  us use the RPi's `UART` without setting it up properly.
+- Using  the real hardware `UART` is enabled step-by-step in following tutorials.
 
 ## Notable additions
 

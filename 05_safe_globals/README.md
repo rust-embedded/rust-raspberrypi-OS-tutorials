@@ -2,8 +2,9 @@
 
 ## tl;dr
 
-A pseudo-lock is introduced; It is a first showcase of OS synchronization primitives and enables
-safe access to a global data structure.
+- A pseudo-lock is introduced.
+-  It is a first showcase of OS synchronization primitives and enables safe access to a global data
+   structure.
 
 ## Mutable globals in Rust
 

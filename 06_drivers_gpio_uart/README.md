@@ -2,9 +2,9 @@
 
 ## tl;dr
 
-Now that we enabled safe globals in the previous tutorial, the infrastructure is laid for adding the
-first real device drivers. We throw out the magic QEMU console and use a real `UART` now. Like
-serious embedded hackers do!
+- Now that we enabled safe globals in the previous tutorial, the infrastructure is laid for adding
+  the first real device drivers.
+- We throw out the magic QEMU console and use a real `UART` now. Like serious embedded hackers do!
 
 ## Notable additions
 

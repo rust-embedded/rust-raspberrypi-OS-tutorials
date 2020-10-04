@@ -299,9 +299,9 @@ Minipush 1.0
 ## Diff to previous
 ```diff
 
-diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_memory_part1_identity_mapping/src/_arch/aarch64/memory/mmu.rs
+diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/memory/mmu.rs
 --- 10_privilege_level/src/_arch/aarch64/memory/mmu.rs
-+++ 11_virtual_memory_part1_identity_mapping/src/_arch/aarch64/memory/mmu.rs
++++ 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/memory/mmu.rs
 @@ -0,0 +1,333 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -637,9 +637,9 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_memory_p
 +    }
 +}
 
-diff -uNr 10_privilege_level/src/bsp/raspberrypi/link.ld 11_virtual_memory_part1_identity_mapping/src/bsp/raspberrypi/link.ld
+diff -uNr 10_privilege_level/src/bsp/raspberrypi/link.ld 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/link.ld
 --- 10_privilege_level/src/bsp/raspberrypi/link.ld
-+++ 11_virtual_memory_part1_identity_mapping/src/bsp/raspberrypi/link.ld
++++ 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/link.ld
 @@ -8,6 +8,7 @@
      /* Set current address to the value from which the RPi starts execution */
      . = 0x80000;
@@ -658,9 +658,9 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/link.ld 11_virtual_memory_part1
      .data :
      {
 
-diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory/mmu.rs 11_virtual_memory_part1_identity_mapping/src/bsp/raspberrypi/memory/mmu.rs
+diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory/mmu.rs 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory/mmu.rs
 --- 10_privilege_level/src/bsp/raspberrypi/memory/mmu.rs
-+++ 11_virtual_memory_part1_identity_mapping/src/bsp/raspberrypi/memory/mmu.rs
++++ 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory/mmu.rs
 @@ -0,0 +1,88 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -751,9 +751,9 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory/mmu.rs 11_virtual_memory
 +    &LAYOUT
 +}
 
-diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory.rs 11_virtual_memory_part1_identity_mapping/src/bsp/raspberrypi/memory.rs
+diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory.rs 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory.rs
 --- 10_privilege_level/src/bsp/raspberrypi/memory.rs
-+++ 11_virtual_memory_part1_identity_mapping/src/bsp/raspberrypi/memory.rs
++++ 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory.rs
 @@ -4,6 +4,8 @@
 
  //! BSP Memory Management.
@@ -826,9 +826,9 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory.rs 11_virtual_memory_par
  //--------------------------------------------------------------------------------------------------
 
 
-diff -uNr 10_privilege_level/src/bsp.rs 11_virtual_memory_part1_identity_mapping/src/bsp.rs
+diff -uNr 10_privilege_level/src/bsp.rs 11_virtual_mem_part1_identity_mapping/src/bsp.rs
 --- 10_privilege_level/src/bsp.rs
-+++ 11_virtual_memory_part1_identity_mapping/src/bsp.rs
++++ 11_virtual_mem_part1_identity_mapping/src/bsp.rs
 @@ -4,7 +4,7 @@
 
  //! Conditional re-exporting of Board Support Packages.
@@ -839,9 +839,9 @@ diff -uNr 10_privilege_level/src/bsp.rs 11_virtual_memory_part1_identity_mapping
  #[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
  mod raspberrypi;
 
-diff -uNr 10_privilege_level/src/main.rs 11_virtual_memory_part1_identity_mapping/src/main.rs
+diff -uNr 10_privilege_level/src/main.rs 11_virtual_mem_part1_identity_mapping/src/main.rs
 --- 10_privilege_level/src/main.rs
-+++ 11_virtual_memory_part1_identity_mapping/src/main.rs
++++ 11_virtual_mem_part1_identity_mapping/src/main.rs
 @@ -11,10 +11,12 @@
  //!
  //! - [`bsp::console::console()`] - Returns a reference to the kernel's [console interface].
@@ -910,9 +910,9 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_memory_part1_identity_mappin
      loop {
          let c = bsp::console::console().read_char();
 
-diff -uNr 10_privilege_level/src/memory/mmu.rs 11_virtual_memory_part1_identity_mapping/src/memory/mmu.rs
+diff -uNr 10_privilege_level/src/memory/mmu.rs 11_virtual_mem_part1_identity_mapping/src/memory/mmu.rs
 --- 10_privilege_level/src/memory/mmu.rs
-+++ 11_virtual_memory_part1_identity_mapping/src/memory/mmu.rs
++++ 11_virtual_mem_part1_identity_mapping/src/memory/mmu.rs
 @@ -0,0 +1,199 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -1114,9 +1114,9 @@ diff -uNr 10_privilege_level/src/memory/mmu.rs 11_virtual_memory_part1_identity_
 +    }
 +}
 
-diff -uNr 10_privilege_level/src/memory.rs 11_virtual_memory_part1_identity_mapping/src/memory.rs
+diff -uNr 10_privilege_level/src/memory.rs 11_virtual_mem_part1_identity_mapping/src/memory.rs
 --- 10_privilege_level/src/memory.rs
-+++ 11_virtual_memory_part1_identity_mapping/src/memory.rs
++++ 11_virtual_mem_part1_identity_mapping/src/memory.rs
 @@ -4,6 +4,8 @@
 
  //! Memory Management.

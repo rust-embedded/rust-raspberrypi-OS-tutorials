@@ -2,10 +2,10 @@
 
 ## tl;dr
 
-Running from an SD card was a nice experience, but it would be extremely tedious to do it for every
-new binary. Let's write a [chainloader] using [position independent code]. This will be the last
-binary you need to put on the SD card. Each following tutorial will provide a `chainboot` target in
-the `Makefile` that lets you conveniently load the kernel over `UART`.
+- Running from an SD card was a nice experience, but it would be extremely tedious to do it for
+  every new binary. Let's write a [chainloader] using [position independent code].
+- This will be the last binary you need to put on the SD card. Each following tutorial will provide
+  a `chainboot` target in the `Makefile` that lets you conveniently load the kernel over `UART`.
 
 [chainloader]: https://en.wikipedia.org/wiki/Chain_loading
 [position independent code]: https://en.wikipedia.org/wiki/Position-independent_code

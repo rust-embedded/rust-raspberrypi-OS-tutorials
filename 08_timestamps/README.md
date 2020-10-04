@@ -2,8 +2,9 @@
 
 ## tl;dr
 
-We add abstractions for the architectural timer, implement it for `aarch64` and use it to annotate
-prints with timestamps; A `warn!()` macro is added.
+- We add abstractions for the architectural timer, implement it for `aarch64` and use it to annotate
+  prints with timestamps.
+- A `warn!()` macro is added.
 
 ## Test it
 
