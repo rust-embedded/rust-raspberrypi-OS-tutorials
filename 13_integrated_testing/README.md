@@ -1096,7 +1096,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/exception.rs 13_integrated_testing/
 diff -uNr 12_exceptions_part1_groundwork/src/lib.rs 13_integrated_testing/src/lib.rs
 --- 12_exceptions_part1_groundwork/src/lib.rs
 +++ 13_integrated_testing/src/lib.rs
-@@ -0,0 +1,170 @@
+@@ -0,0 +1,169 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
@@ -1217,7 +1217,6 @@ diff -uNr 12_exceptions_part1_groundwork/src/lib.rs 13_integrated_testing/src/li
 +#![no_std]
 +// Testing
 +#![cfg_attr(test, no_main)]
-+#![cfg_attr(test, feature(slice_ptr_range))]
 +#![feature(custom_test_frameworks)]
 +#![reexport_test_harness_main = "test_main"]
 +#![test_runner(crate::test_runner)]

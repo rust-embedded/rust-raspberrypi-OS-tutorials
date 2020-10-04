@@ -52,8 +52,8 @@ _带上我最诚挚的问候,<br>Andre ([@andre-richter])_
 3. 安装正确的`Rust`工具链:
    1. 如果你已经安装了一个版本的Rust:
       ```bash
-      rustup toolchain add nightly-2020-09-24
-      rustup default nightly-2020-09-24
+      rustup toolchain add nightly-2020-10-04
+      rustup default nightly-2020-10-04
       rustup component add llvm-tools-preview
       rustup target add aarch64-unknown-none-softfloat
       cargo install cargo-binutils
@@ -62,7 +62,7 @@ _带上我最诚挚的问候,<br>Andre ([@andre-richter])_
    2. 如果你想要全新安装:
       ```bash
       curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- \
-          --default-toolchain nightly-2020-09-24                           \
+          --default-toolchain nightly-2020-10-04                           \
           --component llvm-tools-preview
 
       source $HOME/.cargo/env

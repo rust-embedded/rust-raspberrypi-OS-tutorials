@@ -2414,7 +2414,7 @@ diff -uNr 13_integrated_testing/src/lib.rs 14_exceptions_part2_peripheral_IRQs/s
  #![feature(format_args_nl)]
  #![feature(global_asm)]
  #![feature(linkage)]
-@@ -137,6 +144,7 @@
+@@ -136,6 +143,7 @@
  pub mod exception;
  pub mod memory;
  pub mod print;
