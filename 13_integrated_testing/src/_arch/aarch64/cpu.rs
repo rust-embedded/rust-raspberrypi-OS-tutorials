@@ -20,7 +20,7 @@ use cortex_a::{asm, regs::*};
 /// - Linker script must ensure to place this function at `0x80_000`.
 #[naked]
 #[no_mangle]
-pub unsafe extern "C" fn _start() -> ! {
+pub unsafe fn _start() -> ! {
     // Expect the boot core to start in EL2.
     if (bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id())
         && (CurrentEL.get() == CurrentEL::EL::EL2.value)

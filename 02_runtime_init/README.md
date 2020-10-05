@@ -223,7 +223,7 @@ diff -uNr 01_wait_forever/src/runtime_init.rs 02_runtime_init/src/runtime_init.r
 +///
 +/// - Only a single core must be active and running this function.
 +#[no_mangle]
-+pub unsafe extern "C" fn runtime_init() -> ! {
++pub unsafe fn runtime_init() -> ! {
 +    zero_bss();
 +
 +    crate::kernel_init()

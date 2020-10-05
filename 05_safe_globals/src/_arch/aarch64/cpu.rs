@@ -20,7 +20,7 @@ use cortex_a::{asm, regs::*};
 /// - Linker script must ensure to place this function at `0x80_000`.
 #[naked]
 #[no_mangle]
-pub unsafe extern "C" fn _start() -> ! {
+pub unsafe fn _start() -> ! {
     use crate::runtime_init;
 
     // Expect the boot core to start in EL2.

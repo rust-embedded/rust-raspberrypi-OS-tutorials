@@ -79,7 +79,7 @@ diff -uNr 03_hacky_hello_world/src/_arch/aarch64/cpu.rs 04_zero_overhead_abstrac
 +/// - Linker script must ensure to place this function at `0x80_000`.
 +#[naked]
 +#[no_mangle]
-+pub unsafe extern "C" fn _start() -> ! {
++pub unsafe fn _start() -> ! {
 +    use crate::runtime_init;
 +
 +    // Expect the boot core to start in EL2.
@@ -248,15 +248,12 @@ diff -uNr 03_hacky_hello_world/src/main.rs 04_zero_overhead_abstraction/src/main
 diff -uNr 03_hacky_hello_world/src/runtime_init.rs 04_zero_overhead_abstraction/src/runtime_init.rs
 --- 03_hacky_hello_world/src/runtime_init.rs
 +++ 04_zero_overhead_abstraction/src/runtime_init.rs
-@@ -30,8 +30,7 @@
+@@ -30,7 +30,6 @@
  /// # Safety
  ///
  /// - Only a single core must be active and running this function.
 -#[no_mangle]
--pub unsafe extern "C" fn runtime_init() -> ! {
-+pub unsafe fn runtime_init() -> ! {
+ pub unsafe fn runtime_init() -> ! {
      zero_bss();
-
-     crate::kernel_init()
 
 ```

@@ -228,7 +228,7 @@ diff -uNr 09_hw_debug_JTAG/src/_arch/aarch64/cpu.rs 10_privilege_level/src/_arch
 @@ -21,18 +21,59 @@
  #[naked]
  #[no_mangle]
- pub unsafe extern "C" fn _start() -> ! {
+ pub unsafe fn _start() -> ! {
 -    use crate::runtime_init;
 -
      // Expect the boot core to start in EL2.

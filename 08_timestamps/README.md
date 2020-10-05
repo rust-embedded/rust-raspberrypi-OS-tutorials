@@ -106,7 +106,7 @@ diff -uNr 07_uart_chainloader/src/_arch/aarch64/cpu.rs 08_timestamps/src/_arch/a
 @@ -21,12 +21,12 @@
  #[naked]
  #[no_mangle]
- pub unsafe extern "C" fn _start() -> ! {
+ pub unsafe fn _start() -> ! {
 -    use crate::relocate;
 +    use crate::runtime_init;
 

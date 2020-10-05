@@ -181,7 +181,7 @@ diff -uNr 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs 07_uart_chainloader/src/
 @@ -21,12 +21,12 @@
  #[naked]
  #[no_mangle]
- pub unsafe extern "C" fn _start() -> ! {
+ pub unsafe fn _start() -> ! {
 -    use crate::runtime_init;
 +    use crate::relocate;
 

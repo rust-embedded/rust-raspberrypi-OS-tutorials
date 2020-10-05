@@ -31,7 +31,7 @@ unsafe fn zero_bss() {
 ///
 /// - Only a single core must be active and running this function.
 #[no_mangle]
-pub unsafe extern "C" fn runtime_init() -> ! {
+pub unsafe fn runtime_init() -> ! {
     zero_bss();
 
     crate::kernel_init()
