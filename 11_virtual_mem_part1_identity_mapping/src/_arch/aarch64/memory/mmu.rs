@@ -138,7 +138,7 @@ struct MemoryManagementUnit;
 /// # Safety
 ///
 /// - Supposed to land in `.bss`. Therefore, ensure that all initial member values boil down to "0".
-static mut TABLES: ArchTranslationTable = ArchTranslationTable::new();
+static mut KERNEL_TABLES: ArchTranslationTable = ArchTranslationTable::new();
 
 static MMU: MemoryManagementUnit = MemoryManagementUnit;
 
@@ -254,10 +254,10 @@ fn set_up_mair() {
 ///
 /// - Modifies a `static mut`. Ensure it only happens from here.
 unsafe fn populate_tt_entries() -> Result<(), &'static str> {
-    for (l2_nr, l2_entry) in TABLES.lvl2.iter_mut().enumerate() {
-        *l2_entry = TABLES.lvl3[l2_nr].base_addr_usize().into();
+    for (l2_nr, l2_entry) in KERNEL_TABLES.lvl2.iter_mut().enumerate() {
+        *l2_entry = KERNEL_TABLES.lvl3[l2_nr].base_addr_usize().into();
 
-        for (l3_nr, l3_entry) in TABLES.lvl3[l2_nr].iter_mut().enumerate() {
+        for (l3_nr, l3_entry) in KERNEL_TABLES.lvl3[l2_nr].iter_mut().enumerate() {
             let virt_addr = (l2_nr << FIVETWELVE_MIB_SHIFT) + (l3_nr << SIXTYFOUR_KIB_SHIFT);
 
             let (output_addr, attribute_fields) =
@@ -313,7 +313,7 @@ impl memory::mmu::interface::MMU for MemoryManagementUnit {
         populate_tt_entries()?;
 
         // Set the "Translation Table Base Register".
-        TTBR0_EL1.set_baddr(TABLES.lvl2.base_addr_u64());
+        TTBR0_EL1.set_baddr(KERNEL_TABLES.lvl2.base_addr_u64());
 
         configure_translation_control();
 

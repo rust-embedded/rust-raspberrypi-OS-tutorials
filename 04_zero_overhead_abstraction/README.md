@@ -180,7 +180,7 @@ diff -uNr 03_hacky_hello_world/src/bsp/raspberrypi/memory.rs 04_zero_overhead_ab
 +    map::BOOT_CORE_STACK_END
 +}
 +
- /// Return the range spanning the .bss section.
+ /// Return the inclusive range spanning the .bss section.
  ///
  /// # Safety
 

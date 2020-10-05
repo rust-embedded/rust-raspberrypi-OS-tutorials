@@ -545,7 +545,7 @@ mod tests {
     /// Check if KERNEL_TABLES is in .bss.
     #[kernel_test]
     fn kernel_tables_in_bss() {
-        let bss_range = bsp::memory::bss_range();
+        let bss_range = bsp::memory::bss_range_inclusive();
         let kernel_tables_addr = &KERNEL_TABLES as *const _ as usize as *mut u64;
 
         assert!(bss_range.contains(&kernel_tables_addr));

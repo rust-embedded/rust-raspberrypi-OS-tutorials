@@ -720,14 +720,17 @@ RUSTFLAGS="-C link-arg=-Tsrc/bsp/raspberrypi/link.ld -C target-cpu=cortex-a53 -D
     Finished release [optimized] target(s) in 0.01s
      Running target/aarch64-unknown-none-softfloat/release/deps/libkernel-4cc6412ddf631982
          -------------------------------------------------------------------
-         🦀 Running 5 tests
+         🦀 Running 8 tests
          -------------------------------------------------------------------
 
-           1. bss_section_is_sane.......................................[ok]
-           2. virt_mem_layout_sections_are_64KiB_aligned................[ok]
-           3. virt_mem_layout_has_no_overlaps...........................[ok]
-           4. test_runner_executes_in_kernel_mode.......................[ok]
-           5. zero_volatile_works.......................................[ok]
+           1. virt_mem_layout_sections_are_64KiB_aligned................[ok]
+           2. virt_mem_layout_has_no_overlaps...........................[ok]
+           3. test_runner_executes_in_kernel_mode.......................[ok]
+           4. size_of_tabledescriptor_equals_64_bit.....................[ok]
+           5. size_of_pagedescriptor_equals_64_bit......................[ok]
+           6. kernel_tables_in_bss......................................[ok]
+           7. zero_volatile_works.......................................[ok]
+           8. bss_section_is_sane.......................................[ok]
 
          -------------------------------------------------------------------
          ✅ Success: libkernel
@@ -974,7 +977,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs 13_integ
 @@ -5,7 +5,7 @@
  //! Architectural synchronous and asynchronous exception handling.
 
- use core::fmt;
+ use core::{cell::UnsafeCell, fmt};
 -use cortex_a::{asm, barrier, regs::*};
 +use cortex_a::{barrier, regs::*};
  use register::InMemoryRegister;
@@ -997,6 +1000,51 @@ diff -uNr 12_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs 13_integ
      default_exception_handler(e);
  }
 
+
+diff -uNr 12_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu.rs 13_integrated_testing/src/_arch/aarch64/memory/mmu.rs
+--- 12_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu.rs
++++ 13_integrated_testing/src/_arch/aarch64/memory/mmu.rs
+@@ -331,3 +331,40 @@
+         Ok(())
+     }
+ }
++
++//--------------------------------------------------------------------------------------------------
++// Testing
++//--------------------------------------------------------------------------------------------------
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use test_macros::kernel_test;
++
++    /// Check if the size of `struct TableDescriptor` is as expected.
++    #[kernel_test]
++    fn size_of_tabledescriptor_equals_64_bit() {
++        assert_eq!(
++            core::mem::size_of::<TableDescriptor>(),
++            core::mem::size_of::<u64>()
++        );
++    }
++
++    /// Check if the size of `struct PageDescriptor` is as expected.
++    #[kernel_test]
++    fn size_of_pagedescriptor_equals_64_bit() {
++        assert_eq!(
++            core::mem::size_of::<PageDescriptor>(),
++            core::mem::size_of::<u64>()
++        );
++    }
++
++    /// Check if KERNEL_TABLES is in .bss.
++    #[kernel_test]
++    fn kernel_tables_in_bss() {
++        let bss_range = bsp::memory::bss_range_inclusive();
++        let kernel_tables_addr = unsafe { &KERNEL_TABLES as *const _ as usize as *mut u64 };
++
++        assert!(bss_range.contains(&kernel_tables_addr));
++    }
++}
 
 diff -uNr 12_exceptions_part1_groundwork/src/bsp/raspberrypi/console.rs 13_integrated_testing/src/bsp/raspberrypi/console.rs
 --- 12_exceptions_part1_groundwork/src/bsp/raspberrypi/console.rs
@@ -1478,8 +1526,8 @@ diff -uNr 12_exceptions_part1_groundwork/src/memory/mmu.rs 13_integrated_testing
 diff -uNr 12_exceptions_part1_groundwork/src/memory.rs 13_integrated_testing/src/memory.rs
 --- 12_exceptions_part1_groundwork/src/memory.rs
 +++ 13_integrated_testing/src/memory.rs
-@@ -29,3 +29,24 @@
-         ptr = ptr.offset(1);
+@@ -34,3 +34,40 @@
+         }
      }
  }
 +
@@ -1497,10 +1545,26 @@ diff -uNr 12_exceptions_part1_groundwork/src/memory.rs 13_integrated_testing/src
 +    fn zero_volatile_works() {
 +        let mut x: [usize; 3] = [10, 11, 12];
 +        let x_range = x.as_mut_ptr_range();
++        let x_range_inclusive =
++            RangeInclusive::new(x_range.start, unsafe { x_range.end.offset(-1) });
 +
-+        unsafe { zero_volatile(x_range) };
++        unsafe { zero_volatile(x_range_inclusive) };
 +
 +        assert_eq!(x, [0, 0, 0]);
++    }
++
++    /// Check `bss` section layout.
++    #[kernel_test]
++    fn bss_section_is_sane() {
++        use crate::bsp::memory::bss_range_inclusive;
++        use core::mem;
++
++        let start = *bss_range_inclusive().start() as usize;
++        let end = *bss_range_inclusive().end() as usize;
++
++        assert_eq!(start modulo mem::size_of::<usize>(), 0);
++        assert_eq!(end modulo mem::size_of::<usize>(), 0);
++        assert!(end >= start);
 +    }
 +}
 
@@ -1553,40 +1617,18 @@ diff -uNr 12_exceptions_part1_groundwork/src/panic_wait.rs 13_integrated_testing
 diff -uNr 12_exceptions_part1_groundwork/src/runtime_init.rs 13_integrated_testing/src/runtime_init.rs
 --- 12_exceptions_part1_groundwork/src/runtime_init.rs
 +++ 13_integrated_testing/src/runtime_init.rs
-@@ -31,7 +31,33 @@
+@@ -31,7 +31,10 @@
  ///
  /// - Only a single core must be active and running this function.
  pub unsafe fn runtime_init() -> ! {
+-    zero_bss();
 +    extern "Rust" {
 +        fn kernel_init() -> !;
 +    }
-+
-     zero_bss();
-+    kernel_init()
-+}
-+
-+//--------------------------------------------------------------------------------------------------
-+// Testing
-+//--------------------------------------------------------------------------------------------------
-+
-+#[cfg(test)]
-+mod tests {
-+    use super::*;
-+    use test_macros::kernel_test;
-+
-+    /// Check `bss` section layout.
-+    #[kernel_test]
-+    fn bss_section_is_sane() {
-+        use core::mem;
-+
-+        let start = bsp::memory::bss_range().start as *const _ as usize;
-+        let end = bsp::memory::bss_range().end as *const _ as usize;
 
 -    crate::kernel_init()
-+        assert_eq!(start modulo mem::size_of::<usize>(), 0);
-+        assert_eq!(end modulo mem::size_of::<usize>(), 0);
-+        assert!(end >= start);
-+    }
++    zero_bss();
++    kernel_init()
  }
 
 diff -uNr 12_exceptions_part1_groundwork/test-macros/Cargo.toml 13_integrated_testing/test-macros/Cargo.toml

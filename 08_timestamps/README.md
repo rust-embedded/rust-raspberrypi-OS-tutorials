@@ -263,7 +263,7 @@ diff -uNr 07_uart_chainloader/src/bsp/raspberrypi/link.ld 08_timestamps/src/bsp/
      {
          *(.text._start) *(.text*)
 @@ -33,14 +32,5 @@
-         __bss_end = .;
+         __bss_end_inclusive = . - 8;
      }
 
 -    .got :
@@ -307,7 +307,7 @@ diff -uNr 07_uart_chainloader/src/bsp/raspberrypi/memory.rs 08_timestamps/src/bs
 -    map::BOARD_DEFAULT_LOAD_ADDRESS
 -}
 -
- /// Return the range spanning the .bss section.
+ /// Return the inclusive range spanning the .bss section.
  ///
  /// # Safety
 

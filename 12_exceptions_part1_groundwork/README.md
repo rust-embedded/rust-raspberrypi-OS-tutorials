@@ -486,7 +486,7 @@ diff -uNr 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
  //! Architectural synchronous and asynchronous exception handling.
 
 -use cortex_a::regs::*;
-+use core::fmt;
++use core::{cell::UnsafeCell, fmt};
 +use cortex_a::{asm, barrier, regs::*};
 +use register::InMemoryRegister;
 +
@@ -713,7 +713,7 @@ diff -uNr 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
 
  //--------------------------------------------------------------------------------------------------
  // Public Code
-@@ -21,3 +244,24 @@
+@@ -21,3 +244,23 @@
          _ => (PrivilegeLevel::Unknown, "Unknown"),
      }
  }
@@ -728,12 +728,11 @@ diff -uNr 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
 +///   Manual.
 +pub unsafe fn handling_init() {
 +    // Provided by exception.S.
-+    extern "C" {
-+        static mut __exception_vector_start: u64;
++    extern "Rust" {
++        static __exception_vector_start: UnsafeCell<()>;
 +    }
-+    let addr: u64 = &__exception_vector_start as *const _ as u64;
 +
-+    VBAR_EL1.set(addr);
++    VBAR_EL1.set(__exception_vector_start.get() as u64);
 +
 +    // Force VBAR update to complete before next instruction.
 +    barrier::isb(barrier::SY);

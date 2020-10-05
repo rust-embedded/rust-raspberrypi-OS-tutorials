@@ -452,7 +452,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
  /// # Safety
  ///
  /// - Supposed to land in `.bss`. Therefore, ensure that all initial member values boil down to "0".
--static mut TABLES: ArchTranslationTable = ArchTranslationTable::new();
+-static mut KERNEL_TABLES: ArchTranslationTable = ArchTranslationTable::new();
 +static KERNEL_TABLES: InitStateLock<ArchTranslationTable> =
 +    InitStateLock::new(ArchTranslationTable::new());
 
@@ -591,10 +591,10 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
 -///
 -/// - Modifies a `static mut`. Ensure it only happens from here.
 -unsafe fn populate_tt_entries() -> Result<(), &'static str> {
--    for (l2_nr, l2_entry) in TABLES.lvl2.iter_mut().enumerate() {
--        *l2_entry = TABLES.lvl3[l2_nr].base_addr_usize().into();
+-    for (l2_nr, l2_entry) in KERNEL_TABLES.lvl2.iter_mut().enumerate() {
+-        *l2_entry = KERNEL_TABLES.lvl3[l2_nr].base_addr_usize().into();
 -
--        for (l3_nr, l3_entry) in TABLES.lvl3[l2_nr].iter_mut().enumerate() {
+-        for (l3_nr, l3_entry) in KERNEL_TABLES.lvl3[l2_nr].iter_mut().enumerate() {
 -            let virt_addr = (l2_nr << FIVETWELVE_MIB_SHIFT) + (l3_nr << SIXTYFOUR_KIB_SHIFT);
 -
 -            let (output_addr, attribute_fields) =
@@ -678,14 +678,14 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
 +        if p.len() != v.len() {
 +            return Err("Tried to map page slices with unequal sizes");
 +        }
-+
+
+-impl memory::mmu::interface::MMU for MemoryManagementUnit {
+-    unsafe fn init(&self) -> Result<(), &'static str> {
 +        // No work to do for empty slices.
 +        if p.is_empty() {
 +            return Ok(());
 +        }
-
--impl memory::mmu::interface::MMU for MemoryManagementUnit {
--    unsafe fn init(&self) -> Result<(), &'static str> {
++
 +        if p.last().unwrap().as_ptr() >= bsp::memory::mmu::phys_addr_space_end_page() {
 +            return Err("Tried to map outside of physical address space");
 +        }
@@ -757,55 +757,30 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
 -        populate_tt_entries()?;
 -
          // Set the "Translation Table Base Register".
--        TTBR0_EL1.set_baddr(TABLES.lvl2.base_addr_u64());
+-        TTBR0_EL1.set_baddr(KERNEL_TABLES.lvl2.base_addr_u64());
 +        TTBR0_EL1.set_baddr(phys_kernel_table_base_addr.into_usize() as u64);
 
          configure_translation_control();
 
-@@ -331,3 +511,43 @@
-         Ok(())
-     }
- }
-+
-+//--------------------------------------------------------------------------------------------------
-+// Testing
-+//--------------------------------------------------------------------------------------------------
-+
-+#[cfg(test)]
+@@ -337,6 +517,9 @@
+ //--------------------------------------------------------------------------------------------------
+
+ #[cfg(test)]
 +pub(in crate::memory::mmu) type MinSizeArchTranslationTable = FixedSizeTranslationTable<1>;
 +
 +#[cfg(test)]
-+mod tests {
-+    use super::*;
-+    use test_macros::kernel_test;
-+
-+    /// Check if the size of `struct TableDescriptor` is as expected.
-+    #[kernel_test]
-+    fn size_of_tabledescriptor_equals_64_bit() {
-+        assert_eq!(
-+            core::mem::size_of::<TableDescriptor>(),
-+            core::mem::size_of::<u64>()
-+        );
-+    }
-+
-+    /// Check if the size of `struct PageDescriptor` is as expected.
-+    #[kernel_test]
-+    fn size_of_pagedescriptor_equals_64_bit() {
-+        assert_eq!(
-+            core::mem::size_of::<PageDescriptor>(),
-+            core::mem::size_of::<u64>()
-+        );
-+    }
-+
-+    /// Check if KERNEL_TABLES is in .bss.
-+    #[kernel_test]
-+    fn kernel_tables_in_bss() {
-+        let bss_range = bsp::memory::bss_range();
+ mod tests {
+     use super::*;
+     use test_macros::kernel_test;
+@@ -363,7 +546,7 @@
+     #[kernel_test]
+     fn kernel_tables_in_bss() {
+         let bss_range = bsp::memory::bss_range_inclusive();
+-        let kernel_tables_addr = unsafe { &KERNEL_TABLES as *const _ as usize as *mut u64 };
 +        let kernel_tables_addr = &KERNEL_TABLES as *const _ as usize as *mut u64;
-+
-+        assert!(bss_range.contains(&kernel_tables_addr));
-+    }
-+}
+
+         assert!(bss_range.contains(&kernel_tables_addr));
+     }
 
 diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gicc.rs 15_virtual_mem_part2_mmio_remap/src/bsp/device_driver/arm/gicv2/gicc.rs
 --- 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gicc.rs
@@ -1467,7 +1442,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/link.ld 15_vir
 +++ 15_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/link.ld
 @@ -39,6 +39,11 @@
          . = ALIGN(8);
-         __bss_end = .;
+         __bss_end_inclusive = . - 8;
      }
 +    . = ALIGN(65536);
 +    __data_end = .;
@@ -1749,18 +1724,16 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs 15_v
  pub mod mmu;
 
 +use crate::memory::mmu::{Address, Physical, Virtual};
- use core::ops::Range;
+ use core::{cell::UnsafeCell, ops::RangeInclusive};
 
  //--------------------------------------------------------------------------------------------------
-@@ -15,36 +47,41 @@
- // Symbols from the linker script.
- extern "C" {
-     static __ro_start: usize;
--    static __ro_end: usize;
-+    static __ro_size: usize;
-     static __bss_start: usize;
-     static __bss_end: usize;
-+    static __data_size: usize;
+@@ -17,34 +49,39 @@
+     static __bss_start: UnsafeCell<u64>;
+     static __bss_end_inclusive: UnsafeCell<u64>;
+     static __ro_start: UnsafeCell<()>;
+-    static __ro_end: UnsafeCell<()>;
++    static __ro_size: UnsafeCell<()>;
++    static __data_size: UnsafeCell<()>;
  }
 
  //--------------------------------------------------------------------------------------------------
@@ -1841,9 +1814,9 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs 15_v
  /// - Value is provided by the linker script and must be trusted as-is.
  #[inline(always)]
 -fn ro_start() -> usize {
--    unsafe { &__ro_start as *const _ as usize }
+-    unsafe { __ro_start.get() as usize }
 +fn virt_ro_start() -> Address<Virtual> {
-+    Address::new(unsafe { &__ro_start as *const _ as usize })
++    Address::new(unsafe { __ro_start.get() as usize })
  }
 
  /// Size of the Read-Only (RO) range of the kernel binary.
@@ -1852,9 +1825,9 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs 15_v
  /// - Value is provided by the linker script and must be trusted as-is.
  #[inline(always)]
 -fn ro_end() -> usize {
--    unsafe { &__ro_end as *const _ as usize }
+-    unsafe { __ro_end.get() as usize }
 +fn ro_size() -> usize {
-+    unsafe { &__ro_size as *const _ as usize }
++    unsafe { __ro_size.get() as usize }
 +}
 +
 +/// Start address of the data range.
@@ -1870,7 +1843,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs 15_v
 +/// - Value is provided by the linker script and must be trusted as-is.
 +#[inline(always)]
 +fn data_size() -> usize {
-+    unsafe { &__data_size as *const _ as usize }
++    unsafe { __data_size.get() as usize }
 +}
 +
 +/// Start address of the boot core's stack.
@@ -1904,7 +1877,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs 15_v
 +    Address::new(end)
  }
 
- /// Return the range spanning the .bss section.
+ /// Return the inclusive range spanning the .bss section.
 
 diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi.rs 15_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi.rs
 --- 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi.rs

@@ -263,7 +263,7 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/raspberrypi/link.ld 07_uart_chainloader/s
      {
          *(.text._start) *(.text*)
 @@ -32,5 +33,14 @@
-         __bss_end = .;
+         __bss_end_inclusive = . - 8;
      }
 
 +    .got :
@@ -307,7 +307,7 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs 07_uart_chainloader
 +    map::BOARD_DEFAULT_LOAD_ADDRESS
 +}
 +
- /// Return the range spanning the .bss section.
+ /// Return the inclusive range spanning the .bss section.
  ///
  /// # Safety
 

@@ -17,7 +17,7 @@ use crate::{bsp, memory};
 /// - Must only be called pre `kernel_init()`.
 #[inline(always)]
 unsafe fn zero_bss() {
-    memory::zero_volatile(bsp::memory::bss_range());
+    memory::zero_volatile(bsp::memory::bss_range_inclusive());
 }
 
 //--------------------------------------------------------------------------------------------------

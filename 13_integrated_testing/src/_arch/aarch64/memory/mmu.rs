@@ -138,7 +138,7 @@ struct MemoryManagementUnit;
 /// # Safety
 ///
 /// - Supposed to land in `.bss`. Therefore, ensure that all initial member values boil down to "0".
-static mut TABLES: ArchTranslationTable = ArchTranslationTable::new();
+static mut KERNEL_TABLES: ArchTranslationTable = ArchTranslationTable::new();
 
 static MMU: MemoryManagementUnit = MemoryManagementUnit;
 
@@ -254,10 +254,10 @@ fn set_up_mair() {
 ///
 /// - Modifies a `static mut`. Ensure it only happens from here.
 unsafe fn populate_tt_entries() -> Result<(), &'static str> {
-    for (l2_nr, l2_entry) in TABLES.lvl2.iter_mut().enumerate() {
-        *l2_entry = TABLES.lvl3[l2_nr].base_addr_usize().into();
+    for (l2_nr, l2_entry) in KERNEL_TABLES.lvl2.iter_mut().enumerate() {
+        *l2_entry = KERNEL_TABLES.lvl3[l2_nr].base_addr_usize().into();
 
-        for (l3_nr, l3_entry) in TABLES.lvl3[l2_nr].iter_mut().enumerate() {
+        for (l3_nr, l3_entry) in KERNEL_TABLES.lvl3[l2_nr].iter_mut().enumerate() {
             let virt_addr = (l2_nr << FIVETWELVE_MIB_SHIFT) + (l3_nr << SIXTYFOUR_KIB_SHIFT);
 
             let (output_addr, attribute_fields) =
@@ -313,7 +313,7 @@ impl memory::mmu::interface::MMU for MemoryManagementUnit {
         populate_tt_entries()?;
 
         // Set the "Translation Table Base Register".
-        TTBR0_EL1.set_baddr(TABLES.lvl2.base_addr_u64());
+        TTBR0_EL1.set_baddr(KERNEL_TABLES.lvl2.base_addr_u64());
 
         configure_translation_control();
 
@@ -329,5 +329,42 @@ impl memory::mmu::interface::MMU for MemoryManagementUnit {
         barrier::isb(barrier::SY);
 
         Ok(())
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// Testing
+//--------------------------------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use test_macros::kernel_test;
+
+    /// Check if the size of `struct TableDescriptor` is as expected.
+    #[kernel_test]
+    fn size_of_tabledescriptor_equals_64_bit() {
+        assert_eq!(
+            core::mem::size_of::<TableDescriptor>(),
+            core::mem::size_of::<u64>()
+        );
+    }
+
+    /// Check if the size of `struct PageDescriptor` is as expected.
+    #[kernel_test]
+    fn size_of_pagedescriptor_equals_64_bit() {
+        assert_eq!(
+            core::mem::size_of::<PageDescriptor>(),
+            core::mem::size_of::<u64>()
+        );
+    }
+
+    /// Check if KERNEL_TABLES is in .bss.
+    #[kernel_test]
+    fn kernel_tables_in_bss() {
+        let bss_range = bsp::memory::bss_range_inclusive();
+        let kernel_tables_addr = unsafe { &KERNEL_TABLES as *const _ as usize as *mut u64 };
+
+        assert!(bss_range.contains(&kernel_tables_addr));
     }
 }

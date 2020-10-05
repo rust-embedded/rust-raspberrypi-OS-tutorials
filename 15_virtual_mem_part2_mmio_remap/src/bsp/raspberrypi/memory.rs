@@ -38,19 +38,19 @@
 pub mod mmu;
 
 use crate::memory::mmu::{Address, Physical, Virtual};
-use core::ops::Range;
+use core::{cell::UnsafeCell, ops::RangeInclusive};
 
 //--------------------------------------------------------------------------------------------------
 // Private Definitions
 //--------------------------------------------------------------------------------------------------
 
 // Symbols from the linker script.
-extern "C" {
-    static __ro_start: usize;
-    static __ro_size: usize;
-    static __bss_start: usize;
-    static __bss_end: usize;
-    static __data_size: usize;
+extern "Rust" {
+    static __bss_start: UnsafeCell<u64>;
+    static __bss_end_inclusive: UnsafeCell<u64>;
+    static __ro_start: UnsafeCell<()>;
+    static __ro_size: UnsafeCell<()>;
+    static __data_size: UnsafeCell<()>;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -118,7 +118,7 @@ pub(super) mod map {
 /// - Value is provided by the linker script and must be trusted as-is.
 #[inline(always)]
 fn virt_ro_start() -> Address<Virtual> {
-    Address::new(unsafe { &__ro_start as *const _ as usize })
+    Address::new(unsafe { __ro_start.get() as usize })
 }
 
 /// Size of the Read-Only (RO) range of the kernel binary.
@@ -128,7 +128,7 @@ fn virt_ro_start() -> Address<Virtual> {
 /// - Value is provided by the linker script and must be trusted as-is.
 #[inline(always)]
 fn ro_size() -> usize {
-    unsafe { &__ro_size as *const _ as usize }
+    unsafe { __ro_size.get() as usize }
 }
 
 /// Start address of the data range.
@@ -144,7 +144,7 @@ fn virt_data_start() -> Address<Virtual> {
 /// - Value is provided by the linker script and must be trusted as-is.
 #[inline(always)]
 fn data_size() -> usize {
-    unsafe { &__data_size as *const _ as usize }
+    unsafe { __data_size.get() as usize }
 }
 
 /// Start address of the boot core's stack.
@@ -177,17 +177,12 @@ pub fn phys_boot_core_stack_end() -> Address<Physical> {
     Address::new(end)
 }
 
-/// Return the range spanning the .bss section.
+/// Return the inclusive range spanning the .bss section.
 ///
 /// # Safety
 ///
 /// - Values are provided by the linker script and must be trusted as-is.
 /// - The linker-provided addresses must be u64 aligned.
-pub fn bss_range() -> Range<*mut u64> {
-    unsafe {
-        Range {
-            start: &__bss_start as *const _ as *mut u64,
-            end: &__bss_end as *const _ as *mut u64,
-        }
-    }
+pub fn bss_range_inclusive() -> RangeInclusive<*mut u64> {
+    unsafe { RangeInclusive::new(__bss_start.get(), __bss_end_inclusive.get()) }
 }

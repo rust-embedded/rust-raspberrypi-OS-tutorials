@@ -68,7 +68,7 @@ diff -uNr 01_wait_forever/src/bsp/raspberrypi/link.ld 02_runtime_init/src/bsp/ra
 +        __bss_start = .;
 +        *(.bss*);
 +        . = ALIGN(8);
-+        __bss_end = .;
++        __bss_end_inclusive = . - 8;
 +    }
 +
      /DISCARD/ : { *(.comment*) }
@@ -77,42 +77,37 @@ diff -uNr 01_wait_forever/src/bsp/raspberrypi/link.ld 02_runtime_init/src/bsp/ra
 diff -uNr 01_wait_forever/src/bsp/raspberrypi/memory.rs 02_runtime_init/src/bsp/raspberrypi/memory.rs
 --- 01_wait_forever/src/bsp/raspberrypi/memory.rs
 +++ 02_runtime_init/src/bsp/raspberrypi/memory.rs
-@@ -0,0 +1,36 @@
+@@ -0,0 +1,31 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! BSP Memory Management.
 +
-+use core::ops::Range;
++use core::{cell::UnsafeCell, ops::RangeInclusive};
 +
 +//--------------------------------------------------------------------------------------------------
 +// Private Definitions
 +//--------------------------------------------------------------------------------------------------
 +
 +// Symbols from the linker script.
-+extern "C" {
-+    static __bss_start: usize;
-+    static __bss_end: usize;
++extern "Rust" {
++    static __bss_start: UnsafeCell<u64>;
++    static __bss_end_inclusive: UnsafeCell<u64>;
 +}
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Code
 +//--------------------------------------------------------------------------------------------------
 +
-+/// Return the range spanning the .bss section.
++/// Return the inclusive range spanning the .bss section.
 +///
 +/// # Safety
 +///
 +/// - Values are provided by the linker script and must be trusted as-is.
 +/// - The linker-provided addresses must be u64 aligned.
-+pub fn bss_range() -> Range<*mut u64> {
-+    unsafe {
-+        Range {
-+            start: &__bss_start as *const _ as *mut u64,
-+            end: &__bss_end as *const _ as *mut u64,
-+        }
-+    }
++pub fn bss_range_inclusive() -> RangeInclusive<*mut u64> {
++    unsafe { RangeInclusive::new(__bss_start.get(), __bss_end_inclusive.get()) }
 +}
 
 diff -uNr 01_wait_forever/src/bsp/raspberrypi.rs 02_runtime_init/src/bsp/raspberrypi.rs
@@ -155,34 +150,39 @@ diff -uNr 01_wait_forever/src/main.rs 02_runtime_init/src/main.rs
 diff -uNr 01_wait_forever/src/memory.rs 02_runtime_init/src/memory.rs
 --- 01_wait_forever/src/memory.rs
 +++ 02_runtime_init/src/memory.rs
-@@ -0,0 +1,29 @@
+@@ -0,0 +1,34 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Memory Management.
 +
-+use core::ops::Range;
++use core::ops::RangeInclusive;
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Code
 +//--------------------------------------------------------------------------------------------------
 +
-+/// Zero out a memory range.
++/// Zero out an inclusive memory range.
 +///
 +/// # Safety
 +///
 +/// - `range.start` and `range.end` must be valid.
 +/// - `range.start` and `range.end` must be `T` aligned.
-+pub unsafe fn zero_volatile<T>(range: Range<*mut T>)
++pub unsafe fn zero_volatile<T>(range: RangeInclusive<*mut T>)
 +where
 +    T: From<u8>,
 +{
-+    let mut ptr = range.start;
++    let mut ptr = *range.start();
++    let end_inclusive = *range.end();
 +
-+    while ptr < range.end {
++    loop {
 +        core::ptr::write_volatile(ptr, T::from(0));
 +        ptr = ptr.offset(1);
++
++        if ptr > end_inclusive {
++            break;
++        }
 +    }
 +}
 
@@ -209,7 +209,7 @@ diff -uNr 01_wait_forever/src/runtime_init.rs 02_runtime_init/src/runtime_init.r
 +/// - Must only be called pre `kernel_init()`.
 +#[inline(always)]
 +unsafe fn zero_bss() {
-+    memory::zero_volatile(bsp::memory::bss_range());
++    memory::zero_volatile(bsp::memory::bss_range_inclusive());
 +}
 +
 +//--------------------------------------------------------------------------------------------------

@@ -853,7 +853,7 @@ diff -uNr 13_integrated_testing/src/_arch/aarch64/exception.rs 14_exceptions_par
  //! Architectural synchronous and asynchronous exception handling.
 
 +use crate::{bsp, exception};
- use core::fmt;
+ use core::{cell::UnsafeCell, fmt};
  use cortex_a::{barrier, regs::*};
  use register::InMemoryRegister;
 @@ -84,8 +85,11 @@

@@ -17,7 +17,7 @@ use crate::{bsp, memory};
 /// - Must only be called pre `kernel_init()`.
 #[inline(always)]
 unsafe fn zero_bss() {
-    memory::zero_volatile(bsp::memory::bss_range());
+    memory::zero_volatile(bsp::memory::bss_range_inclusive());
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -37,27 +37,4 @@ pub unsafe fn runtime_init() -> ! {
 
     zero_bss();
     kernel_init()
-}
-
-//--------------------------------------------------------------------------------------------------
-// Testing
-//--------------------------------------------------------------------------------------------------
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use test_macros::kernel_test;
-
-    /// Check `bss` section layout.
-    #[kernel_test]
-    fn bss_section_is_sane() {
-        use core::mem;
-
-        let start = bsp::memory::bss_range().start as *const _ as usize;
-        let end = bsp::memory::bss_range().end as *const _ as usize;
-
-        assert_eq!(start % mem::size_of::<usize>(), 0);
-        assert_eq!(end % mem::size_of::<usize>(), 0);
-        assert!(end >= start);
-    }
 }

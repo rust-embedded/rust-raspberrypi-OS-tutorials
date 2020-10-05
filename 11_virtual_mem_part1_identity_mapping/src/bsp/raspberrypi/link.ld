@@ -32,7 +32,7 @@ SECTIONS
         __bss_start = .;
         *(.bss*);
         . = ALIGN(8);
-        __bss_end = .;
+        __bss_end_inclusive = . - 8;
     }
 
     /DISCARD/ : { *(.comment*) }

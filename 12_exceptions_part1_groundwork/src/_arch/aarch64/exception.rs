@@ -4,7 +4,7 @@
 
 //! Architectural synchronous and asynchronous exception handling.
 
-use core::fmt;
+use core::{cell::UnsafeCell, fmt};
 use cortex_a::{asm, barrier, regs::*};
 use register::InMemoryRegister;
 
@@ -255,12 +255,11 @@ pub fn current_privilege_level() -> (PrivilegeLevel, &'static str) {
 ///   Manual.
 pub unsafe fn handling_init() {
     // Provided by exception.S.
-    extern "C" {
-        static mut __exception_vector_start: u64;
+    extern "Rust" {
+        static __exception_vector_start: UnsafeCell<()>;
     }
-    let addr: u64 = &__exception_vector_start as *const _ as u64;
 
-    VBAR_EL1.set(addr);
+    VBAR_EL1.set(__exception_vector_start.get() as u64);
 
     // Force VBAR update to complete before next instruction.
     barrier::isb(barrier::SY);
