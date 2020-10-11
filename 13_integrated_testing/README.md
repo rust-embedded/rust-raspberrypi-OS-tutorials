@@ -346,7 +346,7 @@ you sit in front of an `x86` machine, whereas the RPi kernel is `AArch64`.
 
 Therefore, we need to install some hooks that make sure the test kernel gets executed inside `QEMU`,
 quite like it is done for the existing `make qemu` target that is in place since tutorial 1. The
-first step is to add a new file to the project, `.cargo/config`:
+first step is to add a new file to the project, `.cargo/config.toml`:
 
 ```toml
 [target.'cfg(target_os = "none")']
@@ -787,9 +787,9 @@ RUSTFLAGS="-C link-arg=-Tsrc/bsp/raspberrypi/link.ld -C target-cpu=cortex-a53 -D
 ## Diff to previous
 ```diff
 
-diff -uNr 12_exceptions_part1_groundwork/.cargo/config 13_integrated_testing/.cargo/config
---- 12_exceptions_part1_groundwork/.cargo/config
-+++ 13_integrated_testing/.cargo/config
+diff -uNr 12_exceptions_part1_groundwork/.cargo/config.toml 13_integrated_testing/.cargo/config.toml
+--- 12_exceptions_part1_groundwork/.cargo/config.toml
++++ 13_integrated_testing/.cargo/config.toml
 @@ -0,0 +1,2 @@
 +[target.'cfg(target_os = "none")']
 +runner = "target/kernel_test_runner.sh"
