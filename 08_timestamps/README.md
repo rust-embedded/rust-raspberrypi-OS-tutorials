@@ -118,6 +118,26 @@ diff -uNr 07_uart_chainloader/src/_arch/aarch64/cpu.rs 08_timestamps/src/_arch/a
      } else {
          // If not core0, infinitely wait for events.
          wait_forever()
+@@ -54,19 +54,3 @@
+         asm::wfe()
+     }
+ }
+-
+-/// Branch to a raw integer value.
+-///
+-/// # Safety
+-///
+-/// - This is highly unsafe. Use with care.
+-#[inline(always)]
+-pub unsafe fn branch_to_raw_addr(addr: usize) -> ! {
+-    asm!(
+-        "blr {destination:x}",
+-        destination = in(reg) addr,
+-        options(nomem, nostack)
+-    );
+-
+-    core::intrinsics::unreachable()
+-}
 
 diff -uNr 07_uart_chainloader/src/_arch/aarch64/time.rs 08_timestamps/src/_arch/aarch64/time.rs
 --- 07_uart_chainloader/src/_arch/aarch64/time.rs
@@ -250,7 +270,7 @@ diff -uNr 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 08
 diff -uNr 07_uart_chainloader/src/bsp/raspberrypi/link.ld 08_timestamps/src/bsp/raspberrypi/link.ld
 --- 07_uart_chainloader/src/bsp/raspberrypi/link.ld
 +++ 08_timestamps/src/bsp/raspberrypi/link.ld
-@@ -5,10 +5,9 @@
+@@ -5,16 +5,12 @@
 
  SECTIONS
  {
@@ -262,8 +282,15 @@ diff -uNr 07_uart_chainloader/src/bsp/raspberrypi/link.ld 08_timestamps/src/bsp/
 -    __binary_start = .;
      .text :
      {
-         *(.text._start) *(.text*)
-@@ -33,14 +32,5 @@
+-        *(.text._start)
+-        __runtime_init = .;
+-        KEEP(*(.text.runtime_init))
+-        *(.text*);
++        *(.text._start) *(.text*)
+     }
+
+     .rodata :
+@@ -36,14 +32,5 @@
          __bss_end_inclusive = . - 8;
      }
 
@@ -282,16 +309,17 @@ diff -uNr 07_uart_chainloader/src/bsp/raspberrypi/link.ld 08_timestamps/src/bsp/
 diff -uNr 07_uart_chainloader/src/bsp/raspberrypi/memory.rs 08_timestamps/src/bsp/raspberrypi/memory.rs
 --- 07_uart_chainloader/src/bsp/raspberrypi/memory.rs
 +++ 08_timestamps/src/bsp/raspberrypi/memory.rs
-@@ -12,8 +12,6 @@
+@@ -12,9 +12,6 @@
 
  // Symbols from the linker script.
  extern "Rust" {
 -    static __binary_start: UnsafeCell<u64>;
 -    static __binary_end_inclusive: UnsafeCell<u64>;
+-    static __runtime_init: UnsafeCell<u64>;
      static __bss_start: UnsafeCell<u64>;
      static __bss_end_inclusive: UnsafeCell<u64>;
  }
-@@ -25,12 +23,10 @@
+@@ -26,12 +23,10 @@
  /// The board's memory map.
  #[rustfmt::skip]
  pub(super) mod map {
@@ -307,7 +335,7 @@ diff -uNr 07_uart_chainloader/src/bsp/raspberrypi/memory.rs 08_timestamps/src/bs
 
      /// Physical devices.
      #[cfg(feature = "bsp_rpi3")]
-@@ -63,22 +59,6 @@
+@@ -64,34 +59,12 @@
      map::BOOT_CORE_STACK_END
  }
 
@@ -317,19 +345,33 @@ diff -uNr 07_uart_chainloader/src/bsp/raspberrypi/memory.rs 08_timestamps/src/bs
 -    map::BOARD_DEFAULT_LOAD_ADDRESS as _
 -}
 -
--/// Return the inclusive range spanning the whole binary.
+-/// Return the inclusive range spanning the relocated kernel binary.
 -///
 -/// # Safety
 -///
 -/// - Values are provided by the linker script and must be trusted as-is.
 -/// - The linker-provided addresses must be u64 aligned.
--pub fn binary_range_inclusive() -> RangeInclusive<*mut u64> {
+-pub fn relocated_binary_range_inclusive() -> RangeInclusive<*mut u64> {
 -    unsafe { RangeInclusive::new(__binary_start.get(), __binary_end_inclusive.get()) }
 -}
 -
- /// Return the inclusive range spanning the .bss section.
+-/// The relocated address of function `runtime_init()`.
+-#[inline(always)]
+-pub fn relocated_runtime_init_addr() -> *const u64 {
+-    unsafe { __runtime_init.get() as _ }
+-}
+-
+-/// Return the inclusive range spanning the relocated .bss section.
++/// Return the inclusive range spanning the .bss section.
  ///
  /// # Safety
+ ///
+ /// - Values are provided by the linker script and must be trusted as-is.
+ /// - The linker-provided addresses must be u64 aligned.
+-pub fn relocated_bss_range_inclusive() -> RangeInclusive<*mut u64> {
++pub fn bss_range_inclusive() -> RangeInclusive<*mut u64> {
+     unsafe { RangeInclusive::new(__bss_start.get(), __bss_end_inclusive.get()) }
+ }
 
 diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
 --- 07_uart_chainloader/src/main.rs
@@ -346,7 +388,16 @@ diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
  //!
  //! # Code organization and architecture
  //!
-@@ -108,8 +110,7 @@
+@@ -100,8 +102,6 @@
+ //! - `crate::memory::*`
+ //! - `crate::bsp::memory::*`
+
+-#![feature(asm)]
+-#![feature(core_intrinsics)]
+ #![feature(format_args_nl)]
+ #![feature(naked_functions)]
+ #![feature(panic_info_message)]
+@@ -110,8 +110,7 @@
  #![no_std]
 
  // `mod cpu` provides the `_start()` function, the first function to run. `_start()` then calls
@@ -356,7 +407,7 @@ diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
 
  mod bsp;
  mod console;
-@@ -118,9 +119,9 @@
+@@ -120,9 +119,9 @@
  mod memory;
  mod panic_wait;
  mod print;
@@ -367,7 +418,7 @@ diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
 
  /// Early init code.
  ///
-@@ -145,52 +146,31 @@
+@@ -147,52 +146,31 @@
 
  /// The main function running after the early init.
  fn kernel_main() -> ! {
@@ -433,7 +484,7 @@ diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
 +    time::time_manager().spin_for(Duration::from_nanos(1));
 
 -    // Use black magic to get a function pointer.
--    let kernel: fn() -> ! = unsafe { core::mem::transmute(kernel_addr as *const ()) };
+-    let kernel: fn() -> ! = unsafe { core::mem::transmute(kernel_addr) };
 -
 -    // Jump to loaded kernel!
 -    kernel()
@@ -522,56 +573,83 @@ diff -uNr 07_uart_chainloader/src/print.rs 08_timestamps/src/print.rs
 diff -uNr 07_uart_chainloader/src/relocate.rs 08_timestamps/src/relocate.rs
 --- 07_uart_chainloader/src/relocate.rs
 +++ 08_timestamps/src/relocate.rs
-@@ -1,49 +0,0 @@
+@@ -1,55 +0,0 @@
 -// SPDX-License-Identifier: MIT OR Apache-2.0
 -//
 -// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
 -
 -//! Relocation code.
 -
--use crate::{bsp, runtime_init};
+-use crate::{bsp, cpu};
 -
 -//--------------------------------------------------------------------------------------------------
 -// Public Code
 -//--------------------------------------------------------------------------------------------------
 -
--/// Relocates the own binary from `bsp::cpu::BOARD_DEFAULT_LOAD_ADDRESS` to the `__binary_start`
+-/// Relocates the own binary from `bsp::memory::board_default_load_addr()` to the `__binary_start`
 -/// address from the linker script.
 -///
 -/// # Safety
 -///
 -/// - Only a single core must be active and running this function.
 -/// - Function must not use the `bss` section.
+-#[inline(never)]
 -pub unsafe fn relocate_self() -> ! {
--    let range = bsp::memory::binary_range_inclusive();
--    let mut reloc_destination_addr = *range.start();
--    let reloc_end_addr_inclusive = *range.end();
+-    let range = bsp::memory::relocated_binary_range_inclusive();
+-    let mut relocated_binary_start_addr = *range.start();
+-    let relocated_binary_end_addr_inclusive = *range.end();
 -
 -    // The address of where the previous firmware loaded us.
--    let mut src_addr = bsp::memory::board_default_load_addr();
--
--    // TODO Make it work for the case src_addr > reloc_addr as well.
--    let diff = reloc_destination_addr as usize - src_addr as usize;
+-    let mut current_binary_start_addr = bsp::memory::board_default_load_addr();
 -
 -    // Copy the whole binary.
--    //
--    // This is essentially a `memcpy()` optimized for throughput by transferring in chunks of T.
 -    loop {
--        core::ptr::write_volatile(reloc_destination_addr, core::ptr::read_volatile(src_addr));
--        reloc_destination_addr = reloc_destination_addr.offset(1);
--        src_addr = src_addr.offset(1);
+-        core::ptr::write_volatile(
+-            relocated_binary_start_addr,
+-            core::ptr::read_volatile(current_binary_start_addr),
+-        );
+-        relocated_binary_start_addr = relocated_binary_start_addr.offset(1);
+-        current_binary_start_addr = current_binary_start_addr.offset(1);
 -
--        if reloc_destination_addr > reloc_end_addr_inclusive {
+-        if relocated_binary_start_addr > relocated_binary_end_addr_inclusive {
 -            break;
 -        }
 -    }
 -
--    let relocated_runtime_init_addr = runtime_init::runtime_init as *const () as usize + diff;
--    let relocated_runtime_init: fn() -> ! =
--        core::mem::transmute(relocated_runtime_init_addr as *const ());
--
--    relocated_runtime_init()
+-    // The following function calls form a hack to achieve an "absolute jump" to
+-    // `runtime_init::runtime_init()` by forcing an indirection through the global offset table
+-    // (GOT), so that execution continues from the relocated binary.
+-    //
+-    // Without this, the address of `runtime_init()` would be calculated as a relative offset from
+-    // the current program counter, since we are compiling as `position independent code`. This
+-    // would cause us to keep executing from the address to which the firmware loaded us, instead of
+-    // the relocated position.
+-    //
+-    // There likely is a more elegant way to do this.
+-    let relocated_runtime_init_addr = bsp::memory::relocated_runtime_init_addr() as usize;
+-    cpu::branch_to_raw_addr(relocated_runtime_init_addr)
 -}
+
+diff -uNr 07_uart_chainloader/src/runtime_init.rs 08_timestamps/src/runtime_init.rs
+--- 07_uart_chainloader/src/runtime_init.rs
++++ 08_timestamps/src/runtime_init.rs
+@@ -17,7 +17,7 @@
+ /// - Must only be called pre `kernel_init()`.
+ #[inline(always)]
+ unsafe fn zero_bss() {
+-    memory::zero_volatile(bsp::memory::relocated_bss_range_inclusive());
++    memory::zero_volatile(bsp::memory::bss_range_inclusive());
+ }
+
+ //--------------------------------------------------------------------------------------------------
+@@ -30,7 +30,6 @@
+ /// # Safety
+ ///
+ /// - Only a single core must be active and running this function.
+-#[no_mangle]
+ pub unsafe fn runtime_init() -> ! {
+     zero_bss();
+
 
 diff -uNr 07_uart_chainloader/src/time.rs 08_timestamps/src/time.rs
 --- 07_uart_chainloader/src/time.rs

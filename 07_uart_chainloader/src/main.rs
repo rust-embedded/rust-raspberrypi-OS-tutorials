@@ -100,6 +100,8 @@
 //! - `crate::memory::*`
 //! - `crate::bsp::memory::*`
 
+#![feature(asm)]
+#![feature(core_intrinsics)]
 #![feature(format_args_nl)]
 #![feature(naked_functions)]
 #![feature(panic_info_message)]
@@ -189,7 +191,7 @@ fn kernel_main() -> ! {
     console().flush();
 
     // Use black magic to get a function pointer.
-    let kernel: fn() -> ! = unsafe { core::mem::transmute(kernel_addr as *const ()) };
+    let kernel: fn() -> ! = unsafe { core::mem::transmute(kernel_addr) };
 
     // Jump to loaded kernel!
     kernel()

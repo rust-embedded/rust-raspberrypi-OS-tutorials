@@ -11,7 +11,10 @@ SECTIONS
     __binary_start = .;
     .text :
     {
-        *(.text._start) *(.text*)
+        *(.text._start)
+        __runtime_init = .;
+        KEEP(*(.text.runtime_init))
+        *(.text*);
     }
 
     .rodata :

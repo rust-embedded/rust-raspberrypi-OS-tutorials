@@ -4,46 +4,52 @@
 
 //! Relocation code.
 
-use crate::{bsp, runtime_init};
+use crate::{bsp, cpu};
 
 //--------------------------------------------------------------------------------------------------
 // Public Code
 //--------------------------------------------------------------------------------------------------
 
-/// Relocates the own binary from `bsp::cpu::BOARD_DEFAULT_LOAD_ADDRESS` to the `__binary_start`
+/// Relocates the own binary from `bsp::memory::board_default_load_addr()` to the `__binary_start`
 /// address from the linker script.
 ///
 /// # Safety
 ///
 /// - Only a single core must be active and running this function.
 /// - Function must not use the `bss` section.
+#[inline(never)]
 pub unsafe fn relocate_self() -> ! {
-    let range = bsp::memory::binary_range_inclusive();
-    let mut reloc_destination_addr = *range.start();
-    let reloc_end_addr_inclusive = *range.end();
+    let range = bsp::memory::relocated_binary_range_inclusive();
+    let mut relocated_binary_start_addr = *range.start();
+    let relocated_binary_end_addr_inclusive = *range.end();
 
     // The address of where the previous firmware loaded us.
-    let mut src_addr = bsp::memory::board_default_load_addr();
-
-    // TODO Make it work for the case src_addr > reloc_addr as well.
-    let diff = reloc_destination_addr as usize - src_addr as usize;
+    let mut current_binary_start_addr = bsp::memory::board_default_load_addr();
 
     // Copy the whole binary.
-    //
-    // This is essentially a `memcpy()` optimized for throughput by transferring in chunks of T.
     loop {
-        core::ptr::write_volatile(reloc_destination_addr, core::ptr::read_volatile(src_addr));
-        reloc_destination_addr = reloc_destination_addr.offset(1);
-        src_addr = src_addr.offset(1);
+        core::ptr::write_volatile(
+            relocated_binary_start_addr,
+            core::ptr::read_volatile(current_binary_start_addr),
+        );
+        relocated_binary_start_addr = relocated_binary_start_addr.offset(1);
+        current_binary_start_addr = current_binary_start_addr.offset(1);
 
-        if reloc_destination_addr > reloc_end_addr_inclusive {
+        if relocated_binary_start_addr > relocated_binary_end_addr_inclusive {
             break;
         }
     }
 
-    let relocated_runtime_init_addr = runtime_init::runtime_init as *const () as usize + diff;
-    let relocated_runtime_init: fn() -> ! =
-        core::mem::transmute(relocated_runtime_init_addr as *const ());
-
-    relocated_runtime_init()
+    // The following function calls form a hack to achieve an "absolute jump" to
+    // `runtime_init::runtime_init()` by forcing an indirection through the global offset table
+    // (GOT), so that execution continues from the relocated binary.
+    //
+    // Without this, the address of `runtime_init()` would be calculated as a relative offset from
+    // the current program counter, since we are compiling as `position independent code`. This
+    // would cause us to keep executing from the address to which the firmware loaded us, instead of
+    // the relocated position.
+    //
+    // There likely is a more elegant way to do this.
+    let relocated_runtime_init_addr = bsp::memory::relocated_runtime_init_addr() as usize;
+    cpu::branch_to_raw_addr(relocated_runtime_init_addr)
 }

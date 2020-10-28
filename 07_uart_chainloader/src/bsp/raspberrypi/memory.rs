@@ -14,6 +14,7 @@ use core::{cell::UnsafeCell, ops::RangeInclusive};
 extern "Rust" {
     static __binary_start: UnsafeCell<u64>;
     static __binary_end_inclusive: UnsafeCell<u64>;
+    static __runtime_init: UnsafeCell<u64>;
     static __bss_start: UnsafeCell<u64>;
     static __bss_end_inclusive: UnsafeCell<u64>;
 }
@@ -69,22 +70,28 @@ pub fn board_default_load_addr() -> *const u64 {
     map::BOARD_DEFAULT_LOAD_ADDRESS as _
 }
 
-/// Return the inclusive range spanning the whole binary.
+/// Return the inclusive range spanning the relocated kernel binary.
 ///
 /// # Safety
 ///
 /// - Values are provided by the linker script and must be trusted as-is.
 /// - The linker-provided addresses must be u64 aligned.
-pub fn binary_range_inclusive() -> RangeInclusive<*mut u64> {
+pub fn relocated_binary_range_inclusive() -> RangeInclusive<*mut u64> {
     unsafe { RangeInclusive::new(__binary_start.get(), __binary_end_inclusive.get()) }
 }
 
-/// Return the inclusive range spanning the .bss section.
+/// The relocated address of function `runtime_init()`.
+#[inline(always)]
+pub fn relocated_runtime_init_addr() -> *const u64 {
+    unsafe { __runtime_init.get() as _ }
+}
+
+/// Return the inclusive range spanning the relocated .bss section.
 ///
 /// # Safety
 ///
 /// - Values are provided by the linker script and must be trusted as-is.
 /// - The linker-provided addresses must be u64 aligned.
-pub fn bss_range_inclusive() -> RangeInclusive<*mut u64> {
+pub fn relocated_bss_range_inclusive() -> RangeInclusive<*mut u64> {
     unsafe { RangeInclusive::new(__bss_start.get(), __bss_end_inclusive.get()) }
 }
