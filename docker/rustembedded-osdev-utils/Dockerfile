@@ -2,7 +2,7 @@
 ##
 ## Copyright (c) 2017-2020 Andre Richter <andre.o.richter@gmail.com>
 ## Copyright (c) 2019-2020 Nao Taco <naotaco@gmail.com>
-FROM ubuntu:19.10
+FROM ubuntu:20.04
 
 ARG VCS_REF
 
@@ -45,7 +45,7 @@ RUN set -ex;                                        \
     # QEMU
     git clone git://git.qemu.org/qemu.git;                     \
     cd qemu;                                                   \
-    git checkout tags/v5.0.0;                                  \
+    git checkout tags/v5.1.0;                                  \
     ./configure --target-list=aarch64-softmmu --enable-modules \
         --enable-tcg-interpreter --enable-debug-tcg            \
         --python=/usr/bin/python3;                             \
@@ -73,7 +73,8 @@ RUN locale-gen en_US.UTF-8
 
 ENV LANG=en_US.UTF-8  \
     LANGUAGE=en_US:en \
-    LC_ALL=en_US.UTF-8
+    LC_ALL=en_US.UTF-8 \
+    RUBYOPT=-W0
 
 # Openocd
 COPY rpi3.cfg /openocd/
