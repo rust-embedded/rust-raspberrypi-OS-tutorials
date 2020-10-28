@@ -7,10 +7,16 @@ edition = "2018"
 # The features section is used to select the target board.
 [features]
 default = []
-bsp_rpi3 = ["cortex-a"]
-bsp_rpi4 = ["cortex-a"]
+bsp_rpi3 = []
+bsp_rpi4 = []
+
+##--------------------------------------------------------------------------------------------------
+## Dependencies
+##--------------------------------------------------------------------------------------------------
 
 [dependencies]
 
-# Optional dependencies
-cortex-a = { version = "4.x.x", optional = true }
+# Platform specific dependencies
+[target.'cfg(target_arch = "aarch64")'.dependencies]
+cortex-a = { version = "4.x.x" }
+

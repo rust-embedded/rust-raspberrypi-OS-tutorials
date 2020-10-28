@@ -13,19 +13,15 @@
 diff -uNr 03_hacky_hello_world/Cargo.toml 04_zero_overhead_abstraction/Cargo.toml
 --- 03_hacky_hello_world/Cargo.toml
 +++ 04_zero_overhead_abstraction/Cargo.toml
-@@ -7,7 +7,10 @@
- # The features section is used to select the target board.
- [features]
- default = []
--bsp_rpi3 = []
--bsp_rpi4 = []
-+bsp_rpi3 = ["cortex-a"]
-+bsp_rpi4 = ["cortex-a"]
+@@ -15,3 +15,8 @@
+ ##--------------------------------------------------------------------------------------------------
 
  [dependencies]
 +
-+# Optional dependencies
-+cortex-a = { version = "4.x.x", optional = true }
++# Platform specific dependencies
++[target.'cfg(target_arch = "aarch64")'.dependencies]
++cortex-a = { version = "4.x.x" }
++
 
 diff -uNr 03_hacky_hello_world/src/_arch/aarch64/cpu/smp.rs 04_zero_overhead_abstraction/src/_arch/aarch64/cpu/smp.rs
 --- 03_hacky_hello_world/src/_arch/aarch64/cpu/smp.rs

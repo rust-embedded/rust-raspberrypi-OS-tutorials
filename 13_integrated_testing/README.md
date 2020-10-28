@@ -797,18 +797,21 @@ diff -uNr 12_exceptions_part1_groundwork/.cargo/config.toml 13_integrated_testin
 diff -uNr 12_exceptions_part1_groundwork/Cargo.toml 13_integrated_testing/Cargo.toml
 --- 12_exceptions_part1_groundwork/Cargo.toml
 +++ 13_integrated_testing/Cargo.toml
-@@ -11,7 +11,35 @@
- bsp_rpi4 = ["cortex-a", "register"]
+@@ -15,11 +15,38 @@
+ ##--------------------------------------------------------------------------------------------------
 
  [dependencies]
 +qemu-exit = "1.0.x"
 +test-types = { path = "test-types" }
 
  # Optional dependencies
- cortex-a = { version = "4.x.x", optional = true }
 -register = { version = "0.5.x", optional = true }
 +register = { version = "0.5.x", features = ["no_std_unit_tests"], optional = true }
-+
+
+ # Platform specific dependencies
+ [target.'cfg(target_arch = "aarch64")'.dependencies]
+ cortex-a = { version = "4.x.x" }
+
 +##--------------------------------------------------------------------------------------------------
 +## Testing
 +##--------------------------------------------------------------------------------------------------

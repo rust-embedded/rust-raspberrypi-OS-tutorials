@@ -94,20 +94,27 @@ $ sudo screen /dev/ttyUSB0 230400
 diff -uNr 05_safe_globals/Cargo.toml 06_drivers_gpio_uart/Cargo.toml
 --- 05_safe_globals/Cargo.toml
 +++ 06_drivers_gpio_uart/Cargo.toml
-@@ -7,10 +7,11 @@
+@@ -7,8 +7,8 @@
  # The features section is used to select the target board.
  [features]
  default = []
--bsp_rpi3 = ["cortex-a"]
--bsp_rpi4 = ["cortex-a"]
-+bsp_rpi3 = ["cortex-a", "register"]
-+bsp_rpi4 = ["cortex-a", "register"]
+-bsp_rpi3 = []
+-bsp_rpi4 = []
++bsp_rpi3 = ["register"]
++bsp_rpi4 = ["register"]
+
+ ##--------------------------------------------------------------------------------------------------
+ ## Dependencies
+@@ -16,6 +16,9 @@
 
  [dependencies]
 
- # Optional dependencies
- cortex-a = { version = "4.x.x", optional = true }
++# Optional dependencies
 +register = { version = "0.5.x", optional = true }
++
+ # Platform specific dependencies
+ [target.'cfg(target_arch = "aarch64")'.dependencies]
+ cortex-a = { version = "4.x.x" }
 
 diff -uNr 05_safe_globals/src/_arch/aarch64/cpu.rs 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs
 --- 05_safe_globals/src/_arch/aarch64/cpu.rs
