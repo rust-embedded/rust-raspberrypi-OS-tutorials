@@ -782,6 +782,19 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
          assert!(bss_range.contains(&kernel_tables_addr));
      }
 
+diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/time.rs 15_virtual_mem_part2_mmio_remap/src/_arch/aarch64/time.rs
+--- 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/time.rs
++++ 15_virtual_mem_part2_mmio_remap/src/_arch/aarch64/time.rs
+@@ -55,7 +55,7 @@
+         }
+
+         // Calculate the register compare value.
+-        let frq = CNTFRQ_EL0.get() as u64;
++        let frq = CNTFRQ_EL0.get();
+         let x = match frq.checked_mul(duration.as_nanos() as u64) {
+             None => {
+                 warn!("Spin duration too long, skipping");
+
 diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gicc.rs 15_virtual_mem_part2_mmio_remap/src/bsp/device_driver/arm/gicv2/gicc.rs
 --- 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gicc.rs
 +++ 15_virtual_mem_part2_mmio_remap/src/bsp/device_driver/arm/gicv2/gicc.rs

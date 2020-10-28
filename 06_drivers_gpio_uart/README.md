@@ -106,7 +106,7 @@ diff -uNr 05_safe_globals/Cargo.toml 06_drivers_gpio_uart/Cargo.toml
  [dependencies]
 
  # Optional dependencies
- cortex-a = { version = "3.0.x", optional = true }
+ cortex-a = { version = "4.x.x", optional = true }
 +register = { version = "0.5.x", optional = true }
 
 diff -uNr 05_safe_globals/src/_arch/aarch64/cpu.rs 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs

@@ -30,7 +30,7 @@
     mrs    x2,  SPSR_EL1
 
     stp    lr,  x1,  [sp, #16 * 15]
-    str    w2,       [sp, #16 * 16]
+    str    x2,       [sp, #16 * 16]
 
     // x0 is the first argument for the function called through `\handler`.
     mov    x0,  sp

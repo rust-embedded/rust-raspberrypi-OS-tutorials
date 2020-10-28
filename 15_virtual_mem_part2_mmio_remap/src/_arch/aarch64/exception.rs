@@ -18,7 +18,7 @@ global_asm!(include_str!("exception.S"));
 
 /// Wrapper struct for memory copy of SPSR_EL1.
 #[repr(transparent)]
-struct SpsrEL1(InMemoryRegister<u32, SPSR_EL1::Register>);
+struct SpsrEL1(InMemoryRegister<u64, SPSR_EL1::Register>);
 
 /// The exception context as it is stored on the stack on exception entry.
 #[repr(C)]

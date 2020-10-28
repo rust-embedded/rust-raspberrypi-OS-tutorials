@@ -13,5 +13,5 @@ bsp_rpi4 = ["cortex-a", "register"]
 [dependencies]
 
 # Optional dependencies
-cortex-a = { version = "3.0.x", optional = true }
+cortex-a = { version = "4.x.x", optional = true }
 register = { version = "0.5.x", optional = true }

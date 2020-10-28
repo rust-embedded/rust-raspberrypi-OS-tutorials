@@ -15,7 +15,7 @@ mod daif_bits {
 }
 
 trait DaifField {
-    fn daif_field() -> register::Field<u32, DAIF::Register>;
+    fn daif_field() -> register::Field<u64, DAIF::Register>;
 }
 
 struct Debug;
@@ -28,25 +28,25 @@ struct FIQ;
 //--------------------------------------------------------------------------------------------------
 
 impl DaifField for Debug {
-    fn daif_field() -> register::Field<u32, DAIF::Register> {
+    fn daif_field() -> register::Field<u64, DAIF::Register> {
         DAIF::D
     }
 }
 
 impl DaifField for SError {
-    fn daif_field() -> register::Field<u32, DAIF::Register> {
+    fn daif_field() -> register::Field<u64, DAIF::Register> {
         DAIF::A
     }
 }
 
 impl DaifField for IRQ {
-    fn daif_field() -> register::Field<u32, DAIF::Register> {
+    fn daif_field() -> register::Field<u64, DAIF::Register> {
         DAIF::I
     }
 }
 
 impl DaifField for FIQ {
-    fn daif_field() -> register::Field<u32, DAIF::Register> {
+    fn daif_field() -> register::Field<u64, DAIF::Register> {
         DAIF::F
     }
 }
@@ -106,7 +106,7 @@ pub unsafe fn local_irq_mask() {
 ///
 /// - Changes the HW state of the executing core.
 #[inline(always)]
-pub unsafe fn local_irq_mask_save() -> u32 {
+pub unsafe fn local_irq_mask_save() -> u64 {
     let saved = DAIF.get();
     local_irq_mask();
 
@@ -120,7 +120,7 @@ pub unsafe fn local_irq_mask_save() -> u32 {
 /// - Changes the HW state of the executing core.
 /// - No sanity checks on the input.
 #[inline(always)]
-pub unsafe fn local_irq_restore(saved: u32) {
+pub unsafe fn local_irq_restore(saved: u64) {
     DAIF.set(saved);
 }
 

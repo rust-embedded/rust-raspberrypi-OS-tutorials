@@ -2,34 +2,32 @@
 # It is not intended for manual editing.
 [[package]]
 name = "cortex-a"
-version = "3.0.4"
+version = "4.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eda21b8ec67b82099401559fe28cea4508eb1e33217b4dacf60ba22e39b486b1"
 dependencies = [
- "register 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "register",
 ]
 
 [[package]]
 name = "kernel"
 version = "0.1.0"
 dependencies = [
- "cortex-a 3.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "register 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cortex-a",
+ "register",
 ]
 
 [[package]]
 name = "register"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "deaba5b0e477d21f61a57504bb5cef4a1e86de30300b457d38971c1cfc98b815"
 dependencies = [
- "tock-registers 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tock-registers",
 ]
 
 [[package]]
 name = "tock-registers"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[metadata]
-"checksum cortex-a 3.0.4 (registry+https://github.com/rust-lang/crates.io-index)" = "6922a40af4d1a2deac8c963b9f3e57311b8912490740234f1ad182425c547f80"
-"checksum register 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)" = "deaba5b0e477d21f61a57504bb5cef4a1e86de30300b457d38971c1cfc98b815"
-"checksum tock-registers 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "70323afdb8082186c0986da0e10f6e4ed103d681c921c00597e98d9806dac20f"
+checksum = "70323afdb8082186c0986da0e10f6e4ed103d681c921c00597e98d9806dac20f"

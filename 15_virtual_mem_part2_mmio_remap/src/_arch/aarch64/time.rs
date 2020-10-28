@@ -55,7 +55,7 @@ impl time::interface::TimeManager for GenericTimer {
         }
 
         // Calculate the register compare value.
-        let frq = CNTFRQ_EL0.get() as u64;
+        let frq = CNTFRQ_EL0.get();
         let x = match frq.checked_mul(duration.as_nanos() as u64) {
             None => {
                 warn!("Spin duration too long, skipping");
@@ -68,6 +68,7 @@ impl time::interface::TimeManager for GenericTimer {
         // Check if it is within supported bounds.
         let warn: Option<&str> = if tval == 0 {
             Some("smaller")
+        // The upper 32 bits of CNTP_TVAL_EL0 are reserved.
         } else if tval > u32::max_value().into() {
             Some("bigger")
         } else {
@@ -83,7 +84,7 @@ impl time::interface::TimeManager for GenericTimer {
         }
 
         // Set the compare value register.
-        CNTP_TVAL_EL0.set(tval as u32);
+        CNTP_TVAL_EL0.set(tval);
 
         // Kick off the counting.                       // Disable timer interrupt.
         CNTP_CTL_EL0.modify(CNTP_CTL_EL0::ENABLE::SET + CNTP_CTL_EL0::IMASK::SET);

@@ -770,7 +770,7 @@ diff -uNr 13_integrated_testing/src/_arch/aarch64/exception/asynchronous.rs 14_e
 +}
 +
  trait DaifField {
-     fn daif_field() -> register::Field<u32, DAIF::Register>;
+     fn daif_field() -> register::Field<u64, DAIF::Register>;
  }
 @@ -55,6 +59,71 @@
  // Public Code
@@ -823,7 +823,7 @@ diff -uNr 13_integrated_testing/src/_arch/aarch64/exception/asynchronous.rs 14_e
 +///
 +/// - Changes the HW state of the executing core.
 +#[inline(always)]
-+pub unsafe fn local_irq_mask_save() -> u32 {
++pub unsafe fn local_irq_mask_save() -> u64 {
 +    let saved = DAIF.get();
 +    local_irq_mask();
 +
@@ -837,7 +837,7 @@ diff -uNr 13_integrated_testing/src/_arch/aarch64/exception/asynchronous.rs 14_e
 +/// - Changes the HW state of the executing core.
 +/// - No sanity checks on the input.
 +#[inline(always)]
-+pub unsafe fn local_irq_restore(saved: u32) {
++pub unsafe fn local_irq_restore(saved: u64) {
 +    DAIF.set(saved);
 +}
 +

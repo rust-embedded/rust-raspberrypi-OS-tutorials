@@ -499,7 +499,7 @@ diff -uNr 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
 +
 +/// Wrapper struct for memory copy of SPSR_EL1.
 +#[repr(transparent)]
-+struct SpsrEL1(InMemoryRegister<u32, SPSR_EL1::Register>);
++struct SpsrEL1(InMemoryRegister<u64, SPSR_EL1::Register>);
 +
 +/// The exception context as it is stored on the stack on exception entry.
 +#[repr(C)]
@@ -774,7 +774,7 @@ diff -uNr 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.S 12
 +    mrs    x2,  SPSR_EL1
 +
 +    stp    lr,  x1,  [sp, #16 * 15]
-+    str    w2,       [sp, #16 * 16]
++    str    x2,       [sp, #16 * 16]
 +
 +    // x0 is the first argument for the function called through `\handler`.
 +    mov    x0,  sp

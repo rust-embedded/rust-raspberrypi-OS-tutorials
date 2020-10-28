@@ -25,7 +25,7 @@ diff -uNr 03_hacky_hello_world/Cargo.toml 04_zero_overhead_abstraction/Cargo.tom
  [dependencies]
 +
 +# Optional dependencies
-+cortex-a = { version = "3.0.x", optional = true }
++cortex-a = { version = "4.x.x", optional = true }
 
 diff -uNr 03_hacky_hello_world/src/_arch/aarch64/cpu/smp.rs 04_zero_overhead_abstraction/src/_arch/aarch64/cpu/smp.rs
 --- 03_hacky_hello_world/src/_arch/aarch64/cpu/smp.rs

@@ -11,7 +11,7 @@ use cortex_a::regs::*;
 //--------------------------------------------------------------------------------------------------
 
 trait DaifField {
-    fn daif_field() -> register::Field<u32, DAIF::Register>;
+    fn daif_field() -> register::Field<u64, DAIF::Register>;
 }
 
 struct Debug;
@@ -24,25 +24,25 @@ struct FIQ;
 //--------------------------------------------------------------------------------------------------
 
 impl DaifField for Debug {
-    fn daif_field() -> register::Field<u32, DAIF::Register> {
+    fn daif_field() -> register::Field<u64, DAIF::Register> {
         DAIF::D
     }
 }
 
 impl DaifField for SError {
-    fn daif_field() -> register::Field<u32, DAIF::Register> {
+    fn daif_field() -> register::Field<u64, DAIF::Register> {
         DAIF::A
     }
 }
 
 impl DaifField for IRQ {
-    fn daif_field() -> register::Field<u32, DAIF::Register> {
+    fn daif_field() -> register::Field<u64, DAIF::Register> {
         DAIF::I
     }
 }
 
 impl DaifField for FIQ {
-    fn daif_field() -> register::Field<u32, DAIF::Register> {
+    fn daif_field() -> register::Field<u64, DAIF::Register> {
         DAIF::F
     }
 }

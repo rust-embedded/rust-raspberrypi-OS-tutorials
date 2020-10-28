@@ -122,7 +122,7 @@ diff -uNr 07_uart_chainloader/src/_arch/aarch64/cpu.rs 08_timestamps/src/_arch/a
 diff -uNr 07_uart_chainloader/src/_arch/aarch64/time.rs 08_timestamps/src/_arch/aarch64/time.rs
 --- 07_uart_chainloader/src/_arch/aarch64/time.rs
 +++ 08_timestamps/src/_arch/aarch64/time.rs
-@@ -0,0 +1,97 @@
+@@ -0,0 +1,98 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
@@ -193,6 +193,7 @@ diff -uNr 07_uart_chainloader/src/_arch/aarch64/time.rs 08_timestamps/src/_arch/
 +        // Check if it is within supported bounds.
 +        let warn: Option<&str> = if tval == 0 {
 +            Some("smaller")
++        // The upper 32 bits of CNTP_TVAL_EL0 are reserved.
 +        } else if tval > u32::max_value().into() {
 +            Some("bigger")
 +        } else {
@@ -208,7 +209,7 @@ diff -uNr 07_uart_chainloader/src/_arch/aarch64/time.rs 08_timestamps/src/_arch/
 +        }
 +
 +        // Set the compare value register.
-+        CNTP_TVAL_EL0.set(tval as u32);
++        CNTP_TVAL_EL0.set(tval);
 +
 +        // Kick off the counting.                       // Disable timer interrupt.
 +        CNTP_CTL_EL0.modify(CNTP_CTL_EL0::ENABLE::SET + CNTP_CTL_EL0::IMASK::SET);
