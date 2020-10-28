@@ -181,7 +181,7 @@ fn kernel_main() -> ! {
     unsafe {
         // Read the kernel byte by byte.
         for i in 0..size {
-            *kernel_addr.offset(i as isize) = console().read_char() as u8;
+            core::ptr::write_volatile(kernel_addr.offset(i as isize), console().read_char() as u8)
         }
     }
 
@@ -189,7 +189,7 @@ fn kernel_main() -> ! {
     console().flush();
 
     // Use black magic to get a function pointer.
-    let kernel: extern "C" fn() -> ! = unsafe { core::mem::transmute(kernel_addr as *const ()) };
+    let kernel: fn() -> ! = unsafe { core::mem::transmute(kernel_addr as *const ()) };
 
     // Jump to loaded kernel!
     kernel()

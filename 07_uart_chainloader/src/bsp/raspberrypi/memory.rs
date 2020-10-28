@@ -12,6 +12,8 @@ use core::{cell::UnsafeCell, ops::RangeInclusive};
 
 // Symbols from the linker script.
 extern "Rust" {
+    static __binary_start: UnsafeCell<u64>;
+    static __binary_end_inclusive: UnsafeCell<u64>;
     static __bss_start: UnsafeCell<u64>;
     static __bss_end_inclusive: UnsafeCell<u64>;
 }
@@ -63,8 +65,18 @@ pub fn boot_core_stack_end() -> usize {
 
 /// The address on which the Raspberry firmware loads every binary by default.
 #[inline(always)]
-pub fn board_default_load_addr() -> usize {
-    map::BOARD_DEFAULT_LOAD_ADDRESS
+pub fn board_default_load_addr() -> *const u64 {
+    map::BOARD_DEFAULT_LOAD_ADDRESS as _
+}
+
+/// Return the inclusive range spanning the whole binary.
+///
+/// # Safety
+///
+/// - Values are provided by the linker script and must be trusted as-is.
+/// - The linker-provided addresses must be u64 aligned.
+pub fn binary_range_inclusive() -> RangeInclusive<*mut u64> {
+    unsafe { RangeInclusive::new(__binary_start.get(), __binary_end_inclusive.get()) }
 }
 
 /// Return the inclusive range spanning the .bss section.

@@ -40,7 +40,7 @@ SECTIONS
 
     /* Fill up to 8 byte, b/c relocating the binary is done in u64 chunks */
     . = ALIGN(8);
-    __binary_end = .;
+    __binary_end_inclusive = . - 8;
 
     /DISCARD/ : { *(.comment*) }
 }

@@ -17,36 +17,33 @@ use crate::{bsp, runtime_init};
 ///
 /// - Only a single core must be active and running this function.
 /// - Function must not use the `bss` section.
-pub unsafe fn relocate_self<T>() -> ! {
-    extern "C" {
-        static __binary_start: usize;
-        static __binary_end: usize;
-    }
-
-    let binary_start_addr: usize = &__binary_start as *const _ as _;
-    let binary_end_addr: usize = &__binary_end as *const _ as _;
-    let binary_size_in_byte: usize = binary_end_addr - binary_start_addr;
-
-    // Get the relocation destination address from the linker symbol.
-    let mut reloc_dst_addr: *mut T = binary_start_addr as *mut T;
+pub unsafe fn relocate_self() -> ! {
+    let range = bsp::memory::binary_range_inclusive();
+    let mut reloc_destination_addr = *range.start();
+    let reloc_end_addr_inclusive = *range.end();
 
     // The address of where the previous firmware loaded us.
-    let mut src_addr: *const T = bsp::memory::board_default_load_addr() as *const _;
+    let mut src_addr = bsp::memory::board_default_load_addr();
+
+    // TODO Make it work for the case src_addr > reloc_addr as well.
+    let diff = reloc_destination_addr as usize - src_addr as usize;
 
     // Copy the whole binary.
     //
     // This is essentially a `memcpy()` optimized for throughput by transferring in chunks of T.
-    let n = binary_size_in_byte / core::mem::size_of::<T>();
-    for _ in 0..n {
-        use core::ptr;
-
-        ptr::write_volatile::<T>(reloc_dst_addr, ptr::read_volatile::<T>(src_addr));
-        reloc_dst_addr = reloc_dst_addr.offset(1);
+    loop {
+        core::ptr::write_volatile(reloc_destination_addr, core::ptr::read_volatile(src_addr));
+        reloc_destination_addr = reloc_destination_addr.offset(1);
         src_addr = src_addr.offset(1);
+
+        if reloc_destination_addr > reloc_end_addr_inclusive {
+            break;
+        }
     }
 
-    // Call `runtime_init()` through a trait object, causing the jump to use an absolute address to
-    // reach the relocated binary. An elaborate explanation can be found in the `runtime_init.rs`
-    // source comments.
-    runtime_init::get().runtime_init()
+    let relocated_runtime_init_addr = runtime_init::runtime_init as *const () as usize + diff;
+    let relocated_runtime_init: fn() -> ! =
+        core::mem::transmute(relocated_runtime_init_addr as *const ());
+
+    relocated_runtime_init()
 }

@@ -113,7 +113,7 @@ diff -uNr 07_uart_chainloader/src/_arch/aarch64/cpu.rs 08_timestamps/src/_arch/a
      // Expect the boot core to start in EL2.
      if bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id() {
          SP.set(bsp::memory::boot_core_stack_end() as u64);
--        relocate::relocate_self::<u64>()
+-        relocate::relocate_self()
 +        runtime_init::runtime_init()
      } else {
          // If not core0, infinitely wait for events.
@@ -274,7 +274,7 @@ diff -uNr 07_uart_chainloader/src/bsp/raspberrypi/link.ld 08_timestamps/src/bsp/
 -
 -    /* Fill up to 8 byte, b/c relocating the binary is done in u64 chunks */
 -    . = ALIGN(8);
--    __binary_end = .;
+-    __binary_end_inclusive = . - 8;
 -
      /DISCARD/ : { *(.comment*) }
  }
@@ -282,7 +282,16 @@ diff -uNr 07_uart_chainloader/src/bsp/raspberrypi/link.ld 08_timestamps/src/bsp/
 diff -uNr 07_uart_chainloader/src/bsp/raspberrypi/memory.rs 08_timestamps/src/bsp/raspberrypi/memory.rs
 --- 07_uart_chainloader/src/bsp/raspberrypi/memory.rs
 +++ 08_timestamps/src/bsp/raspberrypi/memory.rs
-@@ -23,12 +23,10 @@
+@@ -12,8 +12,6 @@
+
+ // Symbols from the linker script.
+ extern "Rust" {
+-    static __binary_start: UnsafeCell<u64>;
+-    static __binary_end_inclusive: UnsafeCell<u64>;
+     static __bss_start: UnsafeCell<u64>;
+     static __bss_end_inclusive: UnsafeCell<u64>;
+ }
+@@ -25,12 +23,10 @@
  /// The board's memory map.
  #[rustfmt::skip]
  pub(super) mod map {
@@ -298,14 +307,24 @@ diff -uNr 07_uart_chainloader/src/bsp/raspberrypi/memory.rs 08_timestamps/src/bs
 
      /// Physical devices.
      #[cfg(feature = "bsp_rpi3")]
-@@ -61,12 +59,6 @@
+@@ -63,22 +59,6 @@
      map::BOOT_CORE_STACK_END
  }
 
 -/// The address on which the Raspberry firmware loads every binary by default.
 -#[inline(always)]
--pub fn board_default_load_addr() -> usize {
--    map::BOARD_DEFAULT_LOAD_ADDRESS
+-pub fn board_default_load_addr() -> *const u64 {
+-    map::BOARD_DEFAULT_LOAD_ADDRESS as _
+-}
+-
+-/// Return the inclusive range spanning the whole binary.
+-///
+-/// # Safety
+-///
+-/// - Values are provided by the linker script and must be trusted as-is.
+-/// - The linker-provided addresses must be u64 aligned.
+-pub fn binary_range_inclusive() -> RangeInclusive<*mut u64> {
+-    unsafe { RangeInclusive::new(__binary_start.get(), __binary_end_inclusive.get()) }
 -}
 -
  /// Return the inclusive range spanning the .bss section.
@@ -392,7 +411,7 @@ diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
 -    unsafe {
 -        // Read the kernel byte by byte.
 -        for i in 0..size {
--            *kernel_addr.offset(i as isize) = console().read_char() as u8;
+-            core::ptr::write_volatile(kernel_addr.offset(i as isize), console().read_char() as u8)
 -        }
 +    info!(
 +        "Architectural timer resolution: {} ns",
@@ -414,7 +433,7 @@ diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
 +    time::time_manager().spin_for(Duration::from_nanos(1));
 
 -    // Use black magic to get a function pointer.
--    let kernel: extern "C" fn() -> ! = unsafe { core::mem::transmute(kernel_addr as *const ()) };
+-    let kernel: fn() -> ! = unsafe { core::mem::transmute(kernel_addr as *const ()) };
 -
 -    // Jump to loaded kernel!
 -    kernel()
@@ -503,7 +522,7 @@ diff -uNr 07_uart_chainloader/src/print.rs 08_timestamps/src/print.rs
 diff -uNr 07_uart_chainloader/src/relocate.rs 08_timestamps/src/relocate.rs
 --- 07_uart_chainloader/src/relocate.rs
 +++ 08_timestamps/src/relocate.rs
-@@ -1,52 +0,0 @@
+@@ -1,49 +0,0 @@
 -// SPDX-License-Identifier: MIT OR Apache-2.0
 -//
 -// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
@@ -523,105 +542,36 @@ diff -uNr 07_uart_chainloader/src/relocate.rs 08_timestamps/src/relocate.rs
 -///
 -/// - Only a single core must be active and running this function.
 -/// - Function must not use the `bss` section.
--pub unsafe fn relocate_self<T>() -> ! {
--    extern "C" {
--        static __binary_start: usize;
--        static __binary_end: usize;
--    }
--
--    let binary_start_addr: usize = &__binary_start as *const _ as _;
--    let binary_end_addr: usize = &__binary_end as *const _ as _;
--    let binary_size_in_byte: usize = binary_end_addr - binary_start_addr;
--
--    // Get the relocation destination address from the linker symbol.
--    let mut reloc_dst_addr: *mut T = binary_start_addr as *mut T;
+-pub unsafe fn relocate_self() -> ! {
+-    let range = bsp::memory::binary_range_inclusive();
+-    let mut reloc_destination_addr = *range.start();
+-    let reloc_end_addr_inclusive = *range.end();
 -
 -    // The address of where the previous firmware loaded us.
--    let mut src_addr: *const T = bsp::memory::board_default_load_addr() as *const _;
+-    let mut src_addr = bsp::memory::board_default_load_addr();
+-
+-    // TODO Make it work for the case src_addr > reloc_addr as well.
+-    let diff = reloc_destination_addr as usize - src_addr as usize;
 -
 -    // Copy the whole binary.
 -    //
 -    // This is essentially a `memcpy()` optimized for throughput by transferring in chunks of T.
--    let n = binary_size_in_byte / core::mem::size_of::<T>();
--    for _ in 0..n {
--        use core::ptr;
--
--        ptr::write_volatile::<T>(reloc_dst_addr, ptr::read_volatile::<T>(src_addr));
--        reloc_dst_addr = reloc_dst_addr.offset(1);
+-    loop {
+-        core::ptr::write_volatile(reloc_destination_addr, core::ptr::read_volatile(src_addr));
+-        reloc_destination_addr = reloc_destination_addr.offset(1);
 -        src_addr = src_addr.offset(1);
+-
+-        if reloc_destination_addr > reloc_end_addr_inclusive {
+-            break;
+-        }
 -    }
 -
--    // Call `runtime_init()` through a trait object, causing the jump to use an absolute address to
--    // reach the relocated binary. An elaborate explanation can be found in the `runtime_init.rs`
--    // source comments.
--    runtime_init::get().runtime_init()
+-    let relocated_runtime_init_addr = runtime_init::runtime_init as *const () as usize + diff;
+-    let relocated_runtime_init: fn() -> ! =
+-        core::mem::transmute(relocated_runtime_init_addr as *const ());
+-
+-    relocated_runtime_init()
 -}
-
-diff -uNr 07_uart_chainloader/src/runtime_init.rs 08_timestamps/src/runtime_init.rs
---- 07_uart_chainloader/src/runtime_init.rs
-+++ 08_timestamps/src/runtime_init.rs
-@@ -7,43 +7,9 @@
- use crate::{bsp, memory};
-
- //--------------------------------------------------------------------------------------------------
--// Private Definitions
--//--------------------------------------------------------------------------------------------------
--
--struct Traitor;
--
--//--------------------------------------------------------------------------------------------------
--// Public Definitions
--//--------------------------------------------------------------------------------------------------
--
--/// We are outsmarting the compiler here by using a trait as a layer of indirection. Because we are
--/// generating PIC code, a static dispatch to `init()` would generate a relative jump from the
--/// callee to `init()`. However, when calling `init()`, code just finished copying the binary to the
--/// actual link-time address, and hence is still running at whatever location the previous loader
--/// has put it. So we do not want a relative jump, because it would not jump to the relocated code.
--///
--/// By indirecting through a trait object, we can make use of the property that vtables store
--/// absolute addresses. So calling `init()` this way will kick execution to the relocated binary.
--pub trait RunTimeInit {
--    /// Equivalent to `crt0` or `c0` code in C/C++ world. Clears the `bss` section, then jumps to
--    /// kernel init code.
--    ///
--    /// # Safety
--    ///
--    /// - Only a single core must be active and running this function.
--    unsafe fn runtime_init(&self) -> ! {
--        zero_bss();
--
--        crate::kernel_init()
--    }
--}
--
--//--------------------------------------------------------------------------------------------------
- // Private Code
- //--------------------------------------------------------------------------------------------------
-
--impl RunTimeInit for Traitor {}
--
- /// Zero out the .bss section.
- ///
- /// # Safety
-@@ -58,7 +24,14 @@
- // Public Code
- //--------------------------------------------------------------------------------------------------
-
--/// Give the callee a `RunTimeInit` trait object.
--pub fn get() -> &'static dyn RunTimeInit {
--    &Traitor {}
-+/// Equivalent to `crt0` or `c0` code in C/C++ world. Clears the `bss` section, then jumps to kernel
-+/// init code.
-+///
-+/// # Safety
-+///
-+/// - Only a single core must be active and running this function.
-+pub unsafe fn runtime_init() -> ! {
-+    zero_bss();
-+
-+    crate::kernel_init()
- }
 
 diff -uNr 07_uart_chainloader/src/time.rs 08_timestamps/src/time.rs
 --- 07_uart_chainloader/src/time.rs
