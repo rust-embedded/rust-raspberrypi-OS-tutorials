@@ -278,7 +278,7 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 0
 diff -uNr 06_drivers_gpio_uart/src/bsp/raspberrypi/link.ld 07_uart_chainloader/src/bsp/raspberrypi/link.ld
 --- 06_drivers_gpio_uart/src/bsp/raspberrypi/link.ld
 +++ 07_uart_chainloader/src/bsp/raspberrypi/link.ld
-@@ -5,12 +5,16 @@
+@@ -5,12 +5,15 @@
 
  SECTIONS
  {
@@ -292,13 +292,12 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/raspberrypi/link.ld 07_uart_chainloader/s
      {
 -        *(.text._start) *(.text*)
 +        *(.text._start)
-+        __runtime_init = .;
 +        KEEP(*(.text.runtime_init))
 +        *(.text*);
      }
 
      .rodata :
-@@ -32,5 +36,14 @@
+@@ -32,5 +35,16 @@
          __bss_end_inclusive = . - 8;
      }
 
@@ -310,6 +309,8 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/raspberrypi/link.ld 07_uart_chainloader/s
 +    /* Fill up to 8 byte, b/c relocating the binary is done in u64 chunks */
 +    . = ALIGN(8);
 +    __binary_end_inclusive = . - 8;
++
++    __runtime_init_reloc = runtime_init;
 +
      /DISCARD/ : { *(.comment*) }
  }
@@ -323,7 +324,7 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs 07_uart_chainloader
  extern "Rust" {
 +    static __binary_start: UnsafeCell<u64>;
 +    static __binary_end_inclusive: UnsafeCell<u64>;
-+    static __runtime_init: UnsafeCell<u64>;
++    static __runtime_init_reloc: UnsafeCell<u64>;
      static __bss_start: UnsafeCell<u64>;
      static __bss_end_inclusive: UnsafeCell<u64>;
  }
@@ -367,7 +368,7 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs 07_uart_chainloader
 +/// The relocated address of function `runtime_init()`.
 +#[inline(always)]
 +pub fn relocated_runtime_init_addr() -> *const u64 {
-+    unsafe { __runtime_init.get() as _ }
++    unsafe { __runtime_init_reloc.get() as _ }
 +}
 +
 +/// Return the inclusive range spanning the relocated .bss section.
