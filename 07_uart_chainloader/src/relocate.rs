@@ -27,17 +27,13 @@ pub unsafe fn relocate_self() -> ! {
     let mut current_binary_start_addr = bsp::memory::board_default_load_addr();
 
     // Copy the whole binary.
-    loop {
+    while relocated_binary_start_addr <= relocated_binary_end_addr_inclusive {
         core::ptr::write_volatile(
             relocated_binary_start_addr,
             core::ptr::read_volatile(current_binary_start_addr),
         );
         relocated_binary_start_addr = relocated_binary_start_addr.offset(1);
         current_binary_start_addr = current_binary_start_addr.offset(1);
-
-        if relocated_binary_start_addr > relocated_binary_end_addr_inclusive {
-            break;
-        }
     }
 
     // The following function calls form a hack to achieve an "absolute jump" to

@@ -93,5 +93,11 @@ pub fn relocated_runtime_init_addr() -> *const u64 {
 /// - Values are provided by the linker script and must be trusted as-is.
 /// - The linker-provided addresses must be u64 aligned.
 pub fn relocated_bss_range_inclusive() -> RangeInclusive<*mut u64> {
-    unsafe { RangeInclusive::new(__bss_start.get(), __bss_end_inclusive.get()) }
+    let range;
+    unsafe {
+        range = RangeInclusive::new(__bss_start.get(), __bss_end_inclusive.get());
+    }
+    assert!(!range.is_empty());
+
+    range
 }

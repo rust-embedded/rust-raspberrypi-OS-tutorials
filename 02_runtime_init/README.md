@@ -48,7 +48,7 @@ diff -uNr 01_wait_forever/src/_arch/aarch64/cpu.S 02_runtime_init/src/_arch/aarc
 diff -uNr 01_wait_forever/src/bsp/raspberrypi/link.ld 02_runtime_init/src/bsp/raspberrypi/link.ld
 --- 01_wait_forever/src/bsp/raspberrypi/link.ld
 +++ 02_runtime_init/src/bsp/raspberrypi/link.ld
-@@ -13,5 +13,24 @@
+@@ -13,5 +13,27 @@
          *(.text._start) *(.text*)
      }
 
@@ -68,6 +68,9 @@ diff -uNr 01_wait_forever/src/bsp/raspberrypi/link.ld 02_runtime_init/src/bsp/ra
 +        __bss_start = .;
 +        *(.bss*);
 +        . = ALIGN(8);
++
++        /* Fill for the bss == 0 case, so that __bss_start <= __bss_end_inclusive holds */
++        . += 8;
 +        __bss_end_inclusive = . - 8;
 +    }
 +
@@ -77,7 +80,7 @@ diff -uNr 01_wait_forever/src/bsp/raspberrypi/link.ld 02_runtime_init/src/bsp/ra
 diff -uNr 01_wait_forever/src/bsp/raspberrypi/memory.rs 02_runtime_init/src/bsp/raspberrypi/memory.rs
 --- 01_wait_forever/src/bsp/raspberrypi/memory.rs
 +++ 02_runtime_init/src/bsp/raspberrypi/memory.rs
-@@ -0,0 +1,31 @@
+@@ -0,0 +1,37 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
@@ -107,7 +110,13 @@ diff -uNr 01_wait_forever/src/bsp/raspberrypi/memory.rs 02_runtime_init/src/bsp/
 +/// - Values are provided by the linker script and must be trusted as-is.
 +/// - The linker-provided addresses must be u64 aligned.
 +pub fn bss_range_inclusive() -> RangeInclusive<*mut u64> {
-+    unsafe { RangeInclusive::new(__bss_start.get(), __bss_end_inclusive.get()) }
++    let range;
++    unsafe {
++        range = RangeInclusive::new(__bss_start.get(), __bss_end_inclusive.get());
++    }
++    assert!(!range.is_empty());
++
++    range
 +}
 
 diff -uNr 01_wait_forever/src/bsp/raspberrypi.rs 02_runtime_init/src/bsp/raspberrypi.rs
@@ -150,7 +159,7 @@ diff -uNr 01_wait_forever/src/main.rs 02_runtime_init/src/main.rs
 diff -uNr 01_wait_forever/src/memory.rs 02_runtime_init/src/memory.rs
 --- 01_wait_forever/src/memory.rs
 +++ 02_runtime_init/src/memory.rs
-@@ -0,0 +1,34 @@
+@@ -0,0 +1,30 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
@@ -176,13 +185,9 @@ diff -uNr 01_wait_forever/src/memory.rs 02_runtime_init/src/memory.rs
 +    let mut ptr = *range.start();
 +    let end_inclusive = *range.end();
 +
-+    loop {
++    while ptr <= end_inclusive {
 +        core::ptr::write_volatile(ptr, T::from(0));
 +        ptr = ptr.offset(1);
-+
-+        if ptr > end_inclusive {
-+            break;
-+        }
 +    }
 +}
 

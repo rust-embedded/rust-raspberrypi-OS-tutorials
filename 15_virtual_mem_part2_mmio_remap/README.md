@@ -1453,8 +1453,8 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/driver.rs 15_v
 diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/link.ld 15_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/link.ld
 --- 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/link.ld
 +++ 15_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/link.ld
-@@ -39,6 +39,11 @@
-         . = ALIGN(8);
+@@ -42,6 +42,11 @@
+         . += 8;
          __bss_end_inclusive = . - 8;
      }
 +    . = ALIGN(65536);

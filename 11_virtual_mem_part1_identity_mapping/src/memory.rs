@@ -25,12 +25,8 @@ where
     let mut ptr = *range.start();
     let end_inclusive = *range.end();
 
-    loop {
+    while ptr <= end_inclusive {
         core::ptr::write_volatile(ptr, T::from(0));
         ptr = ptr.offset(1);
-
-        if ptr > end_inclusive {
-            break;
-        }
     }
 }

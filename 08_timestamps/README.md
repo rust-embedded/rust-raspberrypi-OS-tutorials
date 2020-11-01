@@ -301,7 +301,7 @@ diff -uNr 07_uart_chainloader/src/bsp/raspberrypi/link.ld 08_timestamps/src/bsp/
      }
 
      .rodata :
-@@ -35,16 +32,5 @@
+@@ -38,16 +35,5 @@
          __bss_end_inclusive = . - 8;
      }
 
@@ -348,7 +348,7 @@ diff -uNr 07_uart_chainloader/src/bsp/raspberrypi/memory.rs 08_timestamps/src/bs
 
      /// Physical devices.
      #[cfg(feature = "bsp_rpi3")]
-@@ -64,34 +59,12 @@
+@@ -64,35 +59,13 @@
      map::BOOT_CORE_STACK_END
  }
 
@@ -383,8 +383,9 @@ diff -uNr 07_uart_chainloader/src/bsp/raspberrypi/memory.rs 08_timestamps/src/bs
  /// - The linker-provided addresses must be u64 aligned.
 -pub fn relocated_bss_range_inclusive() -> RangeInclusive<*mut u64> {
 +pub fn bss_range_inclusive() -> RangeInclusive<*mut u64> {
-     unsafe { RangeInclusive::new(__bss_start.get(), __bss_end_inclusive.get()) }
- }
+     let range;
+     unsafe {
+         range = RangeInclusive::new(__bss_start.get(), __bss_end_inclusive.get());
 
 diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
 --- 07_uart_chainloader/src/main.rs
@@ -586,7 +587,7 @@ diff -uNr 07_uart_chainloader/src/print.rs 08_timestamps/src/print.rs
 diff -uNr 07_uart_chainloader/src/relocate.rs 08_timestamps/src/relocate.rs
 --- 07_uart_chainloader/src/relocate.rs
 +++ 08_timestamps/src/relocate.rs
-@@ -1,55 +0,0 @@
+@@ -1,51 +0,0 @@
 -// SPDX-License-Identifier: MIT OR Apache-2.0
 -//
 -// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
@@ -616,17 +617,13 @@ diff -uNr 07_uart_chainloader/src/relocate.rs 08_timestamps/src/relocate.rs
 -    let mut current_binary_start_addr = bsp::memory::board_default_load_addr();
 -
 -    // Copy the whole binary.
--    loop {
+-    while relocated_binary_start_addr <= relocated_binary_end_addr_inclusive {
 -        core::ptr::write_volatile(
 -            relocated_binary_start_addr,
 -            core::ptr::read_volatile(current_binary_start_addr),
 -        );
 -        relocated_binary_start_addr = relocated_binary_start_addr.offset(1);
 -        current_binary_start_addr = current_binary_start_addr.offset(1);
--
--        if relocated_binary_start_addr > relocated_binary_end_addr_inclusive {
--            break;
--        }
 -    }
 -
 -    // The following function calls form a hack to achieve an "absolute jump" to

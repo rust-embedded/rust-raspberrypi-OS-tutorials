@@ -1512,8 +1512,8 @@ diff -uNr 12_exceptions_part1_groundwork/src/memory/mmu.rs 13_integrated_testing
 diff -uNr 12_exceptions_part1_groundwork/src/memory.rs 13_integrated_testing/src/memory.rs
 --- 12_exceptions_part1_groundwork/src/memory.rs
 +++ 13_integrated_testing/src/memory.rs
-@@ -34,3 +34,40 @@
-         }
+@@ -30,3 +30,40 @@
+         ptr = ptr.offset(1);
      }
  }
 +
