@@ -12,6 +12,8 @@ ifeq ($(BSP),rpi3)
     QEMU_BINARY       = qemu-system-aarch64
     QEMU_MACHINE_TYPE = raspi3
     QEMU_RELEASE_ARGS = -d in_asm -display none
+    OBJDUMP_BINARY    = aarch64-none-elf-objdump
+    NM_BINARY         = aarch64-none-elf-nm
     LINKER_FILE       = src/bsp/raspberrypi/link.ld
     RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
 else ifeq ($(BSP),rpi4)
@@ -20,6 +22,8 @@ else ifeq ($(BSP),rpi4)
     QEMU_BINARY       = qemu-system-aarch64
     QEMU_MACHINE_TYPE =
     QEMU_RELEASE_ARGS = -d in_asm -display none
+    OBJDUMP_BINARY    = aarch64-none-elf-objdump
+    NM_BINARY         = aarch64-none-elf-nm
     LINKER_FILE       = src/bsp/raspberrypi/link.ld
     RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
 endif
@@ -45,9 +49,11 @@ OBJCOPY_CMD = rust-objcopy \
 KERNEL_ELF = target/$(TARGET)/release/kernel
 
 DOCKER_IMAGE         = rustembedded/osdev-utils
-DOCKER_CMD           = docker run -it --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
+DOCKER_CMD           = docker run --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
+DOCKER_CMD_INTERACT  = $(DOCKER_CMD) -i -t
 
-DOCKER_QEMU = $(DOCKER_CMD) $(DOCKER_IMAGE)
+DOCKER_QEMU     = $(DOCKER_CMD_INTERACT) $(DOCKER_IMAGE)
+DOCKER_ELFTOOLS = $(DOCKER_CMD) $(DOCKER_IMAGE)
 
 EXEC_QEMU = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
 
@@ -82,11 +88,10 @@ readelf: $(KERNEL_ELF)
 	readelf --headers $(KERNEL_ELF)
 
 objdump: $(KERNEL_ELF)
-	rust-objdump --arch-name aarch64 --disassemble --demangle --no-show-raw-insn \
-	    --print-imm-hex $(KERNEL_ELF)
+	@$(DOCKER_ELFTOOLS) $(OBJDUMP_BINARY) --disassemble --demangle $(KERNEL_ELF)
 
 nm: $(KERNEL_ELF)
-	rust-nm --demangle --print-size $(KERNEL_ELF) | sort
+	@$(DOCKER_ELFTOOLS) $(NM_BINARY) --demangle --print-size $(KERNEL_ELF) | sort
 
 # For rust-analyzer
 check:

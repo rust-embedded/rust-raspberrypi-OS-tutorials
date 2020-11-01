@@ -37,18 +37,18 @@ diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
      QEMU_MACHINE_TYPE = raspi3
 -    QEMU_RELEASE_ARGS = -d in_asm -display none
 +    QEMU_RELEASE_ARGS = -serial stdio -display none
+     OBJDUMP_BINARY    = aarch64-none-elf-objdump
+     NM_BINARY         = aarch64-none-elf-nm
      LINKER_FILE       = src/bsp/raspberrypi/link.ld
-     RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
- else ifeq ($(BSP),rpi4)
-@@ -19,7 +19,7 @@
+@@ -21,7 +21,7 @@
      KERNEL_BIN        = kernel8.img
      QEMU_BINARY       = qemu-system-aarch64
      QEMU_MACHINE_TYPE =
 -    QEMU_RELEASE_ARGS = -d in_asm -display none
 +    QEMU_RELEASE_ARGS = -serial stdio -display none
+     OBJDUMP_BINARY    = aarch64-none-elf-objdump
+     NM_BINARY         = aarch64-none-elf-nm
      LINKER_FILE       = src/bsp/raspberrypi/link.ld
-     RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
- endif
 
 diff -uNr 02_runtime_init/src/bsp/raspberrypi/console.rs 03_hacky_hello_world/src/bsp/raspberrypi/console.rs
 --- 02_runtime_init/src/bsp/raspberrypi/console.rs

@@ -47,9 +47,9 @@ Binary files 07_uart_chainloader/demo_payload_rpi4.img and 08_timestamps/demo_pa
 diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
 --- 07_uart_chainloader/Makefile
 +++ 08_timestamps/Makefile
-@@ -19,8 +19,7 @@
-     QEMU_MACHINE_TYPE = raspi3
-     QEMU_RELEASE_ARGS = -serial stdio -display none
+@@ -21,8 +21,7 @@
+     OBJDUMP_BINARY    = aarch64-none-elf-objdump
+     NM_BINARY         = aarch64-none-elf-nm
      LINKER_FILE       = src/bsp/raspberrypi/link.ld
 -    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53 -C relocation-model=pic
 -    CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi3.img
@@ -57,9 +57,9 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
  else ifeq ($(BSP),rpi4)
      TARGET            = aarch64-unknown-none-softfloat
      KERNEL_BIN        = kernel8.img
-@@ -28,8 +27,7 @@
-     QEMU_MACHINE_TYPE =
-     QEMU_RELEASE_ARGS = -serial stdio -display none
+@@ -32,8 +31,7 @@
+     OBJDUMP_BINARY    = aarch64-none-elf-objdump
+     NM_BINARY         = aarch64-none-elf-nm
      LINKER_FILE       = src/bsp/raspberrypi/link.ld
 -    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72 -C relocation-model=pic
 -    CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi4.img
@@ -67,7 +67,7 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
  endif
 
  # Export for build.rs
-@@ -69,8 +67,7 @@
+@@ -75,8 +73,7 @@
  EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
  EXEC_MINIPUSH = ruby ../utils/minipush.rb
 
@@ -77,7 +77,7 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
 
  all: $(KERNEL_BIN)
 
-@@ -84,18 +81,15 @@
+@@ -90,18 +87,15 @@
  	$(DOC_CMD) --document-private-items --open
 
  ifeq ($(QEMU_MACHINE_TYPE),)
@@ -99,6 +99,18 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
 
  clippy:
  	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD)
+@@ -113,10 +107,7 @@
+ 	readelf --headers $(KERNEL_ELF)
+
+ objdump: $(KERNEL_ELF)
+-	@$(DOCKER_ELFTOOLS) $(OBJDUMP_BINARY) --disassemble --demangle \
+-                --section .text \
+-                --section .got  \
+-                $(KERNEL_ELF)
++	@$(DOCKER_ELFTOOLS) $(OBJDUMP_BINARY) --disassemble --demangle $(KERNEL_ELF)
+
+ nm: $(KERNEL_ELF)
+ 	@$(DOCKER_ELFTOOLS) $(NM_BINARY) --demangle --print-size $(KERNEL_ELF) | sort
 
 diff -uNr 07_uart_chainloader/src/_arch/aarch64/cpu.rs 08_timestamps/src/_arch/aarch64/cpu.rs
 --- 07_uart_chainloader/src/_arch/aarch64/cpu.rs

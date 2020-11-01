@@ -19,6 +19,8 @@ ifeq ($(BSP),rpi3)
     QEMU_MACHINE_TYPE = raspi3
     QEMU_RELEASE_ARGS = -serial stdio -display none
     QEMU_TEST_ARGS    = $(QEMU_RELEASE_ARGS) -semihosting
+    OBJDUMP_BINARY    = aarch64-none-elf-objdump
+    NM_BINARY         = aarch64-none-elf-nm
     OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi3.cfg
     JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi3.img
     LINKER_FILE       = src/bsp/raspberrypi/link.ld
@@ -30,6 +32,8 @@ else ifeq ($(BSP),rpi4)
     QEMU_MACHINE_TYPE =
     QEMU_RELEASE_ARGS = -serial stdio -display none
     QEMU_TEST_ARGS    = $(QEMU_RELEASE_ARGS) -semihosting
+    OBJDUMP_BINARY    = aarch64-none-elf-objdump
+    NM_BINARY         = aarch64-none-elf-nm
     OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi4.cfg
     JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi4.img
     LINKER_FILE       = src/bsp/raspberrypi/link.ld
@@ -69,20 +73,21 @@ OBJCOPY_CMD = rust-objcopy \
 KERNEL_ELF = target/$(TARGET)/release/kernel
 
 DOCKER_IMAGE         = rustembedded/osdev-utils
-DOCKER_CMD_TEST      = docker run -i --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
-DOCKER_CMD_USER      = $(DOCKER_CMD_TEST) -t
+DOCKER_CMD           = docker run --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
+DOCKER_CMD_INTERACT  = $(DOCKER_CMD) -i -t
 DOCKER_ARG_DIR_UTILS = -v $(shell pwd)/../utils:/work/utils
 DOCKER_ARG_DIR_JTAG  = -v $(shell pwd)/../X1_JTAG_boot:/work/X1_JTAG_boot
 DOCKER_ARG_DEV       = --privileged -v /dev:/dev
 DOCKER_ARG_NET       = --network host
 
-DOCKER_QEMU = $(DOCKER_CMD_USER) $(DOCKER_IMAGE)
-DOCKER_GDB  = $(DOCKER_CMD_USER) $(DOCKER_ARG_NET) $(DOCKER_IMAGE)
-DOCKER_TEST = $(DOCKER_CMD_TEST) $(DOCKER_IMAGE)
+DOCKER_QEMU     = $(DOCKER_CMD_INTERACT) $(DOCKER_IMAGE)
+DOCKER_GDB      = $(DOCKER_CMD_INTERACT) $(DOCKER_ARG_NET) $(DOCKER_IMAGE)
+DOCKER_TEST     = $(DOCKER_CMD) $(DOCKER_IMAGE)
+DOCKER_ELFTOOLS = $(DOCKER_CMD) $(DOCKER_IMAGE)
 
 # Dockerize commands that require USB device passthrough only on Linux
 ifeq ($(UNAME_S),Linux)
-    DOCKER_CMD_DEV = $(DOCKER_CMD_USER) $(DOCKER_ARG_DEV)
+    DOCKER_CMD_DEV = $(DOCKER_CMD_INTERACT) $(DOCKER_ARG_DEV)
 
     DOCKER_CHAINBOOT = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_IMAGE)
     DOCKER_JTAGBOOT  = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_ARG_DIR_JTAG) $(DOCKER_IMAGE)
@@ -161,11 +166,10 @@ readelf: $(KERNEL_ELF)
 	readelf --headers $(KERNEL_ELF)
 
 objdump: $(KERNEL_ELF)
-	rust-objdump --arch-name aarch64 --disassemble --demangle --no-show-raw-insn \
-	    --print-imm-hex $(KERNEL_ELF)
+	@$(DOCKER_ELFTOOLS) $(OBJDUMP_BINARY) --disassemble --demangle $(KERNEL_ELF)
 
 nm: $(KERNEL_ELF)
-	rust-nm --demangle --print-size $(KERNEL_ELF) | sort
+	@$(DOCKER_ELFTOOLS) $(NM_BINARY) --demangle --print-size $(KERNEL_ELF) | sort
 
 # For rust-analyzer
 check:

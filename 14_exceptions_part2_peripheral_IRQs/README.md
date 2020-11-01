@@ -746,7 +746,7 @@ Minipush 1.0
 diff -uNr 13_integrated_testing/Makefile 14_exceptions_part2_peripheral_IRQs/Makefile
 --- 13_integrated_testing/Makefile
 +++ 14_exceptions_part2_peripheral_IRQs/Makefile
-@@ -53,8 +53,9 @@
+@@ -57,8 +57,9 @@
  RUSTFLAGS          = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
  RUSTFLAGS_PEDANTIC = $(RUSTFLAGS) -D warnings -D missing_docs
 

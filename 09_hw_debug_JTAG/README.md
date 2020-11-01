@@ -305,38 +305,39 @@ Thanks to [@naotaco](https://github.com/naotaco) for laying the groundwork for t
 diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
 --- 08_timestamps/Makefile
 +++ 09_hw_debug_JTAG/Makefile
-@@ -18,6 +18,8 @@
-     QEMU_BINARY       = qemu-system-aarch64
-     QEMU_MACHINE_TYPE = raspi3
+@@ -20,6 +20,8 @@
      QEMU_RELEASE_ARGS = -serial stdio -display none
+     OBJDUMP_BINARY    = aarch64-none-elf-objdump
+     NM_BINARY         = aarch64-none-elf-nm
 +    OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi3.cfg
 +    JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi3.img
      LINKER_FILE       = src/bsp/raspberrypi/link.ld
      RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
  else ifeq ($(BSP),rpi4)
-@@ -26,6 +28,8 @@
-     QEMU_BINARY       = qemu-system-aarch64
-     QEMU_MACHINE_TYPE =
+@@ -30,6 +32,8 @@
      QEMU_RELEASE_ARGS = -serial stdio -display none
+     OBJDUMP_BINARY    = aarch64-none-elf-objdump
+     NM_BINARY         = aarch64-none-elf-nm
 +    OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi4.cfg
 +    JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi4.img
      LINKER_FILE       = src/bsp/raspberrypi/link.ld
      RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
  endif
-@@ -53,21 +57,29 @@
- DOCKER_IMAGE         = rustembedded/osdev-utils
- DOCKER_CMD           = docker run -it --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
+@@ -58,9 +62,12 @@
+ DOCKER_CMD           = docker run --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
+ DOCKER_CMD_INTERACT  = $(DOCKER_CMD) -i -t
  DOCKER_ARG_DIR_UTILS = -v $(shell pwd)/../utils:/work/utils
 +DOCKER_ARG_DIR_JTAG  = -v $(shell pwd)/../X1_JTAG_boot:/work/X1_JTAG_boot
  DOCKER_ARG_DEV       = --privileged -v /dev:/dev
 +DOCKER_ARG_NET       = --network host
 
- DOCKER_QEMU = $(DOCKER_CMD) $(DOCKER_IMAGE)
-+DOCKER_GDB  = $(DOCKER_CMD) $(DOCKER_ARG_NET) $(DOCKER_IMAGE)
+ DOCKER_QEMU     = $(DOCKER_CMD_INTERACT) $(DOCKER_IMAGE)
++DOCKER_GDB      = $(DOCKER_CMD_INTERACT) $(DOCKER_ARG_NET) $(DOCKER_IMAGE)
+ DOCKER_ELFTOOLS = $(DOCKER_CMD) $(DOCKER_IMAGE)
 
  # Dockerize commands that require USB device passthrough only on Linux
- ifeq ($(UNAME_S),Linux)
-     DOCKER_CMD_DEV = $(DOCKER_CMD) $(DOCKER_ARG_DEV)
+@@ -68,12 +75,17 @@
+     DOCKER_CMD_DEV = $(DOCKER_CMD_INTERACT) $(DOCKER_ARG_DEV)
 
      DOCKER_CHAINBOOT = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_IMAGE)
 +    DOCKER_JTAGBOOT  = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_ARG_DIR_JTAG) $(DOCKER_IMAGE)
@@ -354,7 +355,7 @@ diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
 
  all: $(KERNEL_BIN)
 
-@@ -91,6 +103,23 @@
+@@ -97,6 +109,23 @@
  chainboot: $(KERNEL_BIN)
  	@$(DOCKER_CHAINBOOT) $(EXEC_MINIPUSH) $(DEV_SERIAL) $(KERNEL_BIN)
 

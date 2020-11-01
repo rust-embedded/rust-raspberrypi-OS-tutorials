@@ -116,9 +116,9 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
  # BSP-specific arguments
  ifeq ($(BSP),rpi3)
      TARGET            = aarch64-unknown-none-softfloat
-@@ -13,7 +19,8 @@
-     QEMU_MACHINE_TYPE = raspi3
-     QEMU_RELEASE_ARGS = -serial stdio -display none
+@@ -15,7 +21,8 @@
+     OBJDUMP_BINARY    = aarch64-none-elf-objdump
+     NM_BINARY         = aarch64-none-elf-nm
      LINKER_FILE       = src/bsp/raspberrypi/link.ld
 -    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
 +    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53 -C relocation-model=pic
@@ -126,9 +126,9 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
  else ifeq ($(BSP),rpi4)
      TARGET            = aarch64-unknown-none-softfloat
      KERNEL_BIN        = kernel8.img
-@@ -21,7 +28,8 @@
-     QEMU_MACHINE_TYPE =
-     QEMU_RELEASE_ARGS = -serial stdio -display none
+@@ -25,7 +32,8 @@
+     OBJDUMP_BINARY    = aarch64-none-elf-objdump
+     NM_BINARY         = aarch64-none-elf-nm
      LINKER_FILE       = src/bsp/raspberrypi/link.ld
 -    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
 +    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72 -C relocation-model=pic
@@ -136,19 +136,20 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
  endif
 
  # Export for build.rs
-@@ -46,12 +54,23 @@
-
+@@ -51,13 +59,24 @@
  DOCKER_IMAGE         = rustembedded/osdev-utils
- DOCKER_CMD           = docker run -it --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
+ DOCKER_CMD           = docker run --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
+ DOCKER_CMD_INTERACT  = $(DOCKER_CMD) -i -t
 +DOCKER_ARG_DIR_UTILS = -v $(shell pwd)/../utils:/work/utils
 +DOCKER_ARG_DEV       = --privileged -v /dev:/dev
 
- DOCKER_QEMU = $(DOCKER_CMD) $(DOCKER_IMAGE)
+ DOCKER_QEMU     = $(DOCKER_CMD_INTERACT) $(DOCKER_IMAGE)
+ DOCKER_ELFTOOLS = $(DOCKER_CMD) $(DOCKER_IMAGE)
 
 -EXEC_QEMU = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
 +# Dockerize commands that require USB device passthrough only on Linux
 +ifeq ($(UNAME_S),Linux)
-+    DOCKER_CMD_DEV = $(DOCKER_CMD) $(DOCKER_ARG_DEV)
++    DOCKER_CMD_DEV = $(DOCKER_CMD_INTERACT) $(DOCKER_ARG_DEV)
 +
 +    DOCKER_CHAINBOOT = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_IMAGE)
 +endif
@@ -162,7 +163,7 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
 
  all: $(KERNEL_BIN)
 
-@@ -65,13 +84,19 @@
+@@ -71,13 +90,19 @@
  	$(DOC_CMD) --document-private-items --open
 
  ifeq ($(QEMU_MACHINE_TYPE),)
@@ -183,6 +184,18 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
  clippy:
  	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD)
 
+@@ -88,7 +113,10 @@
+ 	readelf --headers $(KERNEL_ELF)
+
+ objdump: $(KERNEL_ELF)
+-	@$(DOCKER_ELFTOOLS) $(OBJDUMP_BINARY) --disassemble --demangle $(KERNEL_ELF)
++	@$(DOCKER_ELFTOOLS) $(OBJDUMP_BINARY) --disassemble --demangle \
++                --section .text \
++                --section .got  \
++                $(KERNEL_ELF)
+
+ nm: $(KERNEL_ELF)
+ 	@$(DOCKER_ELFTOOLS) $(NM_BINARY) --demangle --print-size $(KERNEL_ELF) | sort
 
 diff -uNr 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs 07_uart_chainloader/src/_arch/aarch64/cpu.rs
 --- 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs

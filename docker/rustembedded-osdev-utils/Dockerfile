@@ -62,6 +62,11 @@ RUN set -ex;                                        \
     make install;                                                       \
     # GDB
     wget -P ~ git.io/.gdbinit;                      \
+    # GCC AArch64 tools
+    wget https://developer.arm.com/-/media/Files/downloads/gnu-a/9.2-2019.12/binrel/gcc-arm-9.2-2019.12-x86_64-aarch64-none-elf.tar.xz; \
+    tar -xf gcc-arm-9*;                                                                                                                 \
+    cp gcc-arm-9*/bin/aarch64-none-elf-objdump gcc-arm-9*/bin/aarch64-none-elf-nm /usr/local/bin/;                                      \
+    rm -rf gcc-arm-9*;                                                                                                                  \
     # Cleanup
     apt-get purge -y --auto-remove $tempPkgs;       \
     apt-get autoremove -q -y;                       \
