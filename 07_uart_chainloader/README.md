@@ -103,20 +103,7 @@ Binary files 06_drivers_gpio_uart/demo_payload_rpi4.img and 07_uart_chainloader/
 diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
 --- 06_drivers_gpio_uart/Makefile
 +++ 07_uart_chainloader/Makefile
-@@ -5,6 +5,12 @@
- # Default to the RPi3
- BSP ?= rpi3
-
-+# Default to a serial device name that is common in Linux.
-+DEV_SERIAL ?= /dev/ttyUSB0
-+
-+# Query the host system's kernel name
-+UNAME_S = $(shell uname -s)
-+
- # BSP-specific arguments
- ifeq ($(BSP),rpi3)
-     TARGET            = aarch64-unknown-none-softfloat
-@@ -15,7 +21,8 @@
+@@ -21,7 +21,8 @@
      OBJDUMP_BINARY    = aarch64-none-elf-objdump
      NM_BINARY         = aarch64-none-elf-nm
      LINKER_FILE       = src/bsp/raspberrypi/link.ld
@@ -126,7 +113,7 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
  else ifeq ($(BSP),rpi4)
      TARGET            = aarch64-unknown-none-softfloat
      KERNEL_BIN        = kernel8.img
-@@ -25,7 +32,8 @@
+@@ -31,7 +32,8 @@
      OBJDUMP_BINARY    = aarch64-none-elf-objdump
      NM_BINARY         = aarch64-none-elf-nm
      LINKER_FILE       = src/bsp/raspberrypi/link.ld
@@ -136,34 +123,25 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
  endif
 
  # Export for build.rs
-@@ -51,13 +59,24 @@
- DOCKER_IMAGE         = rustembedded/osdev-utils
- DOCKER_CMD           = docker run --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
- DOCKER_CMD_INTERACT  = $(DOCKER_CMD) -i -t
-+DOCKER_ARG_DIR_UTILS = -v $(shell pwd)/../utils:/work/utils
-+DOCKER_ARG_DEV       = --privileged -v /dev:/dev
+@@ -67,13 +69,14 @@
+ ifeq ($(UNAME_S),Linux)
+     DOCKER_CMD_DEV = $(DOCKER_CMD_INTERACT) $(DOCKER_ARG_DEV)
 
- DOCKER_QEMU     = $(DOCKER_CMD_INTERACT) $(DOCKER_IMAGE)
- DOCKER_ELFTOOLS = $(DOCKER_CMD) $(DOCKER_IMAGE)
-
--EXEC_QEMU = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
-+# Dockerize commands that require USB device passthrough only on Linux
-+ifeq ($(UNAME_S),Linux)
-+    DOCKER_CMD_DEV = $(DOCKER_CMD_INTERACT) $(DOCKER_ARG_DEV)
-+
+-    DOCKER_MINITERM = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_IMAGE)
 +    DOCKER_CHAINBOOT = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_IMAGE)
-+endif
+ endif
 
--.PHONY: all $(KERNEL_ELF) $(KERNEL_BIN) doc qemu clippy clean readelf objdump nm check
-+EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
+ EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
+-EXEC_MINITERM = ruby ../utils/miniterm.rb
 +EXEC_MINIPUSH = ruby ../utils/minipush.rb
-+
+
+-.PHONY: all $(KERNEL_ELF) $(KERNEL_BIN) doc qemu chainboot clippy clean readelf objdump nm check
 +.PHONY: all $(KERNEL_ELF) $(KERNEL_BIN) doc qemu qemuasm chainboot clippy clean readelf objdump nm \
 +    check
 
  all: $(KERNEL_BIN)
 
-@@ -71,13 +90,19 @@
+@@ -87,15 +90,18 @@
  	$(DOC_CMD) --document-private-items --open
 
  ifeq ($(QEMU_MACHINE_TYPE),)
@@ -178,13 +156,14 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
 +	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN) -d in_asm
  endif
 
+-miniterm:
+-	@$(DOCKER_MINITERM) $(EXEC_MINITERM) $(DEV_SERIAL)
 +chainboot:
 +	@$(DOCKER_CHAINBOOT) $(EXEC_MINIPUSH) $(DEV_SERIAL) $(CHAINBOOT_DEMO_PAYLOAD)
-+
+
  clippy:
  	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD)
-
-@@ -88,7 +113,10 @@
+@@ -107,7 +113,10 @@
  	readelf --headers $(KERNEL_ELF)
 
  objdump: $(KERNEL_ELF)

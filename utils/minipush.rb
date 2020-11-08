@@ -5,59 +5,25 @@
 #
 # Copyright (c) 2020 Andre Richter <andre.o.richter@gmail.com>
 
-require 'rubygems'
-require 'bundler/setup'
-require 'io/console'
-require 'colorize'
+require_relative 'miniterm'
 require 'ruby-progressbar'
-require 'serialport'
-require 'timeout'
 require_relative 'minipush/progressbar_patch'
+require 'timeout'
 
-class ConnectionError < StandardError; end
 class ProtocolError < StandardError; end
 
 # The main class
-class MiniPush
+class MiniPush < MiniTerm
     def initialize(serial_name, binary_image_path)
-        @target_serial_name = serial_name
-        @target_serial = nil
+        super(serial_name)
+
+        @name_short = 'MP'
         @binary_image_path = binary_image_path
         @binary_size = nil
         @binary_image = nil
-        @host_console = IO.console
     end
 
     private
-
-    def serial_connected?
-        File.exist?(@target_serial_name)
-    end
-
-    def wait_for_serial
-        loop do
-            break if serial_connected?
-
-            print "\r[MP] ⏳ Waiting for #{@target_serial_name}"
-            sleep(1)
-        end
-    end
-
-    def open_serial
-        wait_for_serial
-
-        @target_serial = SerialPort.new(@target_serial_name, 230_400, 8, 1, SerialPort::NONE)
-
-        # Ensure all output is immediately flushed to the device.
-        @target_serial.sync = true
-    rescue Errno::EACCES => e
-        puts
-        puts "[MP] 🚫 #{e.message} - Maybe try with 'sudo'"
-        exit
-    else
-        puts
-        puts '[MP] ✅ Connected'
-    end
 
     # The three characters signaling the request token are expected to arrive as the last three
     # characters _at the end_ of a character stream (e.g. after a header print from Miniload).
@@ -92,7 +58,7 @@ class MiniPush
     def send_binary
         pb = ProgressBar.create(
             total: @binary_size,
-            format: '[MP] ⏩ Pushing %k KiB %b🦀%i %p%% %r KiB/s %a',
+            format: "[#{@name_short}] ⏩ Pushing %k KiB %b🦀%i %p%% %r KiB/s %a",
             rate_scale: ->(rate) { rate / 1024 },
             length: 92
         )
@@ -104,67 +70,14 @@ class MiniPush
         end
     end
 
-    def terminal
-        @host_console.raw!
-
-        Thread.abort_on_exception = true
-        Thread.report_on_exception = false
-
-        # Receive from target and print on host console.
-        target_to_host = Thread.new do
-            loop do
-                char = @target_serial.getc
-
-                raise ConnectionError if char.nil?
-
-                # onlcr
-                @host_console.putc("\r") if char == "\n"
-                @host_console.putc(char)
-            end
-        end
-
-        # Transmit host console input to target.
-        loop do
-            c = @host_console.getc
-
-            # CTRL + C in raw mode was pressed
-            if c == "\u{3}"
-                target_to_host.kill
-                break
-            end
-
-            @target_serial.putc(c)
-        end
-    end
-
-    def connetion_reset
-        @target_serial&.close
-        @target_serial = nil
-        @host_console.cooked!
-    end
-
-    # When the serial lost power or was removed during R/W operation.
-    def handle_reconnect
-        connetion_reset
-
-        puts
-        puts "[MP] ⚡ #{'Connection Error: Reinsert the USB serial again'.light_red}"
-    end
-
     # When the serial is still powered.
     def handle_protocol_error
         connetion_reset
 
         puts
-        puts "[MP] ⚡ #{'Protocol Error: Remove and insert the USB serial again'.light_red}"
+        puts "[#{@name_short}] ⚡ " \
+             "#{'Protocol Error: Remove and insert the USB serial again'.light_red}"
         sleep(1) while serial_connected?
-    end
-
-    def handle_unexpected(error)
-        connetion_reset
-
-        puts
-        puts "[MP] ⚡ #{"Unexpected Error: #{error.inspect}".light_red}"
     end
 
     public
@@ -187,7 +100,7 @@ class MiniPush
     ensure
         connetion_reset
         puts
-        puts '[MP] Bye 👋'
+        puts "[#{@name_short}] Bye 👋"
     end
 end
 

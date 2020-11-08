@@ -66,18 +66,29 @@ on the SD card._
 
 5. Insert the SD card into the RPi and connect the USB serial to your host PC.
     - Wiring diagram at [top-level README](../README.md#usb-serial).
-6. Run `screen` (you might need to install it first):
+6. Run the `miniterm` target, which opens the UART device on the host:
 
 ```console
-$ sudo screen /dev/ttyUSB0 230400
+$ make miniterm
 ```
 
-> ❗ **NOTE**: Depending on your host operating system, the serial device name might differ.
-> For example, on `macOS`, it might be something like `/dev/tty.usbserial-0001`.
+> ❗ **NOTE**: `Miniterm` assumes a default serial device name of `/dev/ttyUSB0`. Depending on your
+> host operating system, the device name might differ. For example, on `macOS`, it might be
+> something like `/dev/tty.usbserial-0001`. In this case, please give the name explicitly:
 
-7. Hit <kbd>Enter</kbd> to kick off the kernel boot process. Observe the output:
 
 ```console
+$ DEV_SERIAL=/dev/tty.usbserial-0001 make miniterm
+```
+
+7. Hit <kbd>Enter</kbd> after seeing "`Connected`" to kick off the kernel boot process and observe
+   the output:
+
+```console
+Miniterm 1.0
+
+
+[MT] ✅ Connected
 [0] Booting on: Raspberry Pi 3
 [1] Drivers loaded:
       1. BCM GPIO
@@ -86,7 +97,7 @@ $ sudo screen /dev/ttyUSB0 230400
 [3] Echoing input now
 ```
 
-8. Exit screen by pressing <kbd>ctrl-a</kbd> <kbd>ctrl-d</kbd> or disconnecting the USB serial.
+8. Exit by pressing <kbd>ctrl-c</kbd>.
 
 ## Diff to previous
 ```diff
@@ -115,6 +126,59 @@ diff -uNr 05_safe_globals/Cargo.toml 06_drivers_gpio_uart/Cargo.toml
  # Platform specific dependencies
  [target.'cfg(target_arch = "aarch64")'.dependencies]
  cortex-a = { version = "4.x.x" }
+
+diff -uNr 05_safe_globals/Makefile 06_drivers_gpio_uart/Makefile
+--- 05_safe_globals/Makefile
++++ 06_drivers_gpio_uart/Makefile
+@@ -5,6 +5,12 @@
+ # Default to the RPi3
+ BSP ?= rpi3
+
++# Default to a serial device name that is common in Linux.
++DEV_SERIAL ?= /dev/ttyUSB0
++
++# Query the host system's kernel name
++UNAME_S = $(shell uname -s)
++
+ # BSP-specific arguments
+ ifeq ($(BSP),rpi3)
+     TARGET            = aarch64-unknown-none-softfloat
+@@ -51,13 +57,23 @@
+ DOCKER_IMAGE         = rustembedded/osdev-utils
+ DOCKER_CMD           = docker run --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
+ DOCKER_CMD_INTERACT  = $(DOCKER_CMD) -i -t
++DOCKER_ARG_DIR_UTILS = -v $(shell pwd)/../utils:/work/utils
++DOCKER_ARG_DEV       = --privileged -v /dev:/dev
+
+ DOCKER_QEMU     = $(DOCKER_CMD_INTERACT) $(DOCKER_IMAGE)
+ DOCKER_ELFTOOLS = $(DOCKER_CMD) $(DOCKER_IMAGE)
+
+-EXEC_QEMU = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
++# Dockerize commands that require USB device passthrough only on Linux
++ifeq ($(UNAME_S),Linux)
++    DOCKER_CMD_DEV = $(DOCKER_CMD_INTERACT) $(DOCKER_ARG_DEV)
++
++    DOCKER_MINITERM = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_IMAGE)
++endif
++
++EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
++EXEC_MINITERM = ruby ../utils/miniterm.rb
+
+-.PHONY: all $(KERNEL_ELF) $(KERNEL_BIN) doc qemu clippy clean readelf objdump nm check
++.PHONY: all $(KERNEL_ELF) $(KERNEL_BIN) doc qemu chainboot clippy clean readelf objdump nm check
+
+ all: $(KERNEL_BIN)
+
+@@ -78,6 +94,9 @@
+ 	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
+ endif
+
++miniterm:
++	@$(DOCKER_MINITERM) $(EXEC_MINITERM) $(DEV_SERIAL)
++
+ clippy:
+ 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD)
+
 
 diff -uNr 05_safe_globals/src/_arch/aarch64/cpu.rs 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs
 --- 05_safe_globals/src/_arch/aarch64/cpu.rs
