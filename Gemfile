@@ -10,5 +10,5 @@ group :uart do
 end
 
 group :development do
-    gem 'rubocop', '>= 0.90.0', require: false
+    gem 'rubocop', '>= 1.2.0', require: false
 end

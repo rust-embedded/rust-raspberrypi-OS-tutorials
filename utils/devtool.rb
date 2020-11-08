@@ -292,11 +292,11 @@ tool = DevTool.new
 cmd = ARGV[0]
 commands = tool.public_methods(false).sort
 
-if !commands.include?(cmd&.to_sym)
+if commands.include?(cmd&.to_sym)
+    tool.public_send(cmd)
+else
     puts "Usage: ./#{__FILE__.split('/').last} COMMAND [optional list of folders]"
     puts
     puts 'Commands:'
     commands.each { |m| puts "  #{m}" }
-else
-    tool.public_send(cmd)
 end
