@@ -165,7 +165,7 @@ diff -uNr 05_safe_globals/Makefile 06_drivers_gpio_uart/Makefile
 +EXEC_MINITERM = ruby ../utils/miniterm.rb
 
 -.PHONY: all $(KERNEL_ELF) $(KERNEL_BIN) doc qemu clippy clean readelf objdump nm check
-+.PHONY: all $(KERNEL_ELF) $(KERNEL_BIN) doc qemu chainboot clippy clean readelf objdump nm check
++.PHONY: all $(KERNEL_ELF) $(KERNEL_BIN) doc qemu miniterm clippy clean readelf objdump nm check
 
  all: $(KERNEL_BIN)
 
