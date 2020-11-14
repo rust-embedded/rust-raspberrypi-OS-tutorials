@@ -5,7 +5,7 @@
 //! GPIO Driver.
 
 use crate::{
-    bsp::device_driver::common::MMIODerefWrapper, cpu, driver, synchronization,
+    bsp::device_driver::common::MMIODerefWrapper, driver, synchronization,
     synchronization::NullLock,
 };
 use register::{mmio::*, register_bitfields, register_structs};
@@ -17,7 +17,8 @@ use register::{mmio::*, register_bitfields, register_structs};
 // GPIO registers.
 //
 // Descriptions taken from
-// https://github.com/raspberrypi/documentation/files/1888662/BCM2837-ARM-Peripherals.-.Revised.-.V2-1.pdf
+// - https://github.com/raspberrypi/documentation/files/1888662/BCM2837-ARM-Peripherals.-.Revised.-.V2-1.pdf
+// - https://datasheets.raspberrypi.org/bcm2711/bcm2711-peripherals.pdf
 register_bitfields! {
     u32,
 
@@ -39,7 +40,21 @@ register_bitfields! {
         ]
     ],
 
+    /// GPIO Pull-up/down Register
+    ///
+    /// BCM2837 only.
+    GPPUD [
+        /// Controls the actuation of the internal pull-up/down control line to ALL the GPIO pins.
+        PUD OFFSET(0) NUMBITS(2) [
+            Off = 0b00,
+            PullDown = 0b01,
+            PullUp = 0b10
+        ]
+    ],
+
     /// GPIO Pull-up/down Clock Register 0
+    ///
+    /// BCM2837 only.
     GPPUDCLK0 [
         /// Pin 15
         PUDCLK15 OFFSET(15) NUMBITS(1) [
@@ -52,23 +67,37 @@ register_bitfields! {
             NoEffect = 0,
             AssertClock = 1
         ]
+    ],
+
+    /// GPIO Pull-up / Pull-down Register 0
+    ///
+    /// BCM2711 only.
+    GPIO_PUP_PDN_CNTRL_REG0 [
+        /// Pin 15
+        GPIO_PUP_PDN_CNTRL15 OFFSET(30) NUMBITS(2) [
+            NoResistor = 0b00,
+            PullUp = 0b01
+        ],
+
+        /// Pin 14
+        GPIO_PUP_PDN_CNTRL14 OFFSET(28) NUMBITS(2) [
+            NoResistor = 0b00,
+            PullUp = 0b01
+        ]
     ]
 }
 
 register_structs! {
     #[allow(non_snake_case)]
     RegisterBlock {
-        (0x00 => GPFSEL0: ReadWrite<u32>),
+        (0x00 => _reserved1),
         (0x04 => GPFSEL1: ReadWrite<u32, GPFSEL1::Register>),
-        (0x08 => GPFSEL2: ReadWrite<u32>),
-        (0x0C => GPFSEL3: ReadWrite<u32>),
-        (0x10 => GPFSEL4: ReadWrite<u32>),
-        (0x14 => GPFSEL5: ReadWrite<u32>),
-        (0x18 => _reserved1),
-        (0x94 => GPPUD: ReadWrite<u32>),
+        (0x08 => _reserved2),
+        (0x94 => GPPUD: ReadWrite<u32, GPPUD::Register>),
         (0x98 => GPPUDCLK0: ReadWrite<u32, GPPUDCLK0::Register>),
-        (0x9C => GPPUDCLK1: ReadWrite<u32>),
-        (0xA0 => @END),
+        (0x9C => _reserved3),
+        (0xE4 => GPIO_PUP_PDN_CNTRL_REG0: ReadWrite<u32, GPIO_PUP_PDN_CNTRL_REG0::Register>),
+        (0xE8 => @END),
     }
 }
 
@@ -107,26 +136,52 @@ impl GPIOInner {
         }
     }
 
+    /// Disable pull-up/down on pins 14 and 15.
+    #[cfg(feature = "bsp_rpi3")]
+    fn disable_pud_14_15_bcm2837(&mut self) {
+        use crate::{time, time::interface::TimeManager};
+        use core::time::Duration;
+
+        // The Linux 2837 GPIO driver waits 1 µs between the steps.
+        const DELAY: Duration = Duration::from_micros(1);
+
+        self.registers.GPPUD.write(GPPUD::PUD::Off);
+        time::time_manager().spin_for(DELAY);
+
+        self.registers
+            .GPPUDCLK0
+            .write(GPPUDCLK0::PUDCLK15::AssertClock + GPPUDCLK0::PUDCLK14::AssertClock);
+        time::time_manager().spin_for(DELAY);
+
+        self.registers.GPPUD.write(GPPUD::PUD::Off);
+        self.registers.GPPUDCLK0.set(0);
+    }
+
+    /// Disable pull-up/down on pins 14 and 15.
+    #[cfg(feature = "bsp_rpi4")]
+    fn disable_pud_14_15_bcm2711(&mut self) {
+        self.registers.GPIO_PUP_PDN_CNTRL_REG0.write(
+            GPIO_PUP_PDN_CNTRL_REG0::GPIO_PUP_PDN_CNTRL15::PullUp
+                + GPIO_PUP_PDN_CNTRL_REG0::GPIO_PUP_PDN_CNTRL14::PullUp,
+        );
+    }
+
     /// Map PL011 UART as standard output.
     ///
     /// TX to pin 14
     /// RX to pin 15
     pub fn map_pl011_uart(&mut self) {
-        // Map to pins.
+        // Select the UART on pins 14 and 15.
         self.registers
             .GPFSEL1
-            .modify(GPFSEL1::FSEL14::AltFunc0 + GPFSEL1::FSEL15::AltFunc0);
+            .modify(GPFSEL1::FSEL15::AltFunc0 + GPFSEL1::FSEL14::AltFunc0);
 
-        // Enable pins 14 and 15.
-        self.registers.GPPUD.set(0);
-        cpu::spin_for_cycles(150);
+        // Disable pull-up/down on pins 14 and 15.
+        #[cfg(feature = "bsp_rpi3")]
+        self.disable_pud_14_15_bcm2837();
 
-        self.registers
-            .GPPUDCLK0
-            .write(GPPUDCLK0::PUDCLK14::AssertClock + GPPUDCLK0::PUDCLK15::AssertClock);
-        cpu::spin_for_cycles(150);
-
-        self.registers.GPPUDCLK0.set(0);
+        #[cfg(feature = "bsp_rpi4")]
+        self.disable_pud_14_15_bcm2711();
     }
 }
 

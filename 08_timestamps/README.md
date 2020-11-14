@@ -130,7 +130,23 @@ diff -uNr 07_uart_chainloader/src/_arch/aarch64/cpu.rs 08_timestamps/src/_arch/a
      } else {
          // If not core0, infinitely wait for events.
          wait_forever()
-@@ -54,19 +54,3 @@
+@@ -39,15 +39,6 @@
+
+ pub use asm::nop;
+
+-/// Spin for `n` cycles.
+-#[cfg(feature = "bsp_rpi3")]
+-#[inline(always)]
+-pub fn spin_for_cycles(n: usize) {
+-    for _ in 0..n {
+-        asm::nop();
+-    }
+-}
+-
+ /// Pause execution on the core.
+ #[inline(always)]
+ pub fn wait_forever() -> ! {
+@@ -55,19 +46,3 @@
          asm::wfe()
      }
  }
@@ -253,6 +269,42 @@ diff -uNr 07_uart_chainloader/src/_arch/aarch64/time.rs 08_timestamps/src/_arch/
 +        CNTP_CTL_EL0.modify(CNTP_CTL_EL0::ENABLE::CLEAR);
 +    }
 +}
+
+diff -uNr 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 08_timestamps/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
+--- 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
++++ 08_timestamps/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
+@@ -139,25 +139,19 @@
+     /// Disable pull-up/down on pins 14 and 15.
+     #[cfg(feature = "bsp_rpi3")]
+     fn disable_pud_14_15_bcm2837(&mut self) {
+-        use crate::cpu;
++        use crate::{time, time::interface::TimeManager};
++        use core::time::Duration;
+
+-        // Make an educated guess for a good delay value (Sequence described in the BCM2837
+-        // peripherals PDF).
+-        //
+-        // - According to Wikipedia, the fastest Pi3 clocks around 1.4 GHz.
+-        // - The Linux 2837 GPIO driver waits 1 µs between the steps.
+-        //
+-        // So lets try to be on the safe side and default to 2000 cycles, which would equal 1 µs
+-        // would the CPU be clocked at 2 GHz.
+-        const DELAY: usize = 2000;
++        // The Linux 2837 GPIO driver waits 1 µs between the steps.
++        const DELAY: Duration = Duration::from_micros(1);
+
+         self.registers.GPPUD.write(GPPUD::PUD::Off);
+-        cpu::spin_for_cycles(DELAY);
++        time::time_manager().spin_for(DELAY);
+
+         self.registers
+             .GPPUDCLK0
+             .write(GPPUDCLK0::PUDCLK15::AssertClock + GPPUDCLK0::PUDCLK14::AssertClock);
+-        cpu::spin_for_cycles(DELAY);
++        time::time_manager().spin_for(DELAY);
+
+         self.registers.GPPUD.write(GPPUD::PUD::Off);
+         self.registers.GPPUDCLK0.set(0);
 
 diff -uNr 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 08_timestamps/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 --- 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs

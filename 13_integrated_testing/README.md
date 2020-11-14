@@ -935,7 +935,7 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
 diff -uNr 12_exceptions_part1_groundwork/src/_arch/aarch64/cpu.rs 13_integrated_testing/src/_arch/aarch64/cpu.rs
 --- 12_exceptions_part1_groundwork/src/_arch/aarch64/cpu.rs
 +++ 13_integrated_testing/src/_arch/aarch64/cpu.rs
-@@ -95,3 +95,20 @@
+@@ -87,3 +87,20 @@
          asm::wfe()
      }
  }

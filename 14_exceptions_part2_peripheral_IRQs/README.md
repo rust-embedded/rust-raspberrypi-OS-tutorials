@@ -1462,13 +1462,13 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 14_exc
 @@ -6,7 +6,7 @@
 
  use crate::{
-     bsp::device_driver::common::MMIODerefWrapper, cpu, driver, synchronization,
+     bsp::device_driver::common::MMIODerefWrapper, driver, synchronization,
 -    synchronization::NullLock,
 +    synchronization::IRQSafeNullLock,
  };
  use register::{mmio::*, register_bitfields, register_structs};
 
-@@ -88,7 +88,7 @@
+@@ -117,7 +117,7 @@
 
  /// Representation of the GPIO HW.
  pub struct GPIO {
@@ -1477,7 +1477,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 14_exc
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -138,7 +138,7 @@
+@@ -193,7 +193,7 @@
      /// - The user must ensure to provide a correct MMIO start address.
      pub const unsafe fn new(mmio_start_addr: usize) -> Self {
          Self {

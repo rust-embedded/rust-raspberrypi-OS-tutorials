@@ -1052,16 +1052,16 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
  //! GPIO Driver.
 
  use crate::{
--    bsp::device_driver::common::MMIODerefWrapper, cpu, driver, synchronization,
+-    bsp::device_driver::common::MMIODerefWrapper, driver, synchronization,
 -    synchronization::IRQSafeNullLock,
-+    bsp::device_driver::common::MMIODerefWrapper, cpu, driver, memory, memory::mmu::Physical,
++    bsp::device_driver::common::MMIODerefWrapper, driver, memory, memory::mmu::Physical,
 +    synchronization, synchronization::IRQSafeNullLock,
  };
 +use core::sync::atomic::{AtomicUsize, Ordering};
  use register::{mmio::*, register_bitfields, register_structs};
 
  //--------------------------------------------------------------------------------------------------
-@@ -88,6 +89,8 @@
+@@ -117,6 +118,8 @@
 
  /// Representation of the GPIO HW.
  pub struct GPIO {
@@ -1070,7 +1070,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
      inner: IRQSafeNullLock<GPIOInner>,
  }
 
-@@ -107,6 +110,19 @@
+@@ -136,6 +139,19 @@
          }
      }
 
@@ -1087,10 +1087,10 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
 +        Ok(())
 +    }
 +
-     /// Map PL011 UART as standard output.
-     ///
-     /// TX to pin 14
-@@ -135,10 +151,14 @@
+     /// Disable pull-up/down on pins 14 and 15.
+     #[cfg(feature = "bsp_rpi3")]
+     fn disable_pud_14_15_bcm2837(&mut self) {
+@@ -190,10 +206,14 @@
      ///
      /// # Safety
      ///
@@ -1108,7 +1108,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
          }
      }
 
-@@ -158,4 +178,27 @@
+@@ -213,4 +233,27 @@
      fn compatible(&self) -> &'static str {
          "BCM GPIO"
      }

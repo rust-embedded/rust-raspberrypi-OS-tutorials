@@ -194,7 +194,7 @@ diff -uNr 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs 07_uart_chainloader/src/
      } else {
          // If not core0, infinitely wait for events.
          wait_forever()
-@@ -54,3 +54,19 @@
+@@ -55,3 +55,19 @@
          asm::wfe()
      }
  }

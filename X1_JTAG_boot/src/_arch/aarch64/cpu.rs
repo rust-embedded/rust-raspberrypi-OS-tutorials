@@ -20,7 +20,7 @@ use cortex_a::{asm, regs::*};
 /// - Linker script must ensure to place this function at `0x80_000`.
 #[naked]
 #[no_mangle]
-pub unsafe extern "C" fn _start() -> ! {
+pub unsafe fn _start() -> ! {
     use crate::runtime_init;
 
     // Expect the boot core to start in EL2.
@@ -38,14 +38,6 @@ pub unsafe extern "C" fn _start() -> ! {
 //--------------------------------------------------------------------------------------------------
 
 pub use asm::nop;
-
-/// Spin for `n` cycles.
-#[inline(always)]
-pub fn spin_for_cycles(n: usize) {
-    for _ in 0..n {
-        asm::nop();
-    }
-}
 
 /// Pause execution on the core.
 #[inline(always)]
