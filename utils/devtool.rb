@@ -273,7 +273,7 @@ class DevTool
     def copyright_source_files
         extensions = ['.S', '.rs', '.rb']
 
-        # Note: The selection result is the return value of the function.
+        # NOTE: The selection result is the return value of the function.
         tracked_files.select do |f|
             next unless File.exist?(f)
             next if f.include?('build.rs')
