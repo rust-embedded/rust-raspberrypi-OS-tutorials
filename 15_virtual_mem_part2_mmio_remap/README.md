@@ -2019,10 +2019,10 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/lib.rs 15_virtual_mem_part2_mm
  #![allow(incomplete_features)]
  #![feature(asm)]
 +#![feature(const_fn)]
+ #![feature(const_fn_fn_ptr_basics)]
  #![feature(const_generics)]
  #![feature(const_panic)]
- #![feature(core_intrinsics)]
-@@ -137,6 +138,7 @@
+@@ -138,6 +139,7 @@
  mod synchronization;
 
  pub mod bsp;

@@ -12,7 +12,7 @@ use core::{marker::PhantomData, ops};
 
 pub struct MMIODerefWrapper<T> {
     start_addr: usize,
-    phantom: PhantomData<T>,
+    phantom: PhantomData<fn() -> T>,
 }
 
 //--------------------------------------------------------------------------------------------------

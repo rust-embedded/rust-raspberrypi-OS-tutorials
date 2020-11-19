@@ -105,6 +105,7 @@
 //! - `crate::bsp::memory::*`
 
 #![allow(incomplete_features)]
+#![feature(const_fn_fn_ptr_basics)]
 #![feature(const_generics)]
 #![feature(const_panic)]
 #![feature(format_args_nl)]

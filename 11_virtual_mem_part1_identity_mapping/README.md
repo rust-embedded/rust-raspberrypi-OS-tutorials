@@ -855,17 +855,18 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_mem_part1_identity_mapping/s
  //! [timer interface]: ../libkernel/time/interface/trait.TimeManager.html
  //!
  //! # Code organization and architecture
-@@ -102,6 +104,9 @@
+@@ -102,7 +104,10 @@
  //! - `crate::memory::*`
  //! - `crate::bsp::memory::*`
 
 +#![allow(incomplete_features)]
+ #![feature(const_fn_fn_ptr_basics)]
 +#![feature(const_generics)]
 +#![feature(const_panic)]
  #![feature(format_args_nl)]
  #![feature(naked_functions)]
  #![feature(panic_info_message)]
-@@ -129,9 +134,18 @@
+@@ -130,9 +135,18 @@
  /// # Safety
  ///
  /// - Only a single core must be active and running this function.
@@ -885,7 +886,7 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_mem_part1_identity_mapping/s
 
      for i in bsp::driver::driver_manager().all_device_drivers().iter() {
          if let Err(x) = i.init() {
-@@ -154,6 +168,9 @@
+@@ -155,6 +169,9 @@
 
      info!("Booting on: {}", bsp::board_name());
 
@@ -895,7 +896,7 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_mem_part1_identity_mapping/s
      let (_, privilege_level) = exception::current_privilege_level();
      info!("Current privilege level: {}", privilege_level);
 
-@@ -177,6 +194,13 @@
+@@ -178,6 +195,13 @@
      info!("Timer test, spinning for 1 second");
      time::time_manager().spin_for(Duration::from_secs(1));
 

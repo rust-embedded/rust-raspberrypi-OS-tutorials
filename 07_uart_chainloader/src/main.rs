@@ -101,6 +101,7 @@
 //! - `crate::bsp::memory::*`
 
 #![feature(asm)]
+#![feature(const_fn_fn_ptr_basics)]
 #![feature(core_intrinsics)]
 #![feature(format_args_nl)]
 #![feature(naked_functions)]
