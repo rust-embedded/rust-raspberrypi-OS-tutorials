@@ -249,11 +249,11 @@ data sheet. Looking at the generated code, we can see that despite all the type-
 abstractions, it boils down to two assembly instructions:
 
 ```text
-00000000000815e0 <kernel::memory::mmu::arch_mmu::MemoryManagementUnit as kernel::memory::mmu::interface::MMU>::init::hed32b31a58c93b32:
+0000000000081660 <<kernel::memory::mmu::arch_mmu::MemoryManagementUnit as kernel::memory::mmu::interface::MMU>::init>:
    ...
-   8161c:       mov     w8, #0xff04
+   816bc:       529fe088        mov     w8, #0xff04
    ...
-   81644:       msr     MAIR_EL1, x8
+   816c4:       d518a208        msr     mair_el1, x8
 ```
 
 ## Test it

@@ -153,29 +153,29 @@ $ make objdump
 [...]
 Disassembly of section .text:
 
-0000000000080000 _start:
-   80000:       mrs     x8, MPIDR_EL1
-   80004:       tst     x8, #0x3
-   80008:       b.ne    #0x10 <_start+0x18>
-   8000c:       mrs     x8, CurrentEL
-   80010:       cmp     w8, #0x8
-   80014:       b.eq    #0xc <_start+0x20>
-   80018:       wfe
-   8001c:       b       #-0x4 <_start+0x18>
-   80020:       mov     x8, xzr
-   80024:       mov     w9, #0x3
-   80028:       msr     CNTHCTL_EL2, x9
-   8002c:       msr     CNTVOFF_EL2, x8
-   80030:       adrp    x8, #0x0
-   80034:       mov     w10, #-0x80000000
-   80038:       mov     w11, #0x3c5
-   8003c:       mov     w12, #0x80000
-   80040:       msr     HCR_EL2, x10
-   80044:       msr     SPSR_EL2, x11
-   80048:       add     x8, x8, #0xda0
-   8004c:       msr     ELR_EL2, x8
-   80050:       msr     SP_EL1, x12
-   80054:       eret
+0000000000080000 <_start>:
+   80000:       d53800a8        mrs     x8, mpidr_el1
+   80004:       f240051f        tst     x8, #0x3
+   80008:       54000081        b.ne    80018 <_start+0x18>
+   8000c:       d5384248        mrs     x8, currentel
+   80010:       f100211f        cmp     x8, #0x8
+   80014:       54000060        b.eq    80020 <_start+0x20>
+   80018:       d503205f        wfe
+   8001c:       17ffffff        b       80018 <_start+0x18>
+   80020:       aa1f03e8        mov     x8, xzr
+   80024:       52800069        mov     w9, #0x3
+   80028:       d51ce109        msr     cnthctl_el2, x9
+   8002c:       d51ce068        msr     cntvoff_el2, x8
+   80030:       90000008        adrp    x8, 80000 <_start>
+   80034:       52b0000a        mov     w10, #0x80000000
+   80038:       528078ab        mov     w11, #0x3c5
+   8003c:       52a0010c        mov     w12, #0x80000
+   80040:       d51c110a        msr     hcr_el2, x10
+   80044:       d51c400b        msr     spsr_el2, x11
+   80048:       91374108        add     x8, x8, #0xdd0
+   8004c:       d51c4028        msr     elr_el2, x8
+   80050:       d51c410c        msr     sp_el1, x12
+   80054:       d69f03e0        eret
 ```
 
 Looks good! Thanks zero-overhead abstractions in the [cortex-a] crate! :heart_eyes:
