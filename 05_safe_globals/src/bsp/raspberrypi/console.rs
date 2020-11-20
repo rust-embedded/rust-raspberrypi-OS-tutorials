@@ -105,14 +105,12 @@ impl console::interface::Write for QEMUOutput {
     fn write_fmt(&self, args: core::fmt::Arguments) -> fmt::Result {
         // Fully qualified syntax for the call to `core::fmt::Write::write:fmt()` to increase
         // readability.
-        let mut r = &self.inner;
-        r.lock(|inner| fmt::Write::write_fmt(inner, args))
+        self.inner.lock(|inner| fmt::Write::write_fmt(inner, args))
     }
 }
 
 impl console::interface::Statistics for QEMUOutput {
     fn chars_written(&self) -> usize {
-        let mut r = &self.inner;
-        r.lock(|inner| inner.chars_written)
+        self.inner.lock(|inner| inner.chars_written)
     }
 }

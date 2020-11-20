@@ -211,8 +211,7 @@ unsafe fn init(&self) -> Result<(), &'static str> {
     let virt_addr =
         memory::mmu::kernel_map_mmio(self.compatible(), &self.phys_mmio_descriptor)?;
 
-    let mut r = &self.inner;
-    r.lock(|inner| inner.init(Some(virt_addr.into_usize())))?;
+    self.inner.lock(|inner| inner.init(Some(virt_addr.into_usize())))?;
 
      // omitted for brevity.
 
@@ -834,54 +833,51 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gi
      }
 
 +    pub unsafe fn set_mmio(&self, new_mmio_start_addr: usize) {
-+        let mut r = &self.registers;
-+        r.write(|regs| *regs = Registers::new(new_mmio_start_addr));
++        self.registers
++            .write(|regs| *regs = Registers::new(new_mmio_start_addr));
 +    }
 +
      /// Accept interrupts of any priority.
      ///
      /// Quoting the GICv2 Architecture Specification:
-@@ -87,7 +95,10 @@
+@@ -87,7 +95,9 @@
      /// - GICC MMIO registers are banked per CPU core. It is therefore safe to have `&self` instead
      ///   of `&mut self`.
      pub fn priority_accept_all(&self) {
 -        self.registers.PMR.write(PMR::Priority.val(255)); // Comment in arch spec.
-+        let mut r = &self.registers;
-+        r.read(|regs| {
++        self.registers.read(|regs| {
 +            regs.PMR.write(PMR::Priority.val(255)); // Comment in arch spec.
 +        });
      }
 
      /// Enable the interface - start accepting IRQs.
-@@ -97,7 +108,10 @@
+@@ -97,7 +107,9 @@
      /// - GICC MMIO registers are banked per CPU core. It is therefore safe to have `&self` instead
      ///   of `&mut self`.
      pub fn enable(&self) {
 -        self.registers.CTLR.write(CTLR::Enable::SET);
-+        let mut r = &self.registers;
-+        r.read(|regs| {
++        self.registers.read(|regs| {
 +            regs.CTLR.write(CTLR::Enable::SET);
 +        });
      }
 
      /// Extract the number of the highest-priority pending IRQ.
-@@ -113,7 +127,8 @@
+@@ -113,7 +125,8 @@
          &self,
          _ic: &exception::asynchronous::IRQContext<'irq_context>,
      ) -> usize {
 -        self.registers.IAR.read(IAR::InterruptID) as usize
-+        let mut r = &self.registers;
-+        r.read(|regs| regs.IAR.read(IAR::InterruptID) as usize)
++        self.registers
++            .read(|regs| regs.IAR.read(IAR::InterruptID) as usize)
      }
 
      /// Complete handling of the currently active IRQ.
-@@ -132,6 +147,9 @@
+@@ -132,6 +145,8 @@
          irq_number: u32,
          _ic: &exception::asynchronous::IRQContext<'irq_context>,
      ) {
 -        self.registers.EOIR.write(EOIR::EOIINTID.val(irq_number));
-+        let mut r = &self.registers;
-+        r.read(|regs| {
++        self.registers.read(|regs| {
 +            regs.EOIR.write(EOIR::EOIINTID.val(irq_number));
 +        });
      }
@@ -919,7 +915,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gi
  use synchronization::interface::Mutex;
 
  impl GICD {
-@@ -127,10 +129,18 @@
+@@ -127,10 +129,17 @@
      pub const unsafe fn new(mmio_start_addr: usize) -> Self {
          Self {
              shared_registers: IRQSafeNullLock::new(SharedRegisters::new(mmio_start_addr)),
@@ -929,40 +925,39 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gi
      }
 
 +    pub unsafe fn set_mmio(&self, new_mmio_start_addr: usize) {
-+        let mut r = &self.shared_registers;
-+        r.lock(|regs| *regs = SharedRegisters::new(new_mmio_start_addr));
-+
-+        let mut r = &self.banked_registers;
-+        r.write(|regs| *regs = BankedRegisters::new(new_mmio_start_addr));
++        self.shared_registers
++            .lock(|regs| *regs = SharedRegisters::new(new_mmio_start_addr));
++        self.banked_registers
++            .write(|regs| *regs = BankedRegisters::new(new_mmio_start_addr));
 +    }
 +
      /// Use a banked ITARGETSR to retrieve the executing core's GIC target mask.
      ///
      /// Quoting the GICv2 Architecture Specification:
-@@ -138,7 +148,8 @@
+@@ -138,7 +147,8 @@
      ///   "GICD_ITARGETSR0 to GICD_ITARGETSR7 are read-only, and each field returns a value that
      ///    corresponds only to the processor reading the register."
      fn local_gic_target_mask(&self) -> u32 {
 -        self.banked_registers.ITARGETSR[0].read(ITARGETSR::Offset0)
-+        let mut r = &self.banked_registers;
-+        r.read(|regs| regs.ITARGETSR[0].read(ITARGETSR::Offset0))
++        self.banked_registers
++            .read(|regs| regs.ITARGETSR[0].read(ITARGETSR::Offset0))
      }
 
      /// Route all SPIs to the boot core and enable the distributor.
-@@ -179,8 +190,11 @@
+@@ -177,10 +187,10 @@
+         // Check if we are handling a private or shared IRQ.
          match irq_num {
              // Private.
-             0..=31 => {
+-            0..=31 => {
 -                let enable_reg = &self.banked_registers.ISENABLER;
--                enable_reg.set(enable_reg.get() | enable_bit);
-+                let mut r = &self.banked_registers;
-+                r.read(|regs| {
-+                    let enable_reg = &regs.ISENABLER;
-+                    enable_reg.set(enable_reg.get() | enable_bit);
-+                })
-             }
++            0..=31 => self.banked_registers.read(|regs| {
++                let enable_reg = &regs.ISENABLER;
+                 enable_reg.set(enable_reg.get() | enable_bit);
+-            }
++            }),
              // Shared.
              _ => {
+                 let enable_reg_index_shared = enable_reg_index - 1;
 
 diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2.rs 15_virtual_mem_part2_mmio_remap/src/bsp/device_driver/arm/gicv2.rs
 --- 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2.rs
@@ -1108,7 +1103,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
          }
      }
 
-@@ -213,4 +233,27 @@
+@@ -212,4 +232,27 @@
      fn compatible(&self) -> &'static str {
          "BCM GPIO"
      }
@@ -1117,8 +1112,8 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
 +        let virt_addr =
 +            memory::mmu::kernel_map_mmio(self.compatible(), &self.phys_mmio_descriptor)?;
 +
-+        let mut r = &self.inner;
-+        r.lock(|inner| inner.init(Some(virt_addr.into_usize())))?;
++        self.inner
++            .lock(|inner| inner.init(Some(virt_addr.into_usize())))?;
 +
 +        self.virt_mmio_start_addr
 +            .store(virt_addr.into_usize(), Ordering::Relaxed);
@@ -1172,7 +1167,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
 
      /// Stores registered IRQ handlers. Writable only during kernel init. RO afterwards.
      handler_table: InitStateLock<HandlerTable>,
-@@ -70,21 +74,27 @@
+@@ -70,21 +74,26 @@
      ///
      /// # Safety
      ///
@@ -1196,8 +1191,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
      fn pending_irqs(&self) -> PendingIRQs {
 -        let pending_mask: u64 = (u64::from(self.ro_registers.PENDING_2.get()) << 32)
 -            | u64::from(self.ro_registers.PENDING_1.get());
-+        let mut r = &self.ro_registers;
-+        r.read(|regs| {
++        self.ro_registers.read(|regs| {
 +            let pending_mask: u64 =
 +                (u64::from(regs.PENDING_2.get()) << 32) | u64::from(regs.PENDING_1.get());
 
@@ -1207,7 +1201,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
      }
  }
 
-@@ -93,6 +103,26 @@
+@@ -93,6 +102,25 @@
  //------------------------------------------------------------------------------
  use synchronization::interface::{Mutex, ReadWriteEx};
 
@@ -1221,11 +1215,10 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
 +            memory::mmu::kernel_map_mmio(self.compatible(), &self.phys_mmio_descriptor)?
 +                .into_usize();
 +
-+        let mut r = &self.wo_registers;
-+        r.lock(|regs| *regs = WriteOnlyRegisters::new(virt_addr));
-+
-+        let mut r = &self.ro_registers;
-+        r.write(|regs| *regs = ReadOnlyRegisters::new(virt_addr));
++        self.wo_registers
++            .lock(|regs| *regs = WriteOnlyRegisters::new(virt_addr));
++        self.ro_registers
++            .write(|regs| *regs = ReadOnlyRegisters::new(virt_addr));
 +
 +        Ok(())
 +    }
@@ -1353,23 +1346,23 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
              irq_number,
          }
      }
-@@ -341,8 +361,14 @@
+@@ -341,7 +361,14 @@
      }
 
      unsafe fn init(&self) -> Result<(), &'static str> {
+-        self.inner.lock(|inner| inner.init());
 +        let virt_addr =
 +            memory::mmu::kernel_map_mmio(self.compatible(), &self.phys_mmio_descriptor)?;
 +
-         let mut r = &self.inner;
--        r.lock(|inner| inner.init());
-+        r.lock(|inner| inner.init(Some(virt_addr.into_usize())))?;
++        self.inner
++            .lock(|inner| inner.init(Some(virt_addr.into_usize())))?;
 +
 +        self.virt_mmio_start_addr
 +            .store(virt_addr.into_usize(), Ordering::Relaxed);
 
          Ok(())
      }
-@@ -361,6 +387,16 @@
+@@ -360,6 +387,16 @@
 
          Ok(())
      }
@@ -2090,7 +2083,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/main.rs 15_virtual_mem_part2_m
 diff -uNr 14_exceptions_part2_peripheral_IRQs/src/memory/mmu/mapping_record.rs 15_virtual_mem_part2_mmio_remap/src/memory/mmu/mapping_record.rs
 --- 14_exceptions_part2_peripheral_IRQs/src/memory/mmu/mapping_record.rs
 +++ 15_virtual_mem_part2_mmio_remap/src/memory/mmu/mapping_record.rs
-@@ -0,0 +1,224 @@
+@@ -0,0 +1,221 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2020 Andre Richter <andre.o.richter@gmail.com>
@@ -2288,8 +2281,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/memory/mmu/mapping_record.rs 1
 +    virt_pages: &PageSliceDescriptor<Virtual>,
 +    attr: &AttributeFields,
 +) -> Result<(), &'static str> {
-+    let mut m = &KERNEL_MAPPING_RECORD;
-+    m.write(|mr| mr.add(name, phys_pages, virt_pages, attr))
++    KERNEL_MAPPING_RECORD.write(|mr| mr.add(name, phys_pages, virt_pages, attr))
 +}
 +
 +pub fn kernel_find_and_insert_mmio_duplicate(
@@ -2298,8 +2290,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/memory/mmu/mapping_record.rs 1
 +) -> Option<Address<Virtual>> {
 +    let phys_pages: PageSliceDescriptor<Physical> = phys_mmio_descriptor.clone().into();
 +
-+    let mut m = &KERNEL_MAPPING_RECORD;
-+    m.write(|mr| {
++    KERNEL_MAPPING_RECORD.write(|mr| {
 +        let dup = mr.find_duplicate(&phys_pages)?;
 +
 +        if let Err(x) = dup.add_user(new_user) {
@@ -2312,8 +2303,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/memory/mmu/mapping_record.rs 1
 +
 +/// Human-readable print of all recorded kernel mappings.
 +pub fn kernel_print() {
-+    let mut m = &KERNEL_MAPPING_RECORD;
-+    m.read(|mr| mr.print());
++    KERNEL_MAPPING_RECORD.read(|mr| mr.print());
 +}
 
 diff -uNr 14_exceptions_part2_peripheral_IRQs/src/memory/mmu/types.rs 15_virtual_mem_part2_mmio_remap/src/memory/mmu/types.rs

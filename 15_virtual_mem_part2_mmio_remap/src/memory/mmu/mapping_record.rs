@@ -195,8 +195,7 @@ pub fn kernel_add(
     virt_pages: &PageSliceDescriptor<Virtual>,
     attr: &AttributeFields,
 ) -> Result<(), &'static str> {
-    let mut m = &KERNEL_MAPPING_RECORD;
-    m.write(|mr| mr.add(name, phys_pages, virt_pages, attr))
+    KERNEL_MAPPING_RECORD.write(|mr| mr.add(name, phys_pages, virt_pages, attr))
 }
 
 pub fn kernel_find_and_insert_mmio_duplicate(
@@ -205,8 +204,7 @@ pub fn kernel_find_and_insert_mmio_duplicate(
 ) -> Option<Address<Virtual>> {
     let phys_pages: PageSliceDescriptor<Physical> = phys_mmio_descriptor.clone().into();
 
-    let mut m = &KERNEL_MAPPING_RECORD;
-    m.write(|mr| {
+    KERNEL_MAPPING_RECORD.write(|mr| {
         let dup = mr.find_duplicate(&phys_pages)?;
 
         if let Err(x) = dup.add_user(new_user) {
@@ -219,6 +217,5 @@ pub fn kernel_find_and_insert_mmio_duplicate(
 
 /// Human-readable print of all recorded kernel mappings.
 pub fn kernel_print() {
-    let mut m = &KERNEL_MAPPING_RECORD;
-    m.read(|mr| mr.print());
+    KERNEL_MAPPING_RECORD.read(|mr| mr.print());
 }

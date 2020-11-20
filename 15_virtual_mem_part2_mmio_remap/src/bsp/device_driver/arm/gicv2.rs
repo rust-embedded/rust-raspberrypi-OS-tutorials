@@ -190,8 +190,7 @@ impl exception::asynchronous::interface::IRQManager for GICv2 {
         irq_number: Self::IRQNumberType,
         descriptor: exception::asynchronous::IRQDescriptor,
     ) -> Result<(), &'static str> {
-        let mut r = &self.handler_table;
-        r.write(|table| {
+        self.handler_table.write(|table| {
             let irq_number = irq_number.get();
 
             if table[irq_number].is_some() {
@@ -222,8 +221,7 @@ impl exception::asynchronous::interface::IRQManager for GICv2 {
         }
 
         // Call the IRQ handler. Panic if there is none.
-        let mut r = &self.handler_table;
-        r.read(|table| {
+        self.handler_table.read(|table| {
             match table[irq_number] {
                 None => panic!("No handler registered for IRQ {}", irq_number),
                 Some(descriptor) => {
@@ -242,8 +240,7 @@ impl exception::asynchronous::interface::IRQManager for GICv2 {
 
         info!("      Peripheral handler:");
 
-        let mut r = &self.handler_table;
-        r.read(|table| {
+        self.handler_table.read(|table| {
             for (i, opt) in table.iter().skip(32).enumerate() {
                 if let Some(handler) = opt {
                     info!("            {: >3}. {}", i + 32, handler.name);

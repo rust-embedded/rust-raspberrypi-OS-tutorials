@@ -309,7 +309,7 @@ diff -uNr 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 08_times
 diff -uNr 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 08_timestamps/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 --- 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 08_timestamps/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -292,11 +292,18 @@
+@@ -287,11 +287,18 @@
                  cpu::nop();
              }
 

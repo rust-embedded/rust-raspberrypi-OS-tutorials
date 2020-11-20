@@ -79,8 +79,8 @@ impl GICC {
     }
 
     pub unsafe fn set_mmio(&self, new_mmio_start_addr: usize) {
-        let mut r = &self.registers;
-        r.write(|regs| *regs = Registers::new(new_mmio_start_addr));
+        self.registers
+            .write(|regs| *regs = Registers::new(new_mmio_start_addr));
     }
 
     /// Accept interrupts of any priority.
@@ -95,8 +95,7 @@ impl GICC {
     /// - GICC MMIO registers are banked per CPU core. It is therefore safe to have `&self` instead
     ///   of `&mut self`.
     pub fn priority_accept_all(&self) {
-        let mut r = &self.registers;
-        r.read(|regs| {
+        self.registers.read(|regs| {
             regs.PMR.write(PMR::Priority.val(255)); // Comment in arch spec.
         });
     }
@@ -108,8 +107,7 @@ impl GICC {
     /// - GICC MMIO registers are banked per CPU core. It is therefore safe to have `&self` instead
     ///   of `&mut self`.
     pub fn enable(&self) {
-        let mut r = &self.registers;
-        r.read(|regs| {
+        self.registers.read(|regs| {
             regs.CTLR.write(CTLR::Enable::SET);
         });
     }
@@ -127,8 +125,8 @@ impl GICC {
         &self,
         _ic: &exception::asynchronous::IRQContext<'irq_context>,
     ) -> usize {
-        let mut r = &self.registers;
-        r.read(|regs| regs.IAR.read(IAR::InterruptID) as usize)
+        self.registers
+            .read(|regs| regs.IAR.read(IAR::InterruptID) as usize)
     }
 
     /// Complete handling of the currently active IRQ.
@@ -147,8 +145,7 @@ impl GICC {
         irq_number: u32,
         _ic: &exception::asynchronous::IRQContext<'irq_context>,
     ) {
-        let mut r = &self.registers;
-        r.read(|regs| {
+        self.registers.read(|regs| {
             regs.EOIR.write(EOIR::EOIINTID.val(irq_number));
         });
     }

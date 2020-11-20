@@ -219,8 +219,7 @@ impl GPIO {
 
     /// Concurrency safe version of `GPIOInner.map_pl011_uart()`
     pub fn map_pl011_uart(&self) {
-        let mut r = &self.inner;
-        r.lock(|inner| inner.map_pl011_uart())
+        self.inner.lock(|inner| inner.map_pl011_uart())
     }
 }
 
@@ -238,8 +237,8 @@ impl driver::interface::DeviceDriver for GPIO {
         let virt_addr =
             memory::mmu::kernel_map_mmio(self.compatible(), &self.phys_mmio_descriptor)?;
 
-        let mut r = &self.inner;
-        r.lock(|inner| inner.init(Some(virt_addr.into_usize())))?;
+        self.inner
+            .lock(|inner| inner.init(Some(virt_addr.into_usize())))?;
 
         self.virt_mmio_start_addr
             .store(virt_addr.into_usize(), Ordering::Relaxed);

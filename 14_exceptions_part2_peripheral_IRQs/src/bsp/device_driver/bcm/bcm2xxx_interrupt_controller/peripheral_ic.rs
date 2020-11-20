@@ -101,8 +101,7 @@ impl exception::asynchronous::interface::IRQManager for PeripheralIC {
         irq: Self::IRQNumberType,
         descriptor: exception::asynchronous::IRQDescriptor,
     ) -> Result<(), &'static str> {
-        let mut r = &self.handler_table;
-        r.write(|table| {
+        self.handler_table.write(|table| {
             let irq_number = irq.get();
 
             if table[irq_number].is_some() {
@@ -116,8 +115,7 @@ impl exception::asynchronous::interface::IRQManager for PeripheralIC {
     }
 
     fn enable(&self, irq: Self::IRQNumberType) {
-        let mut r = &self.wo_registers;
-        r.lock(|regs| {
+        self.wo_registers.lock(|regs| {
             let enable_reg = if irq.get() <= 31 {
                 &regs.ENABLE_1
             } else {
@@ -136,8 +134,7 @@ impl exception::asynchronous::interface::IRQManager for PeripheralIC {
         &'irq_context self,
         _ic: &exception::asynchronous::IRQContext<'irq_context>,
     ) {
-        let mut r = &self.handler_table;
-        r.read(|table| {
+        self.handler_table.read(|table| {
             for irq_number in self.pending_irqs() {
                 match table[irq_number] {
                     None => panic!("No handler registered for IRQ {}", irq_number),
@@ -155,8 +152,7 @@ impl exception::asynchronous::interface::IRQManager for PeripheralIC {
 
         info!("      Peripheral handler:");
 
-        let mut r = &self.handler_table;
-        r.read(|table| {
+        self.handler_table.read(|table| {
             for (i, opt) in table.iter().enumerate() {
                 if let Some(handler) = opt {
                     info!("            {: >3}. {}", i, handler.name);

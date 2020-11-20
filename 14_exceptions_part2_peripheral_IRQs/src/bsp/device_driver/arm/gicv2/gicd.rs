@@ -151,8 +151,7 @@ impl GICD {
         // Target all SPIs to the boot core only.
         let mask = self.local_gic_target_mask();
 
-        let mut r = &self.shared_registers;
-        r.lock(|regs| {
+        self.shared_registers.lock(|regs| {
             for i in regs.implemented_itargets_slice().iter() {
                 i.write(
                     ITARGETSR::Offset3.val(mask)
@@ -186,8 +185,7 @@ impl GICD {
             _ => {
                 let enable_reg_index_shared = enable_reg_index - 1;
 
-                let mut r = &self.shared_registers;
-                r.lock(|regs| {
+                self.shared_registers.lock(|regs| {
                     let enable_reg = &regs.ISENABLER[enable_reg_index_shared];
                     enable_reg.set(enable_reg.get() | enable_bit);
                 });

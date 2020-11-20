@@ -364,8 +364,8 @@ impl driver::interface::DeviceDriver for PL011Uart {
         let virt_addr =
             memory::mmu::kernel_map_mmio(self.compatible(), &self.phys_mmio_descriptor)?;
 
-        let mut r = &self.inner;
-        r.lock(|inner| inner.init(Some(virt_addr.into_usize())))?;
+        self.inner
+            .lock(|inner| inner.init(Some(virt_addr.into_usize())))?;
 
         self.virt_mmio_start_addr
             .store(virt_addr.into_usize(), Ordering::Relaxed);
@@ -403,21 +403,18 @@ impl console::interface::Write for PL011Uart {
     /// Passthrough of `args` to the `core::fmt::Write` implementation, but guarded by a Mutex to
     /// serialize access.
     fn write_char(&self, c: char) {
-        let mut r = &self.inner;
-        r.lock(|inner| inner.write_char(c));
+        self.inner.lock(|inner| inner.write_char(c));
     }
 
     fn write_fmt(&self, args: core::fmt::Arguments) -> fmt::Result {
         // Fully qualified syntax for the call to `core::fmt::Write::write:fmt()` to increase
         // readability.
-        let mut r = &self.inner;
-        r.lock(|inner| fmt::Write::write_fmt(inner, args))
+        self.inner.lock(|inner| fmt::Write::write_fmt(inner, args))
     }
 
     fn flush(&self) {
         // Spin until TX FIFO empty is set.
-        let mut r = &self.inner;
-        r.lock(|inner| {
+        self.inner.lock(|inner| {
             while !inner.registers.FR.matches_all(FR::TXFE::SET) {
                 cpu::nop();
             }
@@ -427,13 +424,12 @@ impl console::interface::Write for PL011Uart {
 
 impl console::interface::Read for PL011Uart {
     fn read_char(&self) -> char {
-        let mut r = &self.inner;
-        r.lock(|inner| inner.read_char_converting(BlockingMode::Blocking).unwrap())
+        self.inner
+            .lock(|inner| inner.read_char_converting(BlockingMode::Blocking).unwrap())
     }
 
     fn clear(&self) {
-        let mut r = &self.inner;
-        r.lock(|inner| {
+        self.inner.lock(|inner| {
             // Read from the RX FIFO until it is indicating empty.
             while !inner.registers.FR.matches_all(FR::RXFE::SET) {
                 inner.registers.DR.get();
@@ -444,20 +440,17 @@ impl console::interface::Read for PL011Uart {
 
 impl console::interface::Statistics for PL011Uart {
     fn chars_written(&self) -> usize {
-        let mut r = &self.inner;
-        r.lock(|inner| inner.chars_written)
+        self.inner.lock(|inner| inner.chars_written)
     }
 
     fn chars_read(&self) -> usize {
-        let mut r = &self.inner;
-        r.lock(|inner| inner.chars_read)
+        self.inner.lock(|inner| inner.chars_read)
     }
 }
 
 impl exception::asynchronous::interface::IRQHandler for PL011Uart {
     fn handle(&self) -> Result<(), &'static str> {
-        let mut r = &self.inner;
-        r.lock(|inner| {
+        self.inner.lock(|inner| {
             let pending = inner.registers.MIS.extract();
 
             // Clear all pending IRQs.

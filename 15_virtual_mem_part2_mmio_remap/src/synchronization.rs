@@ -3,6 +3,11 @@
 // Copyright (c) 2020 Andre Richter <andre.o.richter@gmail.com>
 
 //! Synchronization primitives.
+//!
+//! Suggested literature:
+//!   - https://doc.rust-lang.org/book/ch16-04-extensible-concurrency-sync-and-send.html
+//!   - https://stackoverflow.com/questions/59428096/understanding-the-send-trait
+//!   - https://doc.rust-lang.org/std/cell/index.html
 
 use core::cell::UnsafeCell;
 
@@ -13,35 +18,14 @@ use core::cell::UnsafeCell;
 /// Synchronization interfaces.
 pub mod interface {
 
-    /// Any object implementing this trait guarantees exclusive access to the data contained within
+    /// Any object implementing this trait guarantees exclusive access to the data wrapped within
     /// the Mutex for the duration of the provided closure.
-    ///
-    /// The trait follows the [Rust embedded WG's proposal] and therefore provides some goodness
-    /// such as [deadlock prevention].
-    ///
-    /// # Example
-    ///
-    /// Since the lock function takes an `&mut self` to enable deadlock-prevention, the trait is
-    /// best implemented **for a reference to a container struct**, and has a usage pattern that
-    /// might feel strange at first:
-    ///
-    /// [Rust embedded WG's proposal]: https://github.com/rust-embedded/wg/blob/master/rfcs/0377-mutex-trait.md
-    /// [deadlock prevention]: https://github.com/rust-embedded/wg/blob/master/rfcs/0377-mutex-trait.md#design-decisions-and-compatibility
-    ///
-    /// ```
-    /// static MUT: Mutex<RefCell<i32>> = Mutex::new(RefCell::new(0));
-    ///
-    /// fn foo() {
-    ///     let mut r = &MUT; // Note that r is mutable
-    ///     r.lock(|data| *data += 1);
-    /// }
-    /// ```
     pub trait Mutex {
-        /// The type of encapsulated data.
+        /// The type of the data that is wrapped by this mutex.
         type Data;
 
-        /// Creates a critical section and grants temporary mutable access to the encapsulated data.
-        fn lock<R>(&mut self, f: impl FnOnce(&mut Self::Data) -> R) -> R;
+        /// Locks the mutex and grants the closure temporary mutable access to the wrapped data.
+        fn lock<R>(&self, f: impl FnOnce(&mut Self::Data) -> R) -> R;
     }
 
     /// A reader-writer exclusion type.
@@ -53,32 +37,34 @@ pub mod interface {
         type Data;
 
         /// Grants temporary mutable access to the encapsulated data.
-        fn write<R>(&mut self, f: impl FnOnce(&mut Self::Data) -> R) -> R;
+        fn write<R>(&self, f: impl FnOnce(&mut Self::Data) -> R) -> R;
 
         /// Grants temporary immutable access to the encapsulated data.
-        fn read<R>(&mut self, f: impl FnOnce(&Self::Data) -> R) -> R;
+        fn read<R>(&self, f: impl FnOnce(&Self::Data) -> R) -> R;
     }
 }
 
 /// A pseudo-lock for teaching purposes.
-///
-/// Used to introduce [interior mutability].
 ///
 /// In contrast to a real Mutex implementation, does not protect against concurrent access from
 /// other cores to the contained data. This part is preserved for later lessons.
 ///
 /// The lock will only be used as long as it is safe to do so, i.e. as long as the kernel is
 /// executing on a single core.
-///
-/// [interior mutability]: https://doc.rust-lang.org/std/cell/index.html
-pub struct IRQSafeNullLock<T: ?Sized> {
+pub struct IRQSafeNullLock<T>
+where
+    T: ?Sized,
+{
     data: UnsafeCell<T>,
 }
 
 /// A pseudo-lock that is RW during the single-core kernel init phase and RO afterwards.
 ///
 /// Intended to encapsulate data that is populated during kernel init when no concurrency exists.
-pub struct InitStateLock<T: ?Sized> {
+pub struct InitStateLock<T>
+where
+    T: ?Sized,
+{
     data: UnsafeCell<T>,
 }
 
@@ -86,10 +72,11 @@ pub struct InitStateLock<T: ?Sized> {
 // Public Code
 //--------------------------------------------------------------------------------------------------
 
-unsafe impl<T: ?Sized> Sync for IRQSafeNullLock<T> {}
+unsafe impl<T> Send for IRQSafeNullLock<T> where T: ?Sized + Send {}
+unsafe impl<T> Sync for IRQSafeNullLock<T> where T: ?Sized + Send {}
 
 impl<T> IRQSafeNullLock<T> {
-    /// Wraps `data` into a new `IRQSafeNullLock`.
+    /// Create an instance.
     pub const fn new(data: T) -> Self {
         Self {
             data: UnsafeCell::new(data),
@@ -97,9 +84,11 @@ impl<T> IRQSafeNullLock<T> {
     }
 }
 
-unsafe impl<T: ?Sized> Sync for InitStateLock<T> {}
+unsafe impl<T> Send for InitStateLock<T> where T: ?Sized + Send {}
+unsafe impl<T> Sync for InitStateLock<T> where T: ?Sized + Send {}
 
 impl<T> InitStateLock<T> {
+    /// Create an instance.
     pub const fn new(data: T) -> Self {
         Self {
             data: UnsafeCell::new(data),
@@ -112,10 +101,10 @@ impl<T> InitStateLock<T> {
 //------------------------------------------------------------------------------
 use crate::{exception, state};
 
-impl<T> interface::Mutex for &IRQSafeNullLock<T> {
+impl<T> interface::Mutex for IRQSafeNullLock<T> {
     type Data = T;
 
-    fn lock<R>(&mut self, f: impl FnOnce(&mut Self::Data) -> R) -> R {
+    fn lock<R>(&self, f: impl FnOnce(&mut Self::Data) -> R) -> R {
         // In a real lock, there would be code encapsulating this line that ensures that this
         // mutable reference will ever only be given out once at a time.
         let data = unsafe { &mut *self.data.get() };
@@ -125,10 +114,10 @@ impl<T> interface::Mutex for &IRQSafeNullLock<T> {
     }
 }
 
-impl<T> interface::ReadWriteEx for &InitStateLock<T> {
+impl<T> interface::ReadWriteEx for InitStateLock<T> {
     type Data = T;
 
-    fn write<R>(&mut self, f: impl FnOnce(&mut Self::Data) -> R) -> R {
+    fn write<R>(&self, f: impl FnOnce(&mut Self::Data) -> R) -> R {
         assert!(
             state::state_manager().is_init(),
             "InitStateLock::write called after kernel init phase"
@@ -143,7 +132,7 @@ impl<T> interface::ReadWriteEx for &InitStateLock<T> {
         f(data)
     }
 
-    fn read<R>(&mut self, f: impl FnOnce(&Self::Data) -> R) -> R {
+    fn read<R>(&self, f: impl FnOnce(&Self::Data) -> R) -> R {
         let data = unsafe { &*self.data.get() };
 
         f(data)

@@ -294,7 +294,7 @@ diff -uNr 09_hw_debug_JTAG/src/_arch/aarch64/cpu.rs 10_privilege_level/src/_arch
 diff -uNr 09_hw_debug_JTAG/src/_arch/aarch64/exception/asynchronous.rs 10_privilege_level/src/_arch/aarch64/exception/asynchronous.rs
 --- 09_hw_debug_JTAG/src/_arch/aarch64/exception/asynchronous.rs
 +++ 10_privilege_level/src/_arch/aarch64/exception/asynchronous.rs
-@@ -0,0 +1,71 @@
+@@ -0,0 +1,74 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
@@ -344,7 +344,10 @@ diff -uNr 09_hw_debug_JTAG/src/_arch/aarch64/exception/asynchronous.rs 10_privil
 +    }
 +}
 +
-+fn is_masked<T: DaifField>() -> bool {
++fn is_masked<T>() -> bool
++where
++    T: DaifField,
++{
 +    DAIF.is_set(T::daif_field())
 +}
 +

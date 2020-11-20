@@ -240,8 +240,7 @@ this tutorial, the `RX IRQ` and the `RX Timeout IRQ` will be configured. This me
 ```rust
 impl exception::asynchronous::interface::IRQHandler for PL011Uart {
     fn handle(&self) -> Result<(), &'static str> {
-        let mut r = &self.inner;
-        r.lock(|inner| {
+        self.inner.lock(|inner| {
             let pending = inner.registers.MIS.extract();
 
             // Clear all pending IRQs.
@@ -401,10 +400,10 @@ access so far, we also want it protected against reentrancy now. Therefore, we u
 `NullLocks` to `IRQSafeNullocks`:
 
 ```rust
-impl<T> interface::Mutex for &IRQSafeNullLock<T> {
+impl<T> interface::Mutex for IRQSafeNullLock<T> {
     type Data = T;
 
-    fn lock<R>(&mut self, f: impl FnOnce(&mut Self::Data) -> R) -> R {
+    fn lock<R>(&self, f: impl FnOnce(&mut Self::Data) -> R) -> R {
         // In a real lock, there would be code encapsulating this line that ensures that this
         // mutable reference will ever only be given out once at a time.
         let data = unsafe { &mut *self.data.get() };
@@ -519,10 +518,10 @@ time"_. For the `InitStateLock`, we only implement the `read()` and `write()` fu
 [are characterized]: https://doc.rust-lang.org/std/sync/struct.RwLock.html
 
 ```rust
-impl<T> interface::ReadWriteEx for &InitStateLock<T> {
+impl<T> interface::ReadWriteEx for InitStateLock<T> {
     type Data = T;
 
-    fn write<R>(&mut self, f: impl FnOnce(&mut Self::Data) -> R) -> R {
+    fn write<R>(&self, f: impl FnOnce(&mut Self::Data) -> R) -> R {
         assert!(
             state::state_manager().is_init(),
             "InitStateLock::write called after kernel init phase"
@@ -537,7 +536,7 @@ impl<T> interface::ReadWriteEx for &InitStateLock<T> {
         f(data)
     }
 
-    fn read<R>(&mut self, f: impl FnOnce(&Self::Data) -> R) -> R {
+    fn read<R>(&self, f: impl FnOnce(&Self::Data) -> R) -> R {
         let data = unsafe { &*self.data.get() };
 
         f(data)
@@ -772,7 +771,7 @@ diff -uNr 13_integrated_testing/src/_arch/aarch64/exception/asynchronous.rs 14_e
  trait DaifField {
      fn daif_field() -> register::Field<u64, DAIF::Register>;
  }
-@@ -55,6 +59,71 @@
+@@ -58,6 +62,71 @@
  // Public Code
  //--------------------------------------------------------------------------------------------------
 
@@ -1016,7 +1015,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2/gicc.rs 14_excep
 diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2/gicd.rs 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gicd.rs
 --- 13_integrated_testing/src/bsp/device_driver/arm/gicv2/gicd.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gicd.rs
-@@ -0,0 +1,197 @@
+@@ -0,0 +1,195 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2020 Andre Richter <andre.o.richter@gmail.com>
@@ -1170,8 +1169,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2/gicd.rs 14_excep
 +        // Target all SPIs to the boot core only.
 +        let mask = self.local_gic_target_mask();
 +
-+        let mut r = &self.shared_registers;
-+        r.lock(|regs| {
++        self.shared_registers.lock(|regs| {
 +            for i in regs.implemented_itargets_slice().iter() {
 +                i.write(
 +                    ITARGETSR::Offset3.val(mask)
@@ -1205,8 +1203,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2/gicd.rs 14_excep
 +            _ => {
 +                let enable_reg_index_shared = enable_reg_index - 1;
 +
-+                let mut r = &self.shared_registers;
-+                r.lock(|regs| {
++                self.shared_registers.lock(|regs| {
 +                    let enable_reg = &regs.ISENABLER[enable_reg_index_shared];
 +                    enable_reg.set(enable_reg.get() | enable_bit);
 +                });
@@ -1218,7 +1215,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2/gicd.rs 14_excep
 diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2.rs 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2.rs
 --- 13_integrated_testing/src/bsp/device_driver/arm/gicv2.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2.rs
-@@ -0,0 +1,222 @@
+@@ -0,0 +1,219 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2020 Andre Richter <andre.o.richter@gmail.com>
@@ -1379,8 +1376,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2.rs 14_exceptions
 +        irq_number: Self::IRQNumberType,
 +        descriptor: exception::asynchronous::IRQDescriptor,
 +    ) -> Result<(), &'static str> {
-+        let mut r = &self.handler_table;
-+        r.write(|table| {
++        self.handler_table.write(|table| {
 +            let irq_number = irq_number.get();
 +
 +            if table[irq_number].is_some() {
@@ -1411,8 +1407,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2.rs 14_exceptions
 +        }
 +
 +        // Call the IRQ handler. Panic if there is none.
-+        let mut r = &self.handler_table;
-+        r.read(|table| {
++        self.handler_table.read(|table| {
 +            match table[irq_number] {
 +                None => panic!("No handler registered for IRQ {}", irq_number),
 +                Some(descriptor) => {
@@ -1431,8 +1426,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2.rs 14_exceptions
 +
 +        info!("      Peripheral handler:");
 +
-+        let mut r = &self.handler_table;
-+        r.read(|table| {
++        self.handler_table.read(|table| {
 +            for (i, opt) in table.iter().skip(32).enumerate() {
 +                if let Some(handler) = opt {
 +                    info!("            {: >3}. {}", i + 32, handler.name);
@@ -1490,7 +1484,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 14_exc
 diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
 --- 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
-@@ -0,0 +1,167 @@
+@@ -0,0 +1,163 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2020 Andre Richter <andre.o.richter@gmail.com>
@@ -1594,8 +1588,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 +        irq: Self::IRQNumberType,
 +        descriptor: exception::asynchronous::IRQDescriptor,
 +    ) -> Result<(), &'static str> {
-+        let mut r = &self.handler_table;
-+        r.write(|table| {
++        self.handler_table.write(|table| {
 +            let irq_number = irq.get();
 +
 +            if table[irq_number].is_some() {
@@ -1609,8 +1602,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 +    }
 +
 +    fn enable(&self, irq: Self::IRQNumberType) {
-+        let mut r = &self.wo_registers;
-+        r.lock(|regs| {
++        self.wo_registers.lock(|regs| {
 +            let enable_reg = if irq.get() <= 31 {
 +                &regs.ENABLE_1
 +            } else {
@@ -1629,8 +1621,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 +        &'irq_context self,
 +        _ic: &exception::asynchronous::IRQContext<'irq_context>,
 +    ) {
-+        let mut r = &self.handler_table;
-+        r.read(|table| {
++        self.handler_table.read(|table| {
 +            for irq_number in self.pending_irqs() {
 +                match table[irq_number] {
 +                    None => panic!("No handler registered for IRQ {}", irq_number),
@@ -1648,8 +1639,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 +
 +        info!("      Peripheral handler:");
 +
-+        let mut r = &self.handler_table;
-+        r.read(|table| {
++        self.handler_table.read(|table| {
 +            for (i, opt) in table.iter().enumerate() {
 +                if let Some(handler) = opt {
 +                    info!("            {: >3}. {}", i, handler.name);
@@ -1961,7 +1951,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
          }
      }
  }
-@@ -255,6 +346,21 @@
+@@ -254,6 +345,21 @@
 
          Ok(())
      }
@@ -1983,11 +1973,11 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
  }
 
  impl console::interface::Write for PL011Uart {
-@@ -286,25 +392,7 @@
+@@ -281,25 +387,8 @@
+
  impl console::interface::Read for PL011Uart {
      fn read_char(&self) -> char {
-         let mut r = &self.inner;
--        r.lock(|inner| {
+-        self.inner.lock(|inner| {
 -            // Spin while RX FIFO empty is set.
 -            while inner.registers.FR.matches_all(FR::RXFE::SET) {
 -                cpu::nop();
@@ -2006,19 +1996,19 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
 -
 -            ret
 -        })
-+        r.lock(|inner| inner.read_char_converting(BlockingMode::Blocking).unwrap())
++        self.inner
++            .lock(|inner| inner.read_char_converting(BlockingMode::Blocking).unwrap())
      }
 
      fn clear(&self) {
-@@ -329,3 +417,25 @@
-         r.lock(|inner| inner.chars_read)
+@@ -321,3 +410,24 @@
+         self.inner.lock(|inner| inner.chars_read)
      }
  }
 +
 +impl exception::asynchronous::interface::IRQHandler for PL011Uart {
 +    fn handle(&self) -> Result<(), &'static str> {
-+        let mut r = &self.inner;
-+        r.lock(|inner| {
++        self.inner.lock(|inner| {
 +            let pending = inner.registers.MIS.extract();
 +
 +            // Clear all pending IRQs.
@@ -2613,9 +2603,9 @@ diff -uNr 13_integrated_testing/src/state.rs 14_exceptions_part2_peripheral_IRQs
 diff -uNr 13_integrated_testing/src/synchronization.rs 14_exceptions_part2_peripheral_IRQs/src/synchronization.rs
 --- 13_integrated_testing/src/synchronization.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/synchronization.rs
-@@ -43,6 +43,21 @@
-         /// Creates a critical section and grants temporary mutable access to the encapsulated data.
-         fn lock<R>(&mut self, f: impl FnOnce(&mut Self::Data) -> R) -> R;
+@@ -27,6 +27,21 @@
+         /// Locks the mutex and grants the closure temporary mutable access to the wrapped data.
+         fn lock<R>(&self, f: impl FnOnce(&mut Self::Data) -> R) -> R;
      }
 +
 +    /// A reader-writer exclusion type.
@@ -2627,43 +2617,46 @@ diff -uNr 13_integrated_testing/src/synchronization.rs 14_exceptions_part2_perip
 +        type Data;
 +
 +        /// Grants temporary mutable access to the encapsulated data.
-+        fn write<R>(&mut self, f: impl FnOnce(&mut Self::Data) -> R) -> R;
++        fn write<R>(&self, f: impl FnOnce(&mut Self::Data) -> R) -> R;
 +
 +        /// Grants temporary immutable access to the encapsulated data.
-+        fn read<R>(&mut self, f: impl FnOnce(&Self::Data) -> R) -> R;
++        fn read<R>(&self, f: impl FnOnce(&Self::Data) -> R) -> R;
 +    }
  }
 
  /// A pseudo-lock for teaching purposes.
-@@ -53,10 +68,17 @@
+@@ -35,8 +50,18 @@
  /// other cores to the contained data. This part is preserved for later lessons.
  ///
  /// The lock will only be used as long as it is safe to do so, i.e. as long as the kernel is
 -/// executing single-threaded, aka only running on a single core with interrupts disabled.
+-pub struct NullLock<T>
 +/// executing on a single core.
- ///
- /// [interior mutability]: https://doc.rust-lang.org/std/cell/index.html
--pub struct NullLock<T: ?Sized> {
-+pub struct IRQSafeNullLock<T: ?Sized> {
++pub struct IRQSafeNullLock<T>
++where
++    T: ?Sized,
++{
 +    data: UnsafeCell<T>,
 +}
 +
 +/// A pseudo-lock that is RW during the single-core kernel init phase and RO afterwards.
 +///
 +/// Intended to encapsulate data that is populated during kernel init when no concurrency exists.
-+pub struct InitStateLock<T: ?Sized> {
-     data: UnsafeCell<T>,
- }
-
-@@ -64,10 +86,20 @@
++pub struct InitStateLock<T>
+ where
+     T: ?Sized,
+ {
+@@ -47,10 +72,22 @@
  // Public Code
  //--------------------------------------------------------------------------------------------------
 
--unsafe impl<T: ?Sized> Sync for NullLock<T> {}
-+unsafe impl<T: ?Sized> Sync for IRQSafeNullLock<T> {}
+-unsafe impl<T> Send for NullLock<T> where T: ?Sized + Send {}
+-unsafe impl<T> Sync for NullLock<T> where T: ?Sized + Send {}
++unsafe impl<T> Send for IRQSafeNullLock<T> where T: ?Sized + Send {}
++unsafe impl<T> Sync for IRQSafeNullLock<T> where T: ?Sized + Send {}
 +
 +impl<T> IRQSafeNullLock<T> {
-+    /// Wraps `data` into a new `IRQSafeNullLock`.
++    /// Create an instance.
 +    pub const fn new(data: T) -> Self {
 +        Self {
 +            data: UnsafeCell::new(data),
@@ -2671,26 +2664,26 @@ diff -uNr 13_integrated_testing/src/synchronization.rs 14_exceptions_part2_perip
 +    }
 +}
 +
-+unsafe impl<T: ?Sized> Sync for InitStateLock<T> {}
++unsafe impl<T> Send for InitStateLock<T> where T: ?Sized + Send {}
++unsafe impl<T> Sync for InitStateLock<T> where T: ?Sized + Send {}
 
 -impl<T> NullLock<T> {
--    /// Wraps `data` into a new `NullLock`.
 +impl<T> InitStateLock<T> {
+     /// Create an instance.
      pub const fn new(data: T) -> Self {
          Self {
-             data: UnsafeCell::new(data),
-@@ -78,8 +110,9 @@
+@@ -62,8 +99,9 @@
  //------------------------------------------------------------------------------
  // OS Interface Code
  //------------------------------------------------------------------------------
 +use crate::{exception, state};
 
--impl<T> interface::Mutex for &NullLock<T> {
-+impl<T> interface::Mutex for &IRQSafeNullLock<T> {
+-impl<T> interface::Mutex for NullLock<T> {
++impl<T> interface::Mutex for IRQSafeNullLock<T> {
      type Data = T;
 
-     fn lock<R>(&mut self, f: impl FnOnce(&mut Self::Data) -> R) -> R {
-@@ -87,6 +120,32 @@
+     fn lock<R>(&self, f: impl FnOnce(&mut Self::Data) -> R) -> R {
+@@ -71,6 +109,32 @@
          // mutable reference will ever only be given out once at a time.
          let data = unsafe { &mut *self.data.get() };
 
@@ -2699,10 +2692,10 @@ diff -uNr 13_integrated_testing/src/synchronization.rs 14_exceptions_part2_perip
 +    }
 +}
 +
-+impl<T> interface::ReadWriteEx for &InitStateLock<T> {
++impl<T> interface::ReadWriteEx for InitStateLock<T> {
 +    type Data = T;
 +
-+    fn write<R>(&mut self, f: impl FnOnce(&mut Self::Data) -> R) -> R {
++    fn write<R>(&self, f: impl FnOnce(&mut Self::Data) -> R) -> R {
 +        assert!(
 +            state::state_manager().is_init(),
 +            "InitStateLock::write called after kernel init phase"
@@ -2717,7 +2710,7 @@ diff -uNr 13_integrated_testing/src/synchronization.rs 14_exceptions_part2_perip
 +        f(data)
 +    }
 +
-+    fn read<R>(&mut self, f: impl FnOnce(&Self::Data) -> R) -> R {
++    fn read<R>(&self, f: impl FnOnce(&Self::Data) -> R) -> R {
 +        let data = unsafe { &*self.data.get() };
 +
          f(data)

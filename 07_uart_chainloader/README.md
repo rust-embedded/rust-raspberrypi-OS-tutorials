@@ -218,15 +218,14 @@ diff -uNr 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs 07_uart_chainloader/src/
 diff -uNr 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 --- 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -271,6 +271,16 @@
-         let mut r = &self.inner;
-         r.lock(|inner| fmt::Write::write_fmt(inner, args))
+@@ -268,6 +268,15 @@
+         // readability.
+         self.inner.lock(|inner| fmt::Write::write_fmt(inner, args))
      }
 +
 +    fn flush(&self) {
 +        // Spin until TX FIFO empty is set.
-+        let mut r = &self.inner;
-+        r.lock(|inner| {
++        self.inner.lock(|inner| {
 +            while !inner.registers.FR.matches_all(FR::TXFE::SET) {
 +                cpu::nop();
 +            }
@@ -235,7 +234,7 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 0
  }
 
  impl console::interface::Read for PL011Uart {
-@@ -282,18 +292,21 @@
+@@ -278,18 +287,20 @@
                  cpu::nop();
              }
 
@@ -257,8 +256,7 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 0
 +    }
 +
 +    fn clear(&self) {
-+        let mut r = &self.inner;
-+        r.lock(|inner| {
++        self.inner.lock(|inner| {
 +            // Read from the RX FIFO until it is indicating empty.
 +            while !inner.registers.FR.matches_all(FR::RXFE::SET) {
 +                inner.registers.DR.get();

@@ -199,8 +199,7 @@ impl GPIO {
 
     /// Concurrency safe version of `GPIOInner.map_pl011_uart()`
     pub fn map_pl011_uart(&self) {
-        let mut r = &self.inner;
-        r.lock(|inner| inner.map_pl011_uart())
+        self.inner.lock(|inner| inner.map_pl011_uart())
     }
 }
 

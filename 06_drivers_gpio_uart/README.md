@@ -205,7 +205,7 @@ diff -uNr 05_safe_globals/src/_arch/aarch64/cpu.rs 06_drivers_gpio_uart/src/_arc
 diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
 --- 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
 +++ 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
-@@ -0,0 +1,222 @@
+@@ -0,0 +1,221 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
@@ -413,8 +413,7 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 06_drivers_g
 +
 +    /// Concurrency safe version of `GPIOInner.map_pl011_uart()`
 +    pub fn map_pl011_uart(&self) {
-+        let mut r = &self.inner;
-+        r.lock(|inner| inner.map_pl011_uart())
++        self.inner.lock(|inner| inner.map_pl011_uart())
 +    }
 +}
 +
@@ -432,7 +431,7 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 06_drivers_g
 diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 --- 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -0,0 +1,311 @@
+@@ -0,0 +1,305 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
@@ -685,8 +684,7 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 06_dri
 +    }
 +
 +    unsafe fn init(&self) -> Result<(), &'static str> {
-+        let mut r = &self.inner;
-+        r.lock(|inner| inner.init());
++        self.inner.lock(|inner| inner.init());
 +
 +        Ok(())
 +    }
@@ -696,22 +694,19 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 06_dri
 +    /// Passthrough of `args` to the `core::fmt::Write` implementation, but guarded by a Mutex to
 +    /// serialize access.
 +    fn write_char(&self, c: char) {
-+        let mut r = &self.inner;
-+        r.lock(|inner| inner.write_char(c));
++        self.inner.lock(|inner| inner.write_char(c));
 +    }
 +
 +    fn write_fmt(&self, args: core::fmt::Arguments) -> fmt::Result {
 +        // Fully qualified syntax for the call to `core::fmt::Write::write:fmt()` to increase
 +        // readability.
-+        let mut r = &self.inner;
-+        r.lock(|inner| fmt::Write::write_fmt(inner, args))
++        self.inner.lock(|inner| fmt::Write::write_fmt(inner, args))
 +    }
 +}
 +
 +impl console::interface::Read for PL011Uart {
 +    fn read_char(&self) -> char {
-+        let mut r = &self.inner;
-+        r.lock(|inner| {
++        self.inner.lock(|inner| {
 +            // Spin while RX FIFO empty is set.
 +            while inner.registers.FR.matches_all(FR::RXFE::SET) {
 +                cpu::nop();
@@ -735,13 +730,11 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 06_dri
 +
 +impl console::interface::Statistics for PL011Uart {
 +    fn chars_written(&self) -> usize {
-+        let mut r = &self.inner;
-+        r.lock(|inner| inner.chars_written)
++        self.inner.lock(|inner| inner.chars_written)
 +    }
 +
 +    fn chars_read(&self) -> usize {
-+        let mut r = &self.inner;
-+        r.lock(|inner| inner.chars_read)
++        self.inner.lock(|inner| inner.chars_read)
 +    }
 +}
 
@@ -824,7 +817,7 @@ diff -uNr 05_safe_globals/src/bsp/device_driver.rs 06_drivers_gpio_uart/src/bsp/
 diff -uNr 05_safe_globals/src/bsp/raspberrypi/console.rs 06_drivers_gpio_uart/src/bsp/raspberrypi/console.rs
 --- 05_safe_globals/src/bsp/raspberrypi/console.rs
 +++ 06_drivers_gpio_uart/src/bsp/raspberrypi/console.rs
-@@ -4,115 +4,34 @@
+@@ -4,113 +4,34 @@
 
  //! BSP console facilities.
 
@@ -946,15 +939,13 @@ diff -uNr 05_safe_globals/src/bsp/raspberrypi/console.rs 06_drivers_gpio_uart/sr
 -    fn write_fmt(&self, args: core::fmt::Arguments) -> fmt::Result {
 -        // Fully qualified syntax for the call to `core::fmt::Write::write:fmt()` to increase
 -        // readability.
--        let mut r = &self.inner;
--        r.lock(|inner| fmt::Write::write_fmt(inner, args))
+-        self.inner.lock(|inner| fmt::Write::write_fmt(inner, args))
 -    }
 -}
 -
 -impl console::interface::Statistics for QEMUOutput {
 -    fn chars_written(&self) -> usize {
--        let mut r = &self.inner;
--        r.lock(|inner| inner.chars_written)
+-        self.inner.lock(|inner| inner.chars_written)
 -    }
 +    &super::PL011_UART
  }

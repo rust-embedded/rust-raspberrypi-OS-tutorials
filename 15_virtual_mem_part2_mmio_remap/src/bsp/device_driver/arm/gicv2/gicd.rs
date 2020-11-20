@@ -134,11 +134,10 @@ impl GICD {
     }
 
     pub unsafe fn set_mmio(&self, new_mmio_start_addr: usize) {
-        let mut r = &self.shared_registers;
-        r.lock(|regs| *regs = SharedRegisters::new(new_mmio_start_addr));
-
-        let mut r = &self.banked_registers;
-        r.write(|regs| *regs = BankedRegisters::new(new_mmio_start_addr));
+        self.shared_registers
+            .lock(|regs| *regs = SharedRegisters::new(new_mmio_start_addr));
+        self.banked_registers
+            .write(|regs| *regs = BankedRegisters::new(new_mmio_start_addr));
     }
 
     /// Use a banked ITARGETSR to retrieve the executing core's GIC target mask.
@@ -148,8 +147,8 @@ impl GICD {
     ///   "GICD_ITARGETSR0 to GICD_ITARGETSR7 are read-only, and each field returns a value that
     ///    corresponds only to the processor reading the register."
     fn local_gic_target_mask(&self) -> u32 {
-        let mut r = &self.banked_registers;
-        r.read(|regs| regs.ITARGETSR[0].read(ITARGETSR::Offset0))
+        self.banked_registers
+            .read(|regs| regs.ITARGETSR[0].read(ITARGETSR::Offset0))
     }
 
     /// Route all SPIs to the boot core and enable the distributor.
@@ -162,8 +161,7 @@ impl GICD {
         // Target all SPIs to the boot core only.
         let mask = self.local_gic_target_mask();
 
-        let mut r = &self.shared_registers;
-        r.lock(|regs| {
+        self.shared_registers.lock(|regs| {
             for i in regs.implemented_itargets_slice().iter() {
                 i.write(
                     ITARGETSR::Offset3.val(mask)
@@ -189,19 +187,15 @@ impl GICD {
         // Check if we are handling a private or shared IRQ.
         match irq_num {
             // Private.
-            0..=31 => {
-                let mut r = &self.banked_registers;
-                r.read(|regs| {
-                    let enable_reg = &regs.ISENABLER;
-                    enable_reg.set(enable_reg.get() | enable_bit);
-                })
-            }
+            0..=31 => self.banked_registers.read(|regs| {
+                let enable_reg = &regs.ISENABLER;
+                enable_reg.set(enable_reg.get() | enable_bit);
+            }),
             // Shared.
             _ => {
                 let enable_reg_index_shared = enable_reg_index - 1;
 
-                let mut r = &self.shared_registers;
-                r.lock(|regs| {
+                self.shared_registers.lock(|regs| {
                     let enable_reg = &regs.ISENABLER[enable_reg_index_shared];
                     enable_reg.set(enable_reg.get() | enable_bit);
                 });

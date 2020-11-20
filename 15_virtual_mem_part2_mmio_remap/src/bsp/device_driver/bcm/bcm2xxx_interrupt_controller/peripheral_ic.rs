@@ -88,8 +88,7 @@ impl PeripheralIC {
 
     /// Query the list of pending IRQs.
     fn pending_irqs(&self) -> PendingIRQs {
-        let mut r = &self.ro_registers;
-        r.read(|regs| {
+        self.ro_registers.read(|regs| {
             let pending_mask: u64 =
                 (u64::from(regs.PENDING_2.get()) << 32) | u64::from(regs.PENDING_1.get());
 
@@ -113,11 +112,10 @@ impl driver::interface::DeviceDriver for PeripheralIC {
             memory::mmu::kernel_map_mmio(self.compatible(), &self.phys_mmio_descriptor)?
                 .into_usize();
 
-        let mut r = &self.wo_registers;
-        r.lock(|regs| *regs = WriteOnlyRegisters::new(virt_addr));
-
-        let mut r = &self.ro_registers;
-        r.write(|regs| *regs = ReadOnlyRegisters::new(virt_addr));
+        self.wo_registers
+            .lock(|regs| *regs = WriteOnlyRegisters::new(virt_addr));
+        self.ro_registers
+            .write(|regs| *regs = ReadOnlyRegisters::new(virt_addr));
 
         Ok(())
     }
@@ -131,8 +129,7 @@ impl exception::asynchronous::interface::IRQManager for PeripheralIC {
         irq: Self::IRQNumberType,
         descriptor: exception::asynchronous::IRQDescriptor,
     ) -> Result<(), &'static str> {
-        let mut r = &self.handler_table;
-        r.write(|table| {
+        self.handler_table.write(|table| {
             let irq_number = irq.get();
 
             if table[irq_number].is_some() {
@@ -146,8 +143,7 @@ impl exception::asynchronous::interface::IRQManager for PeripheralIC {
     }
 
     fn enable(&self, irq: Self::IRQNumberType) {
-        let mut r = &self.wo_registers;
-        r.lock(|regs| {
+        self.wo_registers.lock(|regs| {
             let enable_reg = if irq.get() <= 31 {
                 &regs.ENABLE_1
             } else {
@@ -166,8 +162,7 @@ impl exception::asynchronous::interface::IRQManager for PeripheralIC {
         &'irq_context self,
         _ic: &exception::asynchronous::IRQContext<'irq_context>,
     ) {
-        let mut r = &self.handler_table;
-        r.read(|table| {
+        self.handler_table.read(|table| {
             for irq_number in self.pending_irqs() {
                 match table[irq_number] {
                     None => panic!("No handler registered for IRQ {}", irq_number),
@@ -185,8 +180,7 @@ impl exception::asynchronous::interface::IRQManager for PeripheralIC {
 
         info!("      Peripheral handler:");
 
-        let mut r = &self.handler_table;
-        r.read(|table| {
+        self.handler_table.read(|table| {
             for (i, opt) in table.iter().enumerate() {
                 if let Some(handler) = opt {
                     info!("            {: >3}. {}", i, handler.name);

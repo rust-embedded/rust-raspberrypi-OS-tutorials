@@ -250,8 +250,7 @@ impl driver::interface::DeviceDriver for PL011Uart {
     }
 
     unsafe fn init(&self) -> Result<(), &'static str> {
-        let mut r = &self.inner;
-        r.lock(|inner| inner.init());
+        self.inner.lock(|inner| inner.init());
 
         Ok(())
     }
@@ -261,22 +260,19 @@ impl console::interface::Write for PL011Uart {
     /// Passthrough of `args` to the `core::fmt::Write` implementation, but guarded by a Mutex to
     /// serialize access.
     fn write_char(&self, c: char) {
-        let mut r = &self.inner;
-        r.lock(|inner| inner.write_char(c));
+        self.inner.lock(|inner| inner.write_char(c));
     }
 
     fn write_fmt(&self, args: core::fmt::Arguments) -> fmt::Result {
         // Fully qualified syntax for the call to `core::fmt::Write::write:fmt()` to increase
         // readability.
-        let mut r = &self.inner;
-        r.lock(|inner| fmt::Write::write_fmt(inner, args))
+        self.inner.lock(|inner| fmt::Write::write_fmt(inner, args))
     }
 }
 
 impl console::interface::Read for PL011Uart {
     fn read_char(&self) -> char {
-        let mut r = &self.inner;
-        r.lock(|inner| {
+        self.inner.lock(|inner| {
             // Spin while RX FIFO empty is set.
             while inner.registers.FR.matches_all(FR::RXFE::SET) {
                 cpu::nop();
@@ -300,12 +296,10 @@ impl console::interface::Read for PL011Uart {
 
 impl console::interface::Statistics for PL011Uart {
     fn chars_written(&self) -> usize {
-        let mut r = &self.inner;
-        r.lock(|inner| inner.chars_written)
+        self.inner.lock(|inner| inner.chars_written)
     }
 
     fn chars_read(&self) -> usize {
-        let mut r = &self.inner;
-        r.lock(|inner| inner.chars_read)
+        self.inner.lock(|inner| inner.chars_read)
     }
 }
