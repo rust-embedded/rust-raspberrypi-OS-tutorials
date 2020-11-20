@@ -167,14 +167,14 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
  	readelf --headers $(KERNEL_ELF)
 
  objdump: $(KERNEL_ELF)
--	@$(DOCKER_ELFTOOLS) $(OBJDUMP_BINARY) --disassemble --demangle $(KERNEL_ELF)
+-	@$(DOCKER_ELFTOOLS) $(OBJDUMP_BINARY) --disassemble --demangle $(KERNEL_ELF) | rustfilt
 +	@$(DOCKER_ELFTOOLS) $(OBJDUMP_BINARY) --disassemble --demangle \
 +                --section .text \
 +                --section .got  \
-+                $(KERNEL_ELF)
++                $(KERNEL_ELF) | rustfilt
 
  nm: $(KERNEL_ELF)
- 	@$(DOCKER_ELFTOOLS) $(NM_BINARY) --demangle --print-size $(KERNEL_ELF) | sort
+ 	@$(DOCKER_ELFTOOLS) $(NM_BINARY) --demangle --print-size $(KERNEL_ELF) | sort | rustfilt
 
 diff -uNr 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs 07_uart_chainloader/src/_arch/aarch64/cpu.rs
 --- 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs

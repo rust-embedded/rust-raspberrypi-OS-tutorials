@@ -56,7 +56,7 @@ _带上我最诚挚的问候,<br>Andre ([@andre-richter])_
       rustup default nightly-2020-11-20
       rustup component add llvm-tools-preview
       rustup target add aarch64-unknown-none-softfloat
-      cargo install cargo-binutils
+      cargo install cargo-binutils rustfilt
       ```
 
    2. 如果你想要全新安装:
@@ -67,7 +67,7 @@ _带上我最诚挚的问候,<br>Andre ([@andre-richter])_
 
       source $HOME/.cargo/env
       rustup target add aarch64-unknown-none-softfloat
-      cargo install cargo-binutils
+      cargo install cargo-binutils rustfilt
       ```
 
 4. 如果你使用 `Visual Studio Code`，我强烈推荐你安装[Rust Analyzer 扩展]。

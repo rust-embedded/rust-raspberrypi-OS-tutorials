@@ -72,7 +72,7 @@ other Unix flavors such as **macOS**, but this is only _experimental_.
       rustup default nightly-2020-11-20
       rustup component add llvm-tools-preview
       rustup target add aarch64-unknown-none-softfloat
-      cargo install cargo-binutils
+      cargo install cargo-binutils rustfilt
       ```
 
    2. If you need a fresh install:
@@ -83,7 +83,7 @@ other Unix flavors such as **macOS**, but this is only _experimental_.
 
       source $HOME/.cargo/env
       rustup target add aarch64-unknown-none-softfloat
-      cargo install cargo-binutils
+      cargo install cargo-binutils rustfilt
       ```
 
 3. In case you use `Visual Studio Code`, I strongly recommend installing the [Rust Analyzer extension].
