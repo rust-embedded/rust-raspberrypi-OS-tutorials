@@ -1,4 +1,27 @@
 {
   "editor.formatOnSave": true,
-  "editor.rulers": [100]
+  "editor.rulers": [
+    100
+  ],
+  "rust-analyzer.cargo.features": [
+    "bsp_rpi3"
+  ],
+  "rust-analyzer.cargo.target": "aarch64-unknown-none-softfloat",
+  "rust-analyzer.linkedProjects": [
+    "01_wait_forever/Cargo.toml",
+    "02_runtime_init/Cargo.toml",
+    "03_hacky_hello_world/Cargo.toml",
+    "04_zero_overhead_abstraction/Cargo.toml",
+    "05_safe_globals/Cargo.toml",
+    "06_drivers_gpio_uart/Cargo.toml",
+    "07_uart_chainloader/Cargo.toml",
+    "08_timestamps/Cargo.toml",
+    "09_hw_debug_JTAG/Cargo.toml",
+    "10_privilege_level/Cargo.toml",
+    "11_virtual_mem_part1_identity_mapping/Cargo.toml",
+    "12_exceptions_part1_groundwork/Cargo.toml",
+    "13_integrated_testing/Cargo.toml",
+    "14_exceptions_part2_peripheral_IRQs/Cargo.toml",
+    "15_virtual_mem_part2_mmio_remap/Cargo.toml",
+  ]
 }
