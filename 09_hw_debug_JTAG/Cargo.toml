@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["Andre Richter <andre.o.richter@gmail.com>"]
 edition = "2018"
 
+[profile.release]
+lto = true
+
 # The features section is used to select the target board.
 [features]
 default = []

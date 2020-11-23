@@ -105,7 +105,7 @@ Miniterm 1.0
 diff -uNr 05_safe_globals/Cargo.toml 06_drivers_gpio_uart/Cargo.toml
 --- 05_safe_globals/Cargo.toml
 +++ 06_drivers_gpio_uart/Cargo.toml
-@@ -7,8 +7,8 @@
+@@ -10,8 +10,8 @@
  # The features section is used to select the target board.
  [features]
  default = []
@@ -116,7 +116,7 @@ diff -uNr 05_safe_globals/Cargo.toml 06_drivers_gpio_uart/Cargo.toml
 
  ##--------------------------------------------------------------------------------------------------
  ## Dependencies
-@@ -16,6 +16,9 @@
+@@ -19,6 +19,9 @@
 
  [dependencies]
 

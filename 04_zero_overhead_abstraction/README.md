@@ -13,7 +13,7 @@
 diff -uNr 03_hacky_hello_world/Cargo.toml 04_zero_overhead_abstraction/Cargo.toml
 --- 03_hacky_hello_world/Cargo.toml
 +++ 04_zero_overhead_abstraction/Cargo.toml
-@@ -15,3 +15,8 @@
+@@ -18,3 +18,8 @@
  ##--------------------------------------------------------------------------------------------------
 
  [dependencies]
