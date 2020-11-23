@@ -32,7 +32,7 @@ class Test
         puts "#{INDENT}-------------------------------------------------------------------"
         print INDENT
         print '🦀 '
-        print @output.join('').gsub("\n", "\n#{INDENT}")
+        print @output.join.gsub("\n", "\n#{INDENT}")
     end
 
     def finish(error)

@@ -1938,7 +1938,7 @@ diff -uNr 12_exceptions_part1_groundwork/tests/runner.rb 13_integrated_testing/t
 +        puts "#{INDENT}-------------------------------------------------------------------"
 +        print INDENT
 +        print '🦀 '
-+        print @output.join('').gsub("\n", "\n#{INDENT}")
++        print @output.join.gsub("\n", "\n#{INDENT}")
 +    end
 +
 +    def finish(error)
