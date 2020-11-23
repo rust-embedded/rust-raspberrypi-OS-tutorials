@@ -367,7 +367,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
  /// The output points to the next table.
 @@ -98,36 +105,65 @@
  #[repr(transparent)]
- struct PageDescriptor(InMemoryRegister<u64, STAGE1_PAGE_DESCRIPTOR::Register>);
+ struct PageDescriptor(u64);
 
 +#[derive(Copy, Clone)]
 +enum Granule512MiB {}
@@ -488,7 +488,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
          val.write(
              STAGE1_TABLE_DESCRIPTOR::VALID::True
                  + STAGE1_TABLE_DESCRIPTOR::TYPE::Table
-@@ -207,23 +246,32 @@
+@@ -207,23 +246,33 @@
 
  impl PageDescriptor {
      /// Create an instance.
@@ -507,12 +507,13 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
                  + STAGE1_PAGE_DESCRIPTOR::OUTPUT_ADDR_64KiB.val(shifted),
          );
 
-         Self(val)
+         Self(val.get())
      }
 +
 +    /// Returns the valid bit.
 +    fn is_valid(&self) -> bool {
-+        self.0.is_set(STAGE1_PAGE_DESCRIPTOR::VALID)
++        InMemoryRegister::<u64, STAGE1_PAGE_DESCRIPTOR::Register>::new(self.0)
++            .is_set(STAGE1_PAGE_DESCRIPTOR::VALID)
 +    }
  }
 
@@ -524,10 +525,10 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
      /// Create an instance.
      pub const fn new() -> Self {
          assert!(NUM_TABLES > 0);
-@@ -231,7 +279,55 @@
+@@ -231,7 +280,55 @@
          Self {
-             lvl3: [[PageDescriptor(InMemoryRegister::new(0)); 8192]; NUM_TABLES],
-             lvl2: [TableDescriptor(InMemoryRegister::new(0)); NUM_TABLES],
+             lvl3: [[PageDescriptor(0); 8192]; NUM_TABLES],
+             lvl2: [TableDescriptor(0); NUM_TABLES],
 +            cur_l3_mmio_index: 0,
 +            initialized: false,
 +        }
@@ -580,7 +581,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
      }
  }
 
-@@ -248,28 +344,6 @@
+@@ -248,28 +345,6 @@
      );
  }
 
@@ -609,7 +610,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
  /// Configure various settings of stage 1 of the EL1 translation regime.
  fn configure_translation_control() {
      let ips = ID_AA64MMFR0_EL1.read(ID_AA64MMFR0_EL1::PARange);
-@@ -282,7 +356,7 @@
+@@ -282,7 +357,7 @@
              + TCR_EL1::ORGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
              + TCR_EL1::IRGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
              + TCR_EL1::EPD0::EnableTTBR0Walks
@@ -618,7 +619,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
      );
  }
 
-@@ -290,17 +364,126 @@
+@@ -290,17 +365,126 @@
  // Public Code
  //--------------------------------------------------------------------------------------------------
 
@@ -748,7 +749,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
          // Fail early if translation granule is not supported. Both RPis support it, though.
          if !ID_AA64MMFR0_EL1.matches_all(ID_AA64MMFR0_EL1::TGran64::Supported) {
              return Err("Translation granule not supported in HW");
-@@ -309,11 +492,8 @@
+@@ -309,11 +493,8 @@
          // Prepare the memory attribute indirection register.
          set_up_mair();
 
@@ -761,7 +762,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
 
          configure_translation_control();
 
-@@ -337,6 +517,9 @@
+@@ -337,6 +518,9 @@
  //--------------------------------------------------------------------------------------------------
 
  #[cfg(test)]
@@ -771,7 +772,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
  mod tests {
      use super::*;
      use test_macros::kernel_test;
-@@ -363,7 +546,7 @@
+@@ -363,7 +547,7 @@
      #[kernel_test]
      fn kernel_tables_in_bss() {
          let bss_range = bsp::memory::bss_range_inclusive();

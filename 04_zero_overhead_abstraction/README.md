@@ -20,7 +20,7 @@ diff -uNr 03_hacky_hello_world/Cargo.toml 04_zero_overhead_abstraction/Cargo.tom
 +
 +# Platform specific dependencies
 +[target.'cfg(target_arch = "aarch64")'.dependencies]
-+cortex-a = { version = "4.x.x" }
++cortex-a = { version = "5.x.x" }
 +
 
 diff -uNr 03_hacky_hello_world/src/_arch/aarch64/cpu/smp.rs 04_zero_overhead_abstraction/src/_arch/aarch64/cpu/smp.rs

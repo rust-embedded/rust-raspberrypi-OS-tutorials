@@ -96,14 +96,14 @@ register_bitfields! {u64,
 /// The output points to the next table.
 #[derive(Copy, Clone)]
 #[repr(transparent)]
-struct TableDescriptor(InMemoryRegister<u64, STAGE1_TABLE_DESCRIPTOR::Register>);
+struct TableDescriptor(u64);
 
 /// A page descriptor with 64 KiB aperture.
 ///
 /// The output points to physical memory.
 #[derive(Copy, Clone)]
 #[repr(transparent)]
-struct PageDescriptor(InMemoryRegister<u64, STAGE1_PAGE_DESCRIPTOR::Register>);
+struct PageDescriptor(u64);
 
 #[derive(Copy, Clone)]
 enum Granule512MiB {}
@@ -206,7 +206,7 @@ impl convert::From<usize> for TableDescriptor {
                 + STAGE1_TABLE_DESCRIPTOR::NEXT_LEVEL_TABLE_ADDR_64KiB.val(shifted as u64),
         );
 
-        TableDescriptor(val)
+        TableDescriptor(val.get())
     }
 }
 
@@ -258,12 +258,13 @@ impl PageDescriptor {
                 + STAGE1_PAGE_DESCRIPTOR::OUTPUT_ADDR_64KiB.val(shifted),
         );
 
-        Self(val)
+        Self(val.get())
     }
 
     /// Returns the valid bit.
     fn is_valid(&self) -> bool {
-        self.0.is_set(STAGE1_PAGE_DESCRIPTOR::VALID)
+        InMemoryRegister::<u64, STAGE1_PAGE_DESCRIPTOR::Register>::new(self.0)
+            .is_set(STAGE1_PAGE_DESCRIPTOR::VALID)
     }
 }
 
@@ -277,8 +278,8 @@ impl<const NUM_TABLES: usize> FixedSizeTranslationTable<{ NUM_TABLES }> {
         assert!(NUM_TABLES > 0);
 
         Self {
-            lvl3: [[PageDescriptor(InMemoryRegister::new(0)); 8192]; NUM_TABLES],
-            lvl2: [TableDescriptor(InMemoryRegister::new(0)); NUM_TABLES],
+            lvl3: [[PageDescriptor(0); 8192]; NUM_TABLES],
+            lvl2: [TableDescriptor(0); NUM_TABLES],
             cur_l3_mmio_index: 0,
             initialized: false,
         }

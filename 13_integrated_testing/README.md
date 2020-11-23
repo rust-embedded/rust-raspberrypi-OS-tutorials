@@ -801,16 +801,16 @@ diff -uNr 12_exceptions_part1_groundwork/Cargo.toml 13_integrated_testing/Cargo.
  ##--------------------------------------------------------------------------------------------------
 
  [dependencies]
-+qemu-exit = "1.0.x"
++qemu-exit = "1.x.x"
 +test-types = { path = "test-types" }
 
  # Optional dependencies
--register = { version = "0.5.x", optional = true }
-+register = { version = "0.5.x", features = ["no_std_unit_tests"], optional = true }
+-register = { version = "1.x.x", optional = true }
++register = { version = "1.x.x", features = ["no_std_unit_tests"], optional = true }
 
  # Platform specific dependencies
  [target.'cfg(target_arch = "aarch64")'.dependencies]
- cortex-a = { version = "4.x.x" }
+ cortex-a = { version = "5.x.x" }
 
 +##--------------------------------------------------------------------------------------------------
 +## Testing

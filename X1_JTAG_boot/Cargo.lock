@@ -2,9 +2,9 @@
 # It is not intended for manual editing.
 [[package]]
 name = "cortex-a"
-version = "4.0.0"
+version = "4.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eda21b8ec67b82099401559fe28cea4508eb1e33217b4dacf60ba22e39b486b1"
+checksum = "a389514c1229e12a03c0e8de8b357671b71e1d1bdab3a4f5b591abc94169cba8"
 dependencies = [
  "register",
 ]

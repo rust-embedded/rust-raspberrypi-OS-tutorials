@@ -17,9 +17,9 @@ bsp_rpi4 = ["register"]
 [dependencies]
 
 # Optional dependencies
-register = { version = "0.5.x", optional = true }
+register = { version = "1.x.x", optional = true }
 
 # Platform specific dependencies
 [target.'cfg(target_arch = "aarch64")'.dependencies]
-cortex-a = { version = "4.x.x" }
+cortex-a = { version = "5.x.x" }
 

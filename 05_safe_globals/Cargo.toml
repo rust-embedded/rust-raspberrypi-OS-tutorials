@@ -18,5 +18,5 @@ bsp_rpi4 = []
 
 # Platform specific dependencies
 [target.'cfg(target_arch = "aarch64")'.dependencies]
-cortex-a = { version = "4.x.x" }
+cortex-a = { version = "5.x.x" }
 

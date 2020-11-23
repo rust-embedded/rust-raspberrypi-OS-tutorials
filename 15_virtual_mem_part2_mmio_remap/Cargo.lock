@@ -2,9 +2,9 @@
 # It is not intended for manual editing.
 [[package]]
 name = "cortex-a"
-version = "4.0.0"
+version = "5.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eda21b8ec67b82099401559fe28cea4508eb1e33217b4dacf60ba22e39b486b1"
+checksum = "626fdbb0f6fa1e6be6df0e94795998894c4ad08d3221e12209a6c0b4f546a0c4"
 dependencies = [
  "register",
 ]
@@ -46,18 +46,18 @@ dependencies = [
 
 [[package]]
 name = "register"
-version = "0.5.1"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "deaba5b0e477d21f61a57504bb5cef4a1e86de30300b457d38971c1cfc98b815"
+checksum = "185fff3cbc031a1d17b86a980f8014002da35f9187cf4370728e0eb1eeff6829"
 dependencies = [
  "tock-registers",
 ]
 
 [[package]]
 name = "syn"
-version = "1.0.48"
+version = "1.0.50"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cc371affeffc477f42a221a1e4297aedcea33d47d19b61455588bd9d8f6b19ac"
+checksum = "443b4178719c5a851e1bde36ce12da21d74a0e60b4d982ec3385a933c812f0f6"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -80,9 +80,9 @@ version = "0.1.0"
 
 [[package]]
 name = "tock-registers"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70323afdb8082186c0986da0e10f6e4ed103d681c921c00597e98d9806dac20f"
+checksum = "f521a79accce68c417c9c77ce22108056b626126da1932f7e2e9b5bbffee0cea"
 
 [[package]]
 name = "unicode-xid"

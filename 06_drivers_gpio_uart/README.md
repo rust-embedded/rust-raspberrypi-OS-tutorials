@@ -121,11 +121,11 @@ diff -uNr 05_safe_globals/Cargo.toml 06_drivers_gpio_uart/Cargo.toml
  [dependencies]
 
 +# Optional dependencies
-+register = { version = "0.5.x", optional = true }
++register = { version = "1.x.x", optional = true }
 +
  # Platform specific dependencies
  [target.'cfg(target_arch = "aarch64")'.dependencies]
- cortex-a = { version = "4.x.x" }
+ cortex-a = { version = "5.x.x" }
 
 diff -uNr 05_safe_globals/Makefile 06_drivers_gpio_uart/Makefile
 --- 05_safe_globals/Makefile
