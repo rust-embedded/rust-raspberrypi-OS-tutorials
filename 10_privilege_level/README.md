@@ -225,8 +225,14 @@ Minipush 1.0
 diff -uNr 09_hw_debug_JTAG/src/_arch/aarch64/cpu.rs 10_privilege_level/src/_arch/aarch64/cpu.rs
 --- 09_hw_debug_JTAG/src/_arch/aarch64/cpu.rs
 +++ 10_privilege_level/src/_arch/aarch64/cpu.rs
-@@ -21,18 +21,59 @@
- #[naked]
+@@ -18,22 +18,65 @@
+ /// # Safety
+ ///
+ /// - Linker script must ensure to place this function where it is expected by the target machine.
+-/// - We have to hope that the compiler omits any stack pointer usage before the stack pointer is
+-///   actually set (`SP.set()`).
++/// - We have to hope that the compiler omits any stack pointer usage, because we are not setting up
++///   a stack for EL2.
  #[no_mangle]
  pub unsafe fn _start() -> ! {
 -    use crate::runtime_init;
@@ -252,6 +258,8 @@ diff -uNr 09_hw_debug_JTAG/src/_arch/aarch64/cpu.rs 10_privilege_level/src/_arch
 +/// - The HW state of EL1 must be prepared in a sound way.
 +/// - Exception return from EL2 must must continue execution in EL1 with
 +///   `runtime_init::runtime_init()`.
++/// - We have to hope that the compiler omits any stack pointer usage, because we are not setting up
++///   a stack for EL2.
 +#[inline(always)]
 +unsafe fn el2_to_el1_transition() -> ! {
 +    use crate::runtime_init;

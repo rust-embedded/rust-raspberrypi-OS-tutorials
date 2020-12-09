@@ -53,7 +53,7 @@ diff -uNr 03_hacky_hello_world/src/_arch/aarch64/cpu/smp.rs 04_zero_overhead_abs
 diff -uNr 03_hacky_hello_world/src/_arch/aarch64/cpu.rs 04_zero_overhead_abstraction/src/_arch/aarch64/cpu.rs
 --- 03_hacky_hello_world/src/_arch/aarch64/cpu.rs
 +++ 04_zero_overhead_abstraction/src/_arch/aarch64/cpu.rs
-@@ -4,8 +4,34 @@
+@@ -4,8 +4,35 @@
 
  //! Architectural processor code.
 
@@ -72,8 +72,9 @@ diff -uNr 03_hacky_hello_world/src/_arch/aarch64/cpu.rs 04_zero_overhead_abstrac
 +///
 +/// # Safety
 +///
-+/// - Linker script must ensure to place this function at `0x80_000`.
-+#[naked]
++/// - Linker script must ensure to place this function where it is expected by the target machine.
++/// - We have to hope that the compiler omits any stack pointer usage before the stack pointer is
++///   actually set (`SP.set()`).
 +#[no_mangle]
 +pub unsafe fn _start() -> ! {
 +    use crate::runtime_init;
@@ -90,7 +91,7 @@ diff -uNr 03_hacky_hello_world/src/_arch/aarch64/cpu.rs 04_zero_overhead_abstrac
 
  //--------------------------------------------------------------------------------------------------
  // Public Code
-@@ -14,13 +40,7 @@
+@@ -14,13 +41,7 @@
  /// Pause execution on the core.
  #[inline(always)]
  pub fn wait_forever() -> ! {

@@ -311,7 +311,7 @@ Minipush 1.0
 diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/cpu.rs 15_virtual_mem_part2_mmio_remap/src/_arch/aarch64/cpu.rs
 --- 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/cpu.rs
 +++ 15_virtual_mem_part2_mmio_remap/src/_arch/aarch64/cpu.rs
-@@ -68,7 +68,7 @@
+@@ -71,7 +71,7 @@
      ELR_EL2.set(runtime_init::runtime_init as *const () as u64);
 
      // Set up SP_EL1 (stack pointer), which will be used by EL1 once we "return" to it.

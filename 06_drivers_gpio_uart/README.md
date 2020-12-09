@@ -183,7 +183,7 @@ diff -uNr 05_safe_globals/Makefile 06_drivers_gpio_uart/Makefile
 diff -uNr 05_safe_globals/src/_arch/aarch64/cpu.rs 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs
 --- 05_safe_globals/src/_arch/aarch64/cpu.rs
 +++ 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs
-@@ -37,6 +37,17 @@
+@@ -38,6 +38,17 @@
  // Public Code
  //--------------------------------------------------------------------------------------------------
 

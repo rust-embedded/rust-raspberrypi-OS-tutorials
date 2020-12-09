@@ -115,8 +115,8 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
 diff -uNr 07_uart_chainloader/src/_arch/aarch64/cpu.rs 08_timestamps/src/_arch/aarch64/cpu.rs
 --- 07_uart_chainloader/src/_arch/aarch64/cpu.rs
 +++ 08_timestamps/src/_arch/aarch64/cpu.rs
-@@ -21,12 +21,12 @@
- #[naked]
+@@ -22,12 +22,12 @@
+ ///   actually set (`SP.set()`).
  #[no_mangle]
  pub unsafe fn _start() -> ! {
 -    use crate::relocate;
@@ -130,7 +130,7 @@ diff -uNr 07_uart_chainloader/src/_arch/aarch64/cpu.rs 08_timestamps/src/_arch/a
      } else {
          // If not core0, infinitely wait for events.
          wait_forever()
-@@ -39,15 +39,6 @@
+@@ -40,15 +40,6 @@
 
  pub use asm::nop;
 
@@ -146,7 +146,7 @@ diff -uNr 07_uart_chainloader/src/_arch/aarch64/cpu.rs 08_timestamps/src/_arch/a
  /// Pause execution on the core.
  #[inline(always)]
  pub fn wait_forever() -> ! {
-@@ -55,19 +46,3 @@
+@@ -56,19 +47,3 @@
          asm::wfe()
      }
  }

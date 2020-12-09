@@ -17,8 +17,9 @@ use cortex_a::{asm, regs::*};
 ///
 /// # Safety
 ///
-/// - Linker script must ensure to place this function at `0x80_000`.
-#[naked]
+/// - Linker script must ensure to place this function where it is expected by the target machine.
+/// - We have to hope that the compiler omits any stack pointer usage before the stack pointer is
+///   actually set (`SP.set()`).
 #[no_mangle]
 pub unsafe fn _start() -> ! {
     use crate::relocate;

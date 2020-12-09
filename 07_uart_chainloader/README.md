@@ -179,8 +179,8 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
 diff -uNr 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs 07_uart_chainloader/src/_arch/aarch64/cpu.rs
 --- 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs
 +++ 07_uart_chainloader/src/_arch/aarch64/cpu.rs
-@@ -21,12 +21,12 @@
- #[naked]
+@@ -22,12 +22,12 @@
+ ///   actually set (`SP.set()`).
  #[no_mangle]
  pub unsafe fn _start() -> ! {
 -    use crate::runtime_init;
@@ -194,7 +194,7 @@ diff -uNr 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs 07_uart_chainloader/src/
      } else {
          // If not core0, infinitely wait for events.
          wait_forever()
-@@ -55,3 +55,19 @@
+@@ -56,3 +56,19 @@
          asm::wfe()
      }
  }
