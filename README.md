@@ -65,29 +65,23 @@ other Unix flavors such as **macOS**, but this is only _experimental_.
 
 1. [Install Docker][install_docker].
 1. Ensure your user account is in the [docker group].
-1. Install a suitable `Rust` toolchain:
+1. Prepare the `Rust` toolchain. Most of it will be handled on first use through the
+   [rust-toolchain](rust-toolchain) file. What's left for us to do is:
    1. If you already have a version of Rust installed:
       ```bash
-      rustup toolchain add nightly-2020-11-20
-      rustup default nightly-2020-11-20
-      rustup component add llvm-tools-preview
-      rustup target add aarch64-unknown-none-softfloat
       cargo install cargo-binutils rustfilt
       ```
 
-   2. If you need a fresh install:
+   1. If you need to install Rust from scratch:
       ```bash
-      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- \
-          --default-toolchain nightly-2020-11-20                           \
-          --component llvm-tools-preview
+      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
       source $HOME/.cargo/env
-      rustup target add aarch64-unknown-none-softfloat
       cargo install cargo-binutils rustfilt
       ```
 
-3. In case you use `Visual Studio Code`, I strongly recommend installing the [Rust Analyzer extension].
-4. If you are **NOT** running Linux, some `Ruby` gems are needed as well:
+1. In case you use `Visual Studio Code`, I strongly recommend installing the [Rust Analyzer extension].
+1. If you are **NOT** running Linux, some `Ruby` gems are needed as well:
 
    ```bash
    sudo gem install bundler

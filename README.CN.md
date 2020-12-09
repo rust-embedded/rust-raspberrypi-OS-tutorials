@@ -52,26 +52,19 @@ _带上我最诚挚的问候,<br>Andre ([@andre-richter])_
 3. 安装正确的`Rust`工具链:
    1. 如果你已经安装了一个版本的Rust:
       ```bash
-      rustup toolchain add nightly-2020-11-20
-      rustup default nightly-2020-11-20
-      rustup component add llvm-tools-preview
-      rustup target add aarch64-unknown-none-softfloat
       cargo install cargo-binutils rustfilt
       ```
 
-   2. 如果你想要全新安装:
+   1. 如果你想要全新安装:
       ```bash
-      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- \
-          --default-toolchain nightly-2020-11-20                           \
-          --component llvm-tools-preview
+      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
       source $HOME/.cargo/env
-      rustup target add aarch64-unknown-none-softfloat
       cargo install cargo-binutils rustfilt
       ```
 
-4. 如果你使用 `Visual Studio Code`，我强烈推荐你安装[Rust Analyzer 扩展]。
-5. 如果你使用的**不是**Linux，那么你还需要安装一些`Ruby` gems。
+1. 如果你使用 `Visual Studio Code`，我强烈推荐你安装[Rust Analyzer 扩展]。
+1. 如果你使用的**不是**Linux，那么你还需要安装一些`Ruby` gems。
 
 ```bash
 sudo gem install bundler
