@@ -33,6 +33,7 @@ jobs:
           npm install prettier
       - name: Set up Rust nightly
         run: |
+          rm rust-toolchain
           rustup self update
           rustup toolchain install nightly --component rustfmt clippy
           rustup default nightly
