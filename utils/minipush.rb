@@ -28,7 +28,7 @@ class MiniPush < MiniTerm
     # The three characters signaling the request token are expected to arrive as the last three
     # characters _at the end_ of a character stream (e.g. after a header print from Miniload).
     def wait_for_binary_request
-        Timeout.timeout(7) do
+        Timeout.timeout(30) do
             loop do
                 received = @target_serial.readpartial(4096)
 
