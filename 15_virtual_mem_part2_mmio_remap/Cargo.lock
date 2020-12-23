@@ -2,9 +2,9 @@
 # It is not intended for manual editing.
 [[package]]
 name = "cortex-a"
-version = "5.0.0"
+version = "5.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "626fdbb0f6fa1e6be6df0e94795998894c4ad08d3221e12209a6c0b4f546a0c4"
+checksum = "dc37a4862a4f5b40df96f5e0f3bd4ce6a1bd8bb59a965cd476844673faf83896"
 dependencies = [
  "register",
 ]
@@ -37,27 +37,27 @@ checksum = "b73ae13954572c7ca0ec48ba9fe6a59c0392066eba62f8cb384ffd5addf538c5"
 
 [[package]]
 name = "quote"
-version = "1.0.7"
+version = "1.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa563d17ecb180e500da1cfd2b028310ac758de548efdd203e18f283af693f37"
+checksum = "991431c3519a3f36861882da93630ce66b52918dcf1b8e2fd66b397fc96f28df"
 dependencies = [
  "proc-macro2",
 ]
 
 [[package]]
 name = "register"
-version = "1.0.0"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "185fff3cbc031a1d17b86a980f8014002da35f9187cf4370728e0eb1eeff6829"
+checksum = "faf386c0c48fea132b7fbbf71c32d1b1d62e7c59043bbabdd15c9ed9f254517e"
 dependencies = [
  "tock-registers",
 ]
 
 [[package]]
 name = "syn"
-version = "1.0.50"
+version = "1.0.55"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "443b4178719c5a851e1bde36ce12da21d74a0e60b4d982ec3385a933c812f0f6"
+checksum = "a571a711dddd09019ccc628e1b17fe87c59b09d513c06c026877aa708334f37a"
 dependencies = [
  "proc-macro2",
  "quote",
