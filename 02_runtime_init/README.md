@@ -23,6 +23,46 @@
 ## Diff to previous
 ```diff
 
+diff -uNr 01_wait_forever/Cargo.toml 02_runtime_init/Cargo.toml
+--- 01_wait_forever/Cargo.toml
++++ 02_runtime_init/Cargo.toml
+@@ -4,6 +4,9 @@
+ authors = ["Andre Richter <andre.o.richter@gmail.com>"]
+ edition = "2018"
+
++[profile.release]
++lto = true
++
+ # The features section is used to select the target board.
+ [features]
+ default = []
+
+diff -uNr 01_wait_forever/src/_arch/aarch64/cpu.rs 02_runtime_init/src/_arch/aarch64/cpu.rs
+--- 01_wait_forever/src/_arch/aarch64/cpu.rs
++++ 02_runtime_init/src/_arch/aarch64/cpu.rs
+@@ -6,3 +6,21 @@
+
+ // Assembly counterpart to this file.
+ global_asm!(include_str!("cpu.S"));
++
++//--------------------------------------------------------------------------------------------------
++// Public Code
++//--------------------------------------------------------------------------------------------------
++
++/// Pause execution on the core.
++#[inline(always)]
++pub fn wait_forever() -> ! {
++    unsafe {
++        loop {
++            #[rustfmt::skip]
++            asm!(
++                "wfe",
++                options(nomem, nostack, preserves_flags)
++            );
++        }
++    }
++}
+
 diff -uNr 01_wait_forever/src/_arch/aarch64/cpu.S 02_runtime_init/src/_arch/aarch64/cpu.S
 --- 01_wait_forever/src/_arch/aarch64/cpu.S
 +++ 02_runtime_init/src/_arch/aarch64/cpu.S
@@ -190,6 +230,23 @@ diff -uNr 01_wait_forever/src/memory.rs 02_runtime_init/src/memory.rs
 +        ptr = ptr.offset(1);
 +    }
 +}
+
+diff -uNr 01_wait_forever/src/panic_wait.rs 02_runtime_init/src/panic_wait.rs
+--- 01_wait_forever/src/panic_wait.rs
++++ 02_runtime_init/src/panic_wait.rs
+@@ -4,10 +4,10 @@
+
+ //! A panic handler that infinitely waits.
+
+-// use crate::cpu;
++use crate::cpu;
+ use core::panic::PanicInfo;
+
+ #[panic_handler]
+ fn panic(_info: &PanicInfo) -> ! {
+-    unimplemented!()
++    cpu::wait_forever()
+ }
 
 diff -uNr 01_wait_forever/src/runtime_init.rs 02_runtime_init/src/runtime_init.rs
 --- 01_wait_forever/src/runtime_init.rs
