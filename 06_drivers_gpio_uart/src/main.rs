@@ -147,13 +147,6 @@ fn kernel_main() -> ! {
     use console::interface::All;
     use driver::interface::DriverManager;
 
-    // Wait for user to hit Enter.
-    loop {
-        if bsp::console::console().read_char() == '\n' {
-            break;
-        }
-    }
-
     println!("[0] Booting on: {}", bsp::board_name());
 
     println!("[1] Drivers loaded:");

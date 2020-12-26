@@ -244,7 +244,8 @@ $ make chainboot
 Minipush 1.0
 
 [MP] ⏳ Waiting for /dev/ttyUSB0
-[MP] ✅ Connected
+[MP] ✅ Serial connected
+[MP] 🔌 Please power the target now
  __  __ _      _ _                 _
 |  \/  (_)_ _ (_) |   ___  __ _ __| |
 | |\/| | | ' \| | |__/ _ \/ _` / _` |
@@ -256,18 +257,18 @@ Minipush 1.0
 [MP] ⏩ Pushing 67 KiB ========================================🦀 100% 33 KiB/s Time: 00:00:02
 [ML] Loaded! Executing the payload now
 
-[    3.041355] Booting on: Raspberry Pi 3
-[    3.042438] MMU online:
-[    3.043609]       -----------------------------------------------------------------------------------------------------------------
-[    3.049466]               Virtual                      Physical            Size       Attr                    Entity
-[    3.055323]       -----------------------------------------------------------------------------------------------------------------
-[    3.061183]       0x000070000..0x00007FFFF --> 0x000070000..0x00007FFFF |  64 KiB | C   RW XN | Kernel boot-core stack
-[    3.066476]       0x000080000..0x00008FFFF --> 0x000080000..0x00008FFFF |  64 KiB | C   RO X  | Kernel code and RO data
-[    3.071812]       0x000090000..0x0001AFFFF --> 0x000090000..0x0001AFFFF |   1 MiB | C   RW XN | Kernel data and bss
-[    3.076975]       0x1F0000000..0x1F000FFFF --> 0x03F200000..0x03F20FFFF |  64 KiB | Dev RW XN | BCM GPIO
-[    3.081658]                                                                                   | BCM PL011 UART
-[    3.086606]       0x1F0010000..0x1F001FFFF --> 0x03F000000..0x03F00FFFF |  64 KiB | Dev RW XN | BCM Peripheral Interrupt Controller
-[    3.092462]       -----------------------------------------------------------------------------------------------------------------
+[    3.064756] Booting on: Raspberry Pi 3
+[    3.065839] MMU online:
+[    3.067010]       -----------------------------------------------------------------------------------------------------------------
+[    3.072868]               Virtual                      Physical            Size       Attr                    Entity
+[    3.078725]       -----------------------------------------------------------------------------------------------------------------
+[    3.084585]       0x000070000..0x00007FFFF --> 0x000070000..0x00007FFFF |  64 KiB | C   RW XN | Kernel boot-core stack
+[    3.089877]       0x000080000..0x00008FFFF --> 0x000080000..0x00008FFFF |  64 KiB | C   RO X  | Kernel code and RO data
+[    3.095213]       0x000090000..0x0001BFFFF --> 0x000090000..0x0001BFFFF |   1 MiB | C   RW XN | Kernel data and bss
+[    3.100376]       0x1F0000000..0x1F000FFFF --> 0x03F200000..0x03F20FFFF |  64 KiB | Dev RW XN | BCM GPIO
+[    3.105060]                                                                                   | BCM PL011 UART
+[    3.110008]       0x1F0010000..0x1F001FFFF --> 0x03F000000..0x03F00FFFF |  64 KiB | Dev RW XN | BCM Peripheral Interrupt Controller
+[    3.115863]       -----------------------------------------------------------------------------------------------------------------
 ```
 
 Raspberry Pi 4:
@@ -278,7 +279,8 @@ $ BSP=rpi4 make chainboot
 Minipush 1.0
 
 [MP] ⏳ Waiting for /dev/ttyUSB0
-[MP] ✅ Connected
+[MP] ✅ Serial connected
+[MP] 🔌 Please power the target now
  __  __ _      _ _                 _
 |  \/  (_)_ _ (_) |   ___  __ _ __| |
 | |\/| | | ' \| | |__/ _ \/ _` / _` |
@@ -290,19 +292,19 @@ Minipush 1.0
 [MP] ⏩ Pushing 74 KiB ========================================🦀 100% 24 KiB/s Time: 00:00:03
 [ML] Loaded! Executing the payload now
 
-[    3.376642] Booting on: Raspberry Pi 4
-[    3.377030] MMU online:
-[    3.378202]       -----------------------------------------------------------------------------------------------------------------
-[    3.384059]               Virtual                      Physical            Size       Attr                    Entity
-[    3.389916]       -----------------------------------------------------------------------------------------------------------------
-[    3.395775]       0x000070000..0x00007FFFF --> 0x000070000..0x00007FFFF |  64 KiB | C   RW XN | Kernel boot-core stack
-[    3.401069]       0x000080000..0x00008FFFF --> 0x000080000..0x00008FFFF |  64 KiB | C   RO X  | Kernel code and RO data
-[    3.406404]       0x000090000..0x0001AFFFF --> 0x000090000..0x0001AFFFF |   1 MiB | C   RW XN | Kernel data and bss
-[    3.411566]       0x1F0000000..0x1F000FFFF --> 0x0FE200000..0x0FE20FFFF |  64 KiB | Dev RW XN | BCM GPIO
-[    3.416251]                                                                                   | BCM PL011 UART
-[    3.421198]       0x1F0010000..0x1F001FFFF --> 0x0FF840000..0x0FF84FFFF |  64 KiB | Dev RW XN | GICD
-[    3.425709]                                                                                   | GICC
-[    3.430221]       -----------------------------------------------------------------------------------------------------------------
+[    3.379342] Booting on: Raspberry Pi 4
+[    3.379731] MMU online:
+[    3.380902]       -----------------------------------------------------------------------------------------------------------------
+[    3.386759]               Virtual                      Physical            Size       Attr                    Entity
+[    3.392616]       -----------------------------------------------------------------------------------------------------------------
+[    3.398475]       0x000070000..0x00007FFFF --> 0x000070000..0x00007FFFF |  64 KiB | C   RW XN | Kernel boot-core stack
+[    3.403768]       0x000080000..0x00008FFFF --> 0x000080000..0x00008FFFF |  64 KiB | C   RO X  | Kernel code and RO data
+[    3.409104]       0x000090000..0x0001BFFFF --> 0x000090000..0x0001BFFFF |   1 MiB | C   RW XN | Kernel data and bss
+[    3.414267]       0x1F0000000..0x1F000FFFF --> 0x0FE200000..0x0FE20FFFF |  64 KiB | Dev RW XN | BCM GPIO
+[    3.418951]                                                                                   | BCM PL011 UART
+[    3.423898]       0x1F0010000..0x1F001FFFF --> 0x0FF840000..0x0FF84FFFF |  64 KiB | Dev RW XN | GICD
+[    3.428409]                                                                                   | GICC
+[    3.432921]       -----------------------------------------------------------------------------------------------------------------
 ```
 
 ## Diff to previous

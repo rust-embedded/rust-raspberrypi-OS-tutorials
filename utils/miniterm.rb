@@ -29,11 +29,12 @@ class MiniTerm
     end
 
     def wait_for_serial
-        loop do
-            break if serial_connected?
+        return if serial_connected?
 
-            print "\r[#{@name_short}] ⏳ Waiting for #{@target_serial_name}"
+        puts "[#{@name_short}] ⏳ Waiting for #{@target_serial_name}"
+        loop do
             sleep(1)
+            break if serial_connected?
         end
     end
 
@@ -45,12 +46,10 @@ class MiniTerm
         # Ensure all output is immediately flushed to the device.
         @target_serial.sync = true
     rescue Errno::EACCES => e
-        puts
         puts "[#{@name_short}] 🚫 #{e.message} - Maybe try with 'sudo'"
         exit
     else
-        puts
-        puts "[#{@name_short}] ✅ Connected"
+        puts "[#{@name_short}] ✅ Serial connected"
     end
 
     def terminal

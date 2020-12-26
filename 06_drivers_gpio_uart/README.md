@@ -49,7 +49,7 @@ init_uart_clock=48000000
     - [bootcode.bin](https://github.com/raspberrypi/firmware/raw/master/boot/bootcode.bin)
     - [fixup.dat](https://github.com/raspberrypi/firmware/raw/master/boot/fixup.dat)
     - [start.elf](https://github.com/raspberrypi/firmware/raw/master/boot/start.elf)
-4. Run `make` and copy the [kernel8.img](kernel8.img) onto the SD card.
+4. Run `make`.
 
 ### Pi 4
 
@@ -57,15 +57,15 @@ init_uart_clock=48000000
     - [fixup4.dat](https://github.com/raspberrypi/firmware/raw/master/boot/fixup4.dat)
     - [start4.elf](https://github.com/raspberrypi/firmware/raw/master/boot/start4.elf)
     - [bcm2711-rpi-4-b.dtb](https://github.com/raspberrypi/firmware/raw/master/boot/bcm2711-rpi-4-b.dtb)
-4. Run `BSP=rpi4 make` and copy the [kernel8.img](kernel8.img) onto the SD card.
+4. Run `BSP=rpi4 make`.
+
 
 _**Note**: Should it not work on your RPi4, try renaming `start4.elf` to `start.elf` (without the 4)
 on the SD card._
 
 ### Common again
 
-5. Insert the SD card into the RPi and connect the USB serial to your host PC.
-    - Wiring diagram at [top-level README](../README.md#usb-serial).
+5. Copy the `kernel8.img` onto the SD card and insert it back into the RPi.
 6. Run the `miniterm` target, which opens the UART device on the host:
 
 ```console
@@ -81,14 +81,16 @@ $ make miniterm
 $ DEV_SERIAL=/dev/tty.usbserial-0001 make miniterm
 ```
 
-7. Hit <kbd>Enter</kbd> after seeing "`Connected`" to kick off the kernel boot process and observe
-   the output:
+7. Connect the USB serial to your host PC.
+    - Wiring diagram at [top-level README](../README.md#-usb-serial-output).
+    - Make sure that you **DID NOT** connect the power pin of the USB serial. Only RX/TX and GND.
+8. Connect the RPi to the (USB) power cable and observe the output:
 
 ```console
 Miniterm 1.0
 
-
-[MT] ✅ Connected
+[MT] ⏳ Waiting for /dev/ttyUSB0
+[MT] ✅ Serial connected
 [0] Booting on: Raspberry Pi 3
 [1] Drivers loaded:
       1. BCM GPIO
@@ -1212,7 +1214,7 @@ diff -uNr 05_safe_globals/src/main.rs 06_drivers_gpio_uart/src/main.rs
  mod memory;
  mod panic_wait;
  mod print;
-@@ -116,16 +126,53 @@
+@@ -116,16 +126,46 @@
  /// # Safety
  ///
  /// - Only a single core must be active and running this function.
@@ -1238,13 +1240,6 @@ diff -uNr 05_safe_globals/src/main.rs 06_drivers_gpio_uart/src/main.rs
 +fn kernel_main() -> ! {
 +    use console::interface::All;
 +    use driver::interface::DriverManager;
-+
-+    // Wait for user to hit Enter.
-+    loop {
-+        if bsp::console::console().read_char() == '\n' {
-+            break;
-+        }
-+    }
 +
 +    println!("[0] Booting on: {}", bsp::board_name());
 +

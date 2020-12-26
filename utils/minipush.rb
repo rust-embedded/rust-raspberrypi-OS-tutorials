@@ -17,7 +17,7 @@ class MiniPush < MiniTerm
     def initialize(serial_name, binary_image_path)
         super(serial_name)
 
-        @name_short = 'MP'
+        @name_short = 'MP' # override
         @binary_image_path = binary_image_path
         @binary_size = nil
         @binary_image = nil
@@ -28,11 +28,13 @@ class MiniPush < MiniTerm
     # The three characters signaling the request token are expected to arrive as the last three
     # characters _at the end_ of a character stream (e.g. after a header print from Miniload).
     def wait_for_binary_request
-        Timeout.timeout(30) do
-            loop do
-                received = @target_serial.readpartial(4096)
+        puts "[#{@name_short}] 🔌 Please power the target now"
 
-                raise ConnectionError if received.nil?
+        # Timeout for the request token starts after the first sign of life was received.
+        received = @target_serial.readpartial(4096)
+        Timeout.timeout(10) do
+            loop do
+                raise ProtocolError if received.nil?
 
                 if received.chars.last(3) == ["\u{3}", "\u{3}", "\u{3}"]
                     # Print the last chunk minus the request token.
@@ -41,6 +43,8 @@ class MiniPush < MiniTerm
                 end
 
                 print received
+
+                received = @target_serial.readpartial(4096)
             end
         end
     end
@@ -70,18 +74,20 @@ class MiniPush < MiniTerm
         end
     end
 
-    # When the serial is still powered.
-    def handle_protocol_error
+    # override
+    def handle_reconnect
         connetion_reset
 
         puts
         puts "[#{@name_short}] ⚡ " \
-             "#{'Protocol Error: Remove and insert the USB serial again'.light_red}"
+             "#{'Connection or protocol Error: '.light_red}" \
+             "#{'Remove power and USB serial. Reinsert serial first, then power'.light_red}"
         sleep(1) while serial_connected?
     end
 
     public
 
+    # override
     def run
         open_serial
         wait_for_binary_request
@@ -89,11 +95,8 @@ class MiniPush < MiniTerm
         send_size
         send_binary
         terminal
-    rescue ConnectionError, EOFError, Errno::EIO
+    rescue ConnectionError, EOFError, Errno::EIO, ProtocolError, Timeout::Error
         handle_reconnect
-        retry
-    rescue ProtocolError, Timeout::Error
-        handle_protocol_error
         retry
     rescue StandardError => e
         handle_unexpected(e)

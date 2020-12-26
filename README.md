@@ -120,11 +120,10 @@ provided container, please refer to the repository's [docker](docker) folder.
 ## 📟 USB Serial Output
 
 Since the kernel developed in the tutorials runs on the real hardware, it is highly recommended to
-get a USB serial debug cable to get the full experience. The cable also powers the Raspberry once
-you connect it, so you don't need extra power over the dedicated power-USB.
+get a USB serial cable to get the full experience.
 
 - You can find USB-to-serial cables that should work right away at [\[1\]] [\[2\]].
-- You connect it to the GPIO pins `14/15` as shown below.
+- You connect it to `GND` and GPIO pins `14/15` as shown below.
 - [Tutorial 6](06_drivers_gpio_uart) is the first where you can use it. Check it out for
   instructions on how to prepare the SD card to boot your self-made kernel from it.
 - Starting with [tutorial 7](07_uart_chainloader), booting kernels on your Raspberry is getting

@@ -399,7 +399,8 @@ $ make chainboot
 Minipush 1.0
 
 [MP] ⏳ Waiting for /dev/ttyUSB0
-[MP] ✅ Connected
+[MP] ✅ Serial connected
+[MP] 🔌 Please power the target now
  __  __ _      _ _                 _
 |  \/  (_)_ _ (_) |   ___  __ _ __| |
 | |\/| | | ' \| | |__/ _ \/ _` / _` |
@@ -411,29 +412,29 @@ Minipush 1.0
 [MP] ⏩ Pushing 64 KiB ========================================🦀 100% 32 KiB/s Time: 00:00:02
 [ML] Loaded! Executing the payload now
 
-[    3.006343] Booting on: Raspberry Pi 3
-[    3.007428] MMU online. Special regions:
-[    3.009339]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
-[    3.013422]       0x3f000000 - 0x4000ffff |  16 MiB | Dev RW PXN | Device MMIO
-[    3.016985] Current privilege level: EL1
-[    3.018895] Exception handling state:
-[    3.020676]       Debug:  Masked
-[    3.022240]       SError: Masked
-[    3.023804]       IRQ:    Masked
-[    3.025368]       FIQ:    Masked
-[    3.026931] Architectural timer resolution: 52 ns
-[    3.029234] Drivers loaded:
-[    3.030580]       1. BCM GPIO
-[    3.032014]       2. BCM PL011 UART
-[    3.033708] Timer test, spinning for 1 second
-[    4.035837]
-[    4.035841] Trying to write to address 8 GiB...
-[    4.038006] ************************************************
-[    4.040785] Whoa! We recovered from a synchronous exception!
-[    4.043565] ************************************************
-[    4.046345]
-[    4.047040] Let's try again
-[    4.048387] Trying to write to address 9 GiB...
+[    3.090618] Booting on: Raspberry Pi 3
+[    3.091701] MMU online. Special regions:
+[    3.093610]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
+[    3.097688]       0x3f000000 - 0x4000ffff |  16 MiB | Dev RW PXN | Device MMIO
+[    3.101246] Current privilege level: EL1
+[    3.103155] Exception handling state:
+[    3.104934]       Debug:  Masked
+[    3.106496]       SError: Masked
+[    3.108058]       IRQ:    Masked
+[    3.109619]       FIQ:    Masked
+[    3.111181] Architectural timer resolution: 52 ns
+[    3.113481] Drivers loaded:
+[    3.114826]       1. BCM GPIO
+[    3.116257]       2. BCM PL011 UART
+[    3.117950] Timer test, spinning for 1 second
+[    4.120076]
+[    4.120079] Trying to write to address 8 GiB...
+[    4.122242] ************************************************
+[    4.125018] Whoa! We recovered from a synchronous exception!
+[    4.127795] ************************************************
+[    4.130571]
+[    4.131266] Let's try again
+[    4.132611] Trying to write to address 9 GiB...
 
 Kernel panic:
 
@@ -442,7 +443,7 @@ FAR_EL1: 0x0000000240000000
 ESR_EL1: 0x96000004
       Exception Class         (EC) : 0x25 - Data Abort, current EL
       Instr Specific Syndrome (ISS): 0x4
-ELR_EL1: 0x0000000000080db4
+ELR_EL1: 0x0000000000081454
 SPSR_EL1: 0x600003c5
       Flags:
             Negative (N): Not set
@@ -457,22 +458,22 @@ SPSR_EL1: 0x600003c5
       Illegal Execution State (IL): Not set
 
 General purpose register:
-      x0 : 0x0000000000000000         x1 : 0x00000000000858f6
-      x2 : 0x0000000000000026         x3 : 0x0000000000082a0c
-      x4 : 0x000000000007fc7c         x5 : 0x0000000000000003
-      x6 : 0x0000000000000000         x7 : 0x7f91bc052b2b0208
-      x8 : 0x0000000240000000         x9 : 0x00000000000858f6
-      x10: 0x000000000000041d         x11: 0x000000003f201000
-      x12: 0x0000000000000019         x13: 0x000000000007fc7d
-      x14: 0x000000000007fdc8         x15: 0x0000000000000040
-      x16: 0x0000000000000000         x17: 0x0000000000000040
-      x18: 0x9e06782800000028         x19: 0x000000003b9aca00
-      x20: 0x00000000000003e8         x21: 0x0000000000082f58
-      x22: 0x00000000000830cc         x23: 0x0000000000090008
-      x24: 0x00000000000f4240         x25: 0x0000000000085248
-      x26: 0x00000000000856e0         x27: 0x00000000000857c0
-      x28: 0x00000000000830cc         x29: 0x0000000000085530
-      lr : 0x0000000000080da8
+      x0 : 0x0000000000000000         x1 : 0x0000000000085726
+      x2 : 0x0000000000000026         x3 : 0x0000000000083bf0
+      x4 : 0x0000000000000003         x5 : 0xfb4f101900000000
+      x6 : 0x0000000000000000         x7 : 0x7e9198052b2b0200
+      x8 : 0x0000000240000000         x9 : 0x000000003f201000
+      x10: 0x0000000000000019         x11: 0x0000000000000000
+      x12: 0x0000000000000006         x13: 0x0000000000000031
+      x14: 0x000000000007fc2d         x15: 0x0000000000000000
+      x16: 0x0000000000000040         x17: 0xb557f006f276cfb6
+      x18: 0x0000000000000003         x19: 0x0000000000090008
+      x20: 0x0000000000085510         x21: 0x000000003b9aca00
+      x22: 0x00000000000003e8         x23: 0x000000000008160c
+      x24: 0x0000000000082264         x25: 0x00000000000f4240
+      x26: 0xffffffffc4653600         x27: 0x00000000000855f0
+      x28: 0x0000000000083f84         x29: 0x0000000000086810
+      lr : 0x0000000000081448
 ```
 
 ## Diff to previous

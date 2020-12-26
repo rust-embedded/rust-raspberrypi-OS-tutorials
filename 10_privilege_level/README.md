@@ -192,7 +192,8 @@ $ make chainboot
 Minipush 1.0
 
 [MP] ⏳ Waiting for /dev/ttyUSB0
-[MP] ✅ Connected
+[MP] ✅ Serial connected
+[MP] 🔌 Please power the target now
  __  __ _      _ _                 _
 |  \/  (_)_ _ (_) |   ___  __ _ __| |
 | |\/| | | ' \| | |__/ _ \/ _` / _` |
@@ -201,22 +202,22 @@ Minipush 1.0
            Raspberry Pi 3
 
 [ML] Requesting binary
-[MP] ⏩ Pushing 15 KiB =========================================🦀 100% 0 KiB/s Time: 00:00:00
+[MP] ⏩ Pushing 13 KiB =========================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
-[    0.703812] Booting on: Raspberry Pi 3
-[    0.704900] Current privilege level: EL1
-[    0.706811] Exception handling state:
-[    0.708592]       Debug:  Masked
-[    0.710156]       SError: Masked
-[    0.711719]       IRQ:    Masked
-[    0.713283]       FIQ:    Masked
-[    0.714848] Architectural timer resolution: 52 ns
-[    0.717149] Drivers loaded:
-[    0.718496]       1. BCM GPIO
-[    0.719929]       2. BCM PL011 UART
-[    0.721623] Timer test, spinning for 1 second
-[    1.723753] Echoing input now
+[    0.637617] Booting on: Raspberry Pi 3
+[    0.638737] Current privilege level: EL1
+[    0.640645] Exception handling state:
+[    0.642424]       Debug:  Masked
+[    0.643986]       SError: Masked
+[    0.645548]       IRQ:    Masked
+[    0.647110]       FIQ:    Masked
+[    0.648672] Architectural timer resolution: 52 ns
+[    0.650971] Drivers loaded:
+[    0.652316]       1. BCM GPIO
+[    0.653748]       2. BCM PL011 UART
+[    0.655440] Timer test, spinning for 1 second
+[    1.657567] Echoing input now
 ```
 
 ## Diff to previous

@@ -15,7 +15,8 @@ $ make chainboot
 Minipush 1.0
 
 [MP] ⏳ Waiting for /dev/ttyUSB0
-[MP] ✅ Connected
+[MP] ✅ Serial connected
+[MP] 🔌 Please power the target now
  __  __ _      _ _                 _
 |  \/  (_)_ _ (_) |   ___  __ _ __| |
 | |\/| | | ' \| | |__/ _ \/ _` / _` |
@@ -24,19 +25,18 @@ Minipush 1.0
            Raspberry Pi 3
 
 [ML] Requesting binary
-[MP] ⏩ Pushing 12 KiB =========================================🦀 100% 0 KiB/s Time: 00:00:00
+[MP] ⏩ Pushing 11 KiB =========================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
-[    0.586140] Booting on: Raspberry Pi 3
-[    0.587227] Architectural timer resolution: 52 ns
-[    0.589530] Drivers loaded:
-[    0.590876]       1. BCM GPIO
-[    0.592309]       2. BCM PL011 UART
-[W   0.594005] Spin duration smaller than architecturally supported, skipping
-[    0.597392] Spinning for 1 second
-[    1.599001] Spinning for 1 second
-[    2.599872] Spinning for 1 second
-
+[    0.543941] Booting on: Raspberry Pi 3
+[    0.545059] Architectural timer resolution: 52 ns
+[    0.547358] Drivers loaded:
+[    0.548703]       1. BCM GPIO
+[    0.550135]       2. BCM PL011 UART
+[W   0.551828] Spin duration smaller than architecturally supported, skipping
+[    0.555212] Spinning for 1 second
+[    1.556818] Spinning for 1 second
+[    2.557690] Spinning for 1 second
 ```
 
 ## Diff to previous
@@ -753,5 +753,18 @@ diff -uNr 07_uart_chainloader/src/time.rs 08_timestamps/src/time.rs
 +        fn spin_for(&self, duration: Duration);
 +    }
 +}
+
+diff -uNr 07_uart_chainloader/update.sh 08_timestamps/update.sh
+--- 07_uart_chainloader/update.sh
++++ 08_timestamps/update.sh
+@@ -1,8 +0,0 @@
+-#!/usr/bin/env bash
+-
+-cd ../06_drivers_gpio_uart
+-BSP=rpi4 make
+-cp kernel8.img ../07_uart_chainloader/demo_payload_rpi4.img
+-make
+-cp kernel8.img ../07_uart_chainloader/demo_payload_rpi3.img
+-rm kernel8.img
 
 ```

@@ -665,7 +665,8 @@ $ make chainboot
 Minipush 1.0
 
 [MP] ⏳ Waiting for /dev/ttyUSB0
-[MP] ✅ Connected
+[MP] ✅ Serial connected
+[MP] 🔌 Please power the target now
  __  __ _      _ _                 _
 |  \/  (_)_ _ (_) |   ___  __ _ __| |
 | |\/| | | ' \| | |__/ _ \/ _` / _` |
@@ -677,25 +678,25 @@ Minipush 1.0
 [MP] ⏩ Pushing 66 KiB ========================================🦀 100% 33 KiB/s Time: 00:00:02
 [ML] Loaded! Executing the payload now
 
-[    3.134937] Booting on: Raspberry Pi 3
-[    3.136023] MMU online. Special regions:
-[    3.137934]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
-[    3.142017]       0x3f000000 - 0x4000ffff |  16 MiB | Dev RW PXN | Device MMIO
-[    3.145579] Current privilege level: EL1
-[    3.147490] Exception handling state:
-[    3.149271]       Debug:  Masked
-[    3.150835]       SError: Masked
-[    3.152398]       IRQ:    Unmasked
-[    3.154049]       FIQ:    Masked
-[    3.155613] Architectural timer resolution: 52 ns
-[    3.157915] Drivers loaded:
-[    3.159262]       1. BCM GPIO
-[    3.160695]       2. BCM PL011 UART
-[    3.162389]       3. BCM Interrupt Controller
-[    3.164518] Registered IRQ handlers:
-[    3.166255]       Peripheral handler:
-[    3.168038]              57. BCM PL011 UART
-[    3.170078] Echoing input now
+[    3.203172] Booting on: Raspberry Pi 3
+[    3.204255] MMU online. Special regions:
+[    3.206164]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
+[    3.210242]       0x3f000000 - 0x4000ffff |  16 MiB | Dev RW PXN | Device MMIO
+[    3.213800] Current privilege level: EL1
+[    3.215709] Exception handling state:
+[    3.217487]       Debug:  Masked
+[    3.219049]       SError: Masked
+[    3.220611]       IRQ:    Unmasked
+[    3.222260]       FIQ:    Masked
+[    3.223822] Architectural timer resolution: 52 ns
+[    3.226121] Drivers loaded:
+[    3.227466]       1. BCM GPIO
+[    3.228898]       2. BCM PL011 UART
+[    3.230590]       3. BCM Interrupt Controller
+[    3.232716] Registered IRQ handlers:
+[    3.234451]       Peripheral handler:
+[    3.236232]              57. BCM PL011 UART
+[    3.238269] Echoing input now
 ```
 
 Raspberry Pi 4:
@@ -706,7 +707,8 @@ $ BSP=rpi4 make chainboot
 Minipush 1.0
 
 [MP] ⏳ Waiting for /dev/ttyUSB0
-[MP] ✅ Connected
+[MP] ✅ Serial connected
+[MP] 🔌 Please power the target now
  __  __ _      _ _                 _
 |  \/  (_)_ _ (_) |   ___  __ _ __| |
 | |\/| | | ' \| | |__/ _ \/ _` / _` |
@@ -718,25 +720,25 @@ Minipush 1.0
 [MP] ⏩ Pushing 73 KiB ========================================🦀 100% 24 KiB/s Time: 00:00:03
 [ML] Loaded! Executing the payload now
 
-[    3.413865] Booting on: Raspberry Pi 4
-[    3.414255] MMU online. Special regions:
-[    3.416166]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
-[    3.420249]       0xfe000000 - 0xff84ffff |  24 MiB | Dev RW PXN | Device MMIO
-[    3.423811] Current privilege level: EL1
-[    3.425722] Exception handling state:
-[    3.427503]       Debug:  Masked
-[    3.429067]       SError: Masked
-[    3.430630]       IRQ:    Unmasked
-[    3.432281]       FIQ:    Masked
-[    3.433845] Architectural timer resolution: 18 ns
-[    3.436147] Drivers loaded:
-[    3.437494]       1. BCM GPIO
-[    3.438927]       2. BCM PL011 UART
-[    3.440621]       3. GICv2 (ARM Generic Interrupt Controller v2)
-[    3.443575] Registered IRQ handlers:
-[    3.445312]       Peripheral handler:
-[    3.447096]             153. BCM PL011 UART
-[    3.449136] Echoing input now
+[    3.486234] Booting on: Raspberry Pi 4
+[    3.486623] MMU online. Special regions:
+[    3.488532]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
+[    3.492610]       0xfe000000 - 0xff84ffff |  24 MiB | Dev RW PXN | Device MMIO
+[    3.496167] Current privilege level: EL1
+[    3.498076] Exception handling state:
+[    3.499855]       Debug:  Masked
+[    3.501417]       SError: Masked
+[    3.502979]       IRQ:    Unmasked
+[    3.504628]       FIQ:    Masked
+[    3.506189] Architectural timer resolution: 18 ns
+[    3.508489] Drivers loaded:
+[    3.509834]       1. BCM GPIO
+[    3.511266]       2. BCM PL011 UART
+[    3.512958]       3. GICv2 (ARM Generic Interrupt Controller v2)
+[    3.515908] Registered IRQ handlers:
+[    3.517643]       Peripheral handler:
+[    3.519425]             153. BCM PL011 UART
+[    3.521463] Echoing input now
 ```
 
 ## Diff to previous

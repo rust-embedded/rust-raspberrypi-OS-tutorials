@@ -146,7 +146,8 @@ class DevTool
     def make_xtra
         return if @user_has_supplied_crates
 
-        puts 'Make Xtra crates'.light_blue
+        puts 'Make Xtra stuff'.light_blue
+        system('cd 07_uart_chainloader && bash update.sh')
         system('cd X1_JTAG_boot && bash update.sh')
     end
 

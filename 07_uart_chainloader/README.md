@@ -25,10 +25,13 @@ Our chainloader is called `MiniLoad` and is inspired by [raspbootin].
 
 You can try it with this tutorial already:
 1. Depending on your target hardware:`make` or `BSP=rpi4 make`.
-2. Copy `kernel8.img` to the SD card.
-3. Execute `make chainboot` or `BSP=rpi4 make chainboot`.
-4. Now plug in the USB Serial.
-5. Observe the loader fetching a kernel over `UART`:
+1. Copy `kernel8.img` to the SD card.
+1. Execute `make chainboot` or `BSP=rpi4 make chainboot`.
+1. Connect the USB serial to your host PC.
+    - Wiring diagram at [top-level README](../README.md#-usb-serial-output).
+    - Make sure that you **DID NOT** connect the power pin of the USB serial. Only RX/TX and GND.
+1. Connect the RPi to the (USB) power cable.
+1. Observe the loader fetching a kernel over `UART`:
 
 > ❗ **NOTE**: By default, `make chainboot` tries to connect to `/dev/ttyUSB0`.
 > Should the USB serial on your system have a different name, you have to provide it explicitly. For
@@ -44,7 +47,8 @@ $ make chainboot
 Minipush 1.0
 
 [MP] ⏳ Waiting for /dev/ttyUSB0
-[MP] ✅ Connected
+[MP] ✅ Serial connected
+[MP] 🔌 Please power the target now
  __  __ _      _ _                 _
 |  \/  (_)_ _ (_) |   ___  __ _ __| |
 | |\/| | | ' \| | |__/ _ \/ _` / _` |
@@ -53,7 +57,7 @@ Minipush 1.0
            Raspberry Pi 3
 
 [ML] Requesting binary
-[MP] ⏩ Pushing 7 KiB ==========================================🦀 100% 0 KiB/s Time: 00:00:00
+[MP] ⏩ Pushing 6 KiB ==========================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
 [0] Booting on: Raspberry Pi 3
@@ -429,18 +433,23 @@ diff -uNr 06_drivers_gpio_uart/src/main.rs 07_uart_chainloader/src/main.rs
  mod runtime_init;
  mod synchronization;
 
-@@ -144,35 +148,52 @@
+@@ -144,28 +148,52 @@
 
  /// The main function running after the early init.
  fn kernel_main() -> ! {
 +    use bsp::console::console;
      use console::interface::All;
 -    use driver::interface::DriverManager;
+-
+-    println!("[0] Booting on: {}", bsp::board_name());
 
--    // Wait for user to hit Enter.
--    loop {
--        if bsp::console::console().read_char() == '\n' {
--            break;
+-    println!("[1] Drivers loaded:");
+-    for (i, driver) in bsp::driver::driver_manager()
+-        .all_device_drivers()
+-        .iter()
+-        .enumerate()
+-    {
+-        println!("      {}. {}", i + 1, driver.compatible());
 +    println!(" __  __ _      _ _                 _ ");
 +    println!("|  \\/  (_)_ _ (_) |   ___  __ _ __| |");
 +    println!("| |\\/| | | ' \\| | |__/ _ \\/ _` / _` |");
@@ -458,8 +467,17 @@ diff -uNr 06_drivers_gpio_uart/src/main.rs 07_uart_chainloader/src/main.rs
 +    // Notify `Minipush` to send the binary.
 +    for _ in 0..3 {
 +        console().write_char(3 as char);
-+    }
-+
+     }
+
+-    println!(
+-        "[2] Chars written: {}",
+-        bsp::console::console().chars_written()
+-    );
+-    println!("[3] Echoing input now");
+-
+-    loop {
+-        let c = bsp::console::console().read_char();
+-        bsp::console::console().write_char(c);
 +    // Read the binary's size.
 +    let mut size: u32 = u32::from(console().read_char() as u8);
 +    size |= u32::from(console().read_char() as u8) << 8;
@@ -475,34 +493,15 @@ diff -uNr 06_drivers_gpio_uart/src/main.rs 07_uart_chainloader/src/main.rs
 +        // Read the kernel byte by byte.
 +        for i in 0..size {
 +            core::ptr::write_volatile(kernel_addr.offset(i as isize), console().read_char() as u8)
-         }
++        }
      }
-
--    println!("[0] Booting on: {}", bsp::board_name());
++
 +    println!("[ML] Loaded! Executing the payload now\n");
 +    console().flush();
-
--    println!("[1] Drivers loaded:");
--    for (i, driver) in bsp::driver::driver_manager()
--        .all_device_drivers()
--        .iter()
--        .enumerate()
--    {
--        println!("      {}. {}", i + 1, driver.compatible());
--    }
++
 +    // Use black magic to get a function pointer.
 +    let kernel: fn() -> ! = unsafe { core::mem::transmute(kernel_addr) };
-
--    println!(
--        "[2] Chars written: {}",
--        bsp::console::console().chars_written()
--    );
--    println!("[3] Echoing input now");
--
--    loop {
--        let c = bsp::console::console().read_char();
--        bsp::console::console().write_char(c);
--    }
++
 +    // Jump to loaded kernel!
 +    kernel()
  }
@@ -582,5 +581,19 @@ diff -uNr 06_drivers_gpio_uart/src/runtime_init.rs 07_uart_chainloader/src/runti
 +#[no_mangle]
  pub unsafe fn runtime_init() -> ! {
      zero_bss();
+
+
+diff -uNr 06_drivers_gpio_uart/update.sh 07_uart_chainloader/update.sh
+--- 06_drivers_gpio_uart/update.sh
++++ 07_uart_chainloader/update.sh
+@@ -0,0 +1,8 @@
++#!/usr/bin/env bash
++
++cd ../06_drivers_gpio_uart
++BSP=rpi4 make
++cp kernel8.img ../07_uart_chainloader/demo_payload_rpi4.img
++make
++cp kernel8.img ../07_uart_chainloader/demo_payload_rpi3.img
++rm kernel8.img
 
 ```

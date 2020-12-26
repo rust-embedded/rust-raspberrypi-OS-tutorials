@@ -157,7 +157,8 @@ $ make jtagboot
 Minipush 1.0
 
 [MP] ⏳ Waiting for /dev/ttyUSB0
-[MP] ✅ Connected
+[MP] ✅ Serial connected
+[MP] 🔌 Please power the target now
  __  __ _      _ _                 _
 |  \/  (_)_ _ (_) |   ___  __ _ __| |
 | |\/| | | ' \| | |__/ _ \/ _` / _` |
@@ -166,10 +167,10 @@ Minipush 1.0
            Raspberry Pi 3
 
 [ML] Requesting binary
-[MP] ⏩ Pushing 8 KiB ==========================================🦀 100% 0 KiB/s Time: 00:00:00
+[MP] ⏩ Pushing 7 KiB ==========================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
-[    0.372110] Parking CPU core. Please connect over JTAG now.
+[    0.394532] Parking CPU core. Please connect over JTAG now.
 ```
 
 It is important to keep the USB serial connected and the terminal with the `jtagboot` open and
