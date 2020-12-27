@@ -4,7 +4,6 @@
 
 //! A panic handler that infinitely waits.
 
-// use crate::cpu;
 use core::panic::PanicInfo;
 
 #[panic_handler]
