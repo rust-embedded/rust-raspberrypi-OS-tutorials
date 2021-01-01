@@ -222,7 +222,7 @@ diff -uNr 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs 07_uart_chainloader/src/
 diff -uNr 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 --- 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -268,6 +268,15 @@
+@@ -270,6 +270,15 @@
          // readability.
          self.inner.lock(|inner| fmt::Write::write_fmt(inner, args))
      }
@@ -238,7 +238,7 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 0
  }
 
  impl console::interface::Read for PL011Uart {
-@@ -278,18 +287,20 @@
+@@ -280,18 +289,20 @@
                  cpu::nop();
              }
 

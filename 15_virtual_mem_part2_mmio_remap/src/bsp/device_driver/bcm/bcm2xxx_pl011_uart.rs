@@ -231,12 +231,14 @@ impl PL011UartInner {
 
     /// Set up baud rate and characteristics.
     ///
-    /// The calculation for the BRD given a target rate of 2300400 and a clock set to 48 MHz is:
-    /// `(48_000_000/16)/230400 = 13,02083`. `13` goes to the `IBRD` (integer field). The `FBRD`
-    /// (fractional field) is only 6 bits so `0,0208*64 = 1,3312 rounded to 1` will give the best
-    /// approximation we can get. A 5 % error margin is acceptable for UART and we're now at 0,01 %.
+    /// This results in 8N1 and 576000 baud (we set the clock to 48 MHz in config.txt).
     ///
-    /// This results in 8N1 and 230400 baud (we set the clock to 48 MHz in config.txt).
+    /// The calculation for the BRD given a target rate of 576000 and a clock set to 48 MHz is:
+    /// `(48_000_000 / 16) / 576000 = 5.2083`. `5` goes to the `IBRD` (integer field).
+    ///
+    /// The `FBRD` (fractional field) is only 6 bits so `0.2083 * 64 = 13.3 rounded to 13` will
+    /// give the best approximation we can get. A 5 % error margin is acceptable for UART and we're
+    /// now at 0.01 %.
     ///
     /// # Safety
     ///
@@ -250,8 +252,8 @@ impl PL011UartInner {
         self.registers.CR.set(0);
 
         self.registers.ICR.write(ICR::ALL::CLEAR);
-        self.registers.IBRD.write(IBRD::IBRD.val(13));
-        self.registers.FBRD.write(FBRD::FBRD.val(1));
+        self.registers.IBRD.write(IBRD::IBRD.val(5));
+        self.registers.FBRD.write(FBRD::FBRD.val(13));
         self.registers
             .LCRH
             .write(LCRH::WLEN::EightBit + LCRH::FEN::FifosEnabled); // 8N1 + Fifo on

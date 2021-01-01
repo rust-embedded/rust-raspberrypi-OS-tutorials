@@ -41,7 +41,7 @@ class MiniTerm
     def open_serial
         wait_for_serial
 
-        @target_serial = SerialPort.new(@target_serial_name, 230_400, 8, 1, SerialPort::NONE)
+        @target_serial = SerialPort.new(@target_serial_name, 576_000, 8, 1, SerialPort::NONE)
 
         # Ensure all output is immediately flushed to the device.
         @target_serial.sync = true

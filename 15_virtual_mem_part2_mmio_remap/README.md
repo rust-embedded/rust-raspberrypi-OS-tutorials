@@ -1304,10 +1304,10 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
      inner: IRQSafeNullLock<PL011UartInner>,
      irq_number: bsp::device_driver::IRQNumber,
  }
-@@ -232,7 +237,15 @@
-     /// approximation we can get. A 5 modulo error margin is acceptable for UART and we're now at 0,01 modulo.
-     ///
-     /// This results in 8N1 and 230400 baud (we set the clock to 48 MHz in config.txt).
+@@ -234,7 +239,15 @@
+     /// The `FBRD` (fractional field) is only 6 bits so `0.2083 * 64 = 13.3 rounded to 13` will
+     /// give the best approximation we can get. A 5 modulo error margin is acceptable for UART and we're
+     /// now at 0.01 modulo.
 -    pub fn init(&mut self) {
 +    ///
 +    /// # Safety
@@ -1321,7 +1321,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
          // Turn it off temporarily.
          self.registers.CR.set(0);
 
-@@ -249,6 +262,8 @@
+@@ -251,6 +264,8 @@
          self.registers
              .CR
              .write(CR::UARTEN::Enabled + CR::TXE::Enabled + CR::RXE::Enabled);
@@ -1330,7 +1330,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
      }
 
      /// Send a character.
-@@ -318,13 +333,18 @@
+@@ -320,13 +335,18 @@
      ///
      /// # Safety
      ///
@@ -1352,7 +1352,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
              irq_number,
          }
      }
-@@ -341,7 +361,14 @@
+@@ -343,7 +363,14 @@
      }
 
      unsafe fn init(&self) -> Result<(), &'static str> {
@@ -1368,7 +1368,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
 
          Ok(())
      }
-@@ -360,6 +387,16 @@
+@@ -362,6 +389,16 @@
 
          Ok(())
      }
