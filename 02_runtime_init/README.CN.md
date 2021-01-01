@@ -105,7 +105,7 @@ diff -uNr 01_wait_forever/src/memory.rs 02_runtime_init/src/memory.rs
 @@ -0,0 +1,29 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Memory Management.
 +
@@ -139,7 +139,7 @@ diff -uNr 01_wait_forever/src/runtime_init.rs 02_runtime_init/src/runtime_init.r
 @@ -0,0 +1,58 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Rust runtime initialization code.
 +

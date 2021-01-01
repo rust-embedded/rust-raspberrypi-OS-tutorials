@@ -253,7 +253,7 @@ diff -uNr 04_zero_overhead_abstraction/src/synchronization.rs 05_safe_globals/sr
 @@ -0,0 +1,76 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Synchronization primitives.
 +//!

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
-// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
+// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
 
 /// Call the function provided by parameter `\handler` after saving the exception context. Provide
 /// the context as the first parameter to '\handler'.

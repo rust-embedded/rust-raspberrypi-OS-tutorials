@@ -306,7 +306,7 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_mem_part
 @@ -0,0 +1,333 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Memory Management Unit Driver.
 +//!
@@ -665,7 +665,7 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory/mmu.rs 11_virtual_mem_pa
 @@ -0,0 +1,88 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! BSP Memory Management Unit.
 +
@@ -918,7 +918,7 @@ diff -uNr 10_privilege_level/src/memory/mmu.rs 11_virtual_mem_part1_identity_map
 @@ -0,0 +1,199 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Memory Management Unit.
 +//!

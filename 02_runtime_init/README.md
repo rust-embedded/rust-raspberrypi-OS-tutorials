@@ -123,7 +123,7 @@ diff -uNr 01_wait_forever/src/bsp/raspberrypi/memory.rs 02_runtime_init/src/bsp/
 @@ -0,0 +1,37 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! BSP Memory Management.
 +
@@ -202,7 +202,7 @@ diff -uNr 01_wait_forever/src/memory.rs 02_runtime_init/src/memory.rs
 @@ -0,0 +1,30 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Memory Management.
 +
@@ -234,11 +234,10 @@ diff -uNr 01_wait_forever/src/memory.rs 02_runtime_init/src/memory.rs
 diff -uNr 01_wait_forever/src/panic_wait.rs 02_runtime_init/src/panic_wait.rs
 --- 01_wait_forever/src/panic_wait.rs
 +++ 02_runtime_init/src/panic_wait.rs
-@@ -4,10 +4,10 @@
+@@ -4,9 +4,10 @@
 
  //! A panic handler that infinitely waits.
 
--// use crate::cpu;
 +use crate::cpu;
  use core::panic::PanicInfo;
 
@@ -254,7 +253,7 @@ diff -uNr 01_wait_forever/src/runtime_init.rs 02_runtime_init/src/runtime_init.r
 @@ -0,0 +1,38 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Rust runtime initialization code.
 +

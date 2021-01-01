@@ -1140,7 +1140,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
 +++ 15_virtual_mem_part2_mmio_remap/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
 @@ -2,12 +2,14 @@
  //
- // Copyright (c) 2020 Andre Richter <andre.o.richter@gmail.com>
+ // Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
 
 -//! Peripheral Interrupt regsler Driver.
 +//! Peripheral Interrupt Controller Driver.
@@ -1695,7 +1695,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs 15_v
 --- 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs
 +++ 15_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory.rs
 @@ -3,9 +3,41 @@
- // Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
+ // Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
 
  //! BSP Memory Management.
 +//!
@@ -1943,7 +1943,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/common.rs 15_virtual_mem_part2
 @@ -0,0 +1,21 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! General purpose code.
 +
@@ -2089,7 +2089,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/memory/mmu/mapping_record.rs 1
 @@ -0,0 +1,221 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! A record of mapped pages.
 +
@@ -2315,7 +2315,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/memory/mmu/types.rs 15_virtual
 @@ -0,0 +1,283 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Memory Management Unit Types.
 +
@@ -2601,7 +2601,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/memory/mmu.rs 15_virtual_mem_p
 --- 14_exceptions_part2_peripheral_IRQs/src/memory/mmu.rs
 +++ 15_virtual_mem_part2_mmio_remap/src/memory/mmu.rs
 @@ -3,23 +3,18 @@
- // Copyright (c) 2020 Andre Richter <andre.o.richter@gmail.com>
+ // Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
 
  //! Memory Management Unit.
 -//!

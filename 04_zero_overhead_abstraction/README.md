@@ -29,7 +29,7 @@ diff -uNr 03_hacky_hello_world/src/_arch/aarch64/cpu/smp.rs 04_zero_overhead_abs
 @@ -0,0 +1,22 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Architectural symmetric multiprocessing.
 +
@@ -114,7 +114,7 @@ diff -uNr 03_hacky_hello_world/src/_arch/aarch64/cpu.S 04_zero_overhead_abstract
 @@ -1,21 +0,0 @@
 -// SPDX-License-Identifier: MIT OR Apache-2.0
 -//
--// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
+-// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
 -
 -.section ".text._start"
 -
@@ -140,7 +140,7 @@ diff -uNr 03_hacky_hello_world/src/bsp/raspberrypi/cpu.rs 04_zero_overhead_abstr
 @@ -0,0 +1,12 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! BSP Processor code.
 +
@@ -197,7 +197,7 @@ diff -uNr 03_hacky_hello_world/src/cpu/smp.rs 04_zero_overhead_abstraction/src/c
 @@ -0,0 +1,10 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Symmetric multiprocessing.
 +
