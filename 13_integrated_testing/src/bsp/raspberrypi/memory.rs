@@ -27,6 +27,19 @@ extern "Rust" {
 /// The board's memory map.
 #[rustfmt::skip]
 pub(super) mod map {
+    /// The inclusive end address of the memory map.
+    ///
+    /// End address + 1 must be power of two.
+    ///
+    /// # Note
+    ///
+    /// RPi3 and RPi4 boards can have different amounts of RAM. To make our code lean for
+    /// educational purposes, we set the max size of the address space to 4 GiB regardless of board.
+    /// This way, we can map the entire range that we need (end of MMIO for RPi4) in one take.
+    ///
+    /// However, making this trade-off has the downside of making it possible for the CPU to assert a
+    /// physical address that is not backed by any DRAM (e.g. accessing an address close to 4 GiB on
+    /// an RPi3 that comes with 1 GiB of RAM). This would result in a crash or other kind of error.
     pub const END_INCLUSIVE:       usize = 0xFFFF_FFFF;
 
     pub const BOOT_CORE_STACK_END: usize = 0x8_0000;

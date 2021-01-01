@@ -990,7 +990,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs 13_integ
 diff -uNr 12_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu.rs 13_integrated_testing/src/_arch/aarch64/memory/mmu.rs
 --- 12_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu.rs
 +++ 13_integrated_testing/src/_arch/aarch64/memory/mmu.rs
-@@ -331,3 +331,40 @@
+@@ -341,3 +341,40 @@
          Ok(())
      }
  }
@@ -1053,7 +1053,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/bsp/raspberrypi/console.rs 13_integ
 diff -uNr 12_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs 13_integrated_testing/src/bsp/raspberrypi/memory/mmu.rs
 --- 12_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs
 +++ 13_integrated_testing/src/bsp/raspberrypi/memory/mmu.rs
-@@ -71,3 +71,46 @@
+@@ -76,3 +76,46 @@
  pub fn virt_mem_layout() -> &'static KernelVirtualLayout<{ NUM_MEM_RANGES }> {
      &LAYOUT
  }
@@ -1469,7 +1469,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/main.rs 13_integrated_testing/src/m
 -    // For demo purposes, the exception handler will catch the faulting 8 GiB address and allow
 -    // execution to continue.
 -    info!("");
--    info!("Trying to write to address 8 GiB...");
+-    info!("Trying to read from address 8 GiB...");
 -    let mut big_addr: u64 = 8 * 1024 * 1024 * 1024;
 -    unsafe { core::ptr::read_volatile(big_addr as *mut u64) };
 -
@@ -1480,7 +1480,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/main.rs 13_integrated_testing/src/m
 -    info!("Let's try again");
 -
 -    // Now use address 9 GiB. The exception handler won't forgive us this time.
--    info!("Trying to write to address 9 GiB...");
+-    info!("Trying to read from address 9 GiB...");
 -    big_addr = 9 * 1024 * 1024 * 1024;
 -    unsafe { core::ptr::read_volatile(big_addr as *mut u64) };
 -

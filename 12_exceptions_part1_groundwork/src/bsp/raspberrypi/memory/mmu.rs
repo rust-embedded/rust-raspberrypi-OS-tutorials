@@ -63,8 +63,13 @@ fn mmio_range_inclusive() -> RangeInclusive<usize> {
 //--------------------------------------------------------------------------------------------------
 
 /// Return the address space size in bytes.
+///
+/// Guarantees size to be a power of two.
 pub const fn addr_space_size() -> usize {
-    memory_map::END_INCLUSIVE + 1
+    let size = memory_map::END_INCLUSIVE + 1;
+    assert!(size.is_power_of_two());
+
+    size
 }
 
 /// Return a reference to the virtual memory layout.

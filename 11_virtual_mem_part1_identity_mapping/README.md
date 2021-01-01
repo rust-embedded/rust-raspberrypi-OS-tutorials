@@ -140,7 +140,6 @@ struct FixedSizeTranslationTable<const NUM_TABLES: usize> {
     lvl2: [TableDescriptor; NUM_TABLES],
 }
 
-/// Usually evaluates to 1 GiB for RPi3 and 4 GiB for RPi 4.
 const NUM_LVL2_TABLES: usize = bsp::memory::mmu::addr_space_size() >> FIVETWELVE_MIB_SHIFT;
 type ArchTranslationTable = FixedSizeTranslationTable<NUM_LVL2_TABLES>;
 
@@ -205,7 +204,7 @@ virtual addresses:
 - Since we identity map the whole `Device MMIO` region, it is accessible by asserting its physical
   base address (`0x3F20_1000` or `0xFA20_1000` depending on which RPi you use) after the `MMU` is
   turned on.
-- Additionally, it is also mapped into the last `64 KiB` entry of the `lvl3` table, making it
+- Additionally, it is also mapped into the last `64 KiB` slot in the first `512 MiB`, making it
   accessible through base address `0x1FFF_1000`.
 
 The following block diagram visualizes the underlying translation for the second mapping.
@@ -303,7 +302,7 @@ Minipush 1.0
 diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/memory/mmu.rs
 --- 10_privilege_level/src/_arch/aarch64/memory/mmu.rs
 +++ 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/memory/mmu.rs
-@@ -0,0 +1,333 @@
+@@ -0,0 +1,343 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -343,6 +342,12 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_mem_part
 +// A level 3 page descriptor, as per ARMv8-A Architecture Reference Manual Figure D5-17.
 +register_bitfields! {u64,
 +    STAGE1_PAGE_DESCRIPTOR [
++        /// Unprivileged execute-never.
++        UXN      OFFSET(54) NUMBITS(1) [
++            False = 0,
++            True = 1
++        ],
++
 +        /// Privileged execute-never.
 +        PXN      OFFSET(53) NUMBITS(1) [
 +            False = 0,
@@ -416,7 +421,6 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_mem_part
 +    lvl2: [TableDescriptor; NUM_TABLES],
 +}
 +
-+/// Usually evaluates to 1 GiB for RPi3 and 4 GiB for RPi 4.
 +const NUM_LVL2_TABLES: usize = bsp::memory::mmu::addr_space_size() >> FIVETWELVE_MIB_SHIFT;
 +type ArchTranslationTable = FixedSizeTranslationTable<NUM_LVL2_TABLES>;
 +
@@ -500,12 +504,15 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_mem_part
 +            AccessPermissions::ReadWrite => STAGE1_PAGE_DESCRIPTOR::AP::RW_EL1,
 +        };
 +
-+        // Execute Never.
++        // The execute-never attribute is mapped to PXN in AArch64.
 +        desc += if attribute_fields.execute_never {
 +            STAGE1_PAGE_DESCRIPTOR::PXN::True
 +        } else {
 +            STAGE1_PAGE_DESCRIPTOR::PXN::False
 +        };
++
++        // Always set unprivileged exectue-never as long as userspace is not implemented yet.
++        desc += STAGE1_PAGE_DESCRIPTOR::UXN::True;
 +
 +        desc
 +    }
@@ -579,16 +586,18 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_mem_part
 +/// Configure various settings of stage 1 of the EL1 translation regime.
 +fn configure_translation_control() {
 +    let ips = ID_AA64MMFR0_EL1.read(ID_AA64MMFR0_EL1::PARange);
++    let t0sz: u64 = bsp::memory::mmu::addr_space_size().trailing_zeros().into();
 +
 +    TCR_EL1.write(
 +        TCR_EL1::TBI0::Ignored
 +            + TCR_EL1::IPS.val(ips)
++            + TCR_EL1::EPD1::DisableTTBR1Walks
 +            + TCR_EL1::TG0::KiB_64
 +            + TCR_EL1::SH0::Inner
 +            + TCR_EL1::ORGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
 +            + TCR_EL1::IRGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
 +            + TCR_EL1::EPD0::EnableTTBR0Walks
-+            + TCR_EL1::T0SZ.val(32), // TTBR0 spans 4 GiB total.
++            + TCR_EL1::T0SZ.val(t0sz),
 +    );
 +}
 +
@@ -662,7 +671,7 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/link.ld 11_virtual_mem_part1_id
 diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory/mmu.rs 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory/mmu.rs
 --- 10_privilege_level/src/bsp/raspberrypi/memory/mmu.rs
 +++ 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory/mmu.rs
-@@ -0,0 +1,88 @@
+@@ -0,0 +1,93 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -743,8 +752,13 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory/mmu.rs 11_virtual_mem_pa
 +//--------------------------------------------------------------------------------------------------
 +
 +/// Return the address space size in bytes.
++///
++/// Guarantees size to be a power of two.
 +pub const fn addr_space_size() -> usize {
-+    memory_map::END_INCLUSIVE + 1
++    let size = memory_map::END_INCLUSIVE + 1;
++    assert!(size.is_power_of_two());
++
++    size
 +}
 +
 +/// Return a reference to the virtual memory layout.
@@ -773,16 +787,29 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory.rs 11_virtual_mem_part1_
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -23,6 +27,8 @@
+@@ -23,6 +27,21 @@
  /// The board's memory map.
  #[rustfmt::skip]
  pub(super) mod map {
++    /// The inclusive end address of the memory map.
++    ///
++    /// End address + 1 must be power of two.
++    ///
++    /// # Note
++    ///
++    /// RPi3 and RPi4 boards can have different amounts of RAM. To make our code lean for
++    /// educational purposes, we set the max size of the address space to 4 GiB regardless of board.
++    /// This way, we can map the entire range that we need (end of MMIO for RPi4) in one take.
++    ///
++    /// However, making this trade-off has the downside of making it possible for the CPU to assert a
++    /// physical address that is not backed by any DRAM (e.g. accessing an address close to 4 GiB on
++    /// an RPi3 that comes with 1 GiB of RAM). This would result in a crash or other kind of error.
 +    pub const END_INCLUSIVE:       usize = 0xFFFF_FFFF;
 +
      pub const BOOT_CORE_STACK_END: usize = 0x8_0000;
 
      pub const GPIO_OFFSET:         usize = 0x0020_0000;
-@@ -36,6 +42,7 @@
+@@ -36,6 +55,7 @@
          pub const START:            usize =         0x3F00_0000;
          pub const GPIO_START:       usize = START + GPIO_OFFSET;
          pub const PL011_UART_START: usize = START + UART_OFFSET;
@@ -790,7 +817,7 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory.rs 11_virtual_mem_part1_
      }
 
      /// Physical devices.
-@@ -46,10 +53,35 @@
+@@ -46,10 +66,35 @@
          pub const START:            usize =         0xFE00_0000;
          pub const GPIO_START:       usize = START + GPIO_OFFSET;
          pub const PL011_UART_START: usize = START + UART_OFFSET;

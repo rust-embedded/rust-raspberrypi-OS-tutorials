@@ -37,6 +37,12 @@ register_bitfields! {u64,
 // A level 3 page descriptor, as per ARMv8-A Architecture Reference Manual Figure D5-17.
 register_bitfields! {u64,
     STAGE1_PAGE_DESCRIPTOR [
+        /// Unprivileged execute-never.
+        UXN      OFFSET(54) NUMBITS(1) [
+            False = 0,
+            True = 1
+        ],
+
         /// Privileged execute-never.
         PXN      OFFSET(53) NUMBITS(1) [
             False = 0,
@@ -110,7 +116,6 @@ struct FixedSizeTranslationTable<const NUM_TABLES: usize> {
     lvl2: [TableDescriptor; NUM_TABLES],
 }
 
-/// Usually evaluates to 1 GiB for RPi3 and 4 GiB for RPi 4.
 const NUM_LVL2_TABLES: usize = bsp::memory::mmu::addr_space_size() >> FIVETWELVE_MIB_SHIFT;
 type ArchTranslationTable = FixedSizeTranslationTable<NUM_LVL2_TABLES>;
 
@@ -194,12 +199,15 @@ impl convert::From<AttributeFields>
             AccessPermissions::ReadWrite => STAGE1_PAGE_DESCRIPTOR::AP::RW_EL1,
         };
 
-        // Execute Never.
+        // The execute-never attribute is mapped to PXN in AArch64.
         desc += if attribute_fields.execute_never {
             STAGE1_PAGE_DESCRIPTOR::PXN::True
         } else {
             STAGE1_PAGE_DESCRIPTOR::PXN::False
         };
+
+        // Always set unprivileged exectue-never as long as userspace is not implemented yet.
+        desc += STAGE1_PAGE_DESCRIPTOR::UXN::True;
 
         desc
     }
@@ -273,16 +281,18 @@ unsafe fn populate_tt_entries() -> Result<(), &'static str> {
 /// Configure various settings of stage 1 of the EL1 translation regime.
 fn configure_translation_control() {
     let ips = ID_AA64MMFR0_EL1.read(ID_AA64MMFR0_EL1::PARange);
+    let t0sz: u64 = bsp::memory::mmu::addr_space_size().trailing_zeros().into();
 
     TCR_EL1.write(
         TCR_EL1::TBI0::Ignored
             + TCR_EL1::IPS.val(ips)
+            + TCR_EL1::EPD1::DisableTTBR1Walks
             + TCR_EL1::TG0::KiB_64
             + TCR_EL1::SH0::Inner
             + TCR_EL1::ORGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
             + TCR_EL1::IRGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
             + TCR_EL1::EPD0::EnableTTBR0Walks
-            + TCR_EL1::T0SZ.val(32), // TTBR0 spans 4 GiB total.
+            + TCR_EL1::T0SZ.val(t0sz),
     );
 }
 

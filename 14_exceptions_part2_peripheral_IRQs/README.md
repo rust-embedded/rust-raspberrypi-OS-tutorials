@@ -2145,7 +2145,7 @@ diff -uNr 13_integrated_testing/src/bsp/raspberrypi/exception.rs 14_exceptions_p
 diff -uNr 13_integrated_testing/src/bsp/raspberrypi/memory.rs 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs
 --- 13_integrated_testing/src/bsp/raspberrypi/memory.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs
-@@ -39,10 +39,12 @@
+@@ -52,10 +52,12 @@
      pub mod mmio {
          use super::*;
 
@@ -2162,7 +2162,7 @@ diff -uNr 13_integrated_testing/src/bsp/raspberrypi/memory.rs 14_exceptions_part
      }
 
      /// Physical devices.
-@@ -53,6 +55,8 @@
+@@ -66,6 +68,8 @@
          pub const START:            usize =         0xFE00_0000;
          pub const GPIO_START:       usize = START + GPIO_OFFSET;
          pub const PL011_UART_START: usize = START + UART_OFFSET;

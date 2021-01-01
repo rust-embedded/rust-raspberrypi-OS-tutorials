@@ -47,6 +47,12 @@ register_bitfields! {u64,
 // A level 3 page descriptor, as per ARMv8-A Architecture Reference Manual Figure D5-17.
 register_bitfields! {u64,
     STAGE1_PAGE_DESCRIPTOR [
+        /// Unprivileged execute-never.
+        UXN      OFFSET(54) NUMBITS(1) [
+            False = 0,
+            True = 1
+        ],
+
         /// Privileged execute-never.
         PXN      OFFSET(53) NUMBITS(1) [
             False = 0,
@@ -233,12 +239,15 @@ impl convert::From<AttributeFields>
             AccessPermissions::ReadWrite => STAGE1_PAGE_DESCRIPTOR::AP::RW_EL1,
         };
 
-        // Execute Never.
+        // The execute-never attribute is mapped to PXN in AArch64.
         desc += if attribute_fields.execute_never {
             STAGE1_PAGE_DESCRIPTOR::PXN::True
         } else {
             STAGE1_PAGE_DESCRIPTOR::PXN::False
         };
+
+        // Always set unprivileged exectue-never as long as userspace is not implemented yet.
+        desc += STAGE1_PAGE_DESCRIPTOR::UXN::True;
 
         desc
     }
@@ -352,6 +361,7 @@ fn configure_translation_control() {
     TCR_EL1.write(
         TCR_EL1::TBI0::Ignored
             + TCR_EL1::IPS.val(ips)
+            + TCR_EL1::EPD1::DisableTTBR1Walks
             + TCR_EL1::TG0::KiB_64
             + TCR_EL1::SH0::Inner
             + TCR_EL1::ORGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable

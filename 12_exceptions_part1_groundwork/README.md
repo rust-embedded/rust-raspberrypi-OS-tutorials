@@ -350,14 +350,14 @@ we cause a data abort exception by reading from memory address `8 GiB`:
 // For demo purposes, the exception handler will catch the faulting 8 GiB address and allow
 // execution to continue.
 info!("");
-info!("Trying to write to address 8 GiB...");
+info!("Trying to read from address 8 GiB...");
 let mut big_addr: u64 = 8 * 1024 * 1024 * 1024;
 unsafe { core::ptr::read_volatile(big_addr as *mut u64) };
 ```
 
 This triggers our exception code, because we try to read from a virtual address for which no mapping
-has been installed. Remember, we only installed identity-mapped page tables for the first `1 GiB`
-(RPi3) or `4 GiB` (RPi4) of address space in the previous tutorial.
+has been installed. Remember, we only installed up to `4 GiB` of address space in the previous
+tutorial.
 
 To survive this exception, the respective handler has a special demo case:
 
@@ -412,29 +412,29 @@ Minipush 1.0
 [MP] ⏩ Pushing 64 KiB ========================================🦀 100% 32 KiB/s Time: 00:00:02
 [ML] Loaded! Executing the payload now
 
-[    3.090618] Booting on: Raspberry Pi 3
-[    3.091701] MMU online. Special regions:
-[    3.093610]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
-[    3.097688]       0x3f000000 - 0x4000ffff |  16 MiB | Dev RW PXN | Device MMIO
-[    3.101246] Current privilege level: EL1
-[    3.103155] Exception handling state:
-[    3.104934]       Debug:  Masked
-[    3.106496]       SError: Masked
-[    3.108058]       IRQ:    Masked
-[    3.109619]       FIQ:    Masked
-[    3.111181] Architectural timer resolution: 52 ns
-[    3.113481] Drivers loaded:
-[    3.114826]       1. BCM GPIO
-[    3.116257]       2. BCM PL011 UART
-[    3.117950] Timer test, spinning for 1 second
-[    4.120076]
-[    4.120079] Trying to write to address 8 GiB...
-[    4.122242] ************************************************
-[    4.125018] Whoa! We recovered from a synchronous exception!
-[    4.127795] ************************************************
-[    4.130571]
-[    4.131266] Let's try again
-[    4.132611] Trying to write to address 9 GiB...
+[    3.091032] Booting on: Raspberry Pi 3
+[    3.092116] MMU online. Special regions:
+[    3.094025]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
+[    3.098103]       0x3f000000 - 0x4000ffff |  16 MiB | Dev RW PXN | Device MMIO
+[    3.101661] Current privilege level: EL1
+[    3.103570] Exception handling state:
+[    3.105348]       Debug:  Masked
+[    3.106910]       SError: Masked
+[    3.108472]       IRQ:    Masked
+[    3.110034]       FIQ:    Masked
+[    3.111596] Architectural timer resolution: 52 ns
+[    3.113895] Drivers loaded:
+[    3.115240]       1. BCM GPIO
+[    3.116672]       2. BCM PL011 UART
+[    3.118364] Timer test, spinning for 1 second
+[    4.120490]
+[    4.120494] Trying to read from address 8 GiB...
+[    4.122700] ************************************************
+[    4.125476] Whoa! We recovered from a synchronous exception!
+[    4.128253] ************************************************
+[    4.131030]
+[    4.131724] Let's try again
+[    4.133069] Trying to read from address 9 GiB...
 
 Kernel panic:
 
@@ -443,7 +443,7 @@ FAR_EL1: 0x0000000240000000
 ESR_EL1: 0x96000004
       Exception Class         (EC) : 0x25 - Data Abort, current EL
       Instr Specific Syndrome (ISS): 0x4
-ELR_EL1: 0x0000000000081454
+ELR_EL1: 0x0000000000081458
 SPSR_EL1: 0x600003c5
       Flags:
             Negative (N): Not set
@@ -458,22 +458,22 @@ SPSR_EL1: 0x600003c5
       Illegal Execution State (IL): Not set
 
 General purpose register:
-      x0 : 0x0000000000000000         x1 : 0x0000000000085726
-      x2 : 0x0000000000000026         x3 : 0x0000000000083bf0
-      x4 : 0x0000000000000003         x5 : 0xfb4f101900000000
-      x6 : 0x0000000000000000         x7 : 0x7e9198052b2b0200
+      x0 : 0x0000000000000000         x1 : 0x0000000000085727
+      x2 : 0x0000000000000027         x3 : 0x0000000000000000
+      x4 : 0x0000000000000002         x5 : 0x3f27329c00000000
+      x6 : 0x0000000000000000         x7 : 0xdbd1b90800000000
       x8 : 0x0000000240000000         x9 : 0x000000003f201000
-      x10: 0x0000000000000019         x11: 0x0000000000000000
-      x12: 0x0000000000000006         x13: 0x0000000000000031
+      x10: 0x0000000000000019         x11: 0x00000000000819d0
+      x12: 0x0000000000000000         x13: 0x0000000000000033
       x14: 0x000000000007fc2d         x15: 0x0000000000000000
-      x16: 0x0000000000000040         x17: 0xb557f006f276cfb6
+      x16: 0x0000000000000040         x17: 0xfd7f702255f847d0
       x18: 0x0000000000000003         x19: 0x0000000000090008
       x20: 0x0000000000085510         x21: 0x000000003b9aca00
-      x22: 0x00000000000003e8         x23: 0x000000000008160c
-      x24: 0x0000000000082264         x25: 0x00000000000f4240
+      x22: 0x00000000000003e8         x23: 0x0000000000081610
+      x24: 0x0000000000082268         x25: 0x00000000000f4240
       x26: 0xffffffffc4653600         x27: 0x00000000000855f0
-      x28: 0x0000000000083f84         x29: 0x0000000000086810
-      lr : 0x0000000000081448
+      x28: 0x0000000000083f80         x29: 0x0000000000086810
+      lr : 0x000000000008144c
 ```
 
 ## Diff to previous
@@ -989,7 +989,7 @@ diff -uNr 11_virtual_mem_part1_identity_mapping/src/main.rs 12_exceptions_part1_
 +    // For demo purposes, the exception handler will catch the faulting 8 GiB address and allow
 +    // execution to continue.
 +    info!("");
-+    info!("Trying to write to address 8 GiB...");
++    info!("Trying to read from address 8 GiB...");
 +    let mut big_addr: u64 = 8 * 1024 * 1024 * 1024;
 +    unsafe { core::ptr::read_volatile(big_addr as *mut u64) };
 +
@@ -1000,7 +1000,7 @@ diff -uNr 11_virtual_mem_part1_identity_mapping/src/main.rs 12_exceptions_part1_
 +    info!("Let's try again");
 +
 +    // Now use address 9 GiB. The exception handler won't forgive us this time.
-+    info!("Trying to write to address 9 GiB...");
++    info!("Trying to read from address 9 GiB...");
 +    big_addr = 9 * 1024 * 1024 * 1024;
 +    unsafe { core::ptr::read_volatile(big_addr as *mut u64) };
 

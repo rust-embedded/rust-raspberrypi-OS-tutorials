@@ -357,7 +357,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
 
  // A table descriptor, as per ARMv8-A Architecture Reference Manual Figure D5-15.
  register_bitfields! {u64,
-@@ -81,9 +91,6 @@
+@@ -87,9 +97,6 @@
      ]
  }
 
@@ -367,7 +367,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
  /// A table descriptor for 64 KiB aperture.
  ///
  /// The output points to the next table.
-@@ -98,36 +105,65 @@
+@@ -104,35 +111,65 @@
  #[repr(transparent)]
  struct PageDescriptor(u64);
 
@@ -417,7 +417,6 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
      lvl2: [TableDescriptor; NUM_TABLES],
 -}
 
--/// Usually evaluates to 1 GiB for RPi3 and 4 GiB for RPi 4.
 -const NUM_LVL2_TABLES: usize = bsp::memory::mmu::addr_space_size() >> FIVETWELVE_MIB_SHIFT;
 -type ArchTranslationTable = FixedSizeTranslationTable<NUM_LVL2_TABLES>;
 +    /// Index of the next free MMIO page.
@@ -449,7 +448,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
 
  //--------------------------------------------------------------------------------------------------
  // Global instances
-@@ -138,7 +174,8 @@
+@@ -143,7 +180,8 @@
  /// # Safety
  ///
  /// - Supposed to land in `.bss`. Therefore, ensure that all initial member values boil down to "0".
@@ -459,7 +458,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
 
  static MMU: MemoryManagementUnit = MemoryManagementUnit;
 
-@@ -146,13 +183,15 @@
+@@ -151,13 +189,15 @@
  // Private Code
  //--------------------------------------------------------------------------------------------------
 
@@ -481,7 +480,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
      }
  }
 
-@@ -160,7 +199,7 @@
+@@ -165,7 +205,7 @@
      fn from(next_lvl_table_addr: usize) -> Self {
          let val = InMemoryRegister::<u64, STAGE1_TABLE_DESCRIPTOR::Register>::new(0);
 
@@ -490,7 +489,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
          val.write(
              STAGE1_TABLE_DESCRIPTOR::VALID::True
                  + STAGE1_TABLE_DESCRIPTOR::TYPE::Table
-@@ -207,23 +246,33 @@
+@@ -215,23 +255,33 @@
 
  impl PageDescriptor {
      /// Create an instance.
@@ -527,7 +526,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
      /// Create an instance.
      pub const fn new() -> Self {
          assert!(NUM_TABLES > 0);
-@@ -231,7 +280,55 @@
+@@ -239,7 +289,55 @@
          Self {
              lvl3: [[PageDescriptor(0); 8192]; NUM_TABLES],
              lvl2: [TableDescriptor(0); NUM_TABLES],
@@ -583,7 +582,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
      }
  }
 
-@@ -248,28 +345,6 @@
+@@ -256,32 +354,9 @@
      );
  }
 
@@ -612,16 +611,20 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
  /// Configure various settings of stage 1 of the EL1 translation regime.
  fn configure_translation_control() {
      let ips = ID_AA64MMFR0_EL1.read(ID_AA64MMFR0_EL1::PARange);
-@@ -282,7 +357,7 @@
+-    let t0sz: u64 = bsp::memory::mmu::addr_space_size().trailing_zeros().into();
+
+     TCR_EL1.write(
+         TCR_EL1::TBI0::Ignored
+@@ -292,7 +367,7 @@
              + TCR_EL1::ORGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
              + TCR_EL1::IRGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
              + TCR_EL1::EPD0::EnableTTBR0Walks
--            + TCR_EL1::T0SZ.val(32), // TTBR0 spans 4 GiB total.
+-            + TCR_EL1::T0SZ.val(t0sz),
 +            + TCR_EL1::T0SZ.val(T0SZ),
      );
  }
 
-@@ -290,17 +365,126 @@
+@@ -300,17 +375,126 @@
  // Public Code
  //--------------------------------------------------------------------------------------------------
 
@@ -751,7 +754,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
          // Fail early if translation granule is not supported. Both RPis support it, though.
          if !ID_AA64MMFR0_EL1.matches_all(ID_AA64MMFR0_EL1::TGran64::Supported) {
              return Err("Translation granule not supported in HW");
-@@ -309,11 +493,8 @@
+@@ -319,11 +503,8 @@
          // Prepare the memory attribute indirection register.
          set_up_mair();
 
@@ -764,7 +767,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
 
          configure_translation_control();
 
-@@ -337,6 +518,9 @@
+@@ -347,6 +528,9 @@
  //--------------------------------------------------------------------------------------------------
 
  #[cfg(test)]
@@ -774,7 +777,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
  mod tests {
      use super::*;
      use test_macros::kernel_test;
-@@ -363,7 +547,7 @@
+@@ -373,7 +557,7 @@
      #[kernel_test]
      fn kernel_tables_in_bss() {
          let bss_range = bsp::memory::bss_range_inclusive();
@@ -1465,7 +1468,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/link.ld 15_vir
 diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 15_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs
 --- 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs
 +++ 15_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs
-@@ -4,72 +4,128 @@
+@@ -4,77 +4,128 @@
 
  //! BSP Memory Management Unit.
 
@@ -1584,23 +1587,22 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
  //--------------------------------------------------------------------------------------------------
 
 -/// Return the address space size in bytes.
--pub const fn addr_space_size() -> usize {
--    memory_map::END_INCLUSIVE + 1
 +/// Pointer to the last page of the physical address space.
 +pub fn phys_addr_space_end_page() -> *const Page<Physical> {
 +    common::align_down(
 +        super::phys_addr_space_end().into_usize(),
 +        KernelGranule::SIZE,
 +    ) as *const Page<_>
- }
-
--/// Return a reference to the virtual memory layout.
--pub fn virt_mem_layout() -> &'static KernelVirtualLayout<{ NUM_MEM_RANGES }> {
--    &LAYOUT
++}
++
 +/// Map the kernel binary.
 +///
 +/// # Safety
-+///
+ ///
+-/// Guarantees size to be a power of two.
+-pub const fn addr_space_size() -> usize {
+-    let size = memory_map::END_INCLUSIVE + 1;
+-    assert!(size.is_power_of_two());
 +/// - Any miscalculation or attribute error will likely be fatal. Needs careful manual checking.
 +pub unsafe fn kernel_map_binary() -> Result<(), &'static str> {
 +    kernel_mmu::kernel_map_pages_at(
@@ -1613,7 +1615,9 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
 +            execute_never: true,
 +        },
 +    )?;
-+
+
+-    size
+-}
 +    kernel_mmu::kernel_map_pages_at(
 +        "Kernel code and RO data",
 +        &phys_ro_page_desc(),
@@ -1624,7 +1628,10 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
 +            execute_never: false,
 +        },
 +    )?;
-+
+
+-/// Return a reference to the virtual memory layout.
+-pub fn virt_mem_layout() -> &'static KernelVirtualLayout<{ NUM_MEM_RANGES }> {
+-    &LAYOUT
 +    kernel_mmu::kernel_map_pages_at(
 +        "Kernel data and bss",
 +        &phys_data_page_desc(),
@@ -1640,7 +1647,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -84,14 +140,12 @@
+@@ -89,14 +140,12 @@
      /// Check alignment of the kernel's virtual memory layout sections.
      #[kernel_test]
      fn virt_mem_layout_sections_are_64KiB_aligned() {
@@ -1660,7 +1667,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
              assert!(end >= start);
          }
      }
-@@ -99,17 +153,18 @@
+@@ -104,17 +153,18 @@
      /// Ensure the kernel's virtual memory layout is free of overlaps.
      #[kernel_test]
      fn virt_mem_layout_has_no_overlaps() {
@@ -1736,7 +1743,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs 15_v
  use core::{cell::UnsafeCell, ops::RangeInclusive};
 
  //--------------------------------------------------------------------------------------------------
-@@ -17,34 +49,39 @@
+@@ -17,47 +49,39 @@
      static __bss_start: UnsafeCell<u64>;
      static __bss_end_inclusive: UnsafeCell<u64>;
      static __ro_start: UnsafeCell<()>;
@@ -1753,6 +1760,19 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs 15_v
 +/// The board's physical memory map.
  #[rustfmt::skip]
  pub(super) mod map {
+-    /// The inclusive end address of the memory map.
+-    ///
+-    /// End address + 1 must be power of two.
+-    ///
+-    /// # Note
+-    ///
+-    /// RPi3 and RPi4 boards can have different amounts of RAM. To make our code lean for
+-    /// educational purposes, we set the max size of the address space to 4 GiB regardless of board.
+-    /// This way, we can map the entire range that we need (end of MMIO for RPi4) in one take.
+-    ///
+-    /// However, making this trade-off has the downside of making it possible for the CPU to assert a
+-    /// physical address that is not backed by any DRAM (e.g. accessing an address close to 4 GiB on
+-    /// an RPi3 that comes with 1 GiB of RAM). This would result in a crash or other kind of error.
 -    pub const END_INCLUSIVE:       usize = 0xFFFF_FFFF;
 +    use super::*;
 
@@ -1789,7 +1809,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs 15_v
      }
 
      /// Physical devices.
-@@ -52,13 +89,22 @@
+@@ -65,13 +89,22 @@
      pub mod mmio {
          use super::*;
 
@@ -1818,7 +1838,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs 15_v
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -71,8 +117,8 @@
+@@ -84,8 +117,8 @@
  ///
  /// - Value is provided by the linker script and must be trusted as-is.
  #[inline(always)]
@@ -1829,7 +1849,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs 15_v
  }
 
  /// Size of the Read-Only (RO) range of the kernel binary.
-@@ -81,8 +127,42 @@
+@@ -94,8 +127,42 @@
  ///
  /// - Value is provided by the linker script and must be trusted as-is.
  #[inline(always)]
@@ -1874,7 +1894,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs 15_v
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -91,8 +171,10 @@
+@@ -104,8 +171,10 @@
 
  /// Exclusive end address of the boot core's stack.
  #[inline(always)]
