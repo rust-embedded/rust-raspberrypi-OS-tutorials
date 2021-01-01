@@ -13,8 +13,5 @@ files = files.join(' ')
 
 year = Date.today.year
 
-# Update "Copyright (c) 20..-20.."
-`sed -i -- 's,\\(Copyright .c. 20..\\)-20..,\\1-#{year},g' #{files}`
-
-# Update "Copyright (c) 20.. Name" -> "Copyright (c) 20..-20.. Name"
-`sed -i -- 's,\\(Copyright .c. 20..\\) ,\\1-#{year} ,g' #{files}`
+`sed -i -- 's,\\(Copyright .* 20..\\)-20..,\\1-#{year},g' #{files}`
+`sed -i -- 's,\\(Copyright .* #{year - 1}\\) ,\\1-#{year} ,g' #{files}`
