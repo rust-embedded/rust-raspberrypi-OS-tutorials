@@ -2038,7 +2038,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/lib.rs 15_virtual_mem_part2_mm
  #![feature(const_fn_fn_ptr_basics)]
  #![feature(const_generics)]
  #![feature(const_panic)]
-@@ -138,6 +139,7 @@
+@@ -137,6 +138,7 @@
  mod synchronization;
 
  pub mod bsp;

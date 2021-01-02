@@ -892,9 +892,9 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_mem_part1_identity_mapping/s
 +#![feature(const_generics)]
 +#![feature(const_panic)]
  #![feature(format_args_nl)]
- #![feature(naked_functions)]
  #![feature(panic_info_message)]
-@@ -130,9 +135,18 @@
+ #![feature(trait_alias)]
+@@ -129,9 +134,18 @@
  /// # Safety
  ///
  /// - Only a single core must be active and running this function.
@@ -914,7 +914,7 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_mem_part1_identity_mapping/s
 
      for i in bsp::driver::driver_manager().all_device_drivers().iter() {
          if let Err(x) = i.init() {
-@@ -155,6 +169,9 @@
+@@ -154,6 +168,9 @@
 
      info!("Booting on: {}", bsp::board_name());
 
@@ -924,7 +924,7 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_mem_part1_identity_mapping/s
      let (_, privilege_level) = exception::current_privilege_level();
      info!("Current privilege level: {}", privilege_level);
 
-@@ -178,6 +195,13 @@
+@@ -177,6 +194,13 @@
      info!("Timer test, spinning for 1 second");
      time::time_manager().spin_for(Duration::from_secs(1));
 

@@ -110,7 +110,6 @@
 #![feature(const_panic)]
 #![feature(format_args_nl)]
 #![feature(global_asm)]
-#![feature(naked_functions)]
 #![feature(panic_info_message)]
 #![feature(trait_alias)]
 #![no_main]

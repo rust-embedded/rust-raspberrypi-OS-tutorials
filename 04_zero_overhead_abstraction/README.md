@@ -219,18 +219,17 @@ diff -uNr 03_hacky_hello_world/src/cpu.rs 04_zero_overhead_abstraction/src/cpu.r
 diff -uNr 03_hacky_hello_world/src/main.rs 04_zero_overhead_abstraction/src/main.rs
 --- 03_hacky_hello_world/src/main.rs
 +++ 04_zero_overhead_abstraction/src/main.rs
-@@ -92,9 +92,8 @@
+@@ -92,9 +92,7 @@
  //! - `crate::memory::*`
  //! - `crate::bsp::memory::*`
 
 -#![feature(asm)]
  #![feature(format_args_nl)]
 -#![feature(global_asm)]
-+#![feature(naked_functions)]
  #![feature(panic_info_message)]
  #![no_main]
  #![no_std]
-@@ -116,7 +115,8 @@
+@@ -116,7 +114,8 @@
  ///
  /// - Only a single core must be active and running this function.
  unsafe fn kernel_init() -> ! {

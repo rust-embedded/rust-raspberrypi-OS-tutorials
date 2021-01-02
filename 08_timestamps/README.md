@@ -462,9 +462,9 @@ diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
  #![feature(const_fn_fn_ptr_basics)]
 -#![feature(core_intrinsics)]
  #![feature(format_args_nl)]
- #![feature(naked_functions)]
  #![feature(panic_info_message)]
-@@ -111,8 +111,7 @@
+ #![feature(trait_alias)]
+@@ -110,8 +110,7 @@
  #![no_std]
 
  // `mod cpu` provides the `_start()` function, the first function to run. `_start()` then calls
@@ -474,7 +474,7 @@ diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
 
  mod bsp;
  mod console;
-@@ -121,9 +120,9 @@
+@@ -120,9 +119,9 @@
  mod memory;
  mod panic_wait;
  mod print;
@@ -485,7 +485,7 @@ diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
 
  /// Early init code.
  ///
-@@ -148,52 +147,31 @@
+@@ -147,52 +146,31 @@
 
  /// The main function running after the early init.
  fn kernel_main() -> ! {

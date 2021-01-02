@@ -104,7 +104,6 @@
 
 #![feature(const_fn_fn_ptr_basics)]
 #![feature(format_args_nl)]
-#![feature(naked_functions)]
 #![feature(panic_info_message)]
 #![feature(trait_alias)]
 #![no_main]

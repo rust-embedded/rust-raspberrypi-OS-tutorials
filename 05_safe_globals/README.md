@@ -213,15 +213,15 @@ diff -uNr 04_zero_overhead_abstraction/src/console.rs 05_safe_globals/src/consol
 diff -uNr 04_zero_overhead_abstraction/src/main.rs 05_safe_globals/src/main.rs
 --- 04_zero_overhead_abstraction/src/main.rs
 +++ 05_safe_globals/src/main.rs
-@@ -95,6 +95,7 @@
+@@ -94,6 +94,7 @@
+
  #![feature(format_args_nl)]
- #![feature(naked_functions)]
  #![feature(panic_info_message)]
 +#![feature(trait_alias)]
  #![no_main]
  #![no_std]
 
-@@ -108,6 +109,7 @@
+@@ -107,6 +108,7 @@
  mod panic_wait;
  mod print;
  mod runtime_init;
@@ -229,7 +229,7 @@ diff -uNr 04_zero_overhead_abstraction/src/main.rs 05_safe_globals/src/main.rs
 
  /// Early init code.
  ///
-@@ -115,8 +117,15 @@
+@@ -114,8 +116,15 @@
  ///
  /// - Only a single core must be active and running this function.
  unsafe fn kernel_init() -> ! {

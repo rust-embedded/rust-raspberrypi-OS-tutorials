@@ -1206,9 +1206,9 @@ diff -uNr 05_safe_globals/src/main.rs 06_drivers_gpio_uart/src/main.rs
 
 +#![feature(const_fn_fn_ptr_basics)]
  #![feature(format_args_nl)]
- #![feature(naked_functions)]
  #![feature(panic_info_message)]
-@@ -105,6 +114,7 @@
+ #![feature(trait_alias)]
+@@ -104,6 +113,7 @@
  mod bsp;
  mod console;
  mod cpu;
@@ -1216,7 +1216,7 @@ diff -uNr 05_safe_globals/src/main.rs 06_drivers_gpio_uart/src/main.rs
  mod memory;
  mod panic_wait;
  mod print;
-@@ -116,16 +126,46 @@
+@@ -115,16 +125,46 @@
  /// # Safety
  ///
  /// - Only a single core must be active and running this function.

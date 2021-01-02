@@ -113,7 +113,6 @@
 #![feature(format_args_nl)]
 #![feature(global_asm)]
 #![feature(linkage)]
-#![feature(naked_functions)]
 #![feature(panic_info_message)]
 #![feature(trait_alias)]
 #![no_std]

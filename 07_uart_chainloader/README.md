@@ -413,9 +413,9 @@ diff -uNr 06_drivers_gpio_uart/src/main.rs 07_uart_chainloader/src/main.rs
  #![feature(const_fn_fn_ptr_basics)]
 +#![feature(core_intrinsics)]
  #![feature(format_args_nl)]
- #![feature(naked_functions)]
  #![feature(panic_info_message)]
-@@ -109,7 +111,8 @@
+ #![feature(trait_alias)]
+@@ -108,7 +110,8 @@
  #![no_std]
 
  // `mod cpu` provides the `_start()` function, the first function to run. `_start()` then calls
@@ -425,7 +425,7 @@ diff -uNr 06_drivers_gpio_uart/src/main.rs 07_uart_chainloader/src/main.rs
 
  mod bsp;
  mod console;
-@@ -118,6 +121,7 @@
+@@ -117,6 +120,7 @@
  mod memory;
  mod panic_wait;
  mod print;
@@ -433,7 +433,7 @@ diff -uNr 06_drivers_gpio_uart/src/main.rs 07_uart_chainloader/src/main.rs
  mod runtime_init;
  mod synchronization;
 
-@@ -144,28 +148,52 @@
+@@ -143,28 +147,52 @@
 
  /// The main function running after the early init.
  fn kernel_main() -> ! {

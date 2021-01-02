@@ -961,10 +961,10 @@ diff -uNr 11_virtual_mem_part1_identity_mapping/src/main.rs 12_exceptions_part1_
  #![feature(const_panic)]
  #![feature(format_args_nl)]
 +#![feature(global_asm)]
- #![feature(naked_functions)]
  #![feature(panic_info_message)]
  #![feature(trait_alias)]
-@@ -144,6 +145,8 @@
+ #![no_main]
+@@ -143,6 +144,8 @@
      use driver::interface::DriverManager;
      use memory::mmu::interface::MMU;
 
@@ -973,7 +973,7 @@ diff -uNr 11_virtual_mem_part1_identity_mapping/src/main.rs 12_exceptions_part1_
      if let Err(string) = memory::mmu::mmu().init() {
          panic!("MMU: {}", string);
      }
-@@ -195,13 +198,28 @@
+@@ -194,13 +197,28 @@
      info!("Timer test, spinning for 1 second");
      time::time_manager().spin_for(Duration::from_secs(1));
 

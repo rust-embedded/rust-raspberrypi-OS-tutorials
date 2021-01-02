@@ -93,7 +93,6 @@
 //! - `crate::bsp::memory::*`
 
 #![feature(format_args_nl)]
-#![feature(naked_functions)]
 #![feature(panic_info_message)]
 #![feature(trait_alias)]
 #![no_main]
