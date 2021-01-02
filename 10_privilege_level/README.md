@@ -226,7 +226,7 @@ Minipush 1.0
 diff -uNr 09_hw_debug_JTAG/src/_arch/aarch64/cpu.rs 10_privilege_level/src/_arch/aarch64/cpu.rs
 --- 09_hw_debug_JTAG/src/_arch/aarch64/cpu.rs
 +++ 10_privilege_level/src/_arch/aarch64/cpu.rs
-@@ -18,22 +18,65 @@
+@@ -18,21 +18,65 @@
  /// # Safety
  ///
  /// - Linker script must ensure to place this function where it is expected by the target machine.
@@ -238,10 +238,10 @@ diff -uNr 09_hw_debug_JTAG/src/_arch/aarch64/cpu.rs 10_privilege_level/src/_arch
  pub unsafe fn _start() -> ! {
 -    use crate::runtime_init;
 -
-     // Expect the boot core to start in EL2.
 -    if bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id() {
 -        SP.set(bsp::memory::boot_core_stack_end() as u64);
 -        runtime_init::runtime_init()
++    // Expect the boot core to start in EL2.
 +    if (bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id())
 +        && (CurrentEL.get() == CurrentEL::EL::EL2.value)
 +    {

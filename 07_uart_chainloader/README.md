@@ -183,14 +183,13 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
 diff -uNr 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs 07_uart_chainloader/src/_arch/aarch64/cpu.rs
 --- 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs
 +++ 07_uart_chainloader/src/_arch/aarch64/cpu.rs
-@@ -22,12 +22,12 @@
+@@ -22,11 +22,11 @@
  ///   actually set (`SP.set()`).
  #[no_mangle]
  pub unsafe fn _start() -> ! {
 -    use crate::runtime_init;
 +    use crate::relocate;
 
-     // Expect the boot core to start in EL2.
      if bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id() {
          SP.set(bsp::memory::boot_core_stack_end() as u64);
 -        runtime_init::runtime_init()
@@ -198,7 +197,7 @@ diff -uNr 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs 07_uart_chainloader/src/
      } else {
          // If not core0, infinitely wait for events.
          wait_forever()
-@@ -56,3 +56,19 @@
+@@ -55,3 +55,19 @@
          asm::wfe()
      }
  }

@@ -24,7 +24,6 @@ use cortex_a::{asm, regs::*};
 pub unsafe fn _start() -> ! {
     use crate::relocate;
 
-    // Expect the boot core to start in EL2.
     if bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id() {
         SP.set(bsp::memory::boot_core_stack_end() as u64);
         relocate::relocate_self()

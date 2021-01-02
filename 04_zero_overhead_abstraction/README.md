@@ -53,7 +53,7 @@ diff -uNr 03_hacky_hello_world/src/_arch/aarch64/cpu/smp.rs 04_zero_overhead_abs
 diff -uNr 03_hacky_hello_world/src/_arch/aarch64/cpu.rs 04_zero_overhead_abstraction/src/_arch/aarch64/cpu.rs
 --- 03_hacky_hello_world/src/_arch/aarch64/cpu.rs
 +++ 04_zero_overhead_abstraction/src/_arch/aarch64/cpu.rs
-@@ -4,8 +4,35 @@
+@@ -4,8 +4,34 @@
 
  //! Architectural processor code.
 
@@ -79,7 +79,6 @@ diff -uNr 03_hacky_hello_world/src/_arch/aarch64/cpu.rs 04_zero_overhead_abstrac
 +pub unsafe fn _start() -> ! {
 +    use crate::runtime_init;
 +
-+    // Expect the boot core to start in EL2.
 +    if bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id() {
 +        SP.set(bsp::memory::boot_core_stack_end() as u64);
 +        runtime_init::runtime_init()
@@ -91,7 +90,7 @@ diff -uNr 03_hacky_hello_world/src/_arch/aarch64/cpu.rs 04_zero_overhead_abstrac
 
  //--------------------------------------------------------------------------------------------------
  // Public Code
-@@ -14,13 +41,7 @@
+@@ -14,13 +40,7 @@
  /// Pause execution on the core.
  #[inline(always)]
  pub fn wait_forever() -> ! {

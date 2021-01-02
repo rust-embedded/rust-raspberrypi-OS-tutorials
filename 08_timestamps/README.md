@@ -115,14 +115,13 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
 diff -uNr 07_uart_chainloader/src/_arch/aarch64/cpu.rs 08_timestamps/src/_arch/aarch64/cpu.rs
 --- 07_uart_chainloader/src/_arch/aarch64/cpu.rs
 +++ 08_timestamps/src/_arch/aarch64/cpu.rs
-@@ -22,12 +22,12 @@
+@@ -22,11 +22,11 @@
  ///   actually set (`SP.set()`).
  #[no_mangle]
  pub unsafe fn _start() -> ! {
 -    use crate::relocate;
 +    use crate::runtime_init;
 
-     // Expect the boot core to start in EL2.
      if bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id() {
          SP.set(bsp::memory::boot_core_stack_end() as u64);
 -        relocate::relocate_self()
@@ -130,7 +129,7 @@ diff -uNr 07_uart_chainloader/src/_arch/aarch64/cpu.rs 08_timestamps/src/_arch/a
      } else {
          // If not core0, infinitely wait for events.
          wait_forever()
-@@ -40,15 +40,6 @@
+@@ -39,15 +39,6 @@
 
  pub use asm::nop;
 
@@ -146,7 +145,7 @@ diff -uNr 07_uart_chainloader/src/_arch/aarch64/cpu.rs 08_timestamps/src/_arch/a
  /// Pause execution on the core.
  #[inline(always)]
  pub fn wait_forever() -> ! {
-@@ -56,19 +47,3 @@
+@@ -55,19 +46,3 @@
          asm::wfe()
      }
  }
