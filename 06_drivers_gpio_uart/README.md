@@ -613,9 +613,9 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 06_dri
 +    /// This results in 8N1 and 460800 baud (we set the clock to 48 MHz in config.txt).
 +    ///
 +    /// The calculation for the BRD given a target rate of 460800 and a clock set to 48 MHz is:
-+    /// `(48_000_000 / 16) / 460800 = 5.2083`. `5` goes to the `IBRD` (integer field).
++    /// `(48_000_000 / 16) / 460800 = 6.5104`. `6` goes to the `IBRD` (integer field).
 +    ///
-+    /// The `FBRD` (fractional field) is only 6 bits so `0.2083 * 64 = 13.3 rounded to 13` will
++    /// The `FBRD` (fractional field) is only 6 bits so `0.5104 * 64 = 32.6 rounded to 33` will
 +    /// give the best approximation we can get. A 5 modulo error margin is acceptable for UART and we're
 +    /// now at 0.01 modulo.
 +    pub fn init(&mut self) {
@@ -623,8 +623,8 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 06_dri
 +        self.registers.CR.set(0);
 +
 +        self.registers.ICR.write(ICR::ALL::CLEAR);
-+        self.registers.IBRD.write(IBRD::IBRD.val(5));
-+        self.registers.FBRD.write(FBRD::FBRD.val(13));
++        self.registers.IBRD.write(IBRD::IBRD.val(6));
++        self.registers.FBRD.write(FBRD::FBRD.val(33));
 +        self.registers
 +            .LCRH
 +            .write(LCRH::WLEN::EightBit + LCRH::FEN::FifosEnabled); // 8N1 + Fifo on

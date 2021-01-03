@@ -1305,7 +1305,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
      irq_number: bsp::device_driver::IRQNumber,
  }
 @@ -234,7 +239,15 @@
-     /// The `FBRD` (fractional field) is only 6 bits so `0.2083 * 64 = 13.3 rounded to 13` will
+     /// The `FBRD` (fractional field) is only 6 bits so `0.5104 * 64 = 32.6 rounded to 33` will
      /// give the best approximation we can get. A 5 modulo error margin is acceptable for UART and we're
      /// now at 0.01 modulo.
 -    pub fn init(&mut self) {
