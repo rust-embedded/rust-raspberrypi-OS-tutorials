@@ -31,12 +31,14 @@ class MiniPush < MiniTerm
         puts "[#{@name_short}] 🔌 Please power the target now"
 
         # Timeout for the request token starts after the first sign of life was received.
+        chars = []
         received = @target_serial.readpartial(4096)
         Timeout.timeout(10) do
             loop do
                 raise ProtocolError if received.nil?
 
-                if received.chars.last(3) == ["\u{3}", "\u{3}", "\u{3}"]
+                chars.concat(received.chars)
+                if chars.last(3) == ["\u{3}", "\u{3}", "\u{3}"]
                     # Print the last chunk minus the request token.
                     print received[0..-4]
                     return
