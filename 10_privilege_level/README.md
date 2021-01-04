@@ -464,10 +464,11 @@ diff -uNr 09_hw_debug_JTAG/src/main.rs 10_privilege_level/src/main.rs
  mod memory;
  mod panic_wait;
  mod print;
-@@ -146,12 +147,19 @@
+@@ -146,12 +147,20 @@
 
  /// The main function running after the early init.
  fn kernel_main() -> ! {
++    use bsp::console::console;
 +    use console::interface::All;
      use core::time::Duration;
      use driver::interface::DriverManager;
@@ -484,7 +485,7 @@ diff -uNr 09_hw_debug_JTAG/src/main.rs 10_privilege_level/src/main.rs
      info!(
          "Architectural timer resolution: {} ns",
          time::time_manager().resolution().as_nanos()
-@@ -166,11 +174,12 @@
+@@ -166,11 +175,15 @@
          info!("      {}. {}", i + 1, driver.compatible());
      }
 
@@ -492,8 +493,11 @@ diff -uNr 09_hw_debug_JTAG/src/main.rs 10_privilege_level/src/main.rs
 -    time::time_manager().spin_for(Duration::from_nanos(1));
 +    info!("Timer test, spinning for 1 second");
 +    time::time_manager().spin_for(Duration::from_secs(1));
-
++
 +    info!("Echoing input now");
+
++    // Discard any spurious received characters before going into echo mode.
++    console().clear_rx();
      loop {
 -        info!("Spinning for 1 second");
 -        time::time_manager().spin_for(Duration::from_secs(1));

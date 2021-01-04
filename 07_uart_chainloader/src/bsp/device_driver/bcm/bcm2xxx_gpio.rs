@@ -144,7 +144,7 @@ impl GPIOInner {
         // Make an educated guess for a good delay value (Sequence described in the BCM2837
         // peripherals PDF).
         //
-        // - According to Wikipedia, the fastest Pi3 clocks around 1.4 GHz.
+        // - According to Wikipedia, the fastest RPi4 clocks around 1.5 GHz.
         // - The Linux 2837 GPIO driver waits 1 µs between the steps.
         //
         // So lets try to be on the safe side and default to 2000 cycles, which would equal 1 µs

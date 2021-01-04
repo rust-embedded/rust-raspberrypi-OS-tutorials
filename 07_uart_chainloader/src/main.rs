@@ -160,9 +160,8 @@ fn kernel_main() -> ! {
     println!("[ML] Requesting binary");
     console().flush();
 
-    // Clear the RX FIFOs, if any, of spurious received characters before starting with the loader
-    // protocol.
-    console().clear();
+    // Discard any spurious received characters before starting with the loader protocol.
+    console().clear_rx();
 
     // Notify `Minipush` to send the binary.
     for _ in 0..3 {

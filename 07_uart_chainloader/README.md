@@ -197,7 +197,7 @@ diff -uNr 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs 07_uart_chainloader/src/
      } else {
          // If not core0, infinitely wait for events.
          wait_forever()
-@@ -55,3 +55,19 @@
+@@ -54,3 +54,19 @@
          asm::wfe()
      }
  }
@@ -218,55 +218,62 @@ diff -uNr 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs 07_uart_chainloader/src/
 +    core::intrinsics::unreachable()
 +}
 
+diff -uNr 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
+--- 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
++++ 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
+@@ -144,7 +144,7 @@
+         // Make an educated guess for a good delay value (Sequence described in the BCM2837
+         // peripherals PDF).
+         //
+-        // - According to Wikipedia, the fastest Pi3 clocks around 1.4 GHz.
++        // - According to Wikipedia, the fastest RPi4 clocks around 1.5 GHz.
+         // - The Linux 2837 GPIO driver waits 1 µs between the steps.
+         //
+         // So lets try to be on the safe side and default to 2000 cycles, which would equal 1 µs
+
 diff -uNr 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 --- 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -270,6 +270,15 @@
-         // readability.
-         self.inner.lock(|inner| fmt::Write::write_fmt(inner, args))
+@@ -257,7 +257,7 @@
      }
-+
-+    fn flush(&self) {
-+        // Spin until TX FIFO empty is set.
-+        self.inner.lock(|inner| {
-+            while !inner.registers.FR.matches_all(FR::TXFE::SET) {
-+                cpu::nop();
-+            }
-+        });
-+    }
- }
 
+     /// Retrieve a character.
+-    fn read_char_converting(&mut self, blocking_mode: BlockingMode) -> Option<char> {
++    fn read_char(&mut self, blocking_mode: BlockingMode) -> Option<char> {
+         // If RX FIFO is empty,
+         if self.registers.FR.matches_all(FR::RXFE::SET) {
+             // immediately return in non-blocking mode.
+@@ -272,12 +272,7 @@
+         }
+
+         // Read one character.
+-        let mut ret = self.registers.DR.get() as u8 as char;
+-
+-        // Convert carrige return to newline.
+-        if ret == '\r' {
+-            ret = '\n'
+-        }
++        let ret = self.registers.DR.get() as u8 as char;
+
+         // Update statistics.
+         self.chars_read += 1;
+@@ -357,14 +352,14 @@
  impl console::interface::Read for PL011Uart {
-@@ -280,18 +289,20 @@
-                 cpu::nop();
-             }
-
--            // Read one character.
--            let mut ret = inner.registers.DR.get() as u8 as char;
--
--            // Convert carrige return to newline.
--            if ret == '\r' {
--                ret = '\n'
--            }
--
-             // Update statistics.
-             inner.chars_read += 1;
-
--            ret
-+            // Read one character.
-+            inner.registers.DR.get() as u8 as char
-+        })
-+    }
-+
-+    fn clear(&self) {
-+        self.inner.lock(|inner| {
-+            // Read from the RX FIFO until it is indicating empty.
-+            while !inner.registers.FR.matches_all(FR::RXFE::SET) {
-+                inner.registers.DR.get();
-+            }
-         })
+     fn read_char(&self) -> char {
+         self.inner
+-            .lock(|inner| inner.read_char_converting(BlockingMode::Blocking).unwrap())
++            .lock(|inner| inner.read_char(BlockingMode::Blocking).unwrap())
      }
- }
+
+     fn clear_rx(&self) {
+         // Read from the RX FIFO until it is indicating empty.
+         while self
+             .inner
+-            .lock(|inner| inner.read_char_converting(BlockingMode::NonBlocking))
++            .lock(|inner| inner.read_char(BlockingMode::NonBlocking))
+             .is_some()
+         {}
+     }
 
 diff -uNr 06_drivers_gpio_uart/src/bsp/raspberrypi/link.ld 07_uart_chainloader/src/bsp/raspberrypi/link.ld
 --- 06_drivers_gpio_uart/src/bsp/raspberrypi/link.ld
@@ -376,31 +383,6 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs 07_uart_chainloader
      unsafe {
          range = RangeInclusive::new(__bss_start.get(), __bss_end_inclusive.get());
 
-diff -uNr 06_drivers_gpio_uart/src/console.rs 07_uart_chainloader/src/console.rs
---- 06_drivers_gpio_uart/src/console.rs
-+++ 07_uart_chainloader/src/console.rs
-@@ -19,6 +19,10 @@
-
-         /// Write a Rust format string.
-         fn write_fmt(&self, args: fmt::Arguments) -> fmt::Result;
-+
-+        /// Block execution until the last character has been physically put on the TX wire
-+        /// (draining TX buffers/FIFOs, if any).
-+        fn flush(&self);
-     }
-
-     /// Console read functions.
-@@ -27,6 +31,9 @@
-         fn read_char(&self) -> char {
-             ' '
-         }
-+
-+        /// Clear RX buffers, if any.
-+        fn clear(&self);
-     }
-
-     /// Console statistics.
-
 diff -uNr 06_drivers_gpio_uart/src/main.rs 07_uart_chainloader/src/main.rs
 --- 06_drivers_gpio_uart/src/main.rs
 +++ 07_uart_chainloader/src/main.rs
@@ -432,23 +414,13 @@ diff -uNr 06_drivers_gpio_uart/src/main.rs 07_uart_chainloader/src/main.rs
  mod runtime_init;
  mod synchronization;
 
-@@ -143,28 +147,52 @@
-
- /// The main function running after the early init.
+@@ -145,29 +149,49 @@
  fn kernel_main() -> ! {
-+    use bsp::console::console;
+     use bsp::console::console;
      use console::interface::All;
 -    use driver::interface::DriverManager;
--
--    println!("[0] Booting on: {}", bsp::board_name());
 
--    println!("[1] Drivers loaded:");
--    for (i, driver) in bsp::driver::driver_manager()
--        .all_device_drivers()
--        .iter()
--        .enumerate()
--    {
--        println!("      {}. {}", i + 1, driver.compatible());
+-    println!("[0] Booting on: {}", bsp::board_name());
 +    println!(" __  __ _      _ _                 _ ");
 +    println!("|  \\/  (_)_ _ (_) |   ___  __ _ __| |");
 +    println!("| |\\/| | | ' \\| | |__/ _ \\/ _` / _` |");
@@ -458,22 +430,30 @@ diff -uNr 06_drivers_gpio_uart/src/main.rs 07_uart_chainloader/src/main.rs
 +    println!();
 +    println!("[ML] Requesting binary");
 +    console().flush();
-+
-+    // Clear the RX FIFOs, if any, of spurious received characters before starting with the loader
-+    // protocol.
-+    console().clear();
-+
-+    // Notify `Minipush` to send the binary.
-+    for _ in 0..3 {
-+        console().write_char(3 as char);
-     }
+
+-    println!("[1] Drivers loaded:");
+-    for (i, driver) in bsp::driver::driver_manager()
+-        .all_device_drivers()
+-        .iter()
+-        .enumerate()
+-    {
+-        println!("      {}. {}", i + 1, driver.compatible());
+-    }
++    // Discard any spurious received characters before starting with the loader protocol.
++    console().clear_rx();
 
 -    println!(
 -        "[2] Chars written: {}",
 -        bsp::console::console().chars_written()
 -    );
 -    println!("[3] Echoing input now");
--
++    // Notify `Minipush` to send the binary.
++    for _ in 0..3 {
++        console().write_char(3 as char);
++    }
+
+-    // Discard any spurious received characters before going into echo mode.
+-    console().clear_rx();
 -    loop {
 -        let c = bsp::console::console().read_char();
 -        bsp::console::console().write_char(c);

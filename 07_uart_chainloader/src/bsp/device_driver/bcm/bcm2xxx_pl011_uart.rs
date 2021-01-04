@@ -136,6 +136,12 @@ register_structs! {
 /// Abstraction for the associated MMIO registers.
 type Registers = MMIODerefWrapper<RegisterBlock>;
 
+#[derive(PartialEq)]
+enum BlockingMode {
+    Blocking,
+    NonBlocking,
+}
+
 //--------------------------------------------------------------------------------------------------
 // Public Definitions
 //--------------------------------------------------------------------------------------------------
@@ -174,24 +180,41 @@ impl PL011UartInner {
 
     /// Set up baud rate and characteristics.
     ///
-    /// This results in 8N1 and 576000 baud (we set the clock to 48 MHz in config.txt).
+    /// This results in 8N1 and 921_600 baud.
     ///
-    /// The calculation for the BRD given a target rate of 576000 and a clock set to 48 MHz is:
-    /// `(48_000_000 / 16) / 576000 = 5.2083`. `5` goes to the `IBRD` (integer field).
+    /// The calculation for the BRD is (we set the clock to 48 MHz in config.txt):
+    /// `(48_000_000 / 16) / 921_600 = 3.2552083`. `3` goes to the `IBRD` (integer field).
     ///
-    /// The `FBRD` (fractional field) is only 6 bits so `0.2083 * 64 = 13.3 rounded to 13` will
-    /// give the best approximation we can get. A 5 % error margin is acceptable for UART and we're
-    /// now at 0.01 %.
+    /// The `FBRD` (fractional field) is only 6 bits so `0.2552083 * 64 = 16.3 rounded to 16` will
+    /// give the best approximation we can get. A 5% error margin is acceptable for UART and we're
+    /// now at 0.02%.
     pub fn init(&mut self) {
-        // Turn it off temporarily.
+        // Execution can arrive here while there are still characters queued in the TX FIFO and
+        // actively being sent out by the UART hardware. If the UART is turned off in this case,
+        // those queued characters would be lost.
+        //
+        // For example, this can happen during runtime on a call to panic!(), because panic!()
+        // initializes its own UART instance and calls init().
+        //
+        // Hence, flush first to ensure all pending characters are transmitted.
+        self.flush();
+
+        // Turn the UART off temporarily.
         self.registers.CR.set(0);
 
+        // Clear all pending interrupts.
         self.registers.ICR.write(ICR::ALL::CLEAR);
-        self.registers.IBRD.write(IBRD::IBRD.val(5));
-        self.registers.FBRD.write(FBRD::FBRD.val(13));
+
+        // Set the baud rate.
+        self.registers.IBRD.write(IBRD::IBRD.val(3));
+        self.registers.FBRD.write(FBRD::FBRD.val(16));
+
+        // Set 8N1 + FIFO on.
         self.registers
             .LCRH
-            .write(LCRH::WLEN::EightBit + LCRH::FEN::FifosEnabled); // 8N1 + Fifo on
+            .write(LCRH::WLEN::EightBit + LCRH::FEN::FifosEnabled);
+
+        // Turn the UART on.
         self.registers
             .CR
             .write(CR::UARTEN::Enabled + CR::TXE::Enabled + CR::RXE::Enabled);
@@ -208,6 +231,53 @@ impl PL011UartInner {
         self.registers.DR.set(c as u32);
 
         self.chars_written += 1;
+    }
+
+    /// Block execution until the last buffered character has been physically put on the TX wire.
+    fn flush(&self) {
+        // The bit time for 921_600 baud is 1 / 921_600 = 1.09 µs. 8N1 has a total of 10 bits per
+        // symbol (start bit, 8 data bits, stop bit), so one symbol takes round about 10 * 1.09 =
+        // 10.9 µs, or 10_900 ns. Round it up to 12_000 ns to be on the safe side.
+        //
+        // Now make an educated guess for a good delay value. According to Wikipedia, the fastest
+        // RPi4 clocks around 1.5 GHz.
+        //
+        // So lets try to be on the safe side and default to 24_000 cycles, which would equal 12_000
+        // ns would the CPU be clocked at 2 GHz.
+        const CHAR_TIME_SAFE: usize = 24_000;
+
+        // Spin until TX FIFO empty is set.
+        while !self.registers.FR.matches_all(FR::TXFE::SET) {
+            cpu::nop();
+        }
+
+        // After the last character has been queued for transmission, wait for the time of one
+        // character + some extra time for safety.
+        cpu::spin_for_cycles(CHAR_TIME_SAFE);
+    }
+
+    /// Retrieve a character.
+    fn read_char(&mut self, blocking_mode: BlockingMode) -> Option<char> {
+        // If RX FIFO is empty,
+        if self.registers.FR.matches_all(FR::RXFE::SET) {
+            // immediately return in non-blocking mode.
+            if blocking_mode == BlockingMode::NonBlocking {
+                return None;
+            }
+
+            // Otherwise, wait until a char was received.
+            while self.registers.FR.matches_all(FR::RXFE::SET) {
+                cpu::nop();
+            }
+        }
+
+        // Read one character.
+        let ret = self.registers.DR.get() as u8 as char;
+
+        // Update statistics.
+        self.chars_read += 1;
+
+        Some(ret)
     }
 }
 
@@ -231,6 +301,8 @@ impl fmt::Write for PL011UartInner {
 }
 
 impl PL011Uart {
+    /// Create an instance.
+    ///
     /// # Safety
     ///
     /// - The user must ensure to provide a correct MMIO start address.
@@ -273,37 +345,23 @@ impl console::interface::Write for PL011Uart {
 
     fn flush(&self) {
         // Spin until TX FIFO empty is set.
-        self.inner.lock(|inner| {
-            while !inner.registers.FR.matches_all(FR::TXFE::SET) {
-                cpu::nop();
-            }
-        });
+        self.inner.lock(|inner| inner.flush());
     }
 }
 
 impl console::interface::Read for PL011Uart {
     fn read_char(&self) -> char {
-        self.inner.lock(|inner| {
-            // Spin while RX FIFO empty is set.
-            while inner.registers.FR.matches_all(FR::RXFE::SET) {
-                cpu::nop();
-            }
-
-            // Update statistics.
-            inner.chars_read += 1;
-
-            // Read one character.
-            inner.registers.DR.get() as u8 as char
-        })
+        self.inner
+            .lock(|inner| inner.read_char(BlockingMode::Blocking).unwrap())
     }
 
-    fn clear(&self) {
-        self.inner.lock(|inner| {
-            // Read from the RX FIFO until it is indicating empty.
-            while !inner.registers.FR.matches_all(FR::RXFE::SET) {
-                inner.registers.DR.get();
-            }
-        })
+    fn clear_rx(&self) {
+        // Read from the RX FIFO until it is indicating empty.
+        while self
+            .inner
+            .lock(|inner| inner.read_char(BlockingMode::NonBlocking))
+            .is_some()
+        {}
     }
 }
 

@@ -914,7 +914,7 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_mem_part1_identity_mapping/s
 
      for i in bsp::driver::driver_manager().all_device_drivers().iter() {
          if let Err(x) = i.init() {
-@@ -154,6 +168,9 @@
+@@ -155,6 +169,9 @@
 
      info!("Booting on: {}", bsp::board_name());
 
@@ -924,7 +924,7 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_mem_part1_identity_mapping/s
      let (_, privilege_level) = exception::current_privilege_level();
      info!("Current privilege level: {}", privilege_level);
 
-@@ -177,6 +194,13 @@
+@@ -178,6 +195,13 @@
      info!("Timer test, spinning for 1 second");
      time::time_manager().spin_for(Duration::from_secs(1));
 
@@ -936,8 +936,8 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_mem_part1_identity_mapping/s
 +    .unwrap();
 +
      info!("Echoing input now");
-     loop {
-         let c = bsp::console::console().read_char();
+
+     // Discard any spurious received characters before going into echo mode.
 
 diff -uNr 10_privilege_level/src/memory/mmu.rs 11_virtual_mem_part1_identity_mapping/src/memory/mmu.rs
 --- 10_privilege_level/src/memory/mmu.rs

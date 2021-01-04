@@ -11,6 +11,8 @@ require 'io/console'
 require 'colorize'
 require 'serialport'
 
+SERIAL_BAUD = 921_600
+
 class ConnectionError < StandardError; end
 
 # The main class
@@ -41,7 +43,7 @@ class MiniTerm
     def open_serial
         wait_for_serial
 
-        @target_serial = SerialPort.new(@target_serial_name, 576_000, 8, 1, SerialPort::NONE)
+        @target_serial = SerialPort.new(@target_serial_name, SERIAL_BAUD, 8, 1, SerialPort::NONE)
 
         # Ensure all output is immediately flushed to the device.
         @target_serial.sync = true
