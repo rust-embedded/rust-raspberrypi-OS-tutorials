@@ -92,15 +92,15 @@ other Unix flavors such as **macOS**, but this is only _experimental_.
 [docker group]: https://docs.docker.com/engine/install/linux-postinstall/
 [Rust Analyzer extension]: https://marketplace.visualstudio.com/items?itemName=matklad.rust-analyzer
 
-### 🧰 The Long Version: Eliminating Toolchain Hassle
+### 🧰 More Details: Eliminating Toolchain Hassle
 
 This series tries to put a strong focus on user friendliness. Therefore, efforts were made to
-eliminate the biggest painpoint in embedded development as much as possible: Toolchain hassle.
+eliminate the biggest painpoint in embedded development as much as possible: `Toolchain hassle`.
 
 Rust itself is already helping a lot in that regard, because it has built-in support for
 cross-compilation. All that we need for cross-compiling from an `x86` host to the Raspberry Pi's
-`AArch64` architecture is to install the respective target through `rustup`. However, besides the
-Rust compiler, we will use some more tools. Among others:
+`AArch64` architecture will be automatically installed by `rustup`. However, besides the Rust
+compiler, we will use some more tools. Among others:
 
 - `QEMU` to emulate our kernel on the host system.
 - A self-made tool called `Minipush` to load a kernel onto the Raspberry Pi on-demand over `UART`.
@@ -122,7 +122,8 @@ provided container, please refer to the repository's [docker](docker) folder.
 Since the kernel developed in the tutorials runs on the real hardware, it is highly recommended to
 get a USB serial cable to get the full experience.
 
-- You can find USB-to-serial cables that should work right away at [\[1\]] [\[2\]].
+- You can find USB-to-serial cables that should work right away at [\[1\]] [\[2\]], but many others
+  will work too. Ideally, your cable is based on the `CP2102` chip.
 - You connect it to `GND` and GPIO pins `14/15` as shown below.
 - [Tutorial 6](06_drivers_gpio_uart) is the first where you can use it. Check it out for
   instructions on how to prepare the SD card to boot your self-made kernel from it.

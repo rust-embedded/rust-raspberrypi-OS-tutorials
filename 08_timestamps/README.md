@@ -2,8 +2,9 @@
 
 ## tl;dr
 
-- We add abstractions for the architectural timer, implement it for `aarch64` and use it to annotate
-  prints with timestamps.
+- We add abstractions for the architectural timer and implement them for `_arch/aarch64`.
+- The new timer functions are used to annotate UART prints with timestamps, and to get rid of the
+  cycle-based delays in the `GPIO` and `UART` device drivers, which boosts accuracy.
 - A `warn!()` macro is added.
 
 ## Test it
