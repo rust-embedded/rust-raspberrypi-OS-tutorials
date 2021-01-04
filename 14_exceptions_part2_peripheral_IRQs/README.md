@@ -1862,20 +1862,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
          (0x44 => ICR: WriteOnly<u32, ICR::Register>),
          (0x48 => @END),
      }
-@@ -136,6 +181,12 @@
- /// Abstraction for the associated MMIO registers.
- type Registers = MMIODerefWrapper<RegisterBlock>;
-
-+#[derive(PartialEq)]
-+enum BlockingMode {
-+    Blocking,
-+    NonBlocking,
-+}
-+
- //--------------------------------------------------------------------------------------------------
- // Public Definitions
- //--------------------------------------------------------------------------------------------------
-@@ -151,7 +202,8 @@
+@@ -157,7 +202,8 @@
 
  /// Representation of the UART.
  pub struct PL011Uart {
@@ -1885,59 +1872,22 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -192,6 +244,10 @@
-         self.registers
+@@ -214,6 +260,14 @@
              .LCRH
-             .write(LCRH::WLEN::EightBit + LCRH::FEN::FifosEnabled); // 8N1 + Fifo on
-+        self.registers.IFLS.write(IFLS::RXIFLSEL::OneEigth); // RX FIFO fill level at 1/8
+             .write(LCRH::WLEN::EightBit + LCRH::FEN::FifosEnabled);
+
++        // Set RX FIFO fill level at 1/8.
++        self.registers.IFLS.write(IFLS::RXIFLSEL::OneEigth);
++
++        // Enable RX IRQ + RX timeout IRQ.
 +        self.registers
 +            .IMSC
-+            .write(IMSC::RXIM::Enabled + IMSC::RTIM::Enabled); // RX IRQ + RX timeout IRQ
++            .write(IMSC::RXIM::Enabled + IMSC::RTIM::Enabled);
++
+         // Turn the UART on.
          self.registers
              .CR
-             .write(CR::UARTEN::Enabled + CR::TXE::Enabled + CR::RXE::Enabled);
-@@ -209,6 +265,35 @@
-
-         self.chars_written += 1;
-     }
-+
-+    /// Retrieve a character.
-+    fn read_char_converting(&mut self, blocking_mode: BlockingMode) -> Option<char> {
-+        // If RX FIFO is empty,
-+        if self.registers.FR.matches_all(FR::RXFE::SET) {
-+            // immediately return in non-blocking mode.
-+            if blocking_mode == BlockingMode::NonBlocking {
-+                return None;
-+            }
-+
-+            // Otherwise, wait until a char was received.
-+            while self.registers.FR.matches_all(FR::RXFE::SET) {
-+                cpu::nop();
-+            }
-+        }
-+
-+        // Read one character.
-+        let mut ret = self.registers.DR.get() as u8 as char;
-+
-+        // Convert carrige return to newline.
-+        if ret == '\r' {
-+            ret = '\n'
-+        }
-+
-+        // Update statistics.
-+        self.chars_read += 1;
-+
-+        Some(ret)
-+    }
- }
-
- /// Implementing `core::fmt::Write` enables usage of the `format_args!` macros, which in turn are
-@@ -231,12 +316,18 @@
- }
-
- impl PL011Uart {
-+    /// Create an instance.
-+    ///
+@@ -308,9 +362,13 @@
      /// # Safety
      ///
      /// - The user must ensure to provide a correct MMIO start address.
@@ -1953,7 +1903,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
          }
      }
  }
-@@ -256,6 +347,21 @@
+@@ -330,6 +388,21 @@
 
          Ok(())
      }
@@ -1975,35 +1925,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
  }
 
  impl console::interface::Write for PL011Uart {
-@@ -283,25 +389,8 @@
-
- impl console::interface::Read for PL011Uart {
-     fn read_char(&self) -> char {
--        self.inner.lock(|inner| {
--            // Spin while RX FIFO empty is set.
--            while inner.registers.FR.matches_all(FR::RXFE::SET) {
--                cpu::nop();
--            }
--
--            // Read one character.
--            let mut ret = inner.registers.DR.get() as u8 as char;
--
--            // Convert carrige return to newline.
--            if ret == '\r' {
--                ret = '\n'
--            }
--
--            // Update statistics.
--            inner.chars_read += 1;
--
--            ret
--        })
-+        self.inner
-+            .lock(|inner| inner.read_char_converting(BlockingMode::Blocking).unwrap())
-     }
-
-     fn clear(&self) {
-@@ -323,3 +412,24 @@
+@@ -376,3 +449,24 @@
          self.inner.lock(|inner| inner.chars_read)
      }
  }
@@ -2439,7 +2361,7 @@ diff -uNr 13_integrated_testing/src/main.rs 14_exceptions_part2_peripheral_IRQs/
  #[no_mangle]
  unsafe fn kernel_init() -> ! {
      use driver::interface::DriverManager;
-@@ -42,14 +42,27 @@
+@@ -42,15 +42,27 @@
      bsp::driver::driver_manager().post_device_driver_init();
      // println! is usable from here on.
 
@@ -2462,24 +2384,28 @@ diff -uNr 13_integrated_testing/src/main.rs 14_exceptions_part2_peripheral_IRQs/
 
  /// The main function running after the early init.
  fn kernel_main() -> ! {
+-    use bsp::console::console;
 -    use console::interface::All;
      use driver::interface::DriverManager;
 +    use exception::asynchronous::interface::IRQManager;
 
      info!("Booting on: {}", bsp::board_name());
 
-@@ -76,9 +89,9 @@
+@@ -77,12 +89,9 @@
          info!("      {}. {}", i + 1, driver.compatible());
      }
 
+-    info!("Echoing input now");
 +    info!("Registered IRQ handlers:");
 +    bsp::exception::asynchronous::irq_manager().print_handler();
-+
-     info!("Echoing input now");
+
+-    // Discard any spurious received characters before going into echo mode.
+-    console().clear_rx();
 -    loop {
 -        let c = bsp::console::console().read_char();
 -        bsp::console::console().write_char(c);
 -    }
++    info!("Echoing input now");
 +    cpu::wait_forever();
  }
 

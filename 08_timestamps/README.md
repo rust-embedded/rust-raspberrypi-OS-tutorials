@@ -129,12 +129,11 @@ diff -uNr 07_uart_chainloader/src/_arch/aarch64/cpu.rs 08_timestamps/src/_arch/a
      } else {
          // If not core0, infinitely wait for events.
          wait_forever()
-@@ -39,15 +39,6 @@
+@@ -39,14 +39,6 @@
 
  pub use asm::nop;
 
 -/// Spin for `n` cycles.
--#[cfg(feature = "bsp_rpi3")]
 -#[inline(always)]
 -pub fn spin_for_cycles(n: usize) {
 -    for _ in 0..n {
@@ -145,7 +144,7 @@ diff -uNr 07_uart_chainloader/src/_arch/aarch64/cpu.rs 08_timestamps/src/_arch/a
  /// Pause execution on the core.
  #[inline(always)]
  pub fn wait_forever() -> ! {
-@@ -55,19 +46,3 @@
+@@ -54,19 +46,3 @@
          asm::wfe()
      }
  }
@@ -283,7 +282,7 @@ diff -uNr 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 08_times
 -        // Make an educated guess for a good delay value (Sequence described in the BCM2837
 -        // peripherals PDF).
 -        //
--        // - According to Wikipedia, the fastest Pi3 clocks around 1.4 GHz.
+-        // - According to Wikipedia, the fastest RPi4 clocks around 1.5 GHz.
 -        // - The Linux 2837 GPIO driver waits 1 µs between the steps.
 -        //
 -        // So lets try to be on the safe side and default to 2000 cycles, which would equal 1 µs
@@ -308,27 +307,72 @@ diff -uNr 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 08_times
 diff -uNr 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 08_timestamps/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 --- 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 08_timestamps/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -289,11 +289,18 @@
-                 cpu::nop();
-             }
+@@ -235,16 +235,13 @@
 
-+            // Read one character.
-+            let mut ret = inner.registers.DR.get() as u8 as char;
+     /// Block execution until the last buffered character has been physically put on the TX wire.
+     fn flush(&self) {
++        use crate::{time, time::interface::TimeManager};
++        use core::time::Duration;
 +
-+            // Convert carrige return to newline.
-+            if ret == '\r' {
-+                ret = '\n'
-+            }
-+
-             // Update statistics.
-             inner.chars_read += 1;
+         // The bit time for 921_600 baud is 1 / 921_600 = 1.09 µs. 8N1 has a total of 10 bits per
+         // symbol (start bit, 8 data bits, stop bit), so one symbol takes round about 10 * 1.09 =
+         // 10.9 µs, or 10_900 ns. Round it up to 12_000 ns to be on the safe side.
+-        //
+-        // Now make an educated guess for a good delay value. According to Wikipedia, the fastest
+-        // RPi4 clocks around 1.5 GHz.
+-        //
+-        // So lets try to be on the safe side and default to 24_000 cycles, which would equal 12_000
+-        // ns would the CPU be clocked at 2 GHz.
+-        const CHAR_TIME_SAFE: usize = 24_000;
++        const CHAR_TIME_SAFE: Duration = Duration::from_nanos(12_000);
 
--            // Read one character.
--            inner.registers.DR.get() as u8 as char
-+            ret
-         })
+         // Spin until TX FIFO empty is set.
+         while !self.registers.FR.matches_all(FR::TXFE::SET) {
+@@ -253,11 +250,11 @@
+
+         // After the last character has been queued for transmission, wait for the time of one
+         // character + some extra time for safety.
+-        cpu::spin_for_cycles(CHAR_TIME_SAFE);
++        time::time_manager().spin_for(CHAR_TIME_SAFE);
      }
 
+     /// Retrieve a character.
+-    fn read_char(&mut self, blocking_mode: BlockingMode) -> Option<char> {
++    fn read_char_converting(&mut self, blocking_mode: BlockingMode) -> Option<char> {
+         // If RX FIFO is empty,
+         if self.registers.FR.matches_all(FR::RXFE::SET) {
+             // immediately return in non-blocking mode.
+@@ -272,7 +269,12 @@
+         }
+
+         // Read one character.
+-        let ret = self.registers.DR.get() as u8 as char;
++        let mut ret = self.registers.DR.get() as u8 as char;
++
++        // Convert carrige return to newline.
++        if ret == '\r' {
++            ret = '\n'
++        }
+
+         // Update statistics.
+         self.chars_read += 1;
+@@ -352,14 +354,14 @@
+ impl console::interface::Read for PL011Uart {
+     fn read_char(&self) -> char {
+         self.inner
+-            .lock(|inner| inner.read_char(BlockingMode::Blocking).unwrap())
++            .lock(|inner| inner.read_char_converting(BlockingMode::Blocking).unwrap())
+     }
+
+     fn clear_rx(&self) {
+         // Read from the RX FIFO until it is indicating empty.
+         while self
+             .inner
+-            .lock(|inner| inner.read_char(BlockingMode::NonBlocking))
++            .lock(|inner| inner.read_char_converting(BlockingMode::NonBlocking))
+             .is_some()
+         {}
+     }
 
 diff -uNr 07_uart_chainloader/src/bsp/raspberrypi/link.ld 08_timestamps/src/bsp/raspberrypi/link.ld
 --- 07_uart_chainloader/src/bsp/raspberrypi/link.ld
@@ -484,7 +528,7 @@ diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
 
  /// Early init code.
  ///
-@@ -147,52 +146,31 @@
+@@ -147,51 +146,31 @@
 
  /// The main function running after the early init.
  fn kernel_main() -> ! {
@@ -504,9 +548,8 @@ diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
 -    println!("[ML] Requesting binary");
 -    console().flush();
 -
--    // Clear the RX FIFOs, if any, of spurious received characters before starting with the loader
--    // protocol.
--    console().clear();
+-    // Discard any spurious received characters before starting with the loader protocol.
+-    console().clear_rx();
 -
 -    // Notify `Minipush` to send the binary.
 -    for _ in 0..3 {

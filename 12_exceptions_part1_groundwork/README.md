@@ -973,7 +973,7 @@ diff -uNr 11_virtual_mem_part1_identity_mapping/src/main.rs 12_exceptions_part1_
      if let Err(string) = memory::mmu::mmu().init() {
          panic!("MMU: {}", string);
      }
-@@ -194,13 +197,28 @@
+@@ -195,13 +198,28 @@
      info!("Timer test, spinning for 1 second");
      time::time_manager().spin_for(Duration::from_secs(1));
 
@@ -1006,8 +1006,8 @@ diff -uNr 11_virtual_mem_part1_identity_mapping/src/main.rs 12_exceptions_part1_
 
 +    // Will never reach here in this tutorial.
      info!("Echoing input now");
-     loop {
-         let c = bsp::console::console().read_char();
+
+     // Discard any spurious received characters before going into echo mode.
 
 diff -uNr 11_virtual_mem_part1_identity_mapping/src/memory/mmu.rs 12_exceptions_part1_groundwork/src/memory/mmu.rs
 --- 11_virtual_mem_part1_identity_mapping/src/memory/mmu.rs

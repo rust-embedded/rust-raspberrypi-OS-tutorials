@@ -25,24 +25,29 @@ class MiniPush < MiniTerm
 
     private
 
-    # The three characters signaling the request token are expected to arrive as the last three
-    # characters _at the end_ of a character stream (e.g. after a header print from Miniload).
+    # The three characters signaling the request token form the consecutive sequence "\x03\x03\x03".
     def wait_for_binary_request
         puts "[#{@name_short}] 🔌 Please power the target now"
 
         # Timeout for the request token starts after the first sign of life was received.
         received = @target_serial.readpartial(4096)
         Timeout.timeout(10) do
+            count = 0
+
             loop do
                 raise ProtocolError if received.nil?
 
-                if received.chars.last(3) == ["\u{3}", "\u{3}", "\u{3}"]
-                    # Print the last chunk minus the request token.
-                    print received[0..-4]
-                    return
-                end
+                received.chars.each do |c|
+                    if c == "\u{3}"
+                        count += 1
+                        return true if count == 3
+                    else
+                        # A normal character resets token counting.
+                        count = 0
 
-                print received
+                        print c
+                    end
+                end
 
                 received = @target_serial.readpartial(4096)
             end

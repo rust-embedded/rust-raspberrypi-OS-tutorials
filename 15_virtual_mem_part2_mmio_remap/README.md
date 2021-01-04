@@ -1305,9 +1305,9 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
      irq_number: bsp::device_driver::IRQNumber,
  }
 @@ -234,7 +239,15 @@
-     /// The `FBRD` (fractional field) is only 6 bits so `0.2083 * 64 = 13.3 rounded to 13` will
-     /// give the best approximation we can get. A 5 modulo error margin is acceptable for UART and we're
-     /// now at 0.01 modulo.
+     /// The `FBRD` (fractional field) is only 6 bits so `0.2552083 * 64 = 16.3 rounded to 16` will
+     /// give the best approximation we can get. A 5modulo error margin is acceptable for UART and we're
+     /// now at 0.02modulo.
 -    pub fn init(&mut self) {
 +    ///
 +    /// # Safety
@@ -1318,10 +1318,10 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
 +            self.registers = Registers::new(addr);
 +        }
 +
-         // Turn it off temporarily.
-         self.registers.CR.set(0);
-
-@@ -251,6 +264,8 @@
+         // Execution can arrive here while there are still characters queued in the TX FIFO and
+         // actively being sent out by the UART hardware. If the UART is turned off in this case,
+         // those queued characters would be lost.
+@@ -272,6 +285,8 @@
          self.registers
              .CR
              .write(CR::UARTEN::Enabled + CR::TXE::Enabled + CR::RXE::Enabled);
@@ -1330,7 +1330,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
      }
 
      /// Send a character.
-@@ -320,13 +335,18 @@
+@@ -361,13 +376,18 @@
      ///
      /// # Safety
      ///
@@ -1352,7 +1352,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
              irq_number,
          }
      }
-@@ -343,7 +363,14 @@
+@@ -384,7 +404,14 @@
      }
 
      unsafe fn init(&self) -> Result<(), &'static str> {
@@ -1368,7 +1368,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
 
          Ok(())
      }
-@@ -362,6 +389,16 @@
+@@ -403,6 +430,16 @@
 
          Ok(())
      }

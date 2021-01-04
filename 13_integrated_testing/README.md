@@ -1444,9 +1444,9 @@ diff -uNr 12_exceptions_part1_groundwork/src/main.rs 13_integrated_testing/src/m
  unsafe fn kernel_init() -> ! {
      use driver::interface::DriverManager;
      use memory::mmu::interface::MMU;
-@@ -165,9 +49,7 @@
- /// The main function running after the early init.
+@@ -166,9 +50,7 @@
  fn kernel_main() -> ! {
+     use bsp::console::console;
      use console::interface::All;
 -    use core::time::Duration;
      use driver::interface::DriverManager;
@@ -1454,7 +1454,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/main.rs 13_integrated_testing/src/m
 
      info!("Booting on: {}", bsp::board_name());
 
-@@ -194,31 +76,6 @@
+@@ -195,31 +77,6 @@
          info!("      {}. {}", i + 1, driver.compatible());
      }
 
@@ -1484,8 +1484,8 @@ diff -uNr 12_exceptions_part1_groundwork/src/main.rs 13_integrated_testing/src/m
 -
 -    // Will never reach here in this tutorial.
      info!("Echoing input now");
-     loop {
-         let c = bsp::console::console().read_char();
+
+     // Discard any spurious received characters before going into echo mode.
 
 diff -uNr 12_exceptions_part1_groundwork/src/memory/mmu.rs 13_integrated_testing/src/memory/mmu.rs
 --- 12_exceptions_part1_groundwork/src/memory/mmu.rs
