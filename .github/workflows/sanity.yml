@@ -41,7 +41,7 @@ jobs:
       - name: Setup misspell
         run: |
           curl -L -o ./install-misspell.sh https://git.io/misspell
-          sh ./install-misspell.sh -b ~/bin
+          sh ./install-misspell.sh -b .vendor
       - name: Run checks
         run: |
           BSP=rpi3 bundle exec ruby utils/devtool.rb clippy
