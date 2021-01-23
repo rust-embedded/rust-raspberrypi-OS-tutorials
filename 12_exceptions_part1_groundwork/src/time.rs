@@ -7,7 +7,11 @@
 #[cfg(target_arch = "aarch64")]
 #[path = "_arch/aarch64/time.rs"]
 mod arch_time;
-pub use arch_time::*;
+
+//--------------------------------------------------------------------------------------------------
+// Architectural Public Reexports
+//--------------------------------------------------------------------------------------------------
+pub use arch_time::time_manager;
 
 //--------------------------------------------------------------------------------------------------
 // Public Definitions
@@ -18,8 +22,6 @@ pub mod interface {
     use core::time::Duration;
 
     /// Time management functions.
-    ///
-    /// The `BSP` is supposed to supply one global instance.
     pub trait TimeManager {
         /// The timer's resolution.
         fn resolution(&self) -> Duration;

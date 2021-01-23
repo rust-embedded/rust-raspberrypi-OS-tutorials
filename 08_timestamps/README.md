@@ -2,7 +2,8 @@
 
 ## tl;dr
 
-- We add abstractions for the architectural timer and implement them for `_arch/aarch64`.
+- We add abstractions for timer hardware, and implement them for the ARM architectural timer in
+  `_arch/aarch64`.
 - The new timer functions are used to annotate UART prints with timestamps, and to get rid of the
   cycle-based delays in the `GPIO` and `UART` device drivers, which boosts accuracy.
 - A `warn!()` macro is added.
@@ -68,7 +69,7 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
  endif
 
  # Export for build.rs
-@@ -75,8 +73,7 @@
+@@ -76,8 +74,7 @@
  EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
  EXEC_MINIPUSH = ruby ../utils/minipush.rb
 
@@ -78,7 +79,7 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
 
  all: $(KERNEL_BIN)
 
-@@ -90,18 +87,15 @@
+@@ -91,18 +88,15 @@
  	$(DOC_CMD) --document-private-items --open
 
  ifeq ($(QEMU_MACHINE_TYPE),)
@@ -100,7 +101,7 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
 
  clippy:
  	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD)
-@@ -113,10 +107,7 @@
+@@ -114,10 +108,7 @@
  	readelf --headers $(KERNEL_ELF)
 
  objdump: $(KERNEL_ELF)
@@ -113,10 +114,10 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
  nm: $(KERNEL_ELF)
  	@$(DOCKER_ELFTOOLS) $(NM_BINARY) --demangle --print-size $(KERNEL_ELF) | sort | rustfilt
 
-diff -uNr 07_uart_chainloader/src/_arch/aarch64/cpu.rs 08_timestamps/src/_arch/aarch64/cpu.rs
---- 07_uart_chainloader/src/_arch/aarch64/cpu.rs
-+++ 08_timestamps/src/_arch/aarch64/cpu.rs
-@@ -22,11 +22,11 @@
+diff -uNr 07_uart_chainloader/src/_arch/aarch64/cpu/boot.rs 08_timestamps/src/_arch/aarch64/cpu/boot.rs
+--- 07_uart_chainloader/src/_arch/aarch64/cpu/boot.rs
++++ 08_timestamps/src/_arch/aarch64/cpu/boot.rs
+@@ -29,11 +29,11 @@
  ///   actually set (`SP.set()`).
  #[no_mangle]
  pub unsafe fn _start() -> ! {
@@ -129,8 +130,12 @@ diff -uNr 07_uart_chainloader/src/_arch/aarch64/cpu.rs 08_timestamps/src/_arch/a
 +        runtime_init::runtime_init()
      } else {
          // If not core0, infinitely wait for events.
-         wait_forever()
-@@ -39,14 +39,6 @@
+         cpu::wait_forever()
+
+diff -uNr 07_uart_chainloader/src/_arch/aarch64/cpu.rs 08_timestamps/src/_arch/aarch64/cpu.rs
+--- 07_uart_chainloader/src/_arch/aarch64/cpu.rs
++++ 08_timestamps/src/_arch/aarch64/cpu.rs
+@@ -19,14 +19,6 @@
 
  pub use asm::nop;
 
@@ -145,7 +150,7 @@ diff -uNr 07_uart_chainloader/src/_arch/aarch64/cpu.rs 08_timestamps/src/_arch/a
  /// Pause execution on the core.
  #[inline(always)]
  pub fn wait_forever() -> ! {
-@@ -54,19 +46,3 @@
+@@ -34,19 +26,3 @@
          asm::wfe()
      }
  }
@@ -169,12 +174,19 @@ diff -uNr 07_uart_chainloader/src/_arch/aarch64/cpu.rs 08_timestamps/src/_arch/a
 diff -uNr 07_uart_chainloader/src/_arch/aarch64/time.rs 08_timestamps/src/_arch/aarch64/time.rs
 --- 07_uart_chainloader/src/_arch/aarch64/time.rs
 +++ 08_timestamps/src/_arch/aarch64/time.rs
-@@ -0,0 +1,98 @@
+@@ -0,0 +1,105 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Architectural timer primitives.
++//!
++//! # Orientation
++//!
++//! Since arch modules are imported into generic modules using the path attribute, the path of this
++//! file is:
++//!
++//! crate::time::arch_time
 +
 +use crate::{time, warn};
 +use core::time::Duration;
@@ -227,7 +239,7 @@ diff -uNr 07_uart_chainloader/src/_arch/aarch64/time.rs 08_timestamps/src/_arch/
 +        }
 +
 +        // Calculate the register compare value.
-+        let frq = CNTFRQ_EL0.get() as u64;
++        let frq = CNTFRQ_EL0.get();
 +        let x = match frq.checked_mul(duration.as_nanos() as u64) {
 +            None => {
 +                warn!("Spin duration too long, skipping");
@@ -483,24 +495,28 @@ diff -uNr 07_uart_chainloader/src/bsp/raspberrypi/memory.rs 08_timestamps/src/bs
      unsafe {
          range = RangeInclusive::new(__bss_start.get(), __bss_end_inclusive.get());
 
+diff -uNr 07_uart_chainloader/src/cpu.rs 08_timestamps/src/cpu.rs
+--- 07_uart_chainloader/src/cpu.rs
++++ 08_timestamps/src/cpu.rs
+@@ -15,4 +15,4 @@
+ //--------------------------------------------------------------------------------------------------
+ // Architectural Public Reexports
+ //--------------------------------------------------------------------------------------------------
+-pub use arch_cpu::{branch_to_raw_addr, nop, spin_for_cycles, wait_forever};
++pub use arch_cpu::{nop, wait_forever};
+
 diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
 --- 07_uart_chainloader/src/main.rs
 +++ 08_timestamps/src/main.rs
-@@ -11,9 +11,11 @@
+@@ -102,14 +102,11 @@
  //!
- //! - [`bsp::console::console()`] - Returns a reference to the kernel's [console interface].
- //! - [`bsp::driver::driver_manager()`] - Returns a reference to the kernel's [driver interface].
-+//! - [`time::time_manager()`] - Returns a reference to the kernel's [timer interface].
+ //! 1. The kernel's entry point is the function [`cpu::boot::arch_boot::_start()`].
+ //!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.rs`.
+-//! 2. Once finished with architectural setup, the arch code calls [`relocate::relocate_self()`].
+-//! 3. Finally, [`runtime_init::runtime_init()`] is called.
++//! 2. Once finished with architectural setup, the arch code calls [`runtime_init::runtime_init()`].
  //!
- //! [console interface]: ../libkernel/console/interface/index.html
- //! [driver interface]: ../libkernel/driver/interface/trait.DriverManager.html
-+//! [timer interface]: ../libkernel/time/interface/trait.TimeManager.html
- //!
- //! # Code organization and architecture
- //!
-@@ -100,9 +102,7 @@
- //! - `crate::memory::*`
- //! - `crate::bsp::memory::*`
+ //! [`cpu::boot::arch_boot::_start()`]: cpu/boot/arch_boot/fn._start.html
 
 -#![feature(asm)]
  #![feature(const_fn_fn_ptr_basics)]
@@ -508,17 +524,7 @@ diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
  #![feature(format_args_nl)]
  #![feature(panic_info_message)]
  #![feature(trait_alias)]
-@@ -110,8 +110,7 @@
- #![no_std]
-
- // `mod cpu` provides the `_start()` function, the first function to run. `_start()` then calls
--// `relocate::relocate_self()`. `relocate::relocate_self()` calls `runtime_init()`, which jumps to
--// `kernel_init()`.
-+// `runtime_init()`, which jumps to `kernel_init()`.
-
- mod bsp;
- mod console;
-@@ -120,9 +119,9 @@
+@@ -123,9 +120,9 @@
  mod memory;
  mod panic_wait;
  mod print;
@@ -529,7 +535,7 @@ diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
 
  /// Early init code.
  ///
-@@ -147,51 +146,31 @@
+@@ -150,51 +147,31 @@
 
  /// The main function running after the early init.
  fn kernel_main() -> ! {
@@ -593,7 +599,7 @@ diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
 +    // Test a failing timer case.
 +    time::time_manager().spin_for(Duration::from_nanos(1));
 
--    // Use black magic to get a function pointer.
+-    // Use black magic to create a function pointer.
 -    let kernel: fn() -> ! = unsafe { core::mem::transmute(kernel_addr) };
 -
 -    // Jump to loaded kernel!
@@ -760,7 +766,7 @@ diff -uNr 07_uart_chainloader/src/runtime_init.rs 08_timestamps/src/runtime_init
 diff -uNr 07_uart_chainloader/src/time.rs 08_timestamps/src/time.rs
 --- 07_uart_chainloader/src/time.rs
 +++ 08_timestamps/src/time.rs
-@@ -0,0 +1,35 @@
+@@ -0,0 +1,37 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -770,7 +776,11 @@ diff -uNr 07_uart_chainloader/src/time.rs 08_timestamps/src/time.rs
 +#[cfg(target_arch = "aarch64")]
 +#[path = "_arch/aarch64/time.rs"]
 +mod arch_time;
-+pub use arch_time::*;
++
++//--------------------------------------------------------------------------------------------------
++// Architectural Public Reexports
++//--------------------------------------------------------------------------------------------------
++pub use arch_time::time_manager;
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Definitions
@@ -781,8 +791,6 @@ diff -uNr 07_uart_chainloader/src/time.rs 08_timestamps/src/time.rs
 +    use core::time::Duration;
 +
 +    /// Time management functions.
-+    ///
-+    /// The `BSP` is supposed to supply one global instance.
 +    pub trait TimeManager {
 +        /// The timer's resolution.
 +        fn resolution(&self) -> Duration;

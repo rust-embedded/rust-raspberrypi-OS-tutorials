@@ -42,8 +42,8 @@ static KERNEL_MAPPING_RECORD: InitStateLock<MappingRecord> =
 impl MappingRecordEntry {
     pub fn new(
         name: &'static str,
-        phys_pages: &PageSliceDescriptor<Physical>,
         virt_pages: &PageSliceDescriptor<Virtual>,
+        phys_pages: &PageSliceDescriptor<Physical>,
         attr: &AttributeFields,
     ) -> Self {
         Self {
@@ -97,13 +97,13 @@ impl MappingRecord {
     pub fn add(
         &mut self,
         name: &'static str,
-        phys_pages: &PageSliceDescriptor<Physical>,
         virt_pages: &PageSliceDescriptor<Virtual>,
+        phys_pages: &PageSliceDescriptor<Physical>,
         attr: &AttributeFields,
     ) -> Result<(), &'static str> {
         let x = self.find_next_free()?;
 
-        *x = Some(MappingRecordEntry::new(name, phys_pages, virt_pages, attr));
+        *x = Some(MappingRecordEntry::new(name, virt_pages, phys_pages, attr));
         Ok(())
     }
 
@@ -191,11 +191,11 @@ use synchronization::interface::ReadWriteEx;
 /// Add an entry to the mapping info record.
 pub fn kernel_add(
     name: &'static str,
-    phys_pages: &PageSliceDescriptor<Physical>,
     virt_pages: &PageSliceDescriptor<Virtual>,
+    phys_pages: &PageSliceDescriptor<Physical>,
     attr: &AttributeFields,
 ) -> Result<(), &'static str> {
-    KERNEL_MAPPING_RECORD.write(|mr| mr.add(name, phys_pages, virt_pages, attr))
+    KERNEL_MAPPING_RECORD.write(|mr| mr.add(name, virt_pages, phys_pages, attr))
 }
 
 pub fn kernel_find_and_insert_mmio_duplicate(

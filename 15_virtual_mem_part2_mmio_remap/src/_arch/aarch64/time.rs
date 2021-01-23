@@ -3,6 +3,13 @@
 // Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
 
 //! Architectural timer primitives.
+//!
+//! # Orientation
+//!
+//! Since arch modules are imported into generic modules using the path attribute, the path of this
+//! file is:
+//!
+//! crate::time::arch_time
 
 use crate::{time, warn};
 use core::time::Duration;

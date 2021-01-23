@@ -2,7 +2,7 @@
 
 ## tl;dr
 
-- We extend `cpu.S` to call into Rust code for the first time. There, we zero the [bss] section
+- We extend `boot.S` to call into Rust code for the first time. There, we zero the [bss] section
   before execution is halted with a call to `panic()`.
 - Check out `make qemu` again to see the additional code run.
 
@@ -37,35 +37,9 @@ diff -uNr 01_wait_forever/Cargo.toml 02_runtime_init/Cargo.toml
  [features]
  default = []
 
-diff -uNr 01_wait_forever/src/_arch/aarch64/cpu.rs 02_runtime_init/src/_arch/aarch64/cpu.rs
---- 01_wait_forever/src/_arch/aarch64/cpu.rs
-+++ 02_runtime_init/src/_arch/aarch64/cpu.rs
-@@ -6,3 +6,21 @@
-
- // Assembly counterpart to this file.
- global_asm!(include_str!("cpu.S"));
-+
-+//--------------------------------------------------------------------------------------------------
-+// Public Code
-+//--------------------------------------------------------------------------------------------------
-+
-+/// Pause execution on the core.
-+#[inline(always)]
-+pub fn wait_forever() -> ! {
-+    unsafe {
-+        loop {
-+            #[rustfmt::skip]
-+            asm!(
-+                "wfe",
-+                options(nomem, nostack, preserves_flags)
-+            );
-+        }
-+    }
-+}
-
-diff -uNr 01_wait_forever/src/_arch/aarch64/cpu.S 02_runtime_init/src/_arch/aarch64/cpu.S
---- 01_wait_forever/src/_arch/aarch64/cpu.S
-+++ 02_runtime_init/src/_arch/aarch64/cpu.S
+diff -uNr 01_wait_forever/src/_arch/aarch64/cpu/boot.S 02_runtime_init/src/_arch/aarch64/cpu/boot.S
+--- 01_wait_forever/src/_arch/aarch64/cpu/boot.S
++++ 02_runtime_init/src/_arch/aarch64/cpu/boot.S
 @@ -7,5 +7,15 @@
  .global _start
 
@@ -84,6 +58,41 @@ diff -uNr 01_wait_forever/src/_arch/aarch64/cpu.S 02_runtime_init/src/_arch/aarc
 +    bl      runtime_init    // Jump to the "runtime_init()" kernel function
 +    b       1b              // We should never reach here. But just in case,
 +                            // park this core aswell
+
+diff -uNr 01_wait_forever/src/_arch/aarch64/cpu.rs 02_runtime_init/src/_arch/aarch64/cpu.rs
+--- 01_wait_forever/src/_arch/aarch64/cpu.rs
++++ 02_runtime_init/src/_arch/aarch64/cpu.rs
+@@ -0,0 +1,30 @@
++// SPDX-License-Identifier: MIT OR Apache-2.0
++//
++// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
++
++//! Architectural processor code.
++//!
++//! # Orientation
++//!
++//! Since arch modules are imported into generic modules using the path attribute, the path of this
++//! file is:
++//!
++//! crate::cpu::arch_cpu
++
++//--------------------------------------------------------------------------------------------------
++// Public Code
++//--------------------------------------------------------------------------------------------------
++
++/// Pause execution on the core.
++#[inline(always)]
++pub fn wait_forever() -> ! {
++    unsafe {
++        loop {
++            #[rustfmt::skip]
++            asm!(
++                "wfe",
++                options(nomem, nostack, preserves_flags)
++            );
++        }
++    }
++}
 
 diff -uNr 01_wait_forever/src/bsp/raspberrypi/link.ld 02_runtime_init/src/bsp/raspberrypi/link.ld
 --- 01_wait_forever/src/bsp/raspberrypi/link.ld
@@ -169,16 +178,36 @@ diff -uNr 01_wait_forever/src/bsp/raspberrypi.rs 02_runtime_init/src/bsp/raspber
 -// Coming soon.
 +pub mod memory;
 
+diff -uNr 01_wait_forever/src/cpu.rs 02_runtime_init/src/cpu.rs
+--- 01_wait_forever/src/cpu.rs
++++ 02_runtime_init/src/cpu.rs
+@@ -4,4 +4,13 @@
+
+ //! Processor code.
+
++#[cfg(target_arch = "aarch64")]
++#[path = "_arch/aarch64/cpu.rs"]
++mod arch_cpu;
++
+ mod boot;
++
++//--------------------------------------------------------------------------------------------------
++// Architectural Public Reexports
++//--------------------------------------------------------------------------------------------------
++pub use arch_cpu::wait_forever;
+
 diff -uNr 01_wait_forever/src/main.rs 02_runtime_init/src/main.rs
 --- 01_wait_forever/src/main.rs
 +++ 02_runtime_init/src/main.rs
-@@ -97,10 +97,20 @@
- #![no_main]
- #![no_std]
+@@ -102,6 +102,7 @@
+ //!
+ //! 1. The kernel's entry point is the function `cpu::boot::arch_boot::_start()`.
+ //!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.S`.
++//! 2. Once finished with architectural setup, the arch code calls [`runtime_init::runtime_init()`].
 
--// `mod cpu` provides the `_start()` function, the first function to run.
-+// `mod cpu` provides the `_start()` function, the first function to run. `_start()` then calls
-+// `runtime_init()`, which jumps to `kernel_init()`.
+ #![feature(asm)]
+ #![feature(global_asm)]
+@@ -110,6 +111,15 @@
 
  mod bsp;
  mod cpu;

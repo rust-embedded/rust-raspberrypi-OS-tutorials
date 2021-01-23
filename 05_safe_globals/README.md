@@ -3,8 +3,8 @@
 ## tl;dr
 
 - A pseudo-lock is introduced.
--  It is a first showcase of OS synchronization primitives and enables safe access to a global data
-   structure.
+- It is a first showcase of OS synchronization primitives and enables safe access to a global data
+  structure.
 
 ## Mutable globals in Rust
 
@@ -26,9 +26,7 @@ variant of a *MUTual EXclusion* primitive. `Mutex` is introduced as a trait in `
 and implemented by the `NullLock` in the same file. In order to make the code lean for teaching
 purposes, it leaves out the actual architecture-specific logic for protection against concurrent
 access, since we don't need it as long as the kernel only executes on a single core with interrupts
-disabled. That is also why it is implemented in the same file as the interface itself. In later
-tutorials, an implementation might move to the `_arch` once it pulls in arch-specific code that can
-not be further abstracted.
+disabled.
 
 The `NullLock` focuses on showcasing the Rust core concept of [interior mutability]. Make sure to
 read up on it. I also recommend to read this article about an [accurate mental model for Rust's
@@ -213,7 +211,7 @@ diff -uNr 04_zero_overhead_abstraction/src/console.rs 05_safe_globals/src/consol
 diff -uNr 04_zero_overhead_abstraction/src/main.rs 05_safe_globals/src/main.rs
 --- 04_zero_overhead_abstraction/src/main.rs
 +++ 05_safe_globals/src/main.rs
-@@ -94,6 +94,7 @@
+@@ -108,6 +108,7 @@
 
  #![feature(format_args_nl)]
  #![feature(panic_info_message)]
@@ -221,7 +219,7 @@ diff -uNr 04_zero_overhead_abstraction/src/main.rs 05_safe_globals/src/main.rs
  #![no_main]
  #![no_std]
 
-@@ -107,6 +108,7 @@
+@@ -118,6 +119,7 @@
  mod panic_wait;
  mod print;
  mod runtime_init;
@@ -229,7 +227,7 @@ diff -uNr 04_zero_overhead_abstraction/src/main.rs 05_safe_globals/src/main.rs
 
  /// Early init code.
  ///
-@@ -114,8 +116,15 @@
+@@ -125,8 +127,15 @@
  ///
  /// - Only a single core must be active and running this function.
  unsafe fn kernel_init() -> ! {

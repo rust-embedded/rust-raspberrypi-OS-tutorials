@@ -138,7 +138,6 @@ In `lib.rs`, we add the following headers to get started with `custom_test_frame
 ```rust
 // Testing
 #![cfg_attr(test, no_main)]
-#![cfg_attr(test, feature(slice_ptr_range))]
 #![feature(custom_test_frameworks)]
 #![reexport_test_harness_main = "test_main"]
 #![test_runner(crate::test_runner)]
@@ -255,9 +254,9 @@ this is an opportunity to cut down on setup code.
 
 [tutorial 03]: ../03_hacky_hello_world
 
-As a matter of fact, for the `Raspberrys`, nothing needs to be done and the function is empy. But
+As a matter of fact, for the `Raspberrys`, nothing needs to be done, so the function is empy. But
 this might be different for other hardware emulated by QEMU, so it makes sense to introduce the
-function now to make it easier in case new `BSPs` are  added to the kernel in the future.
+function now to make it easier in case new `BSPs` are added to the kernel in the future.
 
 Next, the reexported `test_main()` is called, which will call our `test_runner()` which finally
 prints the unit test names and executes them.
@@ -875,7 +874,7 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
  RUSTFLAGS          = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
  RUSTFLAGS_PEDANTIC = $(RUSTFLAGS) -D warnings -D missing_docs
 
-@@ -52,6 +65,7 @@
+@@ -53,6 +66,7 @@
  DOC_CMD     = cargo doc $(COMPILER_ARGS)
  CLIPPY_CMD  = cargo clippy $(COMPILER_ARGS)
  CHECK_CMD   = cargo check $(COMPILER_ARGS)
@@ -883,7 +882,7 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
  OBJCOPY_CMD = rust-objcopy \
      --strip-all            \
      -O binary
-@@ -68,6 +82,7 @@
+@@ -69,6 +83,7 @@
 
  DOCKER_QEMU     = $(DOCKER_CMD_INTERACT) $(DOCKER_IMAGE)
  DOCKER_GDB      = $(DOCKER_CMD_INTERACT) $(DOCKER_ARG_NET) $(DOCKER_IMAGE)
@@ -891,7 +890,7 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
  DOCKER_ELFTOOLS = $(DOCKER_CMD) $(DOCKER_IMAGE)
 
  # Dockerize commands that require USB device passthrough only on Linux
-@@ -84,8 +99,8 @@
+@@ -85,8 +100,8 @@
  EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
  EXEC_MINIPUSH = ruby ../utils/minipush.rb
 
@@ -902,7 +901,7 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
 
  all: $(KERNEL_BIN)
 
-@@ -99,11 +114,26 @@
+@@ -100,11 +115,26 @@
  	$(DOC_CMD) --document-private-items --open
 
  ifeq ($(QEMU_MACHINE_TYPE),)
@@ -935,7 +934,7 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
 diff -uNr 12_exceptions_part1_groundwork/src/_arch/aarch64/cpu.rs 13_integrated_testing/src/_arch/aarch64/cpu.rs
 --- 12_exceptions_part1_groundwork/src/_arch/aarch64/cpu.rs
 +++ 13_integrated_testing/src/_arch/aarch64/cpu.rs
-@@ -90,3 +90,20 @@
+@@ -26,3 +26,20 @@
          asm::wfe()
      }
  }
@@ -960,8 +959,8 @@ diff -uNr 12_exceptions_part1_groundwork/src/_arch/aarch64/cpu.rs 13_integrated_
 diff -uNr 12_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs 13_integrated_testing/src/_arch/aarch64/exception.rs
 --- 12_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs
 +++ 13_integrated_testing/src/_arch/aarch64/exception.rs
-@@ -5,7 +5,7 @@
- //! Architectural synchronous and asynchronous exception handling.
+@@ -12,7 +12,7 @@
+ //! crate::exception::arch_exception
 
  use core::{cell::UnsafeCell, fmt};
 -use cortex_a::{asm, barrier, regs::*};
@@ -969,7 +968,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs 13_integ
  use register::InMemoryRegister;
 
  // Assembly counterpart to this file.
-@@ -80,16 +80,6 @@
+@@ -87,16 +87,6 @@
 
  #[no_mangle]
  unsafe extern "C" fn current_elx_synchronous(e: &mut ExceptionContext) {
@@ -987,11 +986,11 @@ diff -uNr 12_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs 13_integ
  }
 
 
-diff -uNr 12_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu.rs 13_integrated_testing/src/_arch/aarch64/memory/mmu.rs
---- 12_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu.rs
-+++ 13_integrated_testing/src/_arch/aarch64/memory/mmu.rs
-@@ -341,3 +341,40 @@
-         Ok(())
+diff -uNr 12_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu/translation_table.rs 13_integrated_testing/src/_arch/aarch64/memory/mmu/translation_table.rs
+--- 12_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu/translation_table.rs
++++ 13_integrated_testing/src/_arch/aarch64/memory/mmu/translation_table.rs
+@@ -286,3 +286,31 @@
+         self.lvl2.base_addr_u64()
      }
  }
 +
@@ -1021,6 +1020,24 @@ diff -uNr 12_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu.rs 13_inte
 +            core::mem::size_of::<u64>()
 +        );
 +    }
++}
+
+diff -uNr 12_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu.rs 13_integrated_testing/src/_arch/aarch64/memory/mmu.rs
+--- 12_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu.rs
++++ 13_integrated_testing/src/_arch/aarch64/memory/mmu.rs
+@@ -144,3 +144,22 @@
+         Ok(())
+     }
+ }
++
++//--------------------------------------------------------------------------------------------------
++// Testing
++//--------------------------------------------------------------------------------------------------
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use test_macros::kernel_test;
 +
 +    /// Check if KERNEL_TABLES is in .bss.
 +    #[kernel_test]
@@ -1053,8 +1070,8 @@ diff -uNr 12_exceptions_part1_groundwork/src/bsp/raspberrypi/console.rs 13_integ
 diff -uNr 12_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs 13_integrated_testing/src/bsp/raspberrypi/memory/mmu.rs
 --- 12_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs
 +++ 13_integrated_testing/src/bsp/raspberrypi/memory/mmu.rs
-@@ -76,3 +76,46 @@
- pub fn virt_mem_layout() -> &'static KernelVirtualLayout<{ NUM_MEM_RANGES }> {
+@@ -69,3 +69,46 @@
+ pub fn virt_mem_layout() -> &'static KernelVirtualLayout<NUM_MEM_RANGES> {
      &LAYOUT
  }
 +
@@ -1101,10 +1118,20 @@ diff -uNr 12_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs 13_in
 +    }
 +}
 
+diff -uNr 12_exceptions_part1_groundwork/src/cpu.rs 13_integrated_testing/src/cpu.rs
+--- 12_exceptions_part1_groundwork/src/cpu.rs
++++ 13_integrated_testing/src/cpu.rs
+@@ -15,4 +15,4 @@
+ //--------------------------------------------------------------------------------------------------
+ // Architectural Public Reexports
+ //--------------------------------------------------------------------------------------------------
+-pub use arch_cpu::{nop, wait_forever};
++pub use arch_cpu::{nop, qemu_exit_failure, qemu_exit_success, wait_forever};
+
 diff -uNr 12_exceptions_part1_groundwork/src/exception.rs 13_integrated_testing/src/exception.rs
 --- 12_exceptions_part1_groundwork/src/exception.rs
 +++ 13_integrated_testing/src/exception.rs
-@@ -24,3 +24,21 @@
+@@ -28,3 +28,21 @@
      Hypervisor,
      Unknown,
  }
@@ -1130,7 +1157,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/exception.rs 13_integrated_testing/
 diff -uNr 12_exceptions_part1_groundwork/src/lib.rs 13_integrated_testing/src/lib.rs
 --- 12_exceptions_part1_groundwork/src/lib.rs
 +++ 13_integrated_testing/src/lib.rs
-@@ -0,0 +1,169 @@
+@@ -0,0 +1,168 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -1140,19 +1167,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/lib.rs 13_integrated_testing/src/li
 +
 +//! The `kernel` library.
 +//!
-+//! Used by `main.rs` to compose the final kernel binary.
-+//!
-+//! # TL;DR - Overview of important Kernel entities
-+//!
-+//! - [`bsp::console::console()`] - Returns a reference to the kernel's [console interface].
-+//! - [`bsp::driver::driver_manager()`] - Returns a reference to the kernel's [driver interface].
-+//! - [`memory::mmu::mmu()`] - Returns a reference to the kernel's [MMU interface].
-+//! - [`time::time_manager()`] - Returns a reference to the kernel's [timer interface].
-+//!
-+//! [console interface]: ../libkernel/console/interface/index.html
-+//! [driver interface]: ../libkernel/driver/interface/trait.DriverManager.html
-+//! [MMU interface]: ../libkernel/memory/mmu/interface/trait.MMU.html
-+//! [timer interface]: ../libkernel/time/interface/trait.TimeManager.html
++//! Used to compose the final kernel binary.
 +//!
 +//! # Code organization and architecture
 +//!
@@ -1167,15 +1182,22 @@ diff -uNr 12_exceptions_part1_groundwork/src/lib.rs 13_integrated_testing/src/li
 +//! `src/_arch`, for example, `src/_arch/aarch64`.
 +//!
 +//! The architecture folders mirror the subsystem modules laid out in `src`. For example,
-+//! architectural code that belongs to the `kernel`'s memory subsystem (`src/memory.rs`) would go
-+//! into `src/_arch/aarch64/memory.rs`. The latter file is directly included and re-exported in
-+//! `src/memory.rs`, so that the architectural code parts are transparent with respect to the code's
-+//! module organization. That means a public function `foo()` defined in
-+//! `src/_arch/aarch64/memory.rs` would be reachable as `crate::memory::foo()` only.
++//! architectural code that belongs to the `kernel`'s MMU subsystem (`src/memory/mmu.rs`) would go
++//! into `src/_arch/aarch64/memory/mmu.rs`. The latter file is loaded as a module in
++//! `src/memory/mmu.rs` using the `path attribute`. Usually, the chosen module name is the generic
++//! module's name prefixed with `arch_`.
 +//!
-+//! The `_` in `_arch` denotes that this folder is not part of the standard module hierarchy.
-+//! Rather, it's contents are conditionally pulled into respective files using the `#[path =
-+//! "_arch/xxx/yyy.rs"]` attribute.
++//! For example, this is the top of `src/memory/mmu.rs`:
++//!
++//! ```
++//! #[cfg(target_arch = "aarch64")]
++//! #[path = "../_arch/aarch64/memory/mmu.rs"]
++//! mod arch_mmu;
++//! ```
++//!
++//! Often times, items from the `arch_ module` will be publicly reexported by the parent module.
++//! This way, each architecture specific module can provide its implementation of an item, while the
++//! caller must not be concerned which architecture has been conditionally compiled.
 +//!
 +//! ## BSP code
 +//!
@@ -1184,9 +1206,8 @@ diff -uNr 12_exceptions_part1_groundwork/src/lib.rs 13_integrated_testing/src/li
 +//! or instances of drivers for devices that are featured on the respective board.
 +//!
 +//! Just like processor architecture code, the `BSP` code's module structure tries to mirror the
-+//! `kernel`'s subsystem modules, but there is no transparent re-exporting this time. That means
-+//! whatever is provided must be called starting from the `bsp` namespace, e.g.
-+//! `bsp::driver::driver_manager()`.
++//! `kernel`'s subsystem modules, but there is no reexporting this time. That means whatever is
++//! provided must be called starting from the `bsp` namespace, e.g. `bsp::driver::driver_manager()`.
 +//!
 +//! ## Kernel interfaces
 +//!
@@ -1238,6 +1259,14 @@ diff -uNr 12_exceptions_part1_groundwork/src/lib.rs 13_integrated_testing/src/li
 +//!
 +//! - `crate::memory::*`
 +//! - `crate::bsp::memory::*`
++//!
++//! # Boot flow
++//!
++//! 1. The kernel's entry point is the function [`cpu::boot::arch_boot::_start()`].
++//!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.rs`.
++//! 2. Once finished with architectural setup, the arch code calls [`runtime_init::runtime_init()`].
++//!
++//! [`cpu::boot::arch_boot::_start()`]: cpu/boot/arch_boot/fn._start.html
 +
 +#![allow(incomplete_features)]
 +#![feature(const_fn_fn_ptr_basics)]
@@ -1254,9 +1283,6 @@ diff -uNr 12_exceptions_part1_groundwork/src/lib.rs 13_integrated_testing/src/li
 +#![feature(custom_test_frameworks)]
 +#![reexport_test_harness_main = "test_main"]
 +#![test_runner(crate::test_runner)]
-+
-+// `mod cpu` provides the `_start()` function, the first function to run. `_start()` then calls
-+// `runtime_init()`, which jumps to `kernel_init()` (defined in `main.rs`).
 +
 +mod panic_wait;
 +mod runtime_init;
@@ -1304,22 +1330,10 @@ diff -uNr 12_exceptions_part1_groundwork/src/lib.rs 13_integrated_testing/src/li
 diff -uNr 12_exceptions_part1_groundwork/src/main.rs 13_integrated_testing/src/main.rs
 --- 12_exceptions_part1_groundwork/src/main.rs
 +++ 13_integrated_testing/src/main.rs
-@@ -6,129 +6,12 @@
+@@ -6,128 +6,12 @@
  #![doc(html_logo_url = "https://git.io/JeGIp")]
 
  //! The `kernel` binary.
--//!
--//! # TL;DR - Overview of important Kernel entities
--//!
--//! - [`bsp::console::console()`] - Returns a reference to the kernel's [console interface].
--//! - [`bsp::driver::driver_manager()`] - Returns a reference to the kernel's [driver interface].
--//! - [`memory::mmu::mmu()`] - Returns a reference to the kernel's [MMU interface].
--//! - [`time::time_manager()`] - Returns a reference to the kernel's [timer interface].
--//!
--//! [console interface]: ../libkernel/console/interface/index.html
--//! [driver interface]: ../libkernel/driver/interface/trait.DriverManager.html
--//! [MMU interface]: ../libkernel/memory/mmu/interface/trait.MMU.html
--//! [timer interface]: ../libkernel/time/interface/trait.TimeManager.html
 -//!
 -//! # Code organization and architecture
 -//!
@@ -1334,15 +1348,22 @@ diff -uNr 12_exceptions_part1_groundwork/src/main.rs 13_integrated_testing/src/m
 -//! `src/_arch`, for example, `src/_arch/aarch64`.
 -//!
 -//! The architecture folders mirror the subsystem modules laid out in `src`. For example,
--//! architectural code that belongs to the `kernel`'s memory subsystem (`src/memory.rs`) would go
--//! into `src/_arch/aarch64/memory.rs`. The latter file is directly included and re-exported in
--//! `src/memory.rs`, so that the architectural code parts are transparent with respect to the code's
--//! module organization. That means a public function `foo()` defined in
--//! `src/_arch/aarch64/memory.rs` would be reachable as `crate::memory::foo()` only.
+-//! architectural code that belongs to the `kernel`'s MMU subsystem (`src/memory/mmu.rs`) would go
+-//! into `src/_arch/aarch64/memory/mmu.rs`. The latter file is loaded as a module in
+-//! `src/memory/mmu.rs` using the `path attribute`. Usually, the chosen module name is the generic
+-//! module's name prefixed with `arch_`.
 -//!
--//! The `_` in `_arch` denotes that this folder is not part of the standard module hierarchy.
--//! Rather, it's contents are conditionally pulled into respective files using the `#[path =
--//! "_arch/xxx/yyy.rs"]` attribute.
+-//! For example, this is the top of `src/memory/mmu.rs`:
+-//!
+-//! ```
+-//! #[cfg(target_arch = "aarch64")]
+-//! #[path = "../_arch/aarch64/memory/mmu.rs"]
+-//! mod arch_mmu;
+-//! ```
+-//!
+-//! Often times, items from the `arch_ module` will be publicly reexported by the parent module.
+-//! This way, each architecture specific module can provide its implementation of an item, while the
+-//! caller must not be concerned which architecture has been conditionally compiled.
 -//!
 -//! ## BSP code
 -//!
@@ -1351,9 +1372,8 @@ diff -uNr 12_exceptions_part1_groundwork/src/main.rs 13_integrated_testing/src/m
 -//! or instances of drivers for devices that are featured on the respective board.
 -//!
 -//! Just like processor architecture code, the `BSP` code's module structure tries to mirror the
--//! `kernel`'s subsystem modules, but there is no transparent re-exporting this time. That means
--//! whatever is provided must be called starting from the `bsp` namespace, e.g.
--//! `bsp::driver::driver_manager()`.
+-//! `kernel`'s subsystem modules, but there is no reexporting this time. That means whatever is
+-//! provided must be called starting from the `bsp` namespace, e.g. `bsp::driver::driver_manager()`.
 -//!
 -//! ## Kernel interfaces
 -//!
@@ -1405,6 +1425,14 @@ diff -uNr 12_exceptions_part1_groundwork/src/main.rs 13_integrated_testing/src/m
 -//!
 -//! - `crate::memory::*`
 -//! - `crate::bsp::memory::*`
+-//!
+-//! # Boot flow
+-//!
+-//! 1. The kernel's entry point is the function [`cpu::boot::arch_boot::_start()`].
+-//!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.rs`.
+-//! 2. Once finished with architectural setup, the arch code calls [`runtime_init::runtime_init()`].
+-//!
+-//! [`cpu::boot::arch_boot::_start()`]: cpu/boot/arch_boot/fn._start.html
 -
 -#![allow(incomplete_features)]
 -#![feature(const_fn_fn_ptr_basics)]
@@ -1418,9 +1446,6 @@ diff -uNr 12_exceptions_part1_groundwork/src/main.rs 13_integrated_testing/src/m
  #![no_main]
  #![no_std]
 
--// `mod cpu` provides the `_start()` function, the first function to run. `_start()` then calls
--// `runtime_init()`, which jumps to `kernel_init()`.
--
 -mod bsp;
 -mod console;
 -mod cpu;
@@ -1436,7 +1461,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/main.rs 13_integrated_testing/src/m
 
  /// Early init code.
  ///
-@@ -140,6 +23,7 @@
+@@ -139,6 +23,7 @@
  ///       - Without it, any atomic operations, e.g. the yet-to-be-introduced spinlocks in the device
  ///         drivers (which currently employ NullLocks instead of spinlocks), will fail to work on
  ///         the RPi SoCs.
@@ -1444,7 +1469,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/main.rs 13_integrated_testing/src/m
  unsafe fn kernel_init() -> ! {
      use driver::interface::DriverManager;
      use memory::mmu::interface::MMU;
-@@ -166,9 +50,7 @@
+@@ -165,9 +50,7 @@
  fn kernel_main() -> ! {
      use bsp::console::console;
      use console::interface::All;
@@ -1454,7 +1479,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/main.rs 13_integrated_testing/src/m
 
      info!("Booting on: {}", bsp::board_name());
 
-@@ -195,31 +77,6 @@
+@@ -194,31 +77,6 @@
          info!("      {}. {}", i + 1, driver.compatible());
      }
 
@@ -1490,7 +1515,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/main.rs 13_integrated_testing/src/m
 diff -uNr 12_exceptions_part1_groundwork/src/memory/mmu.rs 13_integrated_testing/src/memory/mmu.rs
 --- 12_exceptions_part1_groundwork/src/memory/mmu.rs
 +++ 13_integrated_testing/src/memory/mmu.rs
-@@ -42,7 +42,6 @@
+@@ -54,7 +54,6 @@
 
  /// Architecture agnostic translation types.
  #[allow(missing_docs)]
@@ -1498,7 +1523,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/memory/mmu.rs 13_integrated_testing
  #[derive(Copy, Clone)]
  pub enum Translation {
      Identity,
-@@ -197,4 +196,9 @@
+@@ -244,4 +243,9 @@
              info!("{}", i);
          }
      }

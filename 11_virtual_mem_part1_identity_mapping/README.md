@@ -3,7 +3,7 @@
 ## tl;dr
 
 - The `MMU` is turned on.
-- A simple scheme is used: static `64 KiB` translation tables.
+- A simple scheme is used: Static `64 KiB` translation tables.
 - For educational purposes, we write to a remapped `UART`, and `identity map` everything else.
 
 ## Table of Contents
@@ -13,7 +13,7 @@
 - [Approach](#approach)
   * [Generic Kernel code: `memory/mmu.rs`](#generic-kernel-code-memorymmurs)
   * [BSP: `bsp/raspberrypi/memory/mmu.rs`](#bsp-bspraspberrypimemorymmurs)
-  * [AArch64: `_arch/aarch64/memory/mmu.rs`](#aarch64-_archaarch64memorymmurs)
+  * [AArch64: `_arch/aarch64/memory/*`](#aarch64-_archaarch64memory)
   * [`link.ld`](#linkld)
 - [Address translation examples](#address-translation-examples)
   * [Address translation using a 64 KiB page descriptor](#address-translation-using-a-64-kib-page-descriptor)
@@ -25,8 +25,8 @@
 
 Virtual memory is an immensely complex, but important and powerful topic. In this tutorial, we start
 slow and easy by switching on the `MMU`, using static translation tables and `identity-map`
-everything at once (except for the `UART`, which we remap for educational purposes; This will be
-gone again in the next tutorial).
+everything at once (except for the `UART`, which we also remap a second time for educational
+purposes; This will be gone again in the next tutorial).
 
 ## MMU and paging theory
 
@@ -44,14 +44,15 @@ Back from reading `Chapter 12` already? Good job :+1:!
 
 ## Approach
 
-1. The generic `kernel` part: `src/memory/mmu.rs` provides architecture-agnostic descriptor types
-   for composing a high-level data structure that describes the kernel's virtual memory layout:
-   `memory::mmu::KernelVirtualLayout`.
+1. The generic `kernel` part: `src/memory/mmu.rs` and its submodules provide architecture-agnostic
+   descriptor types for composing a high-level data structure that describes the kernel's virtual
+   memory layout: `memory::mmu::KernelVirtualLayout`.
 2. The `BSP` part: `src/bsp/raspberrypi/memory/mmu.rs` contains a static instance of
    `KernelVirtualLayout` and makes it accessible through the function
    `bsp::memory::mmu::virt_mem_layout()`.
-3. The `aarch64` part: `src/_arch/aarch64/memory/mmu.rs` contains the actual `MMU` driver. It picks
-   up the `BSP`'s high-level `KernelVirtualLayout` and maps it using a `64 KiB` granule.
+3. The `aarch64` part: `src/_arch/aarch64/memory/mmu.rs` and its submodules contain the actual `MMU`
+   driver. It picks up the `BSP`'s high-level `KernelVirtualLayout` and maps it using a `64 KiB`
+   granule.
 
 ### Generic Kernel code: `memory/mmu.rs`
 
@@ -97,42 +98,63 @@ pub fn virt_addr_properties(
 ) -> Result<(usize, AttributeFields), &'static str>
 ```
 
-It will be used by the `_arch/aarch64`'s `MMU` code to request attributes for a virtual address and
-the translation, which delivers the physical output address (the `usize` in the return-tuple). The
+It will be used by `_arch/aarch64`'s `MMU` code to request attributes for a virtual address and the
+translation, which delivers the physical output address (the `usize` in the return-tuple). The
 function scans for a descriptor that contains the queried address, and returns the respective
 findings for the first entry that is a hit. If no entry is found, it returns default attributes for
 normal chacheable DRAM and the input address, hence telling the `MMU` code that the requested
 address should be `identity mapped`.
 
-Due to this default return, it is technicall not needed to define normal cacheable DRAM regions.
+Due to this default behavior, it is not needed to define normal cacheable DRAM regions.
 
-### AArch64: `_arch/aarch64/memory/mmu.rs`
+### AArch64: `_arch/aarch64/memory/*`
 
-This file contains the `AArch64` `MMU` driver. The granule is hardcoded here (`64 KiB` page
+These modules contain the `AArch64` `MMU` driver. The granule is hardcoded here (`64 KiB` page
 descriptors).
 
-The actual translation tables are stored in a global instance of the `ArchTranslationTable` struct:
+In `translation_table.rs`, there is a definition of the actual translation table struct which is
+generic over the number of `LVL2` tables. The latter depends on the size of the target board's
+memory. Naturally, the `BSP` knows these details about the target board, and provides the size
+through the constant `bsp::memory::mmu::KernelAddrSpaceSize::SIZE`.
+
+This information is used by `translation_table.rs` to calculate the number of needed `LVL2` tables.
+Since one `LVL2` table in a `64 KiB` configuration covers `512 MiB`, all that needs to be done is to
+divide `KernelAddrSpaceSize::SIZE` by `512 MiB` (there are several compile-time checks in place that
+ensure that `KernelAddrSpaceSize` is a multiple of `512 MiB`).
+
+The final table type is exported as `KernelTranslationTable`. Below is the respective excerpt from
+`translation_table.rs`:
 
 ```rust
 /// A table descriptor for 64 KiB aperture.
 ///
 /// The output points to the next table.
 #[derive(Copy, Clone)]
-#[repr(transparent)]
-struct TableDescriptor(InMemoryRegister<u64, STAGE1_TABLE_DESCRIPTOR::Register>);
+#[repr(C)]
+struct TableDescriptor {
+    value: u64,
+}
 
 /// A page descriptor with 64 KiB aperture.
 ///
 /// The output points to physical memory.
 #[derive(Copy, Clone)]
-#[repr(transparent)]
-struct PageDescriptor(InMemoryRegister<u64, STAGE1_PAGE_DESCRIPTOR::Register>);
+#[repr(C)]
+struct PageDescriptor {
+    value: u64,
+}
+
+const NUM_LVL2_TABLES: usize = bsp::memory::mmu::KernelAddrSpaceSize::SIZE >> Granule512MiB::SHIFT;
+
+//--------------------------------------------------------------------------------------------------
+// Public Definitions
+//--------------------------------------------------------------------------------------------------
 
 /// Big monolithic struct for storing the translation tables. Individual levels must be 64 KiB
 /// aligned, hence the "reverse" order of appearance.
 #[repr(C)]
 #[repr(align(65536))]
-struct FixedSizeTranslationTable<const NUM_TABLES: usize> {
+pub struct FixedSizeTranslationTable<const NUM_TABLES: usize> {
     /// Page descriptors, covering 64 KiB windows per entry.
     lvl3: [[PageDescriptor; 8192]; NUM_TABLES],
 
@@ -140,55 +162,69 @@ struct FixedSizeTranslationTable<const NUM_TABLES: usize> {
     lvl2: [TableDescriptor; NUM_TABLES],
 }
 
-const NUM_LVL2_TABLES: usize = bsp::memory::mmu::addr_space_size() >> FIVETWELVE_MIB_SHIFT;
-type ArchTranslationTable = FixedSizeTranslationTable<NUM_LVL2_TABLES>;
+/// A translation table type for the kernel space.
+pub type KernelTranslationTable = FixedSizeTranslationTable<NUM_LVL2_TABLES>;
+```
 
+In `mmu.rs`, `KernelTranslationTable` is then used to create the final instance of the kernel's
+tables:
+
+```rust
 //--------------------------------------------------------------------------------------------------
 // Global instances
 //--------------------------------------------------------------------------------------------------
 
-/// The translation tables.
+/// The kernel translation tables.
 ///
 /// # Safety
 ///
 /// - Supposed to land in `.bss`. Therefore, ensure that all initial member values boil down to "0".
-static mut KERNEL_TABLES: ArchTranslationTable = ArchTranslationTable::new();
+static mut KERNEL_TABLES: KernelTranslationTable = KernelTranslationTable::new();
 ```
 
-They are populated using `bsp::memory::mmu::virt_mem_layout().virt_addr_properties()` and a bunch of
-utility functions that convert our own descriptors to the actual `64 bit` integer entries needed by
-the `MMU` hardware for the translation table arrays.
+They are populated during `MMU::init()` by calling `KERNEL_TABLES.populate_tt_entries()`, which
+utilizes `bsp::memory::mmu::virt_mem_layout().virt_addr_properties()` and a bunch of utility
+functions that convert the kernel generic descriptors to the actual `64 bit` integer entries needed
+by the `AArch64 MMU` hardware for the translation table arrays.
 
-Each page descriptor has an entry (`AttrIndex`) that indexes into the [MAIR_EL1] register, which
-holds information about the cacheability of the respective page. We currently define normal
-cacheable memory and device memory (which is not cached).
+One notable thing is that each page descriptor has an entry (`AttrIndex`) that indexes into the
+[MAIR_EL1] register, which holds information about the cacheability of the respective page. We
+currently define normal cacheable memory and device memory (which is not cached).
 
 [MAIR_EL1]: http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ddi0500d/CIHDHJBB.html
 
 ```rust
-/// Setup function for the MAIR_EL1 register.
-fn set_up_mair() {
-    // Define the memory types being mapped.
-    MAIR_EL1.write(
-        // Attribute 1 - Cacheable normal DRAM.
-        MAIR_EL1::Attr1_Normal_Outer::WriteBack_NonTransient_ReadWriteAlloc +
+impl MemoryManagementUnit {
+    /// Setup function for the MAIR_EL1 register.
+    fn set_up_mair(&self) {
+        // Define the memory types being mapped.
+        MAIR_EL1.write(
+            // Attribute 1 - Cacheable normal DRAM.
+            MAIR_EL1::Attr1_Normal_Outer::WriteBack_NonTransient_ReadWriteAlloc +
         MAIR_EL1::Attr1_Normal_Inner::WriteBack_NonTransient_ReadWriteAlloc +
 
         // Attribute 0 - Device.
         MAIR_EL1::Attr0_Device::nonGathering_nonReordering_EarlyWriteAck,
-    );
-}
+        );
+    }
 ```
 
 Afterwards, the [Translation Table Base Register 0 - EL1] is set up with the base address of the
-`lvl2` tables and the [Translation Control Register - EL1] is configured.
+`lvl2` tables and the [Translation Control Register - EL1] is configured:
+
+```rust
+    // Set the "Translation Table Base Register".
+    TTBR0_EL1.set_baddr(KERNEL_TABLES.base_address());
+
+    self.configure_translation_control();
+```
 
 Finally, the `MMU` is turned on through the [System Control Register - EL1]. The last step also
 enables caching for data and instructions.
 
-[Translation Table Base Register 0 - EL1]: https://docs.rs/crate/cortex-a/2.4.0/source/src/regs/ttbr0_el1.rs
-[Translation Control Register - EL1]: https://docs.rs/crate/cortex-a/2.4.0/source/src/regs/tcr_el1.rs
-[System Control Register - EL1]: https://docs.rs/crate/cortex-a/2.4.0/source/src/regs/sctlr_el1.rs
+[Translation Table Base Register 0 - EL1]: https://docs.rs/crate/cortex-a/5.1.2/source/src/regs/ttbr0_el1.rs
+[Translation Control Register - EL1]: https://docs.rs/crate/cortex-a/5.1.2/source/src/regs/tcr_el1.rs
+[System Control Register - EL1]: https://docs.rs/crate/cortex-a/5.1.2/source/src/regs/sctlr_el1.rs
 
 ### `link.ld`
 
@@ -227,15 +263,15 @@ Let's take a look again at the piece of code for setting up the `MAIR_EL1` regis
 
 ```rust
 /// Setup function for the MAIR_EL1 register.
-fn set_up_mair() {
+fn set_up_mair(&self) {
     // Define the memory types being mapped.
     MAIR_EL1.write(
         // Attribute 1 - Cacheable normal DRAM.
         MAIR_EL1::Attr1_Normal_Outer::WriteBack_NonTransient_ReadWriteAlloc +
-        MAIR_EL1::Attr1_Normal_Inner::WriteBack_NonTransient_ReadWriteAlloc +
+    MAIR_EL1::Attr1_Normal_Inner::WriteBack_NonTransient_ReadWriteAlloc +
 
-        // Attribute 0 - Device.
-        MAIR_EL1::Attr0_Device::nonGathering_nonReordering_EarlyWriteAck,
+    // Attribute 0 - Device.
+    MAIR_EL1::Attr0_Device::nonGathering_nonReordering_EarlyWriteAck,
     );
 }
 ```
@@ -248,14 +284,25 @@ data sheet. Looking at the generated code, we can see that despite all the type-
 abstractions, it boils down to two assembly instructions:
 
 ```text
-0000000000081660 <<kernel::memory::mmu::arch_mmu::MemoryManagementUnit as kernel::memory::mmu::interface::MMU>::init>:
-   ...
-   816bc:       529fe088        mov     w8, #0xff04
-   ...
-   816c4:       d518a208        msr     mair_el1, x8
+   800a8:       529fe089        mov     w9, #0xff04                     // #65284
+   800ac:       d518a209        msr     mair_el1, x9
 ```
 
 ## Test it
+
+Turning on virtual memory is now the first thing we do during kernel init:
+
+```rust
+unsafe fn kernel_init() -> ! {
+    use driver::interface::DriverManager;
+    use memory::mmu::interface::MMU;
+
+    if let Err(string) = memory::mmu::mmu().init() {
+        panic!("MMU: {}", string);
+    }
+```
+
+Later in the boot process, prints about the mappings can be observed:
 
 ```console
 $ make chainboot
@@ -299,22 +346,33 @@ Minipush 1.0
 ## Diff to previous
 ```diff
 
-diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/memory/mmu.rs
---- 10_privilege_level/src/_arch/aarch64/memory/mmu.rs
-+++ 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/memory/mmu.rs
-@@ -0,0 +1,343 @@
+diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu/translation_table.rs 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/memory/mmu/translation_table.rs
+--- 10_privilege_level/src/_arch/aarch64/memory/mmu/translation_table.rs
++++ 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/memory/mmu/translation_table.rs
+@@ -0,0 +1,288 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2021 Andre Richter <andre.o.richter@gmail.com>
 +
-+//! Memory Management Unit Driver.
++//! Architectural translation table.
 +//!
-+//! Static translation tables, compiled on boot; Everything 64 KiB granule.
++//! Only 64 KiB granule is supported.
++//!
++//! # Orientation
++//!
++//! Since arch modules are imported into generic modules using the path attribute, the path of this
++//! file is:
++//!
++//! crate::memory::mmu::translation_table::arch_translation_table
 +
-+use super::{AccessPermissions, AttributeFields, MemAttributes};
-+use crate::{bsp, memory};
++use crate::{
++    bsp, memory,
++    memory::mmu::{
++        arch_mmu::{Granule512MiB, Granule64KiB},
++        AccessPermissions, AttributeFields, MemAttributes,
++    },
++};
 +use core::convert;
-+use cortex_a::{barrier, regs::*};
 +use register::{register_bitfields, InMemoryRegister};
 +
 +//--------------------------------------------------------------------------------------------------
@@ -392,28 +450,40 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_mem_part
 +    ]
 +}
 +
-+const SIXTYFOUR_KIB_SHIFT: usize = 16; //  log2(64 * 1024)
-+const FIVETWELVE_MIB_SHIFT: usize = 29; // log2(512 * 1024 * 1024)
-+
 +/// A table descriptor for 64 KiB aperture.
 +///
 +/// The output points to the next table.
 +#[derive(Copy, Clone)]
-+#[repr(transparent)]
-+struct TableDescriptor(u64);
++#[repr(C)]
++struct TableDescriptor {
++    value: u64,
++}
 +
 +/// A page descriptor with 64 KiB aperture.
 +///
 +/// The output points to physical memory.
 +#[derive(Copy, Clone)]
-+#[repr(transparent)]
-+struct PageDescriptor(u64);
++#[repr(C)]
++struct PageDescriptor {
++    value: u64,
++}
++
++trait BaseAddr {
++    fn base_addr_u64(&self) -> u64;
++    fn base_addr_usize(&self) -> usize;
++}
++
++const NUM_LVL2_TABLES: usize = bsp::memory::mmu::KernelAddrSpaceSize::SIZE >> Granule512MiB::SHIFT;
++
++//--------------------------------------------------------------------------------------------------
++// Public Definitions
++//--------------------------------------------------------------------------------------------------
 +
 +/// Big monolithic struct for storing the translation tables. Individual levels must be 64 KiB
 +/// aligned, hence the "reverse" order of appearance.
 +#[repr(C)]
 +#[repr(align(65536))]
-+struct FixedSizeTranslationTable<const NUM_TABLES: usize> {
++pub struct FixedSizeTranslationTable<const NUM_TABLES: usize> {
 +    /// Page descriptors, covering 64 KiB windows per entry.
 +    lvl3: [[PageDescriptor; 8192]; NUM_TABLES],
 +
@@ -421,36 +491,8 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_mem_part
 +    lvl2: [TableDescriptor; NUM_TABLES],
 +}
 +
-+const NUM_LVL2_TABLES: usize = bsp::memory::mmu::addr_space_size() >> FIVETWELVE_MIB_SHIFT;
-+type ArchTranslationTable = FixedSizeTranslationTable<NUM_LVL2_TABLES>;
-+
-+trait BaseAddr {
-+    fn base_addr_u64(&self) -> u64;
-+    fn base_addr_usize(&self) -> usize;
-+}
-+
-+/// Constants for indexing the MAIR_EL1.
-+#[allow(dead_code)]
-+mod mair {
-+    pub const DEVICE: u64 = 0;
-+    pub const NORMAL: u64 = 1;
-+}
-+
-+/// Memory Management Unit type.
-+struct MemoryManagementUnit;
-+
-+//--------------------------------------------------------------------------------------------------
-+// Global instances
-+//--------------------------------------------------------------------------------------------------
-+
-+/// The translation tables.
-+///
-+/// # Safety
-+///
-+/// - Supposed to land in `.bss`. Therefore, ensure that all initial member values boil down to "0".
-+static mut KERNEL_TABLES: ArchTranslationTable = ArchTranslationTable::new();
-+
-+static MMU: MemoryManagementUnit = MemoryManagementUnit;
++/// A translation table type for the kernel space.
++pub type KernelTranslationTable = FixedSizeTranslationTable<NUM_LVL2_TABLES>;
 +
 +//--------------------------------------------------------------------------------------------------
 +// Private Code
@@ -466,18 +508,26 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_mem_part
 +    }
 +}
 +
-+impl convert::From<usize> for TableDescriptor {
-+    fn from(next_lvl_table_addr: usize) -> Self {
++impl TableDescriptor {
++    /// Create an instance.
++    ///
++    /// Descriptor is invalid by default.
++    pub const fn new_zeroed() -> Self {
++        Self { value: 0 }
++    }
++
++    /// Create an instance pointing to the supplied address.
++    pub fn from_next_lvl_table_addr(next_lvl_table_addr: usize) -> Self {
 +        let val = InMemoryRegister::<u64, STAGE1_TABLE_DESCRIPTOR::Register>::new(0);
 +
-+        let shifted = next_lvl_table_addr >> SIXTYFOUR_KIB_SHIFT;
++        let shifted = next_lvl_table_addr >> Granule64KiB::SHIFT;
 +        val.write(
 +            STAGE1_TABLE_DESCRIPTOR::VALID::True
 +                + STAGE1_TABLE_DESCRIPTOR::TYPE::Table
 +                + STAGE1_TABLE_DESCRIPTOR::NEXT_LEVEL_TABLE_ADDR_64KiB.val(shifted as u64),
 +        );
 +
-+        TableDescriptor(val.get())
++        TableDescriptor { value: val.get() }
 +    }
 +}
 +
@@ -490,11 +540,11 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_mem_part
 +        let mut desc = match attribute_fields.mem_attributes {
 +            MemAttributes::CacheableDRAM => {
 +                STAGE1_PAGE_DESCRIPTOR::SH::InnerShareable
-+                    + STAGE1_PAGE_DESCRIPTOR::AttrIndx.val(mair::NORMAL)
++                    + STAGE1_PAGE_DESCRIPTOR::AttrIndx.val(memory::mmu::arch_mmu::mair::NORMAL)
 +            }
 +            MemAttributes::Device => {
 +                STAGE1_PAGE_DESCRIPTOR::SH::OuterShareable
-+                    + STAGE1_PAGE_DESCRIPTOR::AttrIndx.val(mair::DEVICE)
++                    + STAGE1_PAGE_DESCRIPTOR::AttrIndx.val(memory::mmu::arch_mmu::mair::DEVICE)
 +            }
 +        };
 +
@@ -520,10 +570,17 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_mem_part
 +
 +impl PageDescriptor {
 +    /// Create an instance.
-+    fn new(output_addr: usize, attribute_fields: AttributeFields) -> Self {
++    ///
++    /// Descriptor is invalid by default.
++    pub const fn new_zeroed() -> Self {
++        Self { value: 0 }
++    }
++
++    /// Create an instance.
++    pub fn from_output_addr(output_addr: usize, attribute_fields: AttributeFields) -> Self {
 +        let val = InMemoryRegister::<u64, STAGE1_PAGE_DESCRIPTOR::Register>::new(0);
 +
-+        let shifted = output_addr as u64 >> SIXTYFOUR_KIB_SHIFT;
++        let shifted = output_addr as u64 >> Granule64KiB::SHIFT;
 +        val.write(
 +            STAGE1_PAGE_DESCRIPTOR::VALID::True
 +                + STAGE1_PAGE_DESCRIPTOR::AF::True
@@ -532,73 +589,159 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_mem_part
 +                + STAGE1_PAGE_DESCRIPTOR::OUTPUT_ADDR_64KiB.val(shifted),
 +        );
 +
-+        Self(val.get())
++        Self { value: val.get() }
 +    }
 +}
 +
-+impl<const NUM_TABLES: usize> FixedSizeTranslationTable<{ NUM_TABLES }> {
++//--------------------------------------------------------------------------------------------------
++// Public Code
++//--------------------------------------------------------------------------------------------------
++
++impl<const NUM_TABLES: usize> FixedSizeTranslationTable<NUM_TABLES> {
 +    /// Create an instance.
++    #[allow(clippy::assertions_on_constants)]
 +    pub const fn new() -> Self {
 +        assert!(NUM_TABLES > 0);
++        assert!((bsp::memory::mmu::KernelAddrSpaceSize::SIZE modulo Granule512MiB::SIZE) == 0);
 +
 +        Self {
-+            lvl3: [[PageDescriptor(0); 8192]; NUM_TABLES],
-+            lvl2: [TableDescriptor(0); NUM_TABLES],
++            lvl3: [[PageDescriptor::new_zeroed(); 8192]; NUM_TABLES],
++            lvl2: [TableDescriptor::new_zeroed(); NUM_TABLES],
 +        }
 +    }
++
++    /// Iterates over all static translation table entries and fills them at once.
++    ///
++    /// # Safety
++    ///
++    /// - Modifies a `static mut`. Ensure it only happens from here.
++    pub unsafe fn populate_tt_entries(&mut self) -> Result<(), &'static str> {
++        for (l2_nr, l2_entry) in self.lvl2.iter_mut().enumerate() {
++            *l2_entry =
++                TableDescriptor::from_next_lvl_table_addr(self.lvl3[l2_nr].base_addr_usize());
++
++            for (l3_nr, l3_entry) in self.lvl3[l2_nr].iter_mut().enumerate() {
++                let virt_addr = (l2_nr << Granule512MiB::SHIFT) + (l3_nr << Granule64KiB::SHIFT);
++
++                let (output_addr, attribute_fields) =
++                    bsp::memory::mmu::virt_mem_layout().virt_addr_properties(virt_addr)?;
++
++                *l3_entry = PageDescriptor::from_output_addr(output_addr, attribute_fields);
++            }
++        }
++
++        Ok(())
++    }
++
++    /// The translation table's base address to be used for programming the MMU.
++    pub fn base_address(&self) -> u64 {
++        self.lvl2.base_addr_u64()
++    }
++}
+
+diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/memory/mmu.rs
+--- 10_privilege_level/src/_arch/aarch64/memory/mmu.rs
++++ 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/memory/mmu.rs
+@@ -0,0 +1,146 @@
++// SPDX-License-Identifier: MIT OR Apache-2.0
++//
++// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
++
++//! Memory Management Unit Driver.
++//!
++//! Only 64 KiB granule is supported.
++//!
++//! # Orientation
++//!
++//! Since arch modules are imported into generic modules using the path attribute, the path of this
++//! file is:
++//!
++//! crate::memory::mmu::arch_mmu
++
++use crate::{
++    bsp, memory,
++    memory::mmu::{translation_table::KernelTranslationTable, TranslationGranule},
++};
++use cortex_a::{barrier, regs::*};
++
++//--------------------------------------------------------------------------------------------------
++// Private Definitions
++//--------------------------------------------------------------------------------------------------
++
++/// Memory Management Unit type.
++struct MemoryManagementUnit;
++
++//--------------------------------------------------------------------------------------------------
++// Public Definitions
++//--------------------------------------------------------------------------------------------------
++
++pub type Granule512MiB = TranslationGranule<{ 512 * 1024 * 1024 }>;
++pub type Granule64KiB = TranslationGranule<{ 64 * 1024 }>;
++
++/// The min supported address space size.
++pub const MIN_ADDR_SPACE_SIZE: usize = 1024 * 1024 * 1024; // 1 GiB
++
++/// The max supported address space size.
++pub const MAX_ADDR_SPACE_SIZE: usize = 32 * 1024 * 1024 * 1024; // 32 GiB
++
++/// The supported address space size granule.
++pub type AddrSpaceSizeGranule = Granule512MiB;
++
++/// Constants for indexing the MAIR_EL1.
++#[allow(dead_code)]
++pub mod mair {
++    pub const DEVICE: u64 = 0;
++    pub const NORMAL: u64 = 1;
 +}
 +
-+/// Setup function for the MAIR_EL1 register.
-+fn set_up_mair() {
-+    // Define the memory types being mapped.
-+    MAIR_EL1.write(
-+        // Attribute 1 - Cacheable normal DRAM.
-+        MAIR_EL1::Attr1_Normal_Outer::WriteBack_NonTransient_ReadWriteAlloc +
++//--------------------------------------------------------------------------------------------------
++// Global instances
++//--------------------------------------------------------------------------------------------------
++
++/// The kernel translation tables.
++///
++/// # Safety
++///
++/// - Supposed to land in `.bss`. Therefore, ensure that all initial member values boil down to "0".
++static mut KERNEL_TABLES: KernelTranslationTable = KernelTranslationTable::new();
++
++static MMU: MemoryManagementUnit = MemoryManagementUnit;
++
++//--------------------------------------------------------------------------------------------------
++// Private Code
++//--------------------------------------------------------------------------------------------------
++
++impl MemoryManagementUnit {
++    /// Setup function for the MAIR_EL1 register.
++    fn set_up_mair(&self) {
++        // Define the memory types being mapped.
++        MAIR_EL1.write(
++            // Attribute 1 - Cacheable normal DRAM.
++            MAIR_EL1::Attr1_Normal_Outer::WriteBack_NonTransient_ReadWriteAlloc +
 +        MAIR_EL1::Attr1_Normal_Inner::WriteBack_NonTransient_ReadWriteAlloc +
 +
 +        // Attribute 0 - Device.
 +        MAIR_EL1::Attr0_Device::nonGathering_nonReordering_EarlyWriteAck,
-+    );
-+}
-+
-+/// Iterates over all static translation table entries and fills them at once.
-+///
-+/// # Safety
-+///
-+/// - Modifies a `static mut`. Ensure it only happens from here.
-+unsafe fn populate_tt_entries() -> Result<(), &'static str> {
-+    for (l2_nr, l2_entry) in KERNEL_TABLES.lvl2.iter_mut().enumerate() {
-+        *l2_entry = KERNEL_TABLES.lvl3[l2_nr].base_addr_usize().into();
-+
-+        for (l3_nr, l3_entry) in KERNEL_TABLES.lvl3[l2_nr].iter_mut().enumerate() {
-+            let virt_addr = (l2_nr << FIVETWELVE_MIB_SHIFT) + (l3_nr << SIXTYFOUR_KIB_SHIFT);
-+
-+            let (output_addr, attribute_fields) =
-+                bsp::memory::mmu::virt_mem_layout().virt_addr_properties(virt_addr)?;
-+
-+            *l3_entry = PageDescriptor::new(output_addr, attribute_fields);
-+        }
++        );
 +    }
 +
-+    Ok(())
-+}
++    /// Configure various settings of stage 1 of the EL1 translation regime.
++    fn configure_translation_control(&self) {
++        let ips = ID_AA64MMFR0_EL1.read(ID_AA64MMFR0_EL1::PARange);
++        let t0sz = (64 - bsp::memory::mmu::KernelAddrSpaceSize::SHIFT) as u64;
 +
-+/// Configure various settings of stage 1 of the EL1 translation regime.
-+fn configure_translation_control() {
-+    let ips = ID_AA64MMFR0_EL1.read(ID_AA64MMFR0_EL1::PARange);
-+    let t0sz: u64 = bsp::memory::mmu::addr_space_size().trailing_zeros().into();
-+
-+    TCR_EL1.write(
-+        TCR_EL1::TBI0::Ignored
-+            + TCR_EL1::IPS.val(ips)
-+            + TCR_EL1::EPD1::DisableTTBR1Walks
-+            + TCR_EL1::TG0::KiB_64
-+            + TCR_EL1::SH0::Inner
-+            + TCR_EL1::ORGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
-+            + TCR_EL1::IRGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
-+            + TCR_EL1::EPD0::EnableTTBR0Walks
-+            + TCR_EL1::T0SZ.val(t0sz),
-+    );
++        TCR_EL1.write(
++            TCR_EL1::TBI0::Ignored
++                + TCR_EL1::IPS.val(ips)
++                + TCR_EL1::EPD1::DisableTTBR1Walks
++                + TCR_EL1::TG0::KiB_64
++                + TCR_EL1::SH0::Inner
++                + TCR_EL1::ORGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
++                + TCR_EL1::IRGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
++                + TCR_EL1::EPD0::EnableTTBR0Walks
++                + TCR_EL1::T0SZ.val(t0sz),
++        );
++    }
 +}
 +
 +//--------------------------------------------------------------------------------------------------
@@ -622,15 +765,15 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_mem_part
 +        }
 +
 +        // Prepare the memory attribute indirection register.
-+        set_up_mair();
++        self.set_up_mair();
 +
 +        // Populate translation tables.
-+        populate_tt_entries()?;
++        KERNEL_TABLES.populate_tt_entries()?;
 +
 +        // Set the "Translation Table Base Register".
-+        TTBR0_EL1.set_baddr(KERNEL_TABLES.lvl2.base_addr_u64());
++        TTBR0_EL1.set_baddr(KERNEL_TABLES.base_address());
 +
-+        configure_translation_control();
++        self.configure_translation_control();
 +
 +        // Switch the MMU on.
 +        //
@@ -671,7 +814,7 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/link.ld 11_virtual_mem_part1_id
 diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory/mmu.rs 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory/mmu.rs
 --- 10_privilege_level/src/bsp/raspberrypi/memory/mmu.rs
 +++ 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory/mmu.rs
-@@ -0,0 +1,93 @@
+@@ -0,0 +1,86 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -686,13 +829,16 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory/mmu.rs 11_virtual_mem_pa
 +// Public Definitions
 +//--------------------------------------------------------------------------------------------------
 +
++/// The address space size chosen by this BSP.
++pub type KernelAddrSpaceSize = AddressSpaceSize<{ memory_map::END_INCLUSIVE + 1 }>;
++
 +const NUM_MEM_RANGES: usize = 3;
 +
 +/// The virtual memory layout.
 +///
 +/// The layout must contain only special ranges, aka anything that is _not_ normal cacheable DRAM.
 +/// It is agnostic of the paging granularity that the architecture's MMU will use.
-+pub static LAYOUT: KernelVirtualLayout<{ NUM_MEM_RANGES }> = KernelVirtualLayout::new(
++pub static LAYOUT: KernelVirtualLayout<NUM_MEM_RANGES> = KernelVirtualLayout::new(
 +    memory_map::END_INCLUSIVE,
 +    [
 +        TranslationDescriptor {
@@ -751,18 +897,8 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory/mmu.rs 11_virtual_mem_pa
 +// Public Code
 +//--------------------------------------------------------------------------------------------------
 +
-+/// Return the address space size in bytes.
-+///
-+/// Guarantees size to be a power of two.
-+pub const fn addr_space_size() -> usize {
-+    let size = memory_map::END_INCLUSIVE + 1;
-+    assert!(size.is_power_of_two());
-+
-+    size
-+}
-+
 +/// Return a reference to the virtual memory layout.
-+pub fn virt_mem_layout() -> &'static KernelVirtualLayout<{ NUM_MEM_RANGES }> {
++pub fn virt_mem_layout() -> &'static KernelVirtualLayout<NUM_MEM_RANGES> {
 +    &LAYOUT
 +}
 
@@ -859,7 +995,7 @@ diff -uNr 10_privilege_level/src/bsp.rs 11_virtual_mem_part1_identity_mapping/sr
 +++ 11_virtual_mem_part1_identity_mapping/src/bsp.rs
 @@ -4,7 +4,7 @@
 
- //! Conditional re-exporting of Board Support Packages.
+ //! Conditional reexporting of Board Support Packages.
 
 -mod device_driver;
 +pub mod device_driver;
@@ -870,22 +1006,9 @@ diff -uNr 10_privilege_level/src/bsp.rs 11_virtual_mem_part1_identity_mapping/sr
 diff -uNr 10_privilege_level/src/main.rs 11_virtual_mem_part1_identity_mapping/src/main.rs
 --- 10_privilege_level/src/main.rs
 +++ 11_virtual_mem_part1_identity_mapping/src/main.rs
-@@ -11,10 +11,12 @@
+@@ -106,7 +106,10 @@
  //!
- //! - [`bsp::console::console()`] - Returns a reference to the kernel's [console interface].
- //! - [`bsp::driver::driver_manager()`] - Returns a reference to the kernel's [driver interface].
-+//! - [`memory::mmu::mmu()`] - Returns a reference to the kernel's [MMU interface].
- //! - [`time::time_manager()`] - Returns a reference to the kernel's [timer interface].
- //!
- //! [console interface]: ../libkernel/console/interface/index.html
- //! [driver interface]: ../libkernel/driver/interface/trait.DriverManager.html
-+//! [MMU interface]: ../libkernel/memory/mmu/interface/trait.MMU.html
- //! [timer interface]: ../libkernel/time/interface/trait.TimeManager.html
- //!
- //! # Code organization and architecture
-@@ -102,7 +104,10 @@
- //! - `crate::memory::*`
- //! - `crate::bsp::memory::*`
+ //! [`cpu::boot::arch_boot::_start()`]: cpu/boot/arch_boot/fn._start.html
 
 +#![allow(incomplete_features)]
  #![feature(const_fn_fn_ptr_basics)]
@@ -894,7 +1017,7 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_mem_part1_identity_mapping/s
  #![feature(format_args_nl)]
  #![feature(panic_info_message)]
  #![feature(trait_alias)]
-@@ -129,9 +134,18 @@
+@@ -130,9 +133,18 @@
  /// # Safety
  ///
  /// - Only a single core must be active and running this function.
@@ -914,7 +1037,7 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_mem_part1_identity_mapping/s
 
      for i in bsp::driver::driver_manager().all_device_drivers().iter() {
          if let Err(x) = i.init() {
-@@ -155,6 +169,9 @@
+@@ -156,6 +168,9 @@
 
      info!("Booting on: {}", bsp::board_name());
 
@@ -924,7 +1047,7 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_mem_part1_identity_mapping/s
      let (_, privilege_level) = exception::current_privilege_level();
      info!("Current privilege level: {}", privilege_level);
 
-@@ -178,6 +195,13 @@
+@@ -179,6 +194,13 @@
      info!("Timer test, spinning for 1 second");
      time::time_manager().spin_for(Duration::from_secs(1));
 
@@ -939,10 +1062,29 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_mem_part1_identity_mapping/s
 
      // Discard any spurious received characters before going into echo mode.
 
+diff -uNr 10_privilege_level/src/memory/mmu/translation_table.rs 11_virtual_mem_part1_identity_mapping/src/memory/mmu/translation_table.rs
+--- 10_privilege_level/src/memory/mmu/translation_table.rs
++++ 11_virtual_mem_part1_identity_mapping/src/memory/mmu/translation_table.rs
+@@ -0,0 +1,14 @@
++// SPDX-License-Identifier: MIT OR Apache-2.0
++//
++// Copyright (c) 2021 Andre Richter <andre.o.richter@gmail.com>
++
++//! Translation table.
++
++#[cfg(target_arch = "aarch64")]
++#[path = "../../_arch/aarch64/memory/mmu/translation_table.rs"]
++mod arch_translation_table;
++
++//--------------------------------------------------------------------------------------------------
++// Architectural Public Reexports
++//--------------------------------------------------------------------------------------------------
++pub use arch_translation_table::KernelTranslationTable;
+
 diff -uNr 10_privilege_level/src/memory/mmu.rs 11_virtual_mem_part1_identity_mapping/src/memory/mmu.rs
 --- 10_privilege_level/src/memory/mmu.rs
 +++ 11_virtual_mem_part1_identity_mapping/src/memory/mmu.rs
-@@ -0,0 +1,199 @@
+@@ -0,0 +1,247 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -950,8 +1092,8 @@ diff -uNr 10_privilege_level/src/memory/mmu.rs 11_virtual_mem_part1_identity_map
 +//! Memory Management Unit.
 +//!
 +//! In order to decouple `BSP` and `arch` parts of the MMU code (to keep them pluggable), this file
-+//! provides types for composing an architecture-agnostic description of the kernel 's virtual
-+//! memory layout.
++//! provides types for composing an architecture-agnostic description of the kernel's virtual memory
++//! layout.
 +//!
 +//! The `BSP` provides such a description through the `bsp::memory::mmu::virt_mem_layout()`
 +//! function.
@@ -962,9 +1104,15 @@ diff -uNr 10_privilege_level/src/memory/mmu.rs 11_virtual_mem_part1_identity_map
 +#[cfg(target_arch = "aarch64")]
 +#[path = "../_arch/aarch64/memory/mmu.rs"]
 +mod arch_mmu;
-+pub use arch_mmu::*;
++
++mod translation_table;
 +
 +use core::{fmt, ops::RangeInclusive};
++
++//--------------------------------------------------------------------------------------------------
++// Architectural Public Reexports
++//--------------------------------------------------------------------------------------------------
++pub use arch_mmu::mmu;
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Definitions
@@ -985,8 +1133,15 @@ diff -uNr 10_privilege_level/src/memory/mmu.rs 11_virtual_mem_part1_identity_map
 +    }
 +}
 +
++/// Describes the characteristics of a translation granule.
++pub struct TranslationGranule<const GRANULE_SIZE: usize>;
++
++/// Describes the size of an address space.
++pub struct AddressSpaceSize<const AS_SIZE: usize>;
++
 +/// Architecture agnostic translation types.
 +#[allow(missing_docs)]
++#[allow(dead_code)]
 +#[derive(Copy, Clone)]
 +pub enum Translation {
 +    Identity,
@@ -1039,6 +1194,41 @@ diff -uNr 10_privilege_level/src/memory/mmu.rs 11_virtual_mem_part1_identity_map
 +//--------------------------------------------------------------------------------------------------
 +// Public Code
 +//--------------------------------------------------------------------------------------------------
++
++impl<const GRANULE_SIZE: usize> TranslationGranule<GRANULE_SIZE> {
++    /// The granule's size.
++    pub const SIZE: usize = Self::size_checked();
++
++    /// The granule's shift, aka log2(size).
++    pub const SHIFT: usize = Self::SIZE.trailing_zeros() as usize;
++
++    const fn size_checked() -> usize {
++        assert!(GRANULE_SIZE.is_power_of_two());
++
++        GRANULE_SIZE
++    }
++}
++
++impl<const AS_SIZE: usize> AddressSpaceSize<AS_SIZE> {
++    /// The address space size.
++    pub const SIZE: usize = Self::size_checked();
++
++    /// The address space shift, aka log2(size).
++    pub const SHIFT: usize = Self::SIZE.trailing_zeros() as usize;
++
++    const fn size_checked() -> usize {
++        assert!(AS_SIZE.is_power_of_two());
++        assert!(arch_mmu::MIN_ADDR_SPACE_SIZE.is_power_of_two());
++        assert!(arch_mmu::MAX_ADDR_SPACE_SIZE.is_power_of_two());
++
++        // Must adhere to architectural restrictions.
++        assert!(AS_SIZE >= arch_mmu::MIN_ADDR_SPACE_SIZE);
++        assert!(AS_SIZE <= arch_mmu::MAX_ADDR_SPACE_SIZE);
++        assert!((AS_SIZE modulo arch_mmu::AddrSpaceSizeGranule::SIZE) == 0);
++
++        AS_SIZE
++    }
++}
 +
 +impl Default for AttributeFields {
 +    fn default() -> AttributeFields {

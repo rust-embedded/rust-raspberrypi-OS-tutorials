@@ -6,7 +6,7 @@
 
 use crate::{
     bsp, bsp::device_driver::common::MMIODerefWrapper, console, cpu, driver, exception, memory,
-    memory::mmu::Physical, synchronization, synchronization::IRQSafeNullLock,
+    memory::Physical, synchronization, synchronization::IRQSafeNullLock,
 };
 use core::{
     fmt,

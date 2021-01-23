@@ -23,47 +23,20 @@ diff -uNr 03_hacky_hello_world/Cargo.toml 04_zero_overhead_abstraction/Cargo.tom
 +cortex-a = { version = "5.x.x" }
 +
 
-diff -uNr 03_hacky_hello_world/src/_arch/aarch64/cpu/smp.rs 04_zero_overhead_abstraction/src/_arch/aarch64/cpu/smp.rs
---- 03_hacky_hello_world/src/_arch/aarch64/cpu/smp.rs
-+++ 04_zero_overhead_abstraction/src/_arch/aarch64/cpu/smp.rs
-@@ -0,0 +1,22 @@
-+// SPDX-License-Identifier: MIT OR Apache-2.0
-+//
-+// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
-+
-+//! Architectural symmetric multiprocessing.
-+
+diff -uNr 03_hacky_hello_world/src/_arch/aarch64/cpu/boot.rs 04_zero_overhead_abstraction/src/_arch/aarch64/cpu/boot.rs
+--- 03_hacky_hello_world/src/_arch/aarch64/cpu/boot.rs
++++ 04_zero_overhead_abstraction/src/_arch/aarch64/cpu/boot.rs
+@@ -11,5 +11,31 @@
+ //!
+ //! crate::cpu::boot::arch_boot
+
+-// Assembly counterpart to this file. Includes function _start().
+-global_asm!(include_str!("boot.S"));
++use crate::{bsp, cpu};
 +use cortex_a::regs::*;
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Code
-+//--------------------------------------------------------------------------------------------------
-+
-+/// Return the executing core's id.
-+#[inline(always)]
-+pub fn core_id<T>() -> T
-+where
-+    T: From<u8>,
-+{
-+    const CORE_MASK: u64 = 0b11;
-+
-+    T::from((MPIDR_EL1.get() & CORE_MASK) as u8)
-+}
-
-diff -uNr 03_hacky_hello_world/src/_arch/aarch64/cpu.rs 04_zero_overhead_abstraction/src/_arch/aarch64/cpu.rs
---- 03_hacky_hello_world/src/_arch/aarch64/cpu.rs
-+++ 04_zero_overhead_abstraction/src/_arch/aarch64/cpu.rs
-@@ -4,8 +4,34 @@
-
- //! Architectural processor code.
-
--// Assembly counterpart to this file.
--global_asm!(include_str!("cpu.S"));
-+use crate::{bsp, cpu};
-+use cortex_a::{asm, regs::*};
-+
-+//--------------------------------------------------------------------------------------------------
-+// Boot Code
 +//--------------------------------------------------------------------------------------------------
 +
 +/// The entry of the `kernel` binary.
@@ -84,32 +57,13 @@ diff -uNr 03_hacky_hello_world/src/_arch/aarch64/cpu.rs 04_zero_overhead_abstrac
 +        runtime_init::runtime_init()
 +    } else {
 +        // If not core0, infinitely wait for events.
-+        wait_forever()
++        cpu::wait_forever()
 +    }
 +}
 
- //--------------------------------------------------------------------------------------------------
- // Public Code
-@@ -14,13 +40,7 @@
- /// Pause execution on the core.
- #[inline(always)]
- pub fn wait_forever() -> ! {
--    unsafe {
--        loop {
--            #[rustfmt::skip]
--            asm!(
--                "wfe",
--                options(nomem, nostack, preserves_flags)
--            );
--        }
-+    loop {
-+        asm::wfe()
-     }
- }
-
-diff -uNr 03_hacky_hello_world/src/_arch/aarch64/cpu.S 04_zero_overhead_abstraction/src/_arch/aarch64/cpu.S
---- 03_hacky_hello_world/src/_arch/aarch64/cpu.S
-+++ 04_zero_overhead_abstraction/src/_arch/aarch64/cpu.S
+diff -uNr 03_hacky_hello_world/src/_arch/aarch64/cpu/boot.S 04_zero_overhead_abstraction/src/_arch/aarch64/cpu/boot.S
+--- 03_hacky_hello_world/src/_arch/aarch64/cpu/boot.S
++++ 04_zero_overhead_abstraction/src/_arch/aarch64/cpu/boot.S
 @@ -1,21 +0,0 @@
 -// SPDX-License-Identifier: MIT OR Apache-2.0
 -//
@@ -132,6 +86,69 @@ diff -uNr 03_hacky_hello_world/src/_arch/aarch64/cpu.S 04_zero_overhead_abstract
 -    bl      runtime_init    // Jump to the "runtime_init()" kernel function
 -    b       1b              // We should never reach here. But just in case,
 -                            // park this core aswell
+
+diff -uNr 03_hacky_hello_world/src/_arch/aarch64/cpu/smp.rs 04_zero_overhead_abstraction/src/_arch/aarch64/cpu/smp.rs
+--- 03_hacky_hello_world/src/_arch/aarch64/cpu/smp.rs
++++ 04_zero_overhead_abstraction/src/_arch/aarch64/cpu/smp.rs
+@@ -0,0 +1,29 @@
++// SPDX-License-Identifier: MIT OR Apache-2.0
++//
++// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
++
++//! Architectural symmetric multiprocessing.
++//!
++//! # Orientation
++//!
++//! Since arch modules are imported into generic modules using the path attribute, the path of this
++//! file is:
++//!
++//! crate::cpu::smp::arch_smp
++
++use cortex_a::regs::*;
++
++//--------------------------------------------------------------------------------------------------
++// Public Code
++//--------------------------------------------------------------------------------------------------
++
++/// Return the executing core's id.
++#[inline(always)]
++pub fn core_id<T>() -> T
++where
++    T: From<u8>,
++{
++    const CORE_MASK: u64 = 0b11;
++
++    T::from((MPIDR_EL1.get() & CORE_MASK) as u8)
++}
+
+diff -uNr 03_hacky_hello_world/src/_arch/aarch64/cpu.rs 04_zero_overhead_abstraction/src/_arch/aarch64/cpu.rs
+--- 03_hacky_hello_world/src/_arch/aarch64/cpu.rs
++++ 04_zero_overhead_abstraction/src/_arch/aarch64/cpu.rs
+@@ -11,6 +11,8 @@
+ //!
+ //! crate::cpu::arch_cpu
+
++use cortex_a::asm;
++
+ //--------------------------------------------------------------------------------------------------
+ // Public Code
+ //--------------------------------------------------------------------------------------------------
+@@ -18,13 +20,7 @@
+ /// Pause execution on the core.
+ #[inline(always)]
+ pub fn wait_forever() -> ! {
+-    unsafe {
+-        loop {
+-            #[rustfmt::skip]
+-            asm!(
+-                "wfe",
+-                options(nomem, nostack, preserves_flags)
+-            );
+-        }
++    loop {
++        asm::wfe()
+     }
+ }
 
 diff -uNr 03_hacky_hello_world/src/bsp/raspberrypi/cpu.rs 04_zero_overhead_abstraction/src/bsp/raspberrypi/cpu.rs
 --- 03_hacky_hello_world/src/bsp/raspberrypi/cpu.rs
@@ -193,7 +210,7 @@ diff -uNr 03_hacky_hello_world/src/bsp/raspberrypi.rs 04_zero_overhead_abstracti
 diff -uNr 03_hacky_hello_world/src/cpu/smp.rs 04_zero_overhead_abstraction/src/cpu/smp.rs
 --- 03_hacky_hello_world/src/cpu/smp.rs
 +++ 04_zero_overhead_abstraction/src/cpu/smp.rs
-@@ -0,0 +1,10 @@
+@@ -0,0 +1,14 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -202,25 +219,32 @@ diff -uNr 03_hacky_hello_world/src/cpu/smp.rs 04_zero_overhead_abstraction/src/c
 +
 +#[cfg(target_arch = "aarch64")]
 +#[path = "../_arch/aarch64/cpu/smp.rs"]
-+mod arch_cpu_smp;
-+pub use arch_cpu_smp::*;
++mod arch_smp;
++
++//--------------------------------------------------------------------------------------------------
++// Architectural Public Reexports
++//--------------------------------------------------------------------------------------------------
++pub use arch_smp::core_id;
 
 diff -uNr 03_hacky_hello_world/src/cpu.rs 04_zero_overhead_abstraction/src/cpu.rs
 --- 03_hacky_hello_world/src/cpu.rs
 +++ 04_zero_overhead_abstraction/src/cpu.rs
-@@ -8,3 +8,5 @@
- #[path = "_arch/aarch64/cpu.rs"]
- mod arch_cpu;
- pub use arch_cpu::*;
-+
+@@ -10,6 +10,8 @@
+
+ mod boot;
+
 +pub mod smp;
++
+ //--------------------------------------------------------------------------------------------------
+ // Architectural Public Reexports
+ //--------------------------------------------------------------------------------------------------
 
 diff -uNr 03_hacky_hello_world/src/main.rs 04_zero_overhead_abstraction/src/main.rs
 --- 03_hacky_hello_world/src/main.rs
 +++ 04_zero_overhead_abstraction/src/main.rs
-@@ -92,9 +92,7 @@
- //! - `crate::memory::*`
- //! - `crate::bsp::memory::*`
+@@ -106,9 +106,7 @@
+ //!
+ //! [`cpu::boot::arch_boot::_start()`]: cpu/boot/arch_boot/fn._start.html
 
 -#![feature(asm)]
  #![feature(format_args_nl)]
@@ -228,7 +252,7 @@ diff -uNr 03_hacky_hello_world/src/main.rs 04_zero_overhead_abstraction/src/main
  #![feature(panic_info_message)]
  #![no_main]
  #![no_std]
-@@ -116,7 +114,8 @@
+@@ -127,7 +125,8 @@
  ///
  /// - Only a single core must be active and running this function.
  unsafe fn kernel_init() -> ! {

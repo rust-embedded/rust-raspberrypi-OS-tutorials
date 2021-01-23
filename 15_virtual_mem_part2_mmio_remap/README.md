@@ -15,7 +15,7 @@
 
 - [Introduction](#introduction)
 - [Implementation](#implementation)
-  - [A New Mapping API in `src/memory/mmu.rs`](#a-new-mapping-api-in-srcmemorymmurs)
+  - [A New Mapping API in `src/memory/mmu.rs`](#a-new-mapping-api-in-srcmemorymmutranslationtablers)
   - [Using the new API in `bsp` code and drivers](#using-the-new-api-in-bsp-code-and-drivers)
   - [Additional Changes](#additional-changes)
 - [Test it](#test-it)
@@ -77,7 +77,7 @@ Until now, the whole address space of the board was identity mapped at once. The
 together directly while setting up the translation tables, without any indirection through **generic
 kernel code** (`src/memory/**`).
 
-The way it worked was that the `architectural MMU driver` would query the `bsp code` about the start
+The way it worked was that the `architectural MMU code` would query the `bsp code` about the start
 and end of the physical address space, and any special regions in this space that need a mapping
 that _is not_ normal chacheable DRAM. It would then go ahead and map the whole address space at once
 and never touch the page tables again during runtime.
@@ -85,7 +85,7 @@ and never touch the page tables again during runtime.
 Changing in this tutorial, **architecture** and **bsp** code will no longer talk to each other
 directly. Instead, this is decoupled now through the kernel's **generic MMU subsystem code**.
 
-### A New Mapping API in `src/memory/mmu.rs`
+### A New Mapping API in `src/memory/mmu/translation_table.rs`
 
 First, we define an interface for operating on `translation tables`:
 
@@ -98,11 +98,11 @@ pub trait TranslationTable {
     /// The translation table's base address to be used for programming the MMU.
     fn phys_base_address(&self) -> Address<Physical>;
 
-    /// Map the given physical pages to the given virtual pages.
+    /// Map the given virtual pages to the given physical pages.
     unsafe fn map_pages_at(
         &mut self,
-        phys_pages: &PageSliceDescriptor<Physical>,
         virt_pages: &PageSliceDescriptor<Virtual>,
+        phys_pages: &PageSliceDescriptor<Physical>,
         attr: &AttributeFields,
     ) -> Result<(), &'static str>;
 
@@ -126,7 +126,7 @@ pub trait TranslationTable {
 The MMU driver (`src/_arch/_/memory/mmu.rs`) has one global instance for the kernel tables which
 implements this interface, and which can be accessed by calling
 `arch_mmu::kernel_translation_tables()` in the generic kernel code (`src/memory/mmu.rs`). From
-there, we provice a couple of memory mapping functions that wrap around this interface , and which
+there, we provide a couple of memory mapping functions that wrap around this interface , and which
 are exported for the rest of the kernel to use:
 
 ```rust
@@ -163,8 +163,8 @@ provides a dedicated call to **map the kernel binary** (because it is the `BSP` 
 pub unsafe fn kernel_map_binary() -> Result<(), &'static str> {
     kernel_mmu::kernel_map_pages_at(
         "Kernel boot-core stack",
-        &phys_stack_page_desc(),
         &virt_stack_page_desc(),
+        &phys_stack_page_desc(),
         &AttributeFields {
             mem_attributes: MemAttributes::CacheableDRAM,
             acc_perms: AccessPermissions::ReadWrite,
@@ -225,7 +225,7 @@ There's a couple of changes not covered in this tutorial text, but the reader sh
 through them:
 
 - [`src/memory/mmu/types.rs`](src/memory/mmu/types.rs) introduces a couple of supporting types, like
-  `Address<ATYPE>`, which is used to differentiate between `Physical` and `Virtual` addresses.
+  `Page<ATYPE>`.
 - [`src/memory/mmu/mapping_record.rs`](src/memory/mmu/mapping_record.rs) provides the generic kernel
   code's way of tracking previous memory mappings for use cases such as reusing existing mappings
   (in case of drivers that have their MMIO ranges in the same `64 KiB` page) or printing mappings
@@ -310,10 +310,10 @@ Minipush 1.0
 ## Diff to previous
 ```diff
 
-diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/cpu.rs 15_virtual_mem_part2_mmio_remap/src/_arch/aarch64/cpu.rs
---- 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/cpu.rs
-+++ 15_virtual_mem_part2_mmio_remap/src/_arch/aarch64/cpu.rs
-@@ -71,7 +71,7 @@
+diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/cpu/boot.rs 15_virtual_mem_part2_mmio_remap/src/_arch/aarch64/cpu/boot.rs
+--- 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/cpu/boot.rs
++++ 15_virtual_mem_part2_mmio_remap/src/_arch/aarch64/cpu/boot.rs
+@@ -56,7 +56,7 @@
      ELR_EL2.set(runtime_init::runtime_init as *const () as u64);
 
      // Set up SP_EL1 (stack pointer), which will be used by EL1 once we "return" to it.
@@ -323,182 +323,81 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/cpu.rs 15_virtua
      // Use `eret` to "return" to EL1. This results in execution of runtime_init() in EL1.
      asm::eret()
 
-diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15_virtual_mem_part2_mmio_remap/src/_arch/aarch64/memory/mmu.rs
---- 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs
-+++ 15_virtual_mem_part2_mmio_remap/src/_arch/aarch64/memory/mmu.rs
-@@ -4,10 +4,19 @@
+diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu/translation_table.rs 15_virtual_mem_part2_mmio_remap/src/_arch/aarch64/memory/mmu/translation_table.rs
+--- 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu/translation_table.rs
++++ 15_virtual_mem_part2_mmio_remap/src/_arch/aarch64/memory/mmu/translation_table.rs
+@@ -15,9 +15,12 @@
 
- //! Memory Management Unit Driver.
- //!
--//! Static translation tables, compiled on boot; Everything 64 KiB granule.
-+//! Only 64 KiB granule is supported.
-
--use super::{AccessPermissions, AttributeFields, MemAttributes};
--use crate::{bsp, memory};
-+use crate::{
-+    bsp,
+ use crate::{
+     bsp, memory,
+-    memory::mmu::{
+-        arch_mmu::{Granule512MiB, Granule64KiB},
+-        AccessPermissions, AttributeFields, MemAttributes,
 +    memory::{
-+        mmu,
 +        mmu::{
-+            AccessPermissions, Address, AddressType, AttributeFields, MemAttributes, Page,
-+            PageSliceDescriptor, Physical, Virtual,
++            arch_mmu::{Granule512MiB, Granule64KiB},
++            AccessPermissions, AttributeFields, MemAttributes, Page, PageSliceDescriptor,
 +        },
-+    },
-+    synchronization::InitStateLock,
-+};
++        Address, AddressType, Physical, Virtual,
+     },
+ };
  use core::convert;
- use cortex_a::{barrier, regs::*};
- use register::{register_bitfields, InMemoryRegister};
-@@ -15,6 +24,7 @@
- //--------------------------------------------------------------------------------------------------
- // Private Definitions
- //--------------------------------------------------------------------------------------------------
-+use mmu::interface::TranslationGranule;
-
- // A table descriptor, as per ARMv8-A Architecture Reference Manual Figure D5-15.
- register_bitfields! {u64,
-@@ -87,9 +97,6 @@
-     ]
+@@ -117,11 +120,11 @@
  }
 
--const SIXTYFOUR_KIB_SHIFT: usize = 16; //  log2(64 * 1024)
--const FIVETWELVE_MIB_SHIFT: usize = 29; // log2(512 * 1024 * 1024)
--
- /// A table descriptor for 64 KiB aperture.
- ///
- /// The output points to the next table.
-@@ -104,35 +111,65 @@
- #[repr(transparent)]
- struct PageDescriptor(u64);
-
-+#[derive(Copy, Clone)]
-+enum Granule512MiB {}
-+
-+trait BaseAddr {
+ trait BaseAddr {
+-    fn base_addr_u64(&self) -> u64;
+-    fn base_addr_usize(&self) -> usize;
 +    fn phys_base_addr(&self) -> Address<Physical>;
-+}
-+
-+/// Constants for indexing the MAIR_EL1.
-+#[allow(dead_code)]
-+mod mair {
-+    pub const DEVICE: u64 = 0;
-+    pub const NORMAL: u64 = 1;
-+}
-+
-+/// Memory Management Unit type.
-+struct MemoryManagementUnit;
-+
-+/// This constant is the power-of-two exponent that defines the virtual address space size.
-+///
-+/// Values tested and known to be working:
-+///   - 30 (1 GiB)
-+///   - 31 (2 GiB)
-+///   - 32 (4 GiB)
-+///   - 33 (8 GiB)
-+const ADDR_SPACE_SIZE_EXPONENT: usize = 33;
-+
-+const NUM_LVL2_TABLES: usize = (1 << ADDR_SPACE_SIZE_EXPONENT) >> Granule512MiB::SHIFT;
-+const T0SZ: u64 = (64 - ADDR_SPACE_SIZE_EXPONENT) as u64;
-+
-+//--------------------------------------------------------------------------------------------------
-+// Public Definitions
-+//--------------------------------------------------------------------------------------------------
-+
- /// Big monolithic struct for storing the translation tables. Individual levels must be 64 KiB
- /// aligned, hence the "reverse" order of appearance.
- #[repr(C)]
- #[repr(align(65536))]
--struct FixedSizeTranslationTable<const NUM_TABLES: usize> {
-+pub(in crate::memory::mmu) struct FixedSizeTranslationTable<const NUM_TABLES: usize> {
-     /// Page descriptors, covering 64 KiB windows per entry.
-     lvl3: [[PageDescriptor; 8192]; NUM_TABLES],
+ }
+
+-const NUM_LVL2_TABLES: usize = bsp::memory::mmu::KernelAddrSpaceSize::SIZE >> Granule512MiB::SHIFT;
++const NUM_LVL2_TABLES: usize =
++    bsp::memory::mmu::KernelVirtAddrSpaceSize::SIZE >> Granule512MiB::SHIFT;
+
+ //--------------------------------------------------------------------------------------------------
+ // Public Definitions
+@@ -137,6 +140,12 @@
 
      /// Table descriptors, covering 512 MiB windows.
      lvl2: [TableDescriptor; NUM_TABLES],
--}
-
--const NUM_LVL2_TABLES: usize = bsp::memory::mmu::addr_space_size() >> FIVETWELVE_MIB_SHIFT;
--type ArchTranslationTable = FixedSizeTranslationTable<NUM_LVL2_TABLES>;
++
 +    /// Index of the next free MMIO page.
 +    cur_l3_mmio_index: usize,
-
--trait BaseAddr {
--    fn base_addr_u64(&self) -> u64;
--    fn base_addr_usize(&self) -> usize;
++
 +    /// Have the tables been initialized?
 +    initialized: bool,
  }
 
--/// Constants for indexing the MAIR_EL1.
--#[allow(dead_code)]
--mod mair {
--    pub const DEVICE: u64 = 0;
--    pub const NORMAL: u64 = 1;
--}
-+pub(in crate::memory::mmu) type ArchTranslationTable = FixedSizeTranslationTable<NUM_LVL2_TABLES>;
-
--/// Memory Management Unit type.
--struct MemoryManagementUnit;
-+// Supported translation granules are exported below, so that BSP code can pick between the options.
-+// This driver only supports 64 KiB at the moment.
-+
-+#[derive(Copy, Clone)]
-+/// 64 KiB translation granule.
-+pub enum Granule64KiB {}
-
- //--------------------------------------------------------------------------------------------------
- // Global instances
-@@ -143,7 +180,8 @@
- /// # Safety
- ///
- /// - Supposed to land in `.bss`. Therefore, ensure that all initial member values boil down to "0".
--static mut KERNEL_TABLES: ArchTranslationTable = ArchTranslationTable::new();
-+static KERNEL_TABLES: InitStateLock<ArchTranslationTable> =
-+    InitStateLock::new(ArchTranslationTable::new());
-
- static MMU: MemoryManagementUnit = MemoryManagementUnit;
-
-@@ -151,13 +189,15 @@
- // Private Code
+ /// A translation table type for the kernel space.
+@@ -147,12 +156,9 @@
  //--------------------------------------------------------------------------------------------------
 
--impl<T, const N: usize> BaseAddr for [T; N] {
+ impl<T, const N: usize> BaseAddr for [T; N] {
 -    fn base_addr_u64(&self) -> u64 {
 -        self as *const T as u64
 -    }
-+impl mmu::interface::TranslationGranule for Granule512MiB {
-+    const SIZE: usize = 512 * 1024 * 1024;
-+    const SHIFT: usize = 29; // log2(SIZE)
-+}
-
+-
 -    fn base_addr_usize(&self) -> usize {
 -        self as *const _ as usize
-+impl<T, const N: usize> BaseAddr for [T; N] {
 +    fn phys_base_addr(&self) -> Address<Physical> {
 +        // The binary is still identity mapped, so we don't need to convert here.
 +        Address::new(self as *const _ as usize)
      }
  }
 
-@@ -165,7 +205,7 @@
-     fn from(next_lvl_table_addr: usize) -> Self {
-         let val = InMemoryRegister::<u64, STAGE1_TABLE_DESCRIPTOR::Register>::new(0);
+@@ -225,20 +231,29 @@
+     }
 
--        let shifted = next_lvl_table_addr >> SIXTYFOUR_KIB_SHIFT;
-+        let shifted = next_lvl_table_addr >> Granule64KiB::SHIFT;
-         val.write(
-             STAGE1_TABLE_DESCRIPTOR::VALID::True
-                 + STAGE1_TABLE_DESCRIPTOR::TYPE::Table
-@@ -215,23 +255,33 @@
-
- impl PageDescriptor {
      /// Create an instance.
--    fn new(output_addr: usize, attribute_fields: AttributeFields) -> Self {
-+    fn new(output_addr: *const Page<Physical>, attribute_fields: &AttributeFields) -> Self {
+-    pub fn from_output_addr(output_addr: usize, attribute_fields: AttributeFields) -> Self {
++    pub fn from_output_addr(
++        output_addr: *const Page<Physical>,
++        attribute_fields: &AttributeFields,
++    ) -> Self {
          let val = InMemoryRegister::<u64, STAGE1_PAGE_DESCRIPTOR::Register>::new(0);
 
--        let shifted = output_addr as u64 >> SIXTYFOUR_KIB_SHIFT;
-+        let shifted = output_addr as u64 >> Granule64KiB::SHIFT;
+         let shifted = output_addr as u64 >> Granule64KiB::SHIFT;
          val.write(
              STAGE1_PAGE_DESCRIPTOR::VALID::True
                  + STAGE1_PAGE_DESCRIPTOR::AF::True
@@ -508,36 +407,53 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
                  + STAGE1_PAGE_DESCRIPTOR::OUTPUT_ADDR_64KiB.val(shifted),
          );
 
-         Self(val.get())
+         Self { value: val.get() }
      }
 +
 +    /// Returns the valid bit.
 +    fn is_valid(&self) -> bool {
-+        InMemoryRegister::<u64, STAGE1_PAGE_DESCRIPTOR::Register>::new(self.0)
++        InMemoryRegister::<u64, STAGE1_PAGE_DESCRIPTOR::Register>::new(self.value)
 +            .is_set(STAGE1_PAGE_DESCRIPTOR::VALID)
 +    }
  }
 
- impl<const NUM_TABLES: usize> FixedSizeTranslationTable<{ NUM_TABLES }> {
+ //--------------------------------------------------------------------------------------------------
+@@ -246,44 +261,172 @@
+ //--------------------------------------------------------------------------------------------------
+
+ impl<const NUM_TABLES: usize> FixedSizeTranslationTable<NUM_TABLES> {
 +    // Reserve the last 256 MiB of the address space for MMIO mappings.
 +    const L2_MMIO_START_INDEX: usize = NUM_TABLES - 1;
 +    const L3_MMIO_START_INDEX: usize = 8192 / 2;
 +
      /// Create an instance.
+     #[allow(clippy::assertions_on_constants)]
      pub const fn new() -> Self {
++        assert!(bsp::memory::mmu::KernelGranule::SIZE == Granule64KiB::SIZE);
          assert!(NUM_TABLES > 0);
-@@ -239,7 +289,55 @@
+-        assert!((bsp::memory::mmu::KernelAddrSpaceSize::SIZE modulo Granule512MiB::SIZE) == 0);
++        assert!((bsp::memory::mmu::KernelVirtAddrSpaceSize::SIZE modulo Granule512MiB::SIZE) == 0);
+
          Self {
-             lvl3: [[PageDescriptor(0); 8192]; NUM_TABLES],
-             lvl2: [TableDescriptor(0); NUM_TABLES],
+             lvl3: [[PageDescriptor::new_zeroed(); 8192]; NUM_TABLES],
+             lvl2: [TableDescriptor::new_zeroed(); NUM_TABLES],
 +            cur_l3_mmio_index: 0,
 +            initialized: false,
-+        }
-+    }
-+
+         }
+     }
+
+-    /// Iterates over all static translation table entries and fills them at once.
+-    ///
+-    /// # Safety
+-    ///
+-    /// - Modifies a `static mut`. Ensure it only happens from here.
+-    pub unsafe fn populate_tt_entries(&mut self) -> Result<(), &'static str> {
+-        for (l2_nr, l2_entry) in self.lvl2.iter_mut().enumerate() {
+-            *l2_entry =
+-                TableDescriptor::from_next_lvl_table_addr(self.lvl3[l2_nr].base_addr_usize());
 +    /// The start address of the table's MMIO range.
 +    #[inline(always)]
-+    fn mmio_start_addr(&self) -> Address<Virtual> {
++    const fn mmio_start_addr(&self) -> Address<Virtual> {
 +        Address::new(
 +            (Self::L2_MMIO_START_INDEX << Granule512MiB::SHIFT)
 +                | (Self::L3_MMIO_START_INDEX << Granule64KiB::SHIFT),
@@ -546,7 +462,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
 +
 +    /// The inclusive end address of the table's MMIO range.
 +    #[inline(always)]
-+    fn mmio_end_addr_inclusive(&self) -> Address<Virtual> {
++    const fn mmio_end_addr_inclusive(&self) -> Address<Virtual> {
 +        Address::new(
 +            (Self::L2_MMIO_START_INDEX << Granule512MiB::SHIFT)
 +                | (8191 << Granule64KiB::SHIFT)
@@ -565,7 +481,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
 +
 +        if lvl2_index > (NUM_TABLES - 1) {
 +            return Err("Virtual page is out of bounds of translation table");
-         }
++        }
 +
 +        Ok((lvl2_index, lvl3_index))
 +    }
@@ -579,100 +495,46 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
 +        let (lvl2_index, lvl3_index) = self.lvl2_lvl3_index_from(addr)?;
 +
 +        Ok(&mut self.lvl3[lvl2_index][lvl3_index])
-     }
- }
-
-@@ -256,32 +354,9 @@
-     );
- }
-
--/// Iterates over all static translation table entries and fills them at once.
--///
--/// # Safety
--///
--/// - Modifies a `static mut`. Ensure it only happens from here.
--unsafe fn populate_tt_entries() -> Result<(), &'static str> {
--    for (l2_nr, l2_entry) in KERNEL_TABLES.lvl2.iter_mut().enumerate() {
--        *l2_entry = KERNEL_TABLES.lvl3[l2_nr].base_addr_usize().into();
--
--        for (l3_nr, l3_entry) in KERNEL_TABLES.lvl3[l2_nr].iter_mut().enumerate() {
--            let virt_addr = (l2_nr << FIVETWELVE_MIB_SHIFT) + (l3_nr << SIXTYFOUR_KIB_SHIFT);
--
--            let (output_addr, attribute_fields) =
--                bsp::memory::mmu::virt_mem_layout().virt_addr_properties(virt_addr)?;
--
--            *l3_entry = PageDescriptor::new(output_addr, attribute_fields);
--        }
--    }
--
--    Ok(())
--}
--
- /// Configure various settings of stage 1 of the EL1 translation regime.
- fn configure_translation_control() {
-     let ips = ID_AA64MMFR0_EL1.read(ID_AA64MMFR0_EL1::PARange);
--    let t0sz: u64 = bsp::memory::mmu::addr_space_size().trailing_zeros().into();
-
-     TCR_EL1.write(
-         TCR_EL1::TBI0::Ignored
-@@ -292,7 +367,7 @@
-             + TCR_EL1::ORGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
-             + TCR_EL1::IRGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
-             + TCR_EL1::EPD0::EnableTTBR0Walks
--            + TCR_EL1::T0SZ.val(t0sz),
-+            + TCR_EL1::T0SZ.val(T0SZ),
-     );
- }
-
-@@ -300,17 +375,126 @@
- // Public Code
- //--------------------------------------------------------------------------------------------------
-
-+/// Return a guarded reference to the kernel's translation tables.
-+pub(in crate::memory::mmu) fn kernel_translation_tables(
-+) -> &'static InitStateLock<ArchTranslationTable> {
-+    &KERNEL_TABLES
++    }
 +}
 +
- /// Return a reference to the MMU instance.
--pub fn mmu() -> &'static impl memory::mmu::interface::MMU {
-+pub(in crate::memory::mmu) fn mmu() -> &'static impl mmu::interface::MMU {
-     &MMU
- }
-
- //------------------------------------------------------------------------------
- // OS Interface Code
- //------------------------------------------------------------------------------
-+impl mmu::interface::TranslationGranule for Granule64KiB {
-+    const SIZE: usize = 64 * 1024;
-+    const SHIFT: usize = 16; // log2(SIZE)
-+}
++//------------------------------------------------------------------------------
++// OS Interface Code
++//------------------------------------------------------------------------------
 +
-+impl<const NUM_TABLES: usize> mmu::interface::TranslationTable
-+    for FixedSizeTranslationTable<{ NUM_TABLES }>
++impl<const NUM_TABLES: usize> memory::mmu::translation_table::interface::TranslationTable
++    for FixedSizeTranslationTable<NUM_TABLES>
 +{
 +    unsafe fn init(&mut self) {
 +        if self.initialized {
 +            return;
 +        }
-+
+
+-            for (l3_nr, l3_entry) in self.lvl3[l2_nr].iter_mut().enumerate() {
+-                let virt_addr = (l2_nr << Granule512MiB::SHIFT) + (l3_nr << Granule64KiB::SHIFT);
 +        // Populate the l2 entries.
 +        for (lvl2_nr, lvl2_entry) in self.lvl2.iter_mut().enumerate() {
-+            *lvl2_entry = self.lvl3[lvl2_nr].phys_base_addr().into_usize().into();
++            let desc = TableDescriptor::from_next_lvl_table_addr(
++                self.lvl3[lvl2_nr].phys_base_addr().into_usize(),
++            );
++            *lvl2_entry = desc;
 +        }
 +
 +        self.cur_l3_mmio_index = Self::L3_MMIO_START_INDEX;
 +        self.initialized = true;
 +    }
-+
+
+-                let (output_addr, attribute_fields) =
+-                    bsp::memory::mmu::virt_mem_layout().virt_addr_properties(virt_addr)?;
 +    fn phys_base_address(&self) -> Address<Physical> {
 +        self.lvl2.phys_base_addr()
 +    }
-+
+
+-                *l3_entry = PageDescriptor::from_output_addr(output_addr, attribute_fields);
 +    unsafe fn map_pages_at(
 +        &mut self,
-+        phys_pages: &PageSliceDescriptor<Physical>,
 +        virt_pages: &PageSliceDescriptor<Virtual>,
++        phys_pages: &PageSliceDescriptor<Physical>,
 +        attr: &AttributeFields,
 +    ) -> Result<(), &'static str> {
 +        assert_eq!(self.initialized, true, "Translation tables not initialized");
@@ -683,9 +545,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
 +        if p.len() != v.len() {
 +            return Err("Tried to map page slices with unequal sizes");
 +        }
-
--impl memory::mmu::interface::MMU for MemoryManagementUnit {
--    unsafe fn init(&self) -> Result<(), &'static str> {
++
 +        // No work to do for empty slices.
 +        if p.is_empty() {
 +            return Ok(());
@@ -700,14 +560,17 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
 +            let page_descriptor = self.page_descriptor_from(virt_page.as_ptr())?;
 +            if page_descriptor.is_valid() {
 +                return Err("Virtual page is already mapped");
-+            }
+             }
 +
-+            *page_descriptor = PageDescriptor::new(phys_page.as_ptr(), &attr);
-+        }
-+
-+        Ok(())
-+    }
-+
++            *page_descriptor = PageDescriptor::from_output_addr(phys_page.as_ptr(), &attr);
+         }
+
+         Ok(())
+     }
+
+-    /// The translation table's base address to be used for programming the MMU.
+-    pub fn base_address(&self) -> u64 {
+-        self.lvl2.base_addr_u64()
 +    fn next_mmio_virt_page_slice(
 +        &mut self,
 +        num_pages: usize,
@@ -743,41 +606,102 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
 +        }
 +
 +        false
-+    }
-+}
-+
-+impl mmu::interface::MMU for MemoryManagementUnit {
-+    unsafe fn enable(
-+        &self,
-+        phys_kernel_table_base_addr: Address<Physical>,
-+    ) -> Result<(), &'static str> {
-         // Fail early if translation granule is not supported. Both RPis support it, though.
-         if !ID_AA64MMFR0_EL1.matches_all(ID_AA64MMFR0_EL1::TGran64::Supported) {
-             return Err("Translation granule not supported in HW");
-@@ -319,11 +503,8 @@
-         // Prepare the memory attribute indirection register.
-         set_up_mair();
+     }
+ }
 
--        // Populate translation tables.
--        populate_tt_entries()?;
--
-         // Set the "Translation Table Base Register".
--        TTBR0_EL1.set_baddr(KERNEL_TABLES.lvl2.base_addr_u64());
-+        TTBR0_EL1.set_baddr(phys_kernel_table_base_addr.into_usize() as u64);
-
-         configure_translation_control();
-
-@@ -347,6 +528,9 @@
+@@ -292,6 +435,9 @@
  //--------------------------------------------------------------------------------------------------
 
  #[cfg(test)]
-+pub(in crate::memory::mmu) type MinSizeArchTranslationTable = FixedSizeTranslationTable<1>;
++pub type MinSizeKernelTranslationTable = FixedSizeTranslationTable<1>;
 +
 +#[cfg(test)]
  mod tests {
      use super::*;
      use test_macros::kernel_test;
-@@ -373,7 +557,7 @@
+
+diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15_virtual_mem_part2_mmio_remap/src/_arch/aarch64/memory/mmu.rs
+--- 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs
++++ 15_virtual_mem_part2_mmio_remap/src/_arch/aarch64/memory/mmu.rs
+@@ -15,7 +15,11 @@
+
+ use crate::{
+     bsp, memory,
+-    memory::mmu::{translation_table::KernelTranslationTable, TranslationGranule},
++    memory::{
++        mmu::{translation_table::KernelTranslationTable, TranslationGranule},
++        Address, Physical,
++    },
++    synchronization::InitStateLock,
+ };
+ use cortex_a::{barrier, regs::*};
+
+@@ -37,7 +41,7 @@
+ pub const MIN_ADDR_SPACE_SIZE: usize = 1024 * 1024 * 1024; // 1 GiB
+
+ /// The max supported address space size.
+-pub const MAX_ADDR_SPACE_SIZE: usize = 32 * 1024 * 1024 * 1024; // 32 GiB
++pub const MAX_ADDR_SPACE_SIZE: usize = 8 * 1024 * 1024 * 1024; // 8 GiB
+
+ /// The supported address space size granule.
+ pub type AddrSpaceSizeGranule = Granule512MiB;
+@@ -58,7 +62,8 @@
+ /// # Safety
+ ///
+ /// - Supposed to land in `.bss`. Therefore, ensure that all initial member values boil down to "0".
+-static mut KERNEL_TABLES: KernelTranslationTable = KernelTranslationTable::new();
++static KERNEL_TABLES: InitStateLock<KernelTranslationTable> =
++    InitStateLock::new(KernelTranslationTable::new());
+
+ static MMU: MemoryManagementUnit = MemoryManagementUnit;
+
+@@ -83,7 +88,7 @@
+     /// Configure various settings of stage 1 of the EL1 translation regime.
+     fn configure_translation_control(&self) {
+         let ips = ID_AA64MMFR0_EL1.read(ID_AA64MMFR0_EL1::PARange);
+-        let t0sz = (64 - bsp::memory::mmu::KernelAddrSpaceSize::SHIFT) as u64;
++        let t0sz = (64 - bsp::memory::mmu::KernelVirtAddrSpaceSize::SHIFT) as u64;
+
+         TCR_EL1.write(
+             TCR_EL1::TBI0::Ignored
+@@ -103,6 +108,11 @@
+ // Public Code
+ //--------------------------------------------------------------------------------------------------
+
++/// Return a guarded reference to the kernel's translation tables.
++pub fn kernel_translation_tables() -> &'static InitStateLock<KernelTranslationTable> {
++    &KERNEL_TABLES
++}
++
+ /// Return a reference to the MMU instance.
+ pub fn mmu() -> &'static impl memory::mmu::interface::MMU {
+     &MMU
+@@ -113,7 +123,10 @@
+ //------------------------------------------------------------------------------
+
+ impl memory::mmu::interface::MMU for MemoryManagementUnit {
+-    unsafe fn init(&self) -> Result<(), &'static str> {
++    unsafe fn enable(
++        &self,
++        kernel_table_phys_base_addr: Address<Physical>,
++    ) -> Result<(), &'static str> {
+         // Fail early if translation granule is not supported. Both RPis support it, though.
+         if !ID_AA64MMFR0_EL1.matches_all(ID_AA64MMFR0_EL1::TGran64::Supported) {
+             return Err("Translation granule not supported in HW");
+@@ -122,11 +135,8 @@
+         // Prepare the memory attribute indirection register.
+         self.set_up_mair();
+
+-        // Populate translation tables.
+-        KERNEL_TABLES.populate_tt_entries()?;
+-
+         // Set the "Translation Table Base Register".
+-        TTBR0_EL1.set_baddr(KERNEL_TABLES.base_address());
++        TTBR0_EL1.set_baddr(kernel_table_phys_base_addr.into_usize() as u64);
+
+         self.configure_translation_control();
+
+@@ -158,7 +168,7 @@
      #[kernel_test]
      fn kernel_tables_in_bss() {
          let bss_range = bsp::memory::bss_range_inclusive();
@@ -786,19 +710,6 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
 
          assert!(bss_range.contains(&kernel_tables_addr));
      }
-
-diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/time.rs 15_virtual_mem_part2_mmio_remap/src/_arch/aarch64/time.rs
---- 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/time.rs
-+++ 15_virtual_mem_part2_mmio_remap/src/_arch/aarch64/time.rs
-@@ -55,7 +55,7 @@
-         }
-
-         // Calculate the register compare value.
--        let frq = CNTFRQ_EL0.get() as u64;
-+        let frq = CNTFRQ_EL0.get();
-         let x = match frq.checked_mul(duration.as_nanos() as u64) {
-             None => {
-                 warn!("Spin duration too long, skipping");
 
 diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gicc.rs 15_virtual_mem_part2_mmio_remap/src/bsp/device_driver/arm/gicv2/gicc.rs
 --- 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gicc.rs
@@ -974,7 +885,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2.rs
 
 -use crate::{bsp, cpu, driver, exception, synchronization, synchronization::InitStateLock};
 +use crate::{
-+    bsp, cpu, driver, exception, memory, memory::mmu::Physical, synchronization,
++    bsp, cpu, driver, exception, memory, memory::Physical, synchronization,
 +    synchronization::InitStateLock,
 +};
 +use core::sync::atomic::{AtomicBool, Ordering};
@@ -1055,7 +966,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
  use crate::{
 -    bsp::device_driver::common::MMIODerefWrapper, driver, synchronization,
 -    synchronization::IRQSafeNullLock,
-+    bsp::device_driver::common::MMIODerefWrapper, driver, memory, memory::mmu::Physical,
++    bsp::device_driver::common::MMIODerefWrapper, driver, memory, memory::Physical,
 +    synchronization, synchronization::IRQSafeNullLock,
  };
 +use core::sync::atomic::{AtomicUsize, Ordering};
@@ -1153,7 +1064,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
      bsp::device_driver::common::MMIODerefWrapper,
 -    exception, synchronization,
 +    driver, exception, memory,
-+    memory::mmu::Physical,
++    memory::Physical,
 +    synchronization,
      synchronization::{IRQSafeNullLock, InitStateLock},
  };
@@ -1242,7 +1153,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
  mod peripheral_ic;
 
 -use crate::{driver, exception};
-+use crate::{driver, exception, memory, memory::mmu::Physical};
++use crate::{driver, exception, memory, memory::Physical};
 
  //--------------------------------------------------------------------------------------------------
  // Private Definitions
@@ -1285,7 +1196,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
 -    bsp, bsp::device_driver::common::MMIODerefWrapper, console, cpu, driver, exception,
 -    synchronization, synchronization::IRQSafeNullLock,
 +    bsp, bsp::device_driver::common::MMIODerefWrapper, console, cpu, driver, exception, memory,
-+    memory::mmu::Physical, synchronization, synchronization::IRQSafeNullLock,
++    memory::Physical, synchronization, synchronization::IRQSafeNullLock,
 +};
 +use core::{
 +    fmt,
@@ -1468,7 +1379,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/link.ld 15_vir
 diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 15_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs
 --- 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs
 +++ 15_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs
-@@ -4,77 +4,128 @@
+@@ -4,70 +4,131 @@
 
  //! BSP Memory Management Unit.
 
@@ -1480,9 +1391,10 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
 +    memory::{
 +        mmu as kernel_mmu,
 +        mmu::{
-+            interface, AccessPermissions, AttributeFields, Granule64KiB, MemAttributes, Page,
-+            PageSliceDescriptor, Physical, Virtual,
++            AccessPermissions, AddressSpaceSize, AttributeFields, MemAttributes, Page,
++            PageSliceDescriptor, TranslationGranule,
 +        },
++        Physical, Virtual,
 +    },
 +};
 
@@ -1490,13 +1402,19 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
  // Public Definitions
  //--------------------------------------------------------------------------------------------------
 
--const NUM_MEM_RANGES: usize = 2;
+-/// The address space size chosen by this BSP.
+-pub type KernelAddrSpaceSize = AddressSpaceSize<{ memory_map::END_INCLUSIVE + 1 }>;
 -
+-const NUM_MEM_RANGES: usize = 2;
++/// The translation granule chosen by this BSP. This will be used everywhere else in the kernel to
++/// derive respective data structures and their sizes. For example, the `crate::memory::mmu::Page`.
++pub type KernelGranule = TranslationGranule<{ 64 * 1024 }>;
+
 -/// The virtual memory layout.
 -///
 -/// The layout must contain only special ranges, aka anything that is _not_ normal cacheable DRAM.
 -/// It is agnostic of the paging granularity that the architecture's MMU will use.
--pub static LAYOUT: KernelVirtualLayout<{ NUM_MEM_RANGES }> = KernelVirtualLayout::new(
+-pub static LAYOUT: KernelVirtualLayout<NUM_MEM_RANGES> = KernelVirtualLayout::new(
 -    memory_map::END_INCLUSIVE,
 -    [
 -        TranslationDescriptor {
@@ -1521,15 +1439,17 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
 -        },
 -    ],
 -);
-+/// The translation granule chosen by this BSP. This will be used everywhere else in the kernel to
-+/// derive respective data structures and their sizes. For example, the `crate::memory::mmu::Page`.
-+pub type KernelGranule = Granule64KiB;
++/// The address space size chosen by this BSP.
++pub type KernelVirtAddrSpaceSize = AddressSpaceSize<{ 8 * 1024 * 1024 * 1024 }>;
 
  //--------------------------------------------------------------------------------------------------
  // Private Code
  //--------------------------------------------------------------------------------------------------
-+use interface::TranslationGranule;
-+
+
+-fn ro_range_inclusive() -> RangeInclusive<usize> {
+-    // Notice the subtraction to turn the exclusive end into an inclusive end.
+-    #[allow(clippy::range_minus_one)]
+-    RangeInclusive::new(super::ro_start(), super::ro_end() - 1)
 +/// Helper function for calculating the number of pages the given parameter spans.
 +const fn size_to_num_pages(size: usize) -> usize {
 +    assert!(size > 0);
@@ -1555,11 +1475,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
 +/// The data pages of the kernel binary.
 +fn virt_data_page_desc() -> PageSliceDescriptor<Virtual> {
 +    let num_pages = size_to_num_pages(super::data_size());
-
--fn ro_range_inclusive() -> RangeInclusive<usize> {
--    // Notice the subtraction to turn the exclusive end into an inclusive end.
--    #[allow(clippy::range_minus_one)]
--    RangeInclusive::new(super::ro_start(), super::ro_end() - 1)
++
 +    PageSliceDescriptor::from_addr(super::virt_data_start(), num_pages)
  }
 
@@ -1586,7 +1502,9 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
  // Public Code
  //--------------------------------------------------------------------------------------------------
 
--/// Return the address space size in bytes.
+-/// Return a reference to the virtual memory layout.
+-pub fn virt_mem_layout() -> &'static KernelVirtualLayout<NUM_MEM_RANGES> {
+-    &LAYOUT
 +/// Pointer to the last page of the physical address space.
 +pub fn phys_addr_space_end_page() -> *const Page<Physical> {
 +    common::align_down(
@@ -1598,44 +1516,35 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
 +/// Map the kernel binary.
 +///
 +/// # Safety
- ///
--/// Guarantees size to be a power of two.
--pub const fn addr_space_size() -> usize {
--    let size = memory_map::END_INCLUSIVE + 1;
--    assert!(size.is_power_of_two());
++///
 +/// - Any miscalculation or attribute error will likely be fatal. Needs careful manual checking.
 +pub unsafe fn kernel_map_binary() -> Result<(), &'static str> {
 +    kernel_mmu::kernel_map_pages_at(
 +        "Kernel boot-core stack",
-+        &phys_stack_page_desc(),
 +        &virt_stack_page_desc(),
++        &phys_stack_page_desc(),
 +        &AttributeFields {
 +            mem_attributes: MemAttributes::CacheableDRAM,
 +            acc_perms: AccessPermissions::ReadWrite,
 +            execute_never: true,
 +        },
 +    )?;
-
--    size
--}
++
 +    kernel_mmu::kernel_map_pages_at(
 +        "Kernel code and RO data",
-+        &phys_ro_page_desc(),
 +        &virt_ro_page_desc(),
++        &phys_ro_page_desc(),
 +        &AttributeFields {
 +            mem_attributes: MemAttributes::CacheableDRAM,
 +            acc_perms: AccessPermissions::ReadOnly,
 +            execute_never: false,
 +        },
 +    )?;
-
--/// Return a reference to the virtual memory layout.
--pub fn virt_mem_layout() -> &'static KernelVirtualLayout<{ NUM_MEM_RANGES }> {
--    &LAYOUT
++
 +    kernel_mmu::kernel_map_pages_at(
 +        "Kernel data and bss",
-+        &phys_data_page_desc(),
 +        &virt_data_page_desc(),
++        &phys_data_page_desc(),
 +        &AttributeFields {
 +            mem_attributes: MemAttributes::CacheableDRAM,
 +            acc_perms: AccessPermissions::ReadWrite,
@@ -1647,19 +1556,19 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -89,14 +140,12 @@
+@@ -82,14 +143,12 @@
      /// Check alignment of the kernel's virtual memory layout sections.
      #[kernel_test]
      fn virt_mem_layout_sections_are_64KiB_aligned() {
 -        const SIXTYFOUR_KIB: usize = 65536;
--
--        for i in LAYOUT.inner().iter() {
--            let start: usize = *(i.virtual_range)().start();
--            let end: usize = *(i.virtual_range)().end() + 1;
 +        for i in [virt_stack_page_desc, virt_ro_page_desc, virt_data_page_desc].iter() {
 +            let start: usize = i().start_addr().into_usize();
 +            let end: usize = i().end_addr().into_usize();
 
+-        for i in LAYOUT.inner().iter() {
+-            let start: usize = *(i.virtual_range)().start();
+-            let end: usize = *(i.virtual_range)().end() + 1;
+-
 -            assert_eq!(start modulo SIXTYFOUR_KIB, 0);
 -            assert_eq!(end modulo SIXTYFOUR_KIB, 0);
 +            assert_eq!(start modulo KernelGranule::SIZE, 0);
@@ -1667,7 +1576,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
              assert!(end >= start);
          }
      }
-@@ -104,17 +153,18 @@
+@@ -97,17 +156,18 @@
      /// Ensure the kernel's virtual memory layout is free of overlaps.
      #[kernel_test]
      fn virt_mem_layout_has_no_overlaps() {
@@ -1739,7 +1648,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs 15_v
 
  pub mod mmu;
 
-+use crate::memory::mmu::{Address, Physical, Virtual};
++use crate::memory::{Address, Physical, Virtual};
  use core::{cell::UnsafeCell, ops::RangeInclusive};
 
  //--------------------------------------------------------------------------------------------------
@@ -2030,7 +1939,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/driver.rs 15_virtual_mem_part2
 diff -uNr 14_exceptions_part2_peripheral_IRQs/src/lib.rs 15_virtual_mem_part2_mmio_remap/src/lib.rs
 --- 14_exceptions_part2_peripheral_IRQs/src/lib.rs
 +++ 15_virtual_mem_part2_mmio_remap/src/lib.rs
-@@ -113,6 +113,7 @@
+@@ -110,6 +110,7 @@
 
  #![allow(incomplete_features)]
  #![feature(asm)]
@@ -2038,7 +1947,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/lib.rs 15_virtual_mem_part2_mm
  #![feature(const_fn_fn_ptr_basics)]
  #![feature(const_generics)]
  #![feature(const_panic)]
-@@ -137,6 +138,7 @@
+@@ -131,6 +132,7 @@
  mod synchronization;
 
  pub mod bsp;
@@ -2151,8 +2060,8 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/memory/mmu/mapping_record.rs 1
 +impl MappingRecordEntry {
 +    pub fn new(
 +        name: &'static str,
-+        phys_pages: &PageSliceDescriptor<Physical>,
 +        virt_pages: &PageSliceDescriptor<Virtual>,
++        phys_pages: &PageSliceDescriptor<Physical>,
 +        attr: &AttributeFields,
 +    ) -> Self {
 +        Self {
@@ -2206,13 +2115,13 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/memory/mmu/mapping_record.rs 1
 +    pub fn add(
 +        &mut self,
 +        name: &'static str,
-+        phys_pages: &PageSliceDescriptor<Physical>,
 +        virt_pages: &PageSliceDescriptor<Virtual>,
++        phys_pages: &PageSliceDescriptor<Physical>,
 +        attr: &AttributeFields,
 +    ) -> Result<(), &'static str> {
 +        let x = self.find_next_free()?;
 +
-+        *x = Some(MappingRecordEntry::new(name, phys_pages, virt_pages, attr));
++        *x = Some(MappingRecordEntry::new(name, virt_pages, phys_pages, attr));
 +        Ok(())
 +    }
 +
@@ -2300,11 +2209,11 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/memory/mmu/mapping_record.rs 1
 +/// Add an entry to the mapping info record.
 +pub fn kernel_add(
 +    name: &'static str,
-+    phys_pages: &PageSliceDescriptor<Physical>,
 +    virt_pages: &PageSliceDescriptor<Virtual>,
++    phys_pages: &PageSliceDescriptor<Physical>,
 +    attr: &AttributeFields,
 +) -> Result<(), &'static str> {
-+    KERNEL_MAPPING_RECORD.write(|mr| mr.add(name, phys_pages, virt_pages, attr))
++    KERNEL_MAPPING_RECORD.write(|mr| mr.add(name, virt_pages, phys_pages, attr))
 +}
 +
 +pub fn kernel_find_and_insert_mmio_duplicate(
@@ -2329,41 +2238,134 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/memory/mmu/mapping_record.rs 1
 +    KERNEL_MAPPING_RECORD.read(|mr| mr.print());
 +}
 
+diff -uNr 14_exceptions_part2_peripheral_IRQs/src/memory/mmu/translation_table.rs 15_virtual_mem_part2_mmio_remap/src/memory/mmu/translation_table.rs
+--- 14_exceptions_part2_peripheral_IRQs/src/memory/mmu/translation_table.rs
++++ 15_virtual_mem_part2_mmio_remap/src/memory/mmu/translation_table.rs
+@@ -8,7 +8,104 @@
+ #[path = "../../_arch/aarch64/memory/mmu/translation_table.rs"]
+ mod arch_translation_table;
+
++use crate::memory::{
++    mmu::{AttributeFields, PageSliceDescriptor},
++    Address, Physical, Virtual,
++};
++
+ //--------------------------------------------------------------------------------------------------
+ // Architectural Public Reexports
+ //--------------------------------------------------------------------------------------------------
+ pub use arch_translation_table::KernelTranslationTable;
++
++//--------------------------------------------------------------------------------------------------
++// Public Definitions
++//--------------------------------------------------------------------------------------------------
++
++/// Translation table interfaces.
++pub mod interface {
++    use super::*;
++
++    /// Translation table operations.
++    pub trait TranslationTable {
++        /// Anything that needs to run before any of the other provided functions can be used.
++        ///
++        /// # Safety
++        ///
++        /// - Implementor must ensure that this function can run only once or is harmless if invoked
++        ///   multiple times.
++        unsafe fn init(&mut self);
++
++        /// The translation table's base address to be used for programming the MMU.
++        fn phys_base_address(&self) -> Address<Physical>;
++
++        /// Map the given virtual pages to the given physical pages.
++        ///
++        /// # Safety
++        ///
++        /// - Using wrong attributes can cause multiple issues of different nature in the system.
++        /// - It is not required that the architectural implementation prevents aliasing. That is,
++        ///   mapping to the same physical memory using multiple virtual addresses, which would
++        ///   break Rust's ownership assumptions. This should be protected against in the kernel's
++        ///   generic MMU code.
++        unsafe fn map_pages_at(
++            &mut self,
++            virt_pages: &PageSliceDescriptor<Virtual>,
++            phys_pages: &PageSliceDescriptor<Physical>,
++            attr: &AttributeFields,
++        ) -> Result<(), &'static str>;
++
++        /// Obtain a free virtual page slice in the MMIO region.
++        ///
++        /// The "MMIO region" is a distinct region of the implementor's choice, which allows
++        /// differentiating MMIO addresses from others. This can speed up debugging efforts.
++        /// Ideally, those MMIO addresses are also standing out visually so that a human eye can
++        /// identify them. For example, by allocating them from near the end of the virtual address
++        /// space.
++        fn next_mmio_virt_page_slice(
++            &mut self,
++            num_pages: usize,
++        ) -> Result<PageSliceDescriptor<Virtual>, &'static str>;
++
++        /// Check if a virtual page splice is in the "MMIO region".
++        fn is_virt_page_slice_mmio(&self, virt_pages: &PageSliceDescriptor<Virtual>) -> bool;
++    }
++}
++
++//--------------------------------------------------------------------------------------------------
++// Testing
++//--------------------------------------------------------------------------------------------------
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use crate::bsp;
++    use arch_translation_table::MinSizeKernelTranslationTable;
++    use interface::TranslationTable;
++    use test_macros::kernel_test;
++
++    /// Sanity checks for the kernel TranslationTable implementation.
++    #[kernel_test]
++    fn translationtable_implementation_sanity() {
++        // Need to take care that `tables` fits into the stack.
++        let mut tables = MinSizeKernelTranslationTable::new();
++
++        unsafe { tables.init() };
++
++        let x = tables.next_mmio_virt_page_slice(0);
++        assert!(x.is_err());
++
++        let x = tables.next_mmio_virt_page_slice(1_0000_0000);
++        assert!(x.is_err());
++
++        let x = tables.next_mmio_virt_page_slice(2).unwrap();
++        assert_eq!(x.size(), bsp::memory::mmu::KernelGranule::SIZE * 2);
++
++        assert_eq!(tables.is_virt_page_slice_mmio(&x), true);
++
++        assert_eq!(
++            tables.is_virt_page_slice_mmio(&PageSliceDescriptor::from_addr(Address::new(0), 1)),
++            false
++        );
++    }
++}
+
 diff -uNr 14_exceptions_part2_peripheral_IRQs/src/memory/mmu/types.rs 15_virtual_mem_part2_mmio_remap/src/memory/mmu/types.rs
 --- 14_exceptions_part2_peripheral_IRQs/src/memory/mmu/types.rs
 +++ 15_virtual_mem_part2_mmio_remap/src/memory/mmu/types.rs
-@@ -0,0 +1,283 @@
+@@ -0,0 +1,213 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
 +
-+//! Memory Management Unit Types.
++//! Memory Management Unit types.
 +
-+use crate::{bsp, common};
++use crate::{
++    bsp, common,
++    memory::{Address, AddressType, Physical, Virtual},
++};
 +use core::{convert::From, marker::PhantomData, ops::RangeInclusive};
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Definitions
 +//--------------------------------------------------------------------------------------------------
-+use super::interface::TranslationGranule;
-+
-+/// Metadata trait for marking the type of an address.
-+pub trait AddressType: Copy + Clone + PartialOrd + PartialEq {}
-+
-+/// Zero-sized type to mark a physical address.
-+#[derive(Copy, Clone, PartialOrd, PartialEq)]
-+pub enum Physical {}
-+
-+/// Zero-sized type to mark a virtual address.
-+#[derive(Copy, Clone, PartialOrd, PartialEq)]
-+pub enum Virtual {}
-+
-+/// Generic address type.
-+#[derive(Copy, Clone, PartialOrd, PartialEq)]
-+pub struct Address<ATYPE: AddressType> {
-+    value: usize,
-+    _address_type: PhantomData<ATYPE>,
-+}
 +
 +/// Generic page type.
 +#[repr(C)]
@@ -2414,60 +2416,6 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/memory/mmu/types.rs 15_virtual
 +//--------------------------------------------------------------------------------------------------
 +// Public Code
 +//--------------------------------------------------------------------------------------------------
-+
-+impl AddressType for Physical {}
-+impl AddressType for Virtual {}
-+
-+//------------------------------------------------------------------------------
-+// Address
-+//------------------------------------------------------------------------------
-+
-+impl<ATYPE: AddressType> Address<ATYPE> {
-+    /// Create an instance.
-+    pub const fn new(value: usize) -> Self {
-+        Self {
-+            value,
-+            _address_type: PhantomData,
-+        }
-+    }
-+
-+    /// Align down.
-+    pub const fn align_down(self, alignment: usize) -> Self {
-+        let aligned = common::align_down(self.value, alignment);
-+
-+        Self {
-+            value: aligned,
-+            _address_type: PhantomData,
-+        }
-+    }
-+
-+    /// Converts `Address` into an usize.
-+    pub const fn into_usize(self) -> usize {
-+        self.value
-+    }
-+}
-+
-+impl<ATYPE: AddressType> core::ops::Add<usize> for Address<ATYPE> {
-+    type Output = Self;
-+
-+    fn add(self, other: usize) -> Self {
-+        Self {
-+            value: self.value + other,
-+            _address_type: PhantomData,
-+        }
-+    }
-+}
-+
-+impl<ATYPE: AddressType> core::ops::Sub<usize> for Address<ATYPE> {
-+    type Output = Self;
-+
-+    fn sub(self, other: usize) -> Self {
-+        Self {
-+            value: self.value - other,
-+            _address_type: PhantomData,
-+        }
-+    }
-+}
 +
 +//------------------------------------------------------------------------------
 +// Page
@@ -2620,14 +2568,14 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/memory/mmu/types.rs 15_virtual
 diff -uNr 14_exceptions_part2_peripheral_IRQs/src/memory/mmu.rs 15_virtual_mem_part2_mmio_remap/src/memory/mmu.rs
 --- 14_exceptions_part2_peripheral_IRQs/src/memory/mmu.rs
 +++ 15_virtual_mem_part2_mmio_remap/src/memory/mmu.rs
-@@ -3,23 +3,18 @@
+@@ -3,29 +3,22 @@
  // Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
 
  //! Memory Management Unit.
 -//!
 -//! In order to decouple `BSP` and `arch` parts of the MMU code (to keep them pluggable), this file
--//! provides types for composing an architecture-agnostic description of the kernel 's virtual
--//! memory layout.
+-//! provides types for composing an architecture-agnostic description of the kernel's virtual memory
+-//! layout.
 -//!
 -//! The `BSP` provides such a description through the `bsp::memory::mmu::virt_mem_layout()`
 -//! function.
@@ -2638,76 +2586,31 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/memory/mmu.rs 15_virtual_mem_p
  #[cfg(target_arch = "aarch64")]
  #[path = "../_arch/aarch64/memory/mmu.rs"]
  mod arch_mmu;
- pub use arch_mmu::*;
+
++mod mapping_record;
+ mod translation_table;
++mod types;
 
 -use core::{fmt, ops::RangeInclusive};
-+mod mapping_record;
-+mod types;
-+
-+use crate::{bsp, synchronization, warn};
-+
++use crate::{
++    bsp,
++    memory::{Address, Physical, Virtual},
++    synchronization, warn,
++};
+
+-//--------------------------------------------------------------------------------------------------
+-// Architectural Public Reexports
+-//--------------------------------------------------------------------------------------------------
+-pub use arch_mmu::mmu;
 +pub use types::*;
 
  //--------------------------------------------------------------------------------------------------
  // Public Definitions
-@@ -27,178 +22,229 @@
+@@ -33,16 +26,20 @@
 
  /// Memory Management interfaces.
  pub mod interface {
 +    use super::*;
-+
-+    /// Describes the characteristics of a translation granule.
-+    #[allow(missing_docs)]
-+    pub trait TranslationGranule {
-+        const SIZE: usize;
-+        const MASK: usize = Self::SIZE - 1;
-+        const SHIFT: usize;
-+    }
-+
-+    /// Translation table operations.
-+    pub trait TranslationTable {
-+        /// Anything that needs to run before any of the other provided functions can be used.
-+        ///
-+        /// # Safety
-+        ///
-+        /// - Implementor must ensure that this function can run only once or is harmless if invoked
-+        ///   multiple times.
-+        unsafe fn init(&mut self);
-+
-+        /// The translation table's base address to be used for programming the MMU.
-+        fn phys_base_address(&self) -> Address<Physical>;
-+
-+        /// Map the given physical pages to the given virtual pages.
-+        ///
-+        /// # Safety
-+        ///
-+        /// - Using wrong attributes can cause multiple issues of different nature in the system.
-+        /// - It is not required that the architectural implementation prevents aliasing. That is,
-+        ///   mapping to the same physical memory using multiple virtual addresses, which would
-+        ///   break Rust's ownership assumptions. This should be protected against in this module
-+        ///   (the kernel's generic MMU code).
-+        unsafe fn map_pages_at(
-+            &mut self,
-+            phys_pages: &PageSliceDescriptor<Physical>,
-+            virt_pages: &PageSliceDescriptor<Virtual>,
-+            attr: &AttributeFields,
-+        ) -> Result<(), &'static str>;
-+
-+        /// Obtain a free virtual page slice in the MMIO region.
-+        ///
-+        /// The "MMIO region" is a distinct region of the implementor's choice, which allows
-+        /// differentiating MMIO addresses from others. This can speed up debugging efforts.
-+        /// Ideally, those MMIO addresses are also standing out visually so that a human eye can
-+        /// identify them. For example, by allocating them from near the end of the virtual address
-+        /// space.
-+        fn next_mmio_virt_page_slice(
-+            &mut self,
-+            num_pages: usize,
-+        ) -> Result<PageSliceDescriptor<Virtual>, &'static str>;
-+
-+        /// Check if a virtual page splice is in the "MMIO region".
-+        fn is_virt_page_slice_mmio(&self, virt_pages: &PageSliceDescriptor<Virtual>) -> bool;
-+    }
 
      /// MMU functions.
      pub trait MMU {
@@ -2722,10 +2625,14 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/memory/mmu.rs 15_virtual_mem_p
 -        unsafe fn init(&self) -> Result<(), &'static str>;
 +        unsafe fn enable(
 +            &self,
-+            phys_kernel_table_base_addr: Address<Physical>,
++            kernel_table_phys_base_addr: Address<Physical>,
 +        ) -> Result<(), &'static str>;
      }
  }
+
+@@ -52,55 +49,35 @@
+ /// Describes the size of an address space.
+ pub struct AddressSpaceSize<const AS_SIZE: usize>;
 
 -/// Architecture agnostic translation types.
 -#[allow(missing_docs)]
@@ -2742,12 +2649,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/memory/mmu.rs 15_virtual_mem_p
 -    CacheableDRAM,
 -    Device,
 -}
-+//--------------------------------------------------------------------------------------------------
-+// Private Code
-+//--------------------------------------------------------------------------------------------------
-+use interface::{TranslationTable, MMU};
-+use synchronization::interface::ReadWriteEx;
-
+-
 -/// Architecture agnostic access permissions.
 -#[allow(missing_docs)]
 -#[derive(Copy, Clone)]
@@ -2755,6 +2657,36 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/memory/mmu.rs 15_virtual_mem_p
 -    ReadOnly,
 -    ReadWrite,
 -}
+-
+-/// Collection of memory attributes.
+-#[allow(missing_docs)]
+-#[derive(Copy, Clone)]
+-pub struct AttributeFields {
+-    pub mem_attributes: MemAttributes,
+-    pub acc_perms: AccessPermissions,
+-    pub execute_never: bool,
+-}
+-
+-/// Architecture agnostic descriptor for a memory range.
+-#[allow(missing_docs)]
+-pub struct TranslationDescriptor {
+-    pub name: &'static str,
+-    pub virtual_range: fn() -> RangeInclusive<usize>,
+-    pub physical_range_translation: Translation,
+-    pub attribute_fields: AttributeFields,
+-}
+-
+-/// Type for expressing the kernel's virtual memory layout.
+-pub struct KernelVirtualLayout<const NUM_SPECIAL_RANGES: usize> {
+-    /// The last (inclusive) address of the address space.
+-    max_virt_addr_inclusive: usize,
++//--------------------------------------------------------------------------------------------------
++// Private Code
++//--------------------------------------------------------------------------------------------------
++use interface::MMU;
++use synchronization::interface::ReadWriteEx;
++use translation_table::interface::TranslationTable;
++
 +/// Map pages in the kernel's translation tables.
 +///
 +/// No input checks done, input is passed through to the architectural implementation.
@@ -2765,137 +2697,36 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/memory/mmu.rs 15_virtual_mem_p
 +/// - Does not prevent aliasing.
 +unsafe fn kernel_map_pages_at_unchecked(
 +    name: &'static str,
-+    phys_pages: &PageSliceDescriptor<Physical>,
 +    virt_pages: &PageSliceDescriptor<Virtual>,
++    phys_pages: &PageSliceDescriptor<Physical>,
 +    attr: &AttributeFields,
 +) -> Result<(), &'static str> {
 +    arch_mmu::kernel_translation_tables()
-+        .write(|tables| tables.map_pages_at(phys_pages, virt_pages, attr))?;
-
--/// Collection of memory attributes.
--#[allow(missing_docs)]
--#[derive(Copy, Clone)]
--pub struct AttributeFields {
--    pub mem_attributes: MemAttributes,
--    pub acc_perms: AccessPermissions,
--    pub execute_never: bool,
--}
-+    if let Err(x) = mapping_record::kernel_add(name, phys_pages, virt_pages, attr) {
++        .write(|tables| tables.map_pages_at(virt_pages, phys_pages, attr))?;
++
++    if let Err(x) = mapping_record::kernel_add(name, virt_pages, phys_pages, attr) {
 +        warn!("{}", x);
 +    }
 
--/// Architecture agnostic descriptor for a memory range.
--#[allow(missing_docs)]
--pub struct TranslationDescriptor {
--    pub name: &'static str,
--    pub virtual_range: fn() -> RangeInclusive<usize>,
--    pub physical_range_translation: Translation,
--    pub attribute_fields: AttributeFields,
-+    Ok(())
- }
-
--/// Type for expressing the kernel's virtual memory layout.
--pub struct KernelVirtualLayout<const NUM_SPECIAL_RANGES: usize> {
--    /// The last (inclusive) address of the address space.
--    max_virt_addr_inclusive: usize,
-+//--------------------------------------------------------------------------------------------------
-+// Public Code
-+//--------------------------------------------------------------------------------------------------
-+use interface::TranslationGranule;
-
 -    /// Array of descriptors for non-standard (normal cacheable DRAM) memory regions.
 -    inner: [TranslationDescriptor; NUM_SPECIAL_RANGES],
-+/// Raw mapping of virtual to physical pages in the kernel translation tables.
-+///
-+/// Prevents mapping into the MMIO range of the tables.
-+///
-+/// # Safety
-+///
-+/// - See `kernel_map_pages_at_unchecked()`.
-+/// - Does not prevent aliasing. Currently, we have to trust the callers.
-+pub unsafe fn kernel_map_pages_at(
-+    name: &'static str,
-+    phys_pages: &PageSliceDescriptor<Physical>,
-+    virt_pages: &PageSliceDescriptor<Virtual>,
-+    attr: &AttributeFields,
-+) -> Result<(), &'static str> {
-+    let is_mmio = arch_mmu::kernel_translation_tables()
-+        .read(|tables| tables.is_virt_page_slice_mmio(virt_pages));
-+    if is_mmio {
-+        return Err("Attempt to manually map into MMIO region");
-+    }
-+
-+    kernel_map_pages_at_unchecked(name, phys_pages, virt_pages, attr)?;
-+
 +    Ok(())
-+}
-+
-+/// MMIO remapping in the kernel translation tables.
-+///
-+/// Typically used by device drivers.
-+///
-+/// # Safety
-+///
-+/// - Same as `kernel_map_pages_at_unchecked()`, minus the aliasing part.
-+pub unsafe fn kernel_map_mmio(
-+    name: &'static str,
-+    phys_mmio_descriptor: &MMIODescriptor<Physical>,
-+) -> Result<Address<Virtual>, &'static str> {
-+    let phys_pages: PageSliceDescriptor<Physical> = phys_mmio_descriptor.clone().into();
-+    let offset_into_start_page =
-+        phys_mmio_descriptor.start_addr().into_usize() & bsp::memory::mmu::KernelGranule::MASK;
-+
-+    // Check if an identical page slice has been mapped for another driver. If so, reuse it.
-+    let virt_addr = if let Some(addr) =
-+        mapping_record::kernel_find_and_insert_mmio_duplicate(phys_mmio_descriptor, name)
-+    {
-+        addr
-+    // Otherwise, allocate a new virtual page slice and map it.
-+    } else {
-+        let virt_pages: PageSliceDescriptor<Virtual> = arch_mmu::kernel_translation_tables()
-+            .write(|tables| tables.next_mmio_virt_page_slice(phys_pages.num_pages()))?;
-+
-+        kernel_map_pages_at_unchecked(
-+            name,
-+            &phys_pages,
-+            &virt_pages,
-+            &AttributeFields {
-+                mem_attributes: MemAttributes::Device,
-+                acc_perms: AccessPermissions::ReadWrite,
-+                execute_never: true,
-+            },
-+        )?;
-+
-+        virt_pages.start_addr()
-+    };
-+
-+    Ok(virt_addr + offset_into_start_page)
-+}
-+
-+/// Map the kernel's binary and enable the MMU.
-+///
-+/// # Safety
-+///
-+/// - Crucial function during kernel init. Changes the the complete memory view of the processor.
-+pub unsafe fn kernel_map_binary_and_enable_mmu() -> Result<(), &'static str> {
-+    let phys_base_addr = arch_mmu::kernel_translation_tables().write(|tables| {
-+        tables.init();
-+        tables.phys_base_address()
-+    });
-+
-+    bsp::memory::mmu::kernel_map_binary()?;
-+    arch_mmu::mmu().enable(phys_base_addr)
-+}
-+
-+/// Human-readable print of all recorded kernel mappings.
-+pub fn kernel_print_mappings() {
-+    mapping_record::kernel_print()
  }
 
  //--------------------------------------------------------------------------------------------------
--// Public Code
-+// Testing
- //--------------------------------------------------------------------------------------------------
+@@ -111,6 +88,9 @@
+     /// The granule's size.
+     pub const SIZE: usize = Self::size_checked();
+
++    /// The granule's mask.
++    pub const MASK: usize = Self::SIZE - 1;
++
+     /// The granule's shift, aka log2(size).
+     pub const SHIFT: usize = Self::SIZE.trailing_zeros() as usize;
+
+@@ -142,110 +122,89 @@
+     }
+ }
 
 -impl Default for AttributeFields {
 -    fn default() -> AttributeFields {
@@ -3002,36 +2833,184 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/memory/mmu.rs 15_virtual_mem_p
 -    #[cfg(test)]
 -    pub fn inner(&self) -> &[TranslationDescriptor; NUM_SPECIAL_RANGES] {
 -        &self.inner
-+#[cfg(test)]
-+mod tests {
-+    use super::*;
-+    use test_macros::kernel_test;
+-    }
++/// Raw mapping of virtual to physical pages in the kernel translation tables.
++///
++/// Prevents mapping into the MMIO range of the tables.
++///
++/// # Safety
++///
++/// - See `kernel_map_pages_at_unchecked()`.
++/// - Does not prevent aliasing. Currently, the callers must be trusted.
++pub unsafe fn kernel_map_pages_at(
++    name: &'static str,
++    virt_pages: &PageSliceDescriptor<Virtual>,
++    phys_pages: &PageSliceDescriptor<Physical>,
++    attr: &AttributeFields,
++) -> Result<(), &'static str> {
++    let is_mmio = arch_mmu::kernel_translation_tables()
++        .read(|tables| tables.is_virt_page_slice_mmio(virt_pages));
++    if is_mmio {
++        return Err("Attempt to manually map into MMIO region");
++    }
 +
-+    /// Sanity checks for the kernel TranslationTable implementation.
-+    #[kernel_test]
-+    fn translationtable_implementation_sanity() {
-+        // Need to take care that `tables` fits into the stack.
-+        let mut tables = MinSizeArchTranslationTable::new();
++    kernel_map_pages_at_unchecked(name, virt_pages, phys_pages, attr)?;
 +
-+        unsafe { tables.init() };
++    Ok(())
++}
 +
-+        let x = tables.next_mmio_virt_page_slice(0);
-+        assert!(x.is_err());
++/// MMIO remapping in the kernel translation tables.
++///
++/// Typically used by device drivers.
++///
++/// # Safety
++///
++/// - Same as `kernel_map_pages_at_unchecked()`, minus the aliasing part.
++pub unsafe fn kernel_map_mmio(
++    name: &'static str,
++    phys_mmio_descriptor: &MMIODescriptor<Physical>,
++) -> Result<Address<Virtual>, &'static str> {
++    let phys_pages: PageSliceDescriptor<Physical> = phys_mmio_descriptor.clone().into();
++    let offset_into_start_page =
++        phys_mmio_descriptor.start_addr().into_usize() & bsp::memory::mmu::KernelGranule::MASK;
 +
-+        let x = tables.next_mmio_virt_page_slice(1_0000_0000);
-+        assert!(x.is_err());
++    // Check if an identical page slice has been mapped for another driver. If so, reuse it.
++    let virt_addr = if let Some(addr) =
++        mapping_record::kernel_find_and_insert_mmio_duplicate(phys_mmio_descriptor, name)
++    {
++        addr
++    // Otherwise, allocate a new virtual page slice and map it.
++    } else {
++        let virt_pages: PageSliceDescriptor<Virtual> = arch_mmu::kernel_translation_tables()
++            .write(|tables| tables.next_mmio_virt_page_slice(phys_pages.num_pages()))?;
 +
-+        let x = tables.next_mmio_virt_page_slice(2).unwrap();
-+        assert_eq!(x.size(), bsp::memory::mmu::KernelGranule::SIZE * 2);
++        kernel_map_pages_at_unchecked(
++            name,
++            &virt_pages,
++            &phys_pages,
++            &AttributeFields {
++                mem_attributes: MemAttributes::Device,
++                acc_perms: AccessPermissions::ReadWrite,
++                execute_never: true,
++            },
++        )?;
 +
-+        assert_eq!(tables.is_virt_page_slice_mmio(&x), true);
++        virt_pages.start_addr()
++    };
 +
-+        assert_eq!(
-+            tables.is_virt_page_slice_mmio(&PageSliceDescriptor::from_addr(Address::new(0), 1)),
-+            false
-+        );
-     }
++    Ok(virt_addr + offset_into_start_page)
++}
++
++/// Map the kernel's binary and enable the MMU.
++///
++/// # Safety
++///
++/// - Crucial function during kernel init. Changes the the complete memory view of the processor.
++pub unsafe fn kernel_map_binary_and_enable_mmu() -> Result<(), &'static str> {
++    let phys_base_addr = arch_mmu::kernel_translation_tables().write(|tables| {
++        tables.init();
++        tables.phys_base_address()
++    });
++
++    bsp::memory::mmu::kernel_map_binary()?;
++    arch_mmu::mmu().enable(phys_base_addr)
++}
++
++/// Human-readable print of all recorded kernel mappings.
++pub fn kernel_print_mappings() {
++    mapping_record::kernel_print()
  }
+
+diff -uNr 14_exceptions_part2_peripheral_IRQs/src/memory.rs 15_virtual_mem_part2_mmio_remap/src/memory.rs
+--- 14_exceptions_part2_peripheral_IRQs/src/memory.rs
++++ 15_virtual_mem_part2_mmio_remap/src/memory.rs
+@@ -6,12 +6,85 @@
+
+ pub mod mmu;
+
+-use core::ops::RangeInclusive;
++use crate::common;
++use core::{marker::PhantomData, ops::RangeInclusive};
++
++//--------------------------------------------------------------------------------------------------
++// Public Definitions
++//--------------------------------------------------------------------------------------------------
++
++/// Metadata trait for marking the type of an address.
++pub trait AddressType: Copy + Clone + PartialOrd + PartialEq {}
++
++/// Zero-sized type to mark a physical address.
++#[derive(Copy, Clone, PartialOrd, PartialEq)]
++pub enum Physical {}
++
++/// Zero-sized type to mark a virtual address.
++#[derive(Copy, Clone, PartialOrd, PartialEq)]
++pub enum Virtual {}
++
++/// Generic address type.
++#[derive(Copy, Clone, PartialOrd, PartialEq)]
++pub struct Address<ATYPE: AddressType> {
++    value: usize,
++    _address_type: PhantomData<fn() -> ATYPE>,
++}
+
+ //--------------------------------------------------------------------------------------------------
+ // Public Code
+ //--------------------------------------------------------------------------------------------------
+
++impl AddressType for Physical {}
++impl AddressType for Virtual {}
++
++impl<ATYPE: AddressType> Address<ATYPE> {
++    /// Create an instance.
++    pub const fn new(value: usize) -> Self {
++        Self {
++            value,
++            _address_type: PhantomData,
++        }
++    }
++
++    /// Align down.
++    pub const fn align_down(self, alignment: usize) -> Self {
++        let aligned = common::align_down(self.value, alignment);
++
++        Self {
++            value: aligned,
++            _address_type: PhantomData,
++        }
++    }
++
++    /// Converts `Address` into an usize.
++    pub const fn into_usize(self) -> usize {
++        self.value
++    }
++}
++
++impl<ATYPE: AddressType> core::ops::Add<usize> for Address<ATYPE> {
++    type Output = Self;
++
++    fn add(self, other: usize) -> Self {
++        Self {
++            value: self.value + other,
++            _address_type: PhantomData,
++        }
++    }
++}
++
++impl<ATYPE: AddressType> core::ops::Sub<usize> for Address<ATYPE> {
++    type Output = Self;
++
++    fn sub(self, other: usize) -> Self {
++        Self {
++            value: self.value - other,
++            _address_type: PhantomData,
++        }
++    }
++}
++
+ /// Zero out an inclusive memory range.
+ ///
+ /// # Safety
 
 diff -uNr 14_exceptions_part2_peripheral_IRQs/tests/02_exception_sync_page_fault.rs 15_virtual_mem_part2_mmio_remap/tests/02_exception_sync_page_fault.rs
 --- 14_exceptions_part2_peripheral_IRQs/tests/02_exception_sync_page_fault.rs

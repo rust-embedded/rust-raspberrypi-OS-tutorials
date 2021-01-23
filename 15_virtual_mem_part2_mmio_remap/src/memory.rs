@@ -6,11 +6,84 @@
 
 pub mod mmu;
 
-use core::ops::RangeInclusive;
+use crate::common;
+use core::{marker::PhantomData, ops::RangeInclusive};
+
+//--------------------------------------------------------------------------------------------------
+// Public Definitions
+//--------------------------------------------------------------------------------------------------
+
+/// Metadata trait for marking the type of an address.
+pub trait AddressType: Copy + Clone + PartialOrd + PartialEq {}
+
+/// Zero-sized type to mark a physical address.
+#[derive(Copy, Clone, PartialOrd, PartialEq)]
+pub enum Physical {}
+
+/// Zero-sized type to mark a virtual address.
+#[derive(Copy, Clone, PartialOrd, PartialEq)]
+pub enum Virtual {}
+
+/// Generic address type.
+#[derive(Copy, Clone, PartialOrd, PartialEq)]
+pub struct Address<ATYPE: AddressType> {
+    value: usize,
+    _address_type: PhantomData<fn() -> ATYPE>,
+}
 
 //--------------------------------------------------------------------------------------------------
 // Public Code
 //--------------------------------------------------------------------------------------------------
+
+impl AddressType for Physical {}
+impl AddressType for Virtual {}
+
+impl<ATYPE: AddressType> Address<ATYPE> {
+    /// Create an instance.
+    pub const fn new(value: usize) -> Self {
+        Self {
+            value,
+            _address_type: PhantomData,
+        }
+    }
+
+    /// Align down.
+    pub const fn align_down(self, alignment: usize) -> Self {
+        let aligned = common::align_down(self.value, alignment);
+
+        Self {
+            value: aligned,
+            _address_type: PhantomData,
+        }
+    }
+
+    /// Converts `Address` into an usize.
+    pub const fn into_usize(self) -> usize {
+        self.value
+    }
+}
+
+impl<ATYPE: AddressType> core::ops::Add<usize> for Address<ATYPE> {
+    type Output = Self;
+
+    fn add(self, other: usize) -> Self {
+        Self {
+            value: self.value + other,
+            _address_type: PhantomData,
+        }
+    }
+}
+
+impl<ATYPE: AddressType> core::ops::Sub<usize> for Address<ATYPE> {
+    type Output = Self;
+
+    fn sub(self, other: usize) -> Self {
+        Self {
+            value: self.value - other,
+            _address_type: PhantomData,
+        }
+    }
+}
 
 /// Zero out an inclusive memory range.
 ///

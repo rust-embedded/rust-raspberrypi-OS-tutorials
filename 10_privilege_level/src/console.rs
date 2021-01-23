@@ -20,8 +20,7 @@ pub mod interface {
         /// Write a Rust format string.
         fn write_fmt(&self, args: fmt::Arguments) -> fmt::Result;
 
-        /// Block execution until the last buffered character has been physically put on the TX
-        /// wire.
+        /// Block until the last buffered character has been physically put on the TX wire.
         fn flush(&self);
     }
 

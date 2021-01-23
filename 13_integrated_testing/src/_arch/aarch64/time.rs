@@ -3,6 +3,13 @@
 // Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
 
 //! Architectural timer primitives.
+//!
+//! # Orientation
+//!
+//! Since arch modules are imported into generic modules using the path attribute, the path of this
+//! file is:
+//!
+//! crate::time::arch_time
 
 use crate::{time, warn};
 use core::time::Duration;
@@ -55,7 +62,7 @@ impl time::interface::TimeManager for GenericTimer {
         }
 
         // Calculate the register compare value.
-        let frq = CNTFRQ_EL0.get() as u64;
+        let frq = CNTFRQ_EL0.get();
         let x = match frq.checked_mul(duration.as_nanos() as u64) {
             None => {
                 warn!("Spin duration too long, skipping");

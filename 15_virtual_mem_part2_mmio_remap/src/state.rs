@@ -69,7 +69,7 @@ impl StateManager {
         }
     }
 
-    /// Return if the kernel is still in an init state.
+    /// Return if the kernel is init state.
     pub fn is_init(&self) -> bool {
         self.state() == State::Init
     }

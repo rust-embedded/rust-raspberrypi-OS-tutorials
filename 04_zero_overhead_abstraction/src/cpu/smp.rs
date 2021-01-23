@@ -6,5 +6,9 @@
 
 #[cfg(target_arch = "aarch64")]
 #[path = "../_arch/aarch64/cpu/smp.rs"]
-mod arch_cpu_smp;
-pub use arch_cpu_smp::*;
+mod arch_smp;
+
+//--------------------------------------------------------------------------------------------------
+// Architectural Public Reexports
+//--------------------------------------------------------------------------------------------------
+pub use arch_smp::core_id;

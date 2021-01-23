@@ -7,12 +7,16 @@
 #[cfg(target_arch = "aarch64")]
 #[path = "../_arch/aarch64/memory/mmu.rs"]
 mod arch_mmu;
-pub use arch_mmu::*;
 
 mod mapping_record;
+mod translation_table;
 mod types;
 
-use crate::{bsp, synchronization, warn};
+use crate::{
+    bsp,
+    memory::{Address, Physical, Virtual},
+    synchronization, warn,
+};
 
 pub use types::*;
 
@@ -24,59 +28,6 @@ pub use types::*;
 pub mod interface {
     use super::*;
 
-    /// Describes the characteristics of a translation granule.
-    #[allow(missing_docs)]
-    pub trait TranslationGranule {
-        const SIZE: usize;
-        const MASK: usize = Self::SIZE - 1;
-        const SHIFT: usize;
-    }
-
-    /// Translation table operations.
-    pub trait TranslationTable {
-        /// Anything that needs to run before any of the other provided functions can be used.
-        ///
-        /// # Safety
-        ///
-        /// - Implementor must ensure that this function can run only once or is harmless if invoked
-        ///   multiple times.
-        unsafe fn init(&mut self);
-
-        /// The translation table's base address to be used for programming the MMU.
-        fn phys_base_address(&self) -> Address<Physical>;
-
-        /// Map the given physical pages to the given virtual pages.
-        ///
-        /// # Safety
-        ///
-        /// - Using wrong attributes can cause multiple issues of different nature in the system.
-        /// - It is not required that the architectural implementation prevents aliasing. That is,
-        ///   mapping to the same physical memory using multiple virtual addresses, which would
-        ///   break Rust's ownership assumptions. This should be protected against in this module
-        ///   (the kernel's generic MMU code).
-        unsafe fn map_pages_at(
-            &mut self,
-            phys_pages: &PageSliceDescriptor<Physical>,
-            virt_pages: &PageSliceDescriptor<Virtual>,
-            attr: &AttributeFields,
-        ) -> Result<(), &'static str>;
-
-        /// Obtain a free virtual page slice in the MMIO region.
-        ///
-        /// The "MMIO region" is a distinct region of the implementor's choice, which allows
-        /// differentiating MMIO addresses from others. This can speed up debugging efforts.
-        /// Ideally, those MMIO addresses are also standing out visually so that a human eye can
-        /// identify them. For example, by allocating them from near the end of the virtual address
-        /// space.
-        fn next_mmio_virt_page_slice(
-            &mut self,
-            num_pages: usize,
-        ) -> Result<PageSliceDescriptor<Virtual>, &'static str>;
-
-        /// Check if a virtual page splice is in the "MMIO region".
-        fn is_virt_page_slice_mmio(&self, virt_pages: &PageSliceDescriptor<Virtual>) -> bool;
-    }
-
     /// MMU functions.
     pub trait MMU {
         /// Turns on the MMU.
@@ -87,16 +38,23 @@ pub mod interface {
         /// - Changes the HW's global state.
         unsafe fn enable(
             &self,
-            phys_kernel_table_base_addr: Address<Physical>,
+            kernel_table_phys_base_addr: Address<Physical>,
         ) -> Result<(), &'static str>;
     }
 }
 
+/// Describes the characteristics of a translation granule.
+pub struct TranslationGranule<const GRANULE_SIZE: usize>;
+
+/// Describes the size of an address space.
+pub struct AddressSpaceSize<const AS_SIZE: usize>;
+
 //--------------------------------------------------------------------------------------------------
 // Private Code
 //--------------------------------------------------------------------------------------------------
-use interface::{TranslationTable, MMU};
+use interface::MMU;
 use synchronization::interface::ReadWriteEx;
+use translation_table::interface::TranslationTable;
 
 /// Map pages in the kernel's translation tables.
 ///
@@ -108,14 +66,14 @@ use synchronization::interface::ReadWriteEx;
 /// - Does not prevent aliasing.
 unsafe fn kernel_map_pages_at_unchecked(
     name: &'static str,
-    phys_pages: &PageSliceDescriptor<Physical>,
     virt_pages: &PageSliceDescriptor<Virtual>,
+    phys_pages: &PageSliceDescriptor<Physical>,
     attr: &AttributeFields,
 ) -> Result<(), &'static str> {
     arch_mmu::kernel_translation_tables()
-        .write(|tables| tables.map_pages_at(phys_pages, virt_pages, attr))?;
+        .write(|tables| tables.map_pages_at(virt_pages, phys_pages, attr))?;
 
-    if let Err(x) = mapping_record::kernel_add(name, phys_pages, virt_pages, attr) {
+    if let Err(x) = mapping_record::kernel_add(name, virt_pages, phys_pages, attr) {
         warn!("{}", x);
     }
 
@@ -125,7 +83,44 @@ unsafe fn kernel_map_pages_at_unchecked(
 //--------------------------------------------------------------------------------------------------
 // Public Code
 //--------------------------------------------------------------------------------------------------
-use interface::TranslationGranule;
+
+impl<const GRANULE_SIZE: usize> TranslationGranule<GRANULE_SIZE> {
+    /// The granule's size.
+    pub const SIZE: usize = Self::size_checked();
+
+    /// The granule's mask.
+    pub const MASK: usize = Self::SIZE - 1;
+
+    /// The granule's shift, aka log2(size).
+    pub const SHIFT: usize = Self::SIZE.trailing_zeros() as usize;
+
+    const fn size_checked() -> usize {
+        assert!(GRANULE_SIZE.is_power_of_two());
+
+        GRANULE_SIZE
+    }
+}
+
+impl<const AS_SIZE: usize> AddressSpaceSize<AS_SIZE> {
+    /// The address space size.
+    pub const SIZE: usize = Self::size_checked();
+
+    /// The address space shift, aka log2(size).
+    pub const SHIFT: usize = Self::SIZE.trailing_zeros() as usize;
+
+    const fn size_checked() -> usize {
+        assert!(AS_SIZE.is_power_of_two());
+        assert!(arch_mmu::MIN_ADDR_SPACE_SIZE.is_power_of_two());
+        assert!(arch_mmu::MAX_ADDR_SPACE_SIZE.is_power_of_two());
+
+        // Must adhere to architectural restrictions.
+        assert!(AS_SIZE >= arch_mmu::MIN_ADDR_SPACE_SIZE);
+        assert!(AS_SIZE <= arch_mmu::MAX_ADDR_SPACE_SIZE);
+        assert!((AS_SIZE % arch_mmu::AddrSpaceSizeGranule::SIZE) == 0);
+
+        AS_SIZE
+    }
+}
 
 /// Raw mapping of virtual to physical pages in the kernel translation tables.
 ///
@@ -134,11 +129,11 @@ use interface::TranslationGranule;
 /// # Safety
 ///
 /// - See `kernel_map_pages_at_unchecked()`.
-/// - Does not prevent aliasing. Currently, we have to trust the callers.
+/// - Does not prevent aliasing. Currently, the callers must be trusted.
 pub unsafe fn kernel_map_pages_at(
     name: &'static str,
-    phys_pages: &PageSliceDescriptor<Physical>,
     virt_pages: &PageSliceDescriptor<Virtual>,
+    phys_pages: &PageSliceDescriptor<Physical>,
     attr: &AttributeFields,
 ) -> Result<(), &'static str> {
     let is_mmio = arch_mmu::kernel_translation_tables()
@@ -147,7 +142,7 @@ pub unsafe fn kernel_map_pages_at(
         return Err("Attempt to manually map into MMIO region");
     }
 
-    kernel_map_pages_at_unchecked(name, phys_pages, virt_pages, attr)?;
+    kernel_map_pages_at_unchecked(name, virt_pages, phys_pages, attr)?;
 
     Ok(())
 }
@@ -179,8 +174,8 @@ pub unsafe fn kernel_map_mmio(
 
         kernel_map_pages_at_unchecked(
             name,
-            &phys_pages,
             &virt_pages,
+            &phys_pages,
             &AttributeFields {
                 mem_attributes: MemAttributes::Device,
                 acc_perms: AccessPermissions::ReadWrite,
@@ -212,39 +207,4 @@ pub unsafe fn kernel_map_binary_and_enable_mmu() -> Result<(), &'static str> {
 /// Human-readable print of all recorded kernel mappings.
 pub fn kernel_print_mappings() {
     mapping_record::kernel_print()
-}
-
-//--------------------------------------------------------------------------------------------------
-// Testing
-//--------------------------------------------------------------------------------------------------
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use test_macros::kernel_test;
-
-    /// Sanity checks for the kernel TranslationTable implementation.
-    #[kernel_test]
-    fn translationtable_implementation_sanity() {
-        // Need to take care that `tables` fits into the stack.
-        let mut tables = MinSizeArchTranslationTable::new();
-
-        unsafe { tables.init() };
-
-        let x = tables.next_mmio_virt_page_slice(0);
-        assert!(x.is_err());
-
-        let x = tables.next_mmio_virt_page_slice(1_0000_0000);
-        assert!(x.is_err());
-
-        let x = tables.next_mmio_virt_page_slice(2).unwrap();
-        assert_eq!(x.size(), bsp::memory::mmu::KernelGranule::SIZE * 2);
-
-        assert_eq!(tables.is_virt_page_slice_mmio(&x), true);
-
-        assert_eq!(
-            tables.is_virt_page_slice_mmio(&PageSliceDescriptor::from_addr(Address::new(0), 1)),
-            false
-        );
-    }
 }

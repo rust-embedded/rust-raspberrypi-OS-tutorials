@@ -9,9 +9,10 @@ use crate::{
     memory::{
         mmu as kernel_mmu,
         mmu::{
-            interface, AccessPermissions, AttributeFields, Granule64KiB, MemAttributes, Page,
-            PageSliceDescriptor, Physical, Virtual,
+            AccessPermissions, AddressSpaceSize, AttributeFields, MemAttributes, Page,
+            PageSliceDescriptor, TranslationGranule,
         },
+        Physical, Virtual,
     },
 };
 
@@ -21,12 +22,14 @@ use crate::{
 
 /// The translation granule chosen by this BSP. This will be used everywhere else in the kernel to
 /// derive respective data structures and their sizes. For example, the `crate::memory::mmu::Page`.
-pub type KernelGranule = Granule64KiB;
+pub type KernelGranule = TranslationGranule<{ 64 * 1024 }>;
+
+/// The address space size chosen by this BSP.
+pub type KernelVirtAddrSpaceSize = AddressSpaceSize<{ 8 * 1024 * 1024 * 1024 }>;
 
 //--------------------------------------------------------------------------------------------------
 // Private Code
 //--------------------------------------------------------------------------------------------------
-use interface::TranslationGranule;
 
 /// Helper function for calculating the number of pages the given parameter spans.
 const fn size_to_num_pages(size: usize) -> usize {
@@ -94,8 +97,8 @@ pub fn phys_addr_space_end_page() -> *const Page<Physical> {
 pub unsafe fn kernel_map_binary() -> Result<(), &'static str> {
     kernel_mmu::kernel_map_pages_at(
         "Kernel boot-core stack",
-        &phys_stack_page_desc(),
         &virt_stack_page_desc(),
+        &phys_stack_page_desc(),
         &AttributeFields {
             mem_attributes: MemAttributes::CacheableDRAM,
             acc_perms: AccessPermissions::ReadWrite,
@@ -105,8 +108,8 @@ pub unsafe fn kernel_map_binary() -> Result<(), &'static str> {
 
     kernel_mmu::kernel_map_pages_at(
         "Kernel code and RO data",
-        &phys_ro_page_desc(),
         &virt_ro_page_desc(),
+        &phys_ro_page_desc(),
         &AttributeFields {
             mem_attributes: MemAttributes::CacheableDRAM,
             acc_perms: AccessPermissions::ReadOnly,
@@ -116,8 +119,8 @@ pub unsafe fn kernel_map_binary() -> Result<(), &'static str> {
 
     kernel_mmu::kernel_map_pages_at(
         "Kernel data and bss",
-        &phys_data_page_desc(),
         &virt_data_page_desc(),
+        &phys_data_page_desc(),
         &AttributeFields {
             mem_attributes: MemAttributes::CacheableDRAM,
             acc_perms: AccessPermissions::ReadWrite,

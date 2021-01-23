@@ -3,6 +3,13 @@
 // Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
 
 //! Architectural synchronous and asynchronous exception handling.
+//!
+//! # Orientation
+//!
+//! Since arch modules are imported into generic modules using the path attribute, the path of this
+//! file is:
+//!
+//! crate::exception::arch_exception
 
 use core::{cell::UnsafeCell, fmt};
 use cortex_a::{asm, barrier, regs::*};

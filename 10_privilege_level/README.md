@@ -33,16 +33,14 @@ architectures, please have a look at the following links:
 - [RISC-V privilege modes](https://content.riscv.org/wp-content/uploads/2017/12/Tue0942-riscv-hypervisor-waterman.pdf).
 
 At this point, I strongly recommend that you glimpse over `Chapter 3` of the [Programmer’s Guide for
-ARMv8-A](http://infocenter.arm.com/help/topic/com.arm.doc.den0024a/DEN0024A_v8_architecture_PG.pdf)
-before you continue. It gives a concise overview about the topic.
+ARMv8-A] before you continue. It gives a concise overview about the topic.
+
+[Programmer’s Guide forARMv8-A]: http://infocenter.arm.com/help/topic/com.arm.doc.den0024a/DEN0024A_v8_architecture_PG.pdf
 
 ## Scope of this tutorial
 
-If you set up your SD Card exactly like mentioned in [tutorial 06], the Rpi will always start
-executing in `EL2`. Since we are writing a traditional `Kernel`, we have to transition into the more
-appropriate `EL1`.
-
-[tutorial 06]: https://github.com/rust-embedded/rust-raspberrypi-OS-tutorials/tree/master/06_drivers_gpio_uart#boot-it-from-sd-card
+By default, the Rpi will always start executing in `EL2`. Since we are writing a traditional
+`Kernel`, we have to transition into the more appropriate `EL1`.
 
 ## Checking for EL2 in the entrypoint
 
@@ -50,7 +48,8 @@ First of all, we need to ensure that we actually execute in `EL2` before we can 
 to transition to `EL1`:
 
 ```rust
-pub unsafe extern "C" fn _start() -> ! {
+#[no_mangle]
+pub unsafe fn _start() -> ! {
     // Expect the boot core to start in EL2.
     if (bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id())
         && (CurrentEL.get() == CurrentEL::EL::EL2.value)
@@ -58,7 +57,7 @@ pub unsafe extern "C" fn _start() -> ! {
         el2_to_el1_transition()
     } else {
         // If not core0, infinitely wait for events.
-        wait_forever()
+        cpu::wait_forever()
     }
 }
 ```
@@ -74,7 +73,7 @@ We are already using them since [tutorial 08](../08_timestamps/), so of course w
 Therefore we set the respective flags in the [Counter-timer Hypervisor Control register] and
 additionally set the virtual offset to zero so that we get the real physical value everytime:
 
-[Counter-timer Hypervisor Control register]: https://docs.rs/cortex-a/2.4.0/src/cortex_a/regs/cnthctl_el2.rs.html
+[Counter-timer Hypervisor Control register]:  https://docs.rs/cortex-a/5.1.2/src/cortex_a/regs/cnthctl_el2.rs.html
 
 ```rust
 // Enable timer counter registers for EL1.
@@ -84,10 +83,10 @@ CNTHCTL_EL2.write(CNTHCTL_EL2::EL1PCEN::SET + CNTHCTL_EL2::EL1PCTEN::SET);
 CNTVOFF_EL2.set(0);
 ```
 
-Next, we configure the [Hypervisor Configuration Register] such that `EL1` should actually run in
-`AArch64` mode, and not in `AArch32`, which would also be possible.
+Next, we configure the [Hypervisor Configuration Register] such that `EL1` runs in `AArch64` mode,
+and not in `AArch32`, which would also be possible.
 
-[Hypervisor Configuration Register]: https://docs.rs/cortex-a/2.4.0/src/cortex_a/regs/hcr_el2.rs.html
+[Hypervisor Configuration Register]: https://docs.rs/cortex-a/5.1.2/src/cortex_a/regs/hcr_el2.rs.html
 
 ```rust
 // Set EL1 execution state to AArch64.
@@ -99,7 +98,7 @@ HCR_EL2.write(HCR_EL2::RW::EL1IsAarch64);
 There is actually only one way to transition from a higher EL to a lower EL, which is by way of
 executing the [ERET] instruction.
 
-[ERET]: https://docs.rs/cortex-a/2.4.0/src/cortex_a/asm.rs.html#49-62
+[ERET]: https://docs.rs/cortex-a/5.1.2/src/cortex_a/asm.rs.html#87-96
 
 This instruction will copy the contents of the [Saved Program Status Register - EL2] to `Current
 Program Status Register - EL1` and jump to the instruction address that is stored in the [Exception
@@ -108,8 +107,8 @@ Link Register - EL2].
 This is basically the reverse of what is happening when an exception is taken. You'll learn about it
 in an upcoming tutorial.
 
-[Saved Program Status Register - EL2]: https://docs.rs/cortex-a/2.4.0/src/cortex_a/regs/spsr_el2.rs.html
-[Exception Link Register - EL2]: https://docs.rs/cortex-a/2.4.0/src/cortex_a/regs/elr_el2.rs.html
+[Saved Program Status Register - EL2]: https://docs.rs/cortex-a/5.1.2/src/cortex_a/regs/spsr_el2.rs.html
+[Exception Link Register - EL2]: https://docs.rs/cortex-a/5.1.2/src/cortex_a/regs/elr_el2.rs.html
 
 ```rust
 // Set up a simulated exception return.
@@ -156,23 +155,23 @@ Disassembly of section .text:
 0000000000080000 <_start>:
    80000:       d53800a8        mrs     x8, mpidr_el1
    80004:       f240051f        tst     x8, #0x3
-   80008:       54000081        b.ne    80018 <_start+0x18>
+   80008:       54000081        b.ne    80018 <_start+0x18>  // b.any
    8000c:       d5384248        mrs     x8, currentel
    80010:       f100211f        cmp     x8, #0x8
-   80014:       54000060        b.eq    80020 <_start+0x20>
+   80014:       54000060        b.eq    80020 <_start+0x20>  // b.none
    80018:       d503205f        wfe
    8001c:       17ffffff        b       80018 <_start+0x18>
    80020:       aa1f03e8        mov     x8, xzr
-   80024:       52800069        mov     w9, #0x3
+   80024:       52800069        mov     w9, #0x3                        // #3
    80028:       d51ce109        msr     cnthctl_el2, x9
    8002c:       d51ce068        msr     cntvoff_el2, x8
-   80030:       90000008        adrp    x8, 80000 <_start>
-   80034:       52b0000a        mov     w10, #0x80000000
-   80038:       528078ab        mov     w11, #0x3c5
-   8003c:       52a0010c        mov     w12, #0x80000
+   80030:       d0000008        adrp    x8, 82000 <kernel::kernel_main+0x6b4>
+   80034:       52b0000a        mov     w10, #0x80000000                // #-2147483648
+   80038:       528078ab        mov     w11, #0x3c5                     // #965
+   8003c:       52a0010c        mov     w12, #0x80000                   // #524288
    80040:       d51c110a        msr     hcr_el2, x10
    80044:       d51c400b        msr     spsr_el2, x11
-   80048:       91374108        add     x8, x8, #0xdd0
+   80048:       9114c108        add     x8, x8, #0x530
    8004c:       d51c4028        msr     elr_el2, x8
    80050:       d51c410c        msr     sp_el1, x12
    80054:       d69f03e0        eret
@@ -223,35 +222,20 @@ Minipush 1.0
 ## Diff to previous
 ```diff
 
-diff -uNr 09_hw_debug_JTAG/src/_arch/aarch64/cpu.rs 10_privilege_level/src/_arch/aarch64/cpu.rs
---- 09_hw_debug_JTAG/src/_arch/aarch64/cpu.rs
-+++ 10_privilege_level/src/_arch/aarch64/cpu.rs
-@@ -18,21 +18,65 @@
- /// # Safety
- ///
- /// - Linker script must ensure to place this function where it is expected by the target machine.
--/// - We have to hope that the compiler omits any stack pointer usage before the stack pointer is
--///   actually set (`SP.set()`).
-+/// - We have to hope that the compiler omits any stack pointer usage, because we are not setting up
-+///   a stack for EL2.
- #[no_mangle]
- pub unsafe fn _start() -> ! {
--    use crate::runtime_init;
--
--    if bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id() {
--        SP.set(bsp::memory::boot_core_stack_end() as u64);
--        runtime_init::runtime_init()
-+    // Expect the boot core to start in EL2.
-+    if (bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id())
-+        && (CurrentEL.get() == CurrentEL::EL::EL2.value)
-+    {
-+        el2_to_el1_transition()
-     } else {
-         // If not core0, infinitely wait for events.
-         wait_forever()
-     }
- }
+diff -uNr 09_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.rs 10_privilege_level/src/_arch/aarch64/cpu/boot.rs
+--- 09_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.rs
++++ 10_privilege_level/src/_arch/aarch64/cpu/boot.rs
+@@ -12,7 +12,55 @@
+ //! crate::cpu::boot::arch_boot
 
+ use crate::{bsp, cpu};
+-use cortex_a::regs::*;
++use cortex_a::{asm, regs::*};
++
++//--------------------------------------------------------------------------------------------------
++// Private Code
++//--------------------------------------------------------------------------------------------------
++
 +/// Transition from EL2 to EL1.
 +///
 +/// # Safety
@@ -295,20 +279,49 @@ diff -uNr 09_hw_debug_JTAG/src/_arch/aarch64/cpu.rs 10_privilege_level/src/_arch
 +    // Use `eret` to "return" to EL1. This results in execution of runtime_init() in EL1.
 +    asm::eret()
 +}
-+
+
  //--------------------------------------------------------------------------------------------------
  // Public Code
- //--------------------------------------------------------------------------------------------------
+@@ -25,15 +73,15 @@
+ /// # Safety
+ ///
+ /// - Linker script must ensure to place this function where it is expected by the target machine.
+-/// - We have to hope that the compiler omits any stack pointer usage before the stack pointer is
+-///   actually set (`SP.set()`).
++/// - We have to hope that the compiler omits any stack pointer usage, because we are not setting up
++///   a stack for EL2.
+ #[no_mangle]
+ pub unsafe fn _start() -> ! {
+-    use crate::runtime_init;
+-
+-    if bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id() {
+-        SP.set(bsp::memory::boot_core_stack_end() as u64);
+-        runtime_init::runtime_init()
++    // Expect the boot core to start in EL2.
++    if (bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id())
++        && (CurrentEL.get() == CurrentEL::EL::EL2.value)
++    {
++        el2_to_el1_transition()
+     } else {
+         // If not core0, infinitely wait for events.
+         cpu::wait_forever()
 
 diff -uNr 09_hw_debug_JTAG/src/_arch/aarch64/exception/asynchronous.rs 10_privilege_level/src/_arch/aarch64/exception/asynchronous.rs
 --- 09_hw_debug_JTAG/src/_arch/aarch64/exception/asynchronous.rs
 +++ 10_privilege_level/src/_arch/aarch64/exception/asynchronous.rs
-@@ -0,0 +1,74 @@
+@@ -0,0 +1,81 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Architectural asynchronous exception handling.
++//!
++//! # Orientation
++//!
++//! Since arch modules are imported into generic modules using the path attribute, the path of this
++//! file is:
++//!
++//! crate::exception::asynchronous::arch_asynchronous
 +
 +use cortex_a::regs::*;
 +
@@ -382,12 +395,19 @@ diff -uNr 09_hw_debug_JTAG/src/_arch/aarch64/exception/asynchronous.rs 10_privil
 diff -uNr 09_hw_debug_JTAG/src/_arch/aarch64/exception.rs 10_privilege_level/src/_arch/aarch64/exception.rs
 --- 09_hw_debug_JTAG/src/_arch/aarch64/exception.rs
 +++ 10_privilege_level/src/_arch/aarch64/exception.rs
-@@ -0,0 +1,23 @@
+@@ -0,0 +1,30 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Architectural synchronous and asynchronous exception handling.
++//!
++//! # Orientation
++//!
++//! Since arch modules are imported into generic modules using the path attribute, the path of this
++//! file is:
++//!
++//! crate::exception::arch_exception
 +
 +use cortex_a::regs::*;
 +
@@ -410,7 +430,7 @@ diff -uNr 09_hw_debug_JTAG/src/_arch/aarch64/exception.rs 10_privilege_level/src
 diff -uNr 09_hw_debug_JTAG/src/exception/asynchronous.rs 10_privilege_level/src/exception/asynchronous.rs
 --- 09_hw_debug_JTAG/src/exception/asynchronous.rs
 +++ 10_privilege_level/src/exception/asynchronous.rs
-@@ -0,0 +1,10 @@
+@@ -0,0 +1,14 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -419,13 +439,17 @@ diff -uNr 09_hw_debug_JTAG/src/exception/asynchronous.rs 10_privilege_level/src/
 +
 +#[cfg(target_arch = "aarch64")]
 +#[path = "../_arch/aarch64/exception/asynchronous.rs"]
-+mod arch_exception_async;
-+pub use arch_exception_async::*;
++mod arch_asynchronous;
++
++//--------------------------------------------------------------------------------------------------
++// Architectural Public Reexports
++//--------------------------------------------------------------------------------------------------
++pub use arch_asynchronous::print_state;
 
 diff -uNr 09_hw_debug_JTAG/src/exception.rs 10_privilege_level/src/exception.rs
 --- 09_hw_debug_JTAG/src/exception.rs
 +++ 10_privilege_level/src/exception.rs
-@@ -0,0 +1,26 @@
+@@ -0,0 +1,30 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -435,9 +459,13 @@ diff -uNr 09_hw_debug_JTAG/src/exception.rs 10_privilege_level/src/exception.rs
 +#[cfg(target_arch = "aarch64")]
 +#[path = "_arch/aarch64/exception.rs"]
 +mod arch_exception;
-+pub use arch_exception::*;
 +
 +pub mod asynchronous;
++
++//--------------------------------------------------------------------------------------------------
++// Architectural Public Reexports
++//--------------------------------------------------------------------------------------------------
++pub use arch_exception::current_privilege_level;
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Definitions
@@ -456,7 +484,7 @@ diff -uNr 09_hw_debug_JTAG/src/exception.rs 10_privilege_level/src/exception.rs
 diff -uNr 09_hw_debug_JTAG/src/main.rs 10_privilege_level/src/main.rs
 --- 09_hw_debug_JTAG/src/main.rs
 +++ 10_privilege_level/src/main.rs
-@@ -116,6 +116,7 @@
+@@ -117,6 +117,7 @@
  mod console;
  mod cpu;
  mod driver;
@@ -464,7 +492,7 @@ diff -uNr 09_hw_debug_JTAG/src/main.rs 10_privilege_level/src/main.rs
  mod memory;
  mod panic_wait;
  mod print;
-@@ -146,12 +147,20 @@
+@@ -147,12 +148,20 @@
 
  /// The main function running after the early init.
  fn kernel_main() -> ! {
@@ -485,7 +513,7 @@ diff -uNr 09_hw_debug_JTAG/src/main.rs 10_privilege_level/src/main.rs
      info!(
          "Architectural timer resolution: {} ns",
          time::time_manager().resolution().as_nanos()
-@@ -166,11 +175,15 @@
+@@ -167,11 +176,15 @@
          info!("      {}. {}", i + 1, driver.compatible());
      }
 

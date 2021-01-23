@@ -744,25 +744,10 @@ Minipush 1.0
 ## Diff to previous
 ```diff
 
-diff -uNr 13_integrated_testing/Makefile 14_exceptions_part2_peripheral_IRQs/Makefile
---- 13_integrated_testing/Makefile
-+++ 14_exceptions_part2_peripheral_IRQs/Makefile
-@@ -57,8 +57,9 @@
- RUSTFLAGS          = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
- RUSTFLAGS_PEDANTIC = $(RUSTFLAGS) -D warnings -D missing_docs
-
-+FEATURES      = bsp_$(BSP)
- COMPILER_ARGS = --target=$(TARGET) \
--    --features bsp_$(BSP)          \
-+    --features $(FEATURES)         \
-     --release
-
- RUSTC_CMD   = cargo rustc $(COMPILER_ARGS)
-
 diff -uNr 13_integrated_testing/src/_arch/aarch64/exception/asynchronous.rs 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/exception/asynchronous.rs
 --- 13_integrated_testing/src/_arch/aarch64/exception/asynchronous.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/exception/asynchronous.rs
-@@ -10,6 +10,10 @@
+@@ -17,6 +17,10 @@
  // Private Definitions
  //--------------------------------------------------------------------------------------------------
 
@@ -773,7 +758,7 @@ diff -uNr 13_integrated_testing/src/_arch/aarch64/exception/asynchronous.rs 14_e
  trait DaifField {
      fn daif_field() -> register::Field<u64, DAIF::Register>;
  }
-@@ -58,6 +62,71 @@
+@@ -65,6 +69,71 @@
  // Public Code
  //--------------------------------------------------------------------------------------------------
 
@@ -849,15 +834,15 @@ diff -uNr 13_integrated_testing/src/_arch/aarch64/exception/asynchronous.rs 14_e
 diff -uNr 13_integrated_testing/src/_arch/aarch64/exception.rs 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/exception.rs
 --- 13_integrated_testing/src/_arch/aarch64/exception.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/exception.rs
-@@ -4,6 +4,7 @@
-
- //! Architectural synchronous and asynchronous exception handling.
+@@ -11,6 +11,7 @@
+ //!
+ //! crate::exception::arch_exception
 
 +use crate::{bsp, exception};
  use core::{cell::UnsafeCell, fmt};
  use cortex_a::{barrier, regs::*};
  use register::InMemoryRegister;
-@@ -84,8 +85,11 @@
+@@ -91,8 +92,11 @@
  }
 
  #[no_mangle]
@@ -2156,12 +2141,20 @@ diff -uNr 13_integrated_testing/src/driver.rs 14_exceptions_part2_peripheral_IRQ
 diff -uNr 13_integrated_testing/src/exception/asynchronous.rs 14_exceptions_part2_peripheral_IRQs/src/exception/asynchronous.rs
 --- 13_integrated_testing/src/exception/asynchronous.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/exception/asynchronous.rs
-@@ -8,3 +8,138 @@
+@@ -8,7 +8,145 @@
  #[path = "../_arch/aarch64/exception/asynchronous.rs"]
- mod arch_exception_async;
- pub use arch_exception_async::*;
-+
+ mod arch_asynchronous;
+
 +use core::{fmt, marker::PhantomData};
++
+ //--------------------------------------------------------------------------------------------------
+ // Architectural Public Reexports
+ //--------------------------------------------------------------------------------------------------
+-pub use arch_asynchronous::print_state;
++pub use arch_asynchronous::{
++    is_local_irq_masked, local_irq_mask, local_irq_mask_save, local_irq_restore, local_irq_unmask,
++    print_state,
++};
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Definitions
@@ -2268,7 +2261,7 @@ diff -uNr 13_integrated_testing/src/exception/asynchronous.rs 14_exceptions_part
 +    }
 +
 +    /// Return the wrapped number.
-+    pub fn get(self) -> usize {
++    pub const fn get(self) -> usize {
 +        self.0
 +    }
 +}
@@ -2299,26 +2292,8 @@ diff -uNr 13_integrated_testing/src/exception/asynchronous.rs 14_exceptions_part
 diff -uNr 13_integrated_testing/src/lib.rs 14_exceptions_part2_peripheral_IRQs/src/lib.rs
 --- 13_integrated_testing/src/lib.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/lib.rs
-@@ -13,12 +13,17 @@
- //!
- //! - [`bsp::console::console()`] - Returns a reference to the kernel's [console interface].
- //! - [`bsp::driver::driver_manager()`] - Returns a reference to the kernel's [driver interface].
-+//! - [`bsp::exception::asynchronous::irq_manager()`] - Returns a reference to the kernel's [IRQ
-+//!   Handling interface].
- //! - [`memory::mmu::mmu()`] - Returns a reference to the kernel's [MMU interface].
-+//! - [`state::state_manager()`] - Returns a reference to the kernel's [state management] instance.
- //! - [`time::time_manager()`] - Returns a reference to the kernel's [timer interface].
- //!
- //! [console interface]: ../libkernel/console/interface/index.html
- //! [driver interface]: ../libkernel/driver/interface/trait.DriverManager.html
-+//! [IRQ Handling interface]: ../libkernel/exception/asynchronous/interface/trait.IRQManager.html
- //! [MMU interface]: ../libkernel/memory/mmu/interface/trait.MMU.html
-+//! [state management]: ../libkernel/state/struct.StateManager.html
- //! [timer interface]: ../libkernel/time/interface/trait.TimeManager.html
- //!
- //! # Code organization and architecture
-@@ -107,9 +112,11 @@
- //! - `crate::bsp::memory::*`
+@@ -109,9 +109,11 @@
+ //! [`cpu::boot::arch_boot::_start()`]: cpu/boot/arch_boot/fn._start.html
 
  #![allow(incomplete_features)]
 +#![feature(asm)]
@@ -2329,7 +2304,7 @@ diff -uNr 13_integrated_testing/src/lib.rs 14_exceptions_part2_peripheral_IRQs/s
  #![feature(format_args_nl)]
  #![feature(global_asm)]
  #![feature(linkage)]
-@@ -136,6 +143,7 @@
+@@ -135,6 +137,7 @@
  pub mod exception;
  pub mod memory;
  pub mod print;
@@ -2506,7 +2481,7 @@ diff -uNr 13_integrated_testing/src/state.rs 14_exceptions_part2_peripheral_IRQs
 +        }
 +    }
 +
-+    /// Return if the kernel is still in an init state.
++    /// Return if the kernel is init state.
 +    pub fn is_init(&self) -> bool {
 +        self.state() == State::Init
 +    }

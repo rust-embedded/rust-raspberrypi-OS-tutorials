@@ -2,8 +2,8 @@
 
 ## tl;dr
 
-- We lay the groundwork for all the architectural `CPU exceptions`. For now, only print an elaborate
-  system state through a `panic!` call, and halt execution
+- We lay the groundwork for all the architectural `CPU exceptions`.
+- For now, only print an elaborate system state through a `panic!` call, and halt execution
 - This will help finding bugs during development and runtime.
 - For demo purposes, MMU `page faults` are used to demonstrate (i) returning from an exception and
   (ii) the default `panic!` behavior.
@@ -27,8 +27,8 @@
 
 Now that we are executing in `EL1`, and have activated the `MMU`, time is due for implementing `CPU
 exceptions`. For now, we only set up a scaffold with very basic functionality that will help us to
-find bugs along the way. A follow-up `Interrupt` tutorial in the future will continue the work we
-start here.
+find bugs along the way. A follow-up `Interrupt` tutorial later will continue the work we start
+here.
 
 Please note that this tutorial is specific to the `AArch64` architecture. It does not contain any
 generic exception handling code yet.
@@ -38,7 +38,7 @@ generic exception handling code yet.
 In `AArch64`, it is differentiated between four types of exceptions. These are:
 - Synchronous
   - For example, a `data abort` (e.g. `page fault`) or a `system call`. They happen in direct
-    consequence of executing a certain instruction, hence _synchronously_.
+    consequence of executing a certain CPU instruction, hence _synchronously_.
 - Interrupt Request (`IRQ`)
   - For example, an external device, like a timer, is asserting a physical interrupt line. IRQs
     happen _asynchronously_.
@@ -176,8 +176,8 @@ resources in its own code without bothering, and as a last action before returni
 handling code, restore the context, so that the processor can continue where it left off before
 taking the exception.
 
-Context save and restore is one of the few places in system software where it is strongly advised to
-to use some hand-crafted assembly. Introducing `exception.S`:
+Context save and restore is one of the few places in system software where there is no way around
+some hand-crafted assembly. Introducing `exception.S`:
 
 ```asm
 /// Call the function provided by parameter `\handler` after saving the exception context. Provide
@@ -356,7 +356,7 @@ unsafe { core::ptr::read_volatile(big_addr as *mut u64) };
 ```
 
 This triggers our exception code, because we try to read from a virtual address for which no mapping
-has been installed. Remember, we only installed up to `4 GiB` of address space in the previous
+has been installed. Remember, we only mapped up to `4 GiB` of address space in the previous
 tutorial.
 
 To survive this exception, the respective handler has a special demo case:
@@ -390,8 +390,6 @@ Therefore, a second read is done, this time from address `9 GiB`. A case which t
 catch, eventually triggering the `panic!` call from the default handler.
 
 ## Test it
-
-Emphasis on the events at timestamps > `4.xxxxxx`.
 
 ```console
 $ make chainboot
@@ -482,9 +480,9 @@ General purpose register:
 diff -uNr 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 12_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs
 --- 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs
 +++ 12_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs
-@@ -4,7 +4,230 @@
-
- //! Architectural synchronous and asynchronous exception handling.
+@@ -11,7 +11,230 @@
+ //!
+ //! crate::exception::arch_exception
 
 -use cortex_a::regs::*;
 +use core::{cell::UnsafeCell, fmt};
@@ -714,7 +712,7 @@ diff -uNr 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
 
  //--------------------------------------------------------------------------------------------------
  // Public Code
-@@ -21,3 +244,23 @@
+@@ -28,3 +251,23 @@
          _ => (PrivilegeLevel::Unknown, "Unknown"),
      }
  }
@@ -901,16 +899,16 @@ diff -uNr 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/link.ld 12_e
 diff -uNr 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory/mmu.rs 12_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs
 --- 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory/mmu.rs
 +++ 12_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs
-@@ -12,7 +12,7 @@
- // Public Definitions
- //--------------------------------------------------------------------------------------------------
+@@ -15,7 +15,7 @@
+ /// The address space size chosen by this BSP.
+ pub type KernelAddrSpaceSize = AddressSpaceSize<{ memory_map::END_INCLUSIVE + 1 }>;
 
 -const NUM_MEM_RANGES: usize = 3;
 +const NUM_MEM_RANGES: usize = 2;
 
  /// The virtual memory layout.
  ///
-@@ -32,16 +32,6 @@
+@@ -35,16 +35,6 @@
              },
          },
          TranslationDescriptor {
@@ -927,7 +925,7 @@ diff -uNr 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory/mmu.r
              name: "Device MMIO",
              virtual_range: mmio_range_inclusive,
              physical_range_translation: Translation::Identity,
-@@ -64,11 +54,6 @@
+@@ -67,11 +57,6 @@
      RangeInclusive::new(super::ro_start(), super::ro_end() - 1)
  }
 
@@ -945,7 +943,7 @@ diff -uNr 11_virtual_mem_part1_identity_mapping/src/bsp.rs 12_exceptions_part1_g
 +++ 12_exceptions_part1_groundwork/src/bsp.rs
 @@ -4,7 +4,7 @@
 
- //! Conditional re-exporting of Board Support Packages.
+ //! Conditional reexporting of Board Support Packages.
 
 -pub mod device_driver;
 +mod device_driver;
@@ -953,10 +951,23 @@ diff -uNr 11_virtual_mem_part1_identity_mapping/src/bsp.rs 12_exceptions_part1_g
  #[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
  mod raspberrypi;
 
+diff -uNr 11_virtual_mem_part1_identity_mapping/src/exception.rs 12_exceptions_part1_groundwork/src/exception.rs
+--- 11_virtual_mem_part1_identity_mapping/src/exception.rs
++++ 12_exceptions_part1_groundwork/src/exception.rs
+@@ -13,7 +13,7 @@
+ //--------------------------------------------------------------------------------------------------
+ // Architectural Public Reexports
+ //--------------------------------------------------------------------------------------------------
+-pub use arch_exception::current_privilege_level;
++pub use arch_exception::{current_privilege_level, handling_init};
+
+ //--------------------------------------------------------------------------------------------------
+ // Public Definitions
+
 diff -uNr 11_virtual_mem_part1_identity_mapping/src/main.rs 12_exceptions_part1_groundwork/src/main.rs
 --- 11_virtual_mem_part1_identity_mapping/src/main.rs
 +++ 12_exceptions_part1_groundwork/src/main.rs
-@@ -109,6 +109,7 @@
+@@ -111,6 +111,7 @@
  #![feature(const_generics)]
  #![feature(const_panic)]
  #![feature(format_args_nl)]
@@ -964,7 +975,7 @@ diff -uNr 11_virtual_mem_part1_identity_mapping/src/main.rs 12_exceptions_part1_
  #![feature(panic_info_message)]
  #![feature(trait_alias)]
  #![no_main]
-@@ -143,6 +144,8 @@
+@@ -142,6 +143,8 @@
      use driver::interface::DriverManager;
      use memory::mmu::interface::MMU;
 
@@ -973,7 +984,7 @@ diff -uNr 11_virtual_mem_part1_identity_mapping/src/main.rs 12_exceptions_part1_
      if let Err(string) = memory::mmu::mmu().init() {
          panic!("MMU: {}", string);
      }
-@@ -195,13 +198,28 @@
+@@ -194,13 +197,28 @@
      info!("Timer test, spinning for 1 second");
      time::time_manager().spin_for(Duration::from_secs(1));
 
@@ -1008,17 +1019,5 @@ diff -uNr 11_virtual_mem_part1_identity_mapping/src/main.rs 12_exceptions_part1_
      info!("Echoing input now");
 
      // Discard any spurious received characters before going into echo mode.
-
-diff -uNr 11_virtual_mem_part1_identity_mapping/src/memory/mmu.rs 12_exceptions_part1_groundwork/src/memory/mmu.rs
---- 11_virtual_mem_part1_identity_mapping/src/memory/mmu.rs
-+++ 12_exceptions_part1_groundwork/src/memory/mmu.rs
-@@ -42,6 +42,7 @@
-
- /// Architecture agnostic translation types.
- #[allow(missing_docs)]
-+#[allow(dead_code)]
- #[derive(Copy, Clone)]
- pub enum Translation {
-     Identity,
 
 ```

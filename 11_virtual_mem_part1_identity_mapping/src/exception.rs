@@ -7,9 +7,13 @@
 #[cfg(target_arch = "aarch64")]
 #[path = "_arch/aarch64/exception.rs"]
 mod arch_exception;
-pub use arch_exception::*;
 
 pub mod asynchronous;
+
+//--------------------------------------------------------------------------------------------------
+// Architectural Public Reexports
+//--------------------------------------------------------------------------------------------------
+pub use arch_exception::current_privilege_level;
 
 //--------------------------------------------------------------------------------------------------
 // Public Definitions

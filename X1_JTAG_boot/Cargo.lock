@@ -2,9 +2,9 @@
 # It is not intended for manual editing.
 [[package]]
 name = "cortex-a"
-version = "4.1.0"
+version = "5.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a389514c1229e12a03c0e8de8b357671b71e1d1bdab3a4f5b591abc94169cba8"
+checksum = "d33a61602f83c3fff3e092967ad4d5d820a9fea7bc418e119616872085fe731d"
 dependencies = [
  "register",
 ]
@@ -19,15 +19,15 @@ dependencies = [
 
 [[package]]
 name = "register"
-version = "0.5.1"
+version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "deaba5b0e477d21f61a57504bb5cef4a1e86de30300b457d38971c1cfc98b815"
+checksum = "f4a247de29ab7cc8f5006cfe775c4a81c704f9914c5e2a79696862e643135433"
 dependencies = [
  "tock-registers",
 ]
 
 [[package]]
 name = "tock-registers"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70323afdb8082186c0986da0e10f6e4ed103d681c921c00597e98d9806dac20f"
+checksum = "f521a79accce68c417c9c77ce22108056b626126da1932f7e2e9b5bbffee0cea"

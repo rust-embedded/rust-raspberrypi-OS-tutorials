@@ -2,7 +2,7 @@
 //
 // Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
 
-//! Printing facilities.
+//! Printing.
 
 use crate::{bsp, console};
 use core::fmt;

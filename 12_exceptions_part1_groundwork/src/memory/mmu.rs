@@ -5,8 +5,8 @@
 //! Memory Management Unit.
 //!
 //! In order to decouple `BSP` and `arch` parts of the MMU code (to keep them pluggable), this file
-//! provides types for composing an architecture-agnostic description of the kernel 's virtual
-//! memory layout.
+//! provides types for composing an architecture-agnostic description of the kernel's virtual memory
+//! layout.
 //!
 //! The `BSP` provides such a description through the `bsp::memory::mmu::virt_mem_layout()`
 //! function.
@@ -17,9 +17,15 @@
 #[cfg(target_arch = "aarch64")]
 #[path = "../_arch/aarch64/memory/mmu.rs"]
 mod arch_mmu;
-pub use arch_mmu::*;
+
+mod translation_table;
 
 use core::{fmt, ops::RangeInclusive};
+
+//--------------------------------------------------------------------------------------------------
+// Architectural Public Reexports
+//--------------------------------------------------------------------------------------------------
+pub use arch_mmu::mmu;
 
 //--------------------------------------------------------------------------------------------------
 // Public Definitions
@@ -39,6 +45,12 @@ pub mod interface {
         unsafe fn init(&self) -> Result<(), &'static str>;
     }
 }
+
+/// Describes the characteristics of a translation granule.
+pub struct TranslationGranule<const GRANULE_SIZE: usize>;
+
+/// Describes the size of an address space.
+pub struct AddressSpaceSize<const AS_SIZE: usize>;
 
 /// Architecture agnostic translation types.
 #[allow(missing_docs)]
@@ -95,6 +107,41 @@ pub struct KernelVirtualLayout<const NUM_SPECIAL_RANGES: usize> {
 //--------------------------------------------------------------------------------------------------
 // Public Code
 //--------------------------------------------------------------------------------------------------
+
+impl<const GRANULE_SIZE: usize> TranslationGranule<GRANULE_SIZE> {
+    /// The granule's size.
+    pub const SIZE: usize = Self::size_checked();
+
+    /// The granule's shift, aka log2(size).
+    pub const SHIFT: usize = Self::SIZE.trailing_zeros() as usize;
+
+    const fn size_checked() -> usize {
+        assert!(GRANULE_SIZE.is_power_of_two());
+
+        GRANULE_SIZE
+    }
+}
+
+impl<const AS_SIZE: usize> AddressSpaceSize<AS_SIZE> {
+    /// The address space size.
+    pub const SIZE: usize = Self::size_checked();
+
+    /// The address space shift, aka log2(size).
+    pub const SHIFT: usize = Self::SIZE.trailing_zeros() as usize;
+
+    const fn size_checked() -> usize {
+        assert!(AS_SIZE.is_power_of_two());
+        assert!(arch_mmu::MIN_ADDR_SPACE_SIZE.is_power_of_two());
+        assert!(arch_mmu::MAX_ADDR_SPACE_SIZE.is_power_of_two());
+
+        // Must adhere to architectural restrictions.
+        assert!(AS_SIZE >= arch_mmu::MIN_ADDR_SPACE_SIZE);
+        assert!(AS_SIZE <= arch_mmu::MAX_ADDR_SPACE_SIZE);
+        assert!((AS_SIZE % arch_mmu::AddrSpaceSizeGranule::SIZE) == 0);
+
+        AS_SIZE
+    }
+}
 
 impl Default for AttributeFields {
     fn default() -> AttributeFields {

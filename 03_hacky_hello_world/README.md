@@ -139,8 +139,17 @@ diff -uNr 02_runtime_init/src/console.rs 03_hacky_hello_world/src/console.rs
 diff -uNr 02_runtime_init/src/main.rs 03_hacky_hello_world/src/main.rs
 --- 02_runtime_init/src/main.rs
 +++ 03_hacky_hello_world/src/main.rs
-@@ -93,7 +93,9 @@
- //! - `crate::bsp::memory::*`
+@@ -100,19 +100,25 @@
+ //!
+ //! # Boot flow
+ //!
+-//! 1. The kernel's entry point is the function `cpu::boot::arch_boot::_start()`.
+-//!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.S`.
++//! 1. The kernel's entry point is the function [`cpu::boot::arch_boot::_start()`].
++//!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.rs`.
+ //! 2. Once finished with architectural setup, the arch code calls [`runtime_init::runtime_init()`].
++//!
++//! [`cpu::boot::arch_boot::_start()`]: cpu/boot/arch_boot/fn._start.html
 
  #![feature(asm)]
 +#![feature(format_args_nl)]
@@ -148,9 +157,6 @@ diff -uNr 02_runtime_init/src/main.rs 03_hacky_hello_world/src/main.rs
 +#![feature(panic_info_message)]
  #![no_main]
  #![no_std]
-
-@@ -101,9 +103,11 @@
- // `runtime_init()`, which jumps to `kernel_init()`.
 
  mod bsp;
 +mod console;
@@ -161,7 +167,7 @@ diff -uNr 02_runtime_init/src/main.rs 03_hacky_hello_world/src/main.rs
  mod runtime_init;
 
  /// Early init code.
-@@ -112,5 +116,7 @@
+@@ -121,5 +127,7 @@
  ///
  /// - Only a single core must be active and running this function.
  unsafe fn kernel_init() -> ! {
@@ -202,7 +208,7 @@ diff -uNr 02_runtime_init/src/print.rs 03_hacky_hello_world/src/print.rs
 +//
 +// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
 +
-+//! Printing facilities.
++//! Printing.
 +
 +use crate::{bsp, console};
 +use core::fmt;

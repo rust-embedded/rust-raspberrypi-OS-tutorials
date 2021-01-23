@@ -19,13 +19,16 @@
   from kernel code.
 - Drivers are stored in `src/bsp/device_driver`, and can be reused between `BSP`s.
     - We introduce the `GPIO` driver, which pinmuxes the RPi's PL011 UART.
+      - Note how this driver differentiates between **RPi 3** and **RPi4**. Their HW is different,
+        so we have to account for it in SW.
     - Most importantly, the `PL011Uart` driver: It implements the `console::interface::*` traits and
       is from now on used as the main system console output.
-- `BSP`s now contain a memory map in `src/bsp/raspberrypi/memory.rs`. In the specific case, they contain the
-  Raspberry's `MMIO` addresses which are used to instantiate the respectivedevice drivers.
+- `BSP`s now contain a memory map in `src/bsp/raspberrypi/memory.rs`. In the specific case, they
+  contain the Raspberry's `MMIO` addresses which are used to instantiate the respective device
+  drivers.
 - We also modify the `panic!` handler, so that it does not anymore rely on `println!`, which uses
   the globally-shared instance of the `UART` that might be locked when an error is encountered (for
-  now this can't happen due to the `NullLock`, but with a real lock it becomes an issue).
+  now, this can't happen due to the `NullLock`, but with a real lock it becomes an issue).
     - Instead, it creates a new UART driver instance, re-initializes the device and uses that one to
       print. This increases the chances that the system is able to print a final important message
       before it suspends itself.
@@ -145,7 +148,7 @@ diff -uNr 05_safe_globals/Makefile 06_drivers_gpio_uart/Makefile
  # BSP-specific arguments
  ifeq ($(BSP),rpi3)
      TARGET            = aarch64-unknown-none-softfloat
-@@ -51,13 +57,23 @@
+@@ -52,13 +58,23 @@
  DOCKER_IMAGE         = rustembedded/osdev-utils
  DOCKER_CMD           = docker run --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
  DOCKER_CMD_INTERACT  = $(DOCKER_CMD) -i -t
@@ -171,7 +174,7 @@ diff -uNr 05_safe_globals/Makefile 06_drivers_gpio_uart/Makefile
 
  all: $(KERNEL_BIN)
 
-@@ -78,6 +94,9 @@
+@@ -79,6 +95,9 @@
  	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
  endif
 
@@ -185,7 +188,7 @@ diff -uNr 05_safe_globals/Makefile 06_drivers_gpio_uart/Makefile
 diff -uNr 05_safe_globals/src/_arch/aarch64/cpu.rs 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs
 --- 05_safe_globals/src/_arch/aarch64/cpu.rs
 +++ 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs
-@@ -37,6 +37,16 @@
+@@ -17,6 +17,16 @@
  // Public Code
  //--------------------------------------------------------------------------------------------------
 
@@ -1158,7 +1161,7 @@ diff -uNr 05_safe_globals/src/bsp.rs 06_drivers_gpio_uart/src/bsp.rs
 +++ 06_drivers_gpio_uart/src/bsp.rs
 @@ -4,6 +4,8 @@
 
- //! Conditional re-exporting of Board Support Packages.
+ //! Conditional reexporting of Board Support Packages.
 
 +mod device_driver;
 +
@@ -1169,7 +1172,7 @@ diff -uNr 05_safe_globals/src/bsp.rs 06_drivers_gpio_uart/src/bsp.rs
 diff -uNr 05_safe_globals/src/console.rs 06_drivers_gpio_uart/src/console.rs
 --- 05_safe_globals/src/console.rs
 +++ 06_drivers_gpio_uart/src/console.rs
-@@ -14,8 +14,26 @@
+@@ -14,8 +14,25 @@
 
      /// Console write functions.
      pub trait Write {
@@ -1179,8 +1182,7 @@ diff -uNr 05_safe_globals/src/console.rs 06_drivers_gpio_uart/src/console.rs
          /// Write a Rust format string.
          fn write_fmt(&self, args: fmt::Arguments) -> fmt::Result;
 +
-+        /// Block execution until the last buffered character has been physically put on the TX
-+        /// wire.
++        /// Block until the last buffered character has been physically put on the TX wire.
 +        fn flush(&self);
 +    }
 +
@@ -1196,7 +1198,7 @@ diff -uNr 05_safe_globals/src/console.rs 06_drivers_gpio_uart/src/console.rs
      }
 
      /// Console statistics.
-@@ -24,8 +42,13 @@
+@@ -24,8 +41,13 @@
          fn chars_written(&self) -> usize {
              0
          }
@@ -1211,6 +1213,16 @@ diff -uNr 05_safe_globals/src/console.rs 06_drivers_gpio_uart/src/console.rs
 -    pub trait All = Write + Statistics;
 +    pub trait All = Write + Read + Statistics;
  }
+
+diff -uNr 05_safe_globals/src/cpu.rs 06_drivers_gpio_uart/src/cpu.rs
+--- 05_safe_globals/src/cpu.rs
++++ 06_drivers_gpio_uart/src/cpu.rs
+@@ -15,4 +15,4 @@
+ //--------------------------------------------------------------------------------------------------
+ // Architectural Public Reexports
+ //--------------------------------------------------------------------------------------------------
+-pub use arch_cpu::wait_forever;
++pub use arch_cpu::{nop, spin_for_cycles, wait_forever};
 
 diff -uNr 05_safe_globals/src/driver.rs 06_drivers_gpio_uart/src/driver.rs
 --- 05_safe_globals/src/driver.rs
@@ -1264,30 +1276,15 @@ diff -uNr 05_safe_globals/src/driver.rs 06_drivers_gpio_uart/src/driver.rs
 diff -uNr 05_safe_globals/src/main.rs 06_drivers_gpio_uart/src/main.rs
 --- 05_safe_globals/src/main.rs
 +++ 06_drivers_gpio_uart/src/main.rs
-@@ -7,6 +7,14 @@
-
- //! The `kernel` binary.
+@@ -106,6 +106,7 @@
  //!
-+//! # TL;DR - Overview of important Kernel entities
-+//!
-+//! - [`bsp::console::console()`] - Returns a reference to the kernel's [console interface].
-+//! - [`bsp::driver::driver_manager()`] - Returns a reference to the kernel's [driver interface].
-+//!
-+//! [console interface]: ../libkernel/console/interface/index.html
-+//! [driver interface]: ../libkernel/driver/interface/trait.DriverManager.html
-+//!
- //! # Code organization and architecture
- //!
- //! The code is divided into different *modules*, each representing a typical **subsystem** of the
-@@ -92,6 +100,7 @@
- //! - `crate::memory::*`
- //! - `crate::bsp::memory::*`
+ //! [`cpu::boot::arch_boot::_start()`]: cpu/boot/arch_boot/fn._start.html
 
 +#![feature(const_fn_fn_ptr_basics)]
  #![feature(format_args_nl)]
  #![feature(panic_info_message)]
  #![feature(trait_alias)]
-@@ -104,6 +113,7 @@
+@@ -115,6 +116,7 @@
  mod bsp;
  mod console;
  mod cpu;
@@ -1295,7 +1292,7 @@ diff -uNr 05_safe_globals/src/main.rs 06_drivers_gpio_uart/src/main.rs
  mod memory;
  mod panic_wait;
  mod print;
-@@ -115,16 +125,49 @@
+@@ -126,16 +128,49 @@
  /// # Safety
  ///
  /// - Only a single core must be active and running this function.
@@ -1303,7 +1300,8 @@ diff -uNr 05_safe_globals/src/main.rs 06_drivers_gpio_uart/src/main.rs
  unsafe fn kernel_init() -> ! {
 -    use console::interface::Statistics;
 +    use driver::interface::DriverManager;
-+
+
+-    println!("[0] Hello from pure Rust!");
 +    for i in bsp::driver::driver_manager().all_device_drivers().iter() {
 +        if let Err(x) = i.init() {
 +            panic!("Error loading driver: {}: {}", i.compatible(), x);
@@ -1315,8 +1313,7 @@ diff -uNr 05_safe_globals/src/main.rs 06_drivers_gpio_uart/src/main.rs
 +    // Transition from unsafe to safe.
 +    kernel_main()
 +}
-
--    println!("[0] Hello from pure Rust!");
++
 +/// The main function running after the early init.
 +fn kernel_main() -> ! {
 +    use bsp::console::console;

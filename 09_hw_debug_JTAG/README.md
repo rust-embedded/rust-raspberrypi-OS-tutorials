@@ -287,8 +287,8 @@ Hence, please ensure the following order of connecting the devices to your box:
   1. Connect the USB serial.
   2. Afterwards, the Olimex debugger.
 
-This way, Linux enumerates the devices accordingly. This has to be done only once. It is fine to
-disconnect and connect the serial multiple times, e.g. for kicking off different `make jtagboot`
+This way, the host OS enumerates the devices accordingly. This has to be done only once. It is fine
+to disconnect and connect the serial multiple times, e.g. for kicking off different `make jtagboot`
 runs, while keeping the debugger connected.
 
 ## Additional resources
@@ -324,7 +324,7 @@ diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
      LINKER_FILE       = src/bsp/raspberrypi/link.ld
      RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
  endif
-@@ -58,9 +62,12 @@
+@@ -59,9 +63,12 @@
  DOCKER_CMD           = docker run --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
  DOCKER_CMD_INTERACT  = $(DOCKER_CMD) -i -t
  DOCKER_ARG_DIR_UTILS = -v $(shell pwd)/../utils:/work/utils
@@ -337,7 +337,7 @@ diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
  DOCKER_ELFTOOLS = $(DOCKER_CMD) $(DOCKER_IMAGE)
 
  # Dockerize commands that require USB device passthrough only on Linux
-@@ -68,12 +75,17 @@
+@@ -69,12 +76,17 @@
      DOCKER_CMD_DEV = $(DOCKER_CMD_INTERACT) $(DOCKER_ARG_DEV)
 
      DOCKER_CHAINBOOT = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_IMAGE)
@@ -356,7 +356,7 @@ diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
 
  all: $(KERNEL_BIN)
 
-@@ -97,6 +109,23 @@
+@@ -98,6 +110,23 @@
  chainboot: $(KERNEL_BIN)
  	@$(DOCKER_CHAINBOOT) $(EXEC_MINIPUSH) $(DEV_SERIAL) $(KERNEL_BIN)
 

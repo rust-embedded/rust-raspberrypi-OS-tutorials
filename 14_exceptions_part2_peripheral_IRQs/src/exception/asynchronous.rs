@@ -6,10 +6,17 @@
 
 #[cfg(target_arch = "aarch64")]
 #[path = "../_arch/aarch64/exception/asynchronous.rs"]
-mod arch_exception_async;
-pub use arch_exception_async::*;
+mod arch_asynchronous;
 
 use core::{fmt, marker::PhantomData};
+
+//--------------------------------------------------------------------------------------------------
+// Architectural Public Reexports
+//--------------------------------------------------------------------------------------------------
+pub use arch_asynchronous::{
+    is_local_irq_masked, local_irq_mask, local_irq_mask_save, local_irq_restore, local_irq_unmask,
+    print_state,
+};
 
 //--------------------------------------------------------------------------------------------------
 // Public Definitions
@@ -116,7 +123,7 @@ impl<const MAX_INCLUSIVE: usize> IRQNumber<{ MAX_INCLUSIVE }> {
     }
 
     /// Return the wrapped number.
-    pub fn get(self) -> usize {
+    pub const fn get(self) -> usize {
         self.0
     }
 }

@@ -40,8 +40,9 @@ export LINKER_FILE
 RUSTFLAGS          = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
 RUSTFLAGS_PEDANTIC = $(RUSTFLAGS) -D warnings -D missing_docs
 
+FEATURES      = bsp_$(BSP)
 COMPILER_ARGS = --target=$(TARGET) \
-    --features bsp_$(BSP)          \
+    --features $(FEATURES)         \
     --release
 
 RUSTC_CMD   = cargo rustc $(COMPILER_ARGS)

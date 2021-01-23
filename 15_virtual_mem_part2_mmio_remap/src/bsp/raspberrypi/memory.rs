@@ -37,7 +37,7 @@
 
 pub mod mmu;
 
-use crate::memory::mmu::{Address, Physical, Virtual};
+use crate::memory::{Address, Physical, Virtual};
 use core::{cell::UnsafeCell, ops::RangeInclusive};
 
 //--------------------------------------------------------------------------------------------------

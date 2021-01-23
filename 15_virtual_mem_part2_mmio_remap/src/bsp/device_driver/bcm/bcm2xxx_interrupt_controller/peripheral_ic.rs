@@ -8,7 +8,7 @@ use super::{InterruptController, PendingIRQs, PeripheralIRQ};
 use crate::{
     bsp::device_driver::common::MMIODerefWrapper,
     driver, exception, memory,
-    memory::mmu::Physical,
+    memory::Physical,
     synchronization,
     synchronization::{IRQSafeNullLock, InitStateLock},
 };

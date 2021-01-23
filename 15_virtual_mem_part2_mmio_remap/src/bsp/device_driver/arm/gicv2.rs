@@ -80,7 +80,7 @@ mod gicc;
 mod gicd;
 
 use crate::{
-    bsp, cpu, driver, exception, memory, memory::mmu::Physical, synchronization,
+    bsp, cpu, driver, exception, memory, memory::Physical, synchronization,
     synchronization::InitStateLock,
 };
 use core::sync::atomic::{AtomicBool, Ordering};

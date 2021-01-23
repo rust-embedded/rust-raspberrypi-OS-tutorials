@@ -5,7 +5,7 @@
 //! GPIO Driver.
 
 use crate::{
-    bsp::device_driver::common::MMIODerefWrapper, driver, memory, memory::mmu::Physical,
+    bsp::device_driver::common::MMIODerefWrapper, driver, memory, memory::Physical,
     synchronization, synchronization::IRQSafeNullLock,
 };
 use core::sync::atomic::{AtomicUsize, Ordering};

@@ -6,7 +6,7 @@
 
 mod peripheral_ic;
 
-use crate::{driver, exception, memory, memory::mmu::Physical};
+use crate::{driver, exception, memory, memory::Physical};
 
 //--------------------------------------------------------------------------------------------------
 // Private Definitions

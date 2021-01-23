@@ -12,13 +12,16 @@ use core::ops::RangeInclusive;
 // Public Definitions
 //--------------------------------------------------------------------------------------------------
 
+/// The address space size chosen by this BSP.
+pub type KernelAddrSpaceSize = AddressSpaceSize<{ memory_map::END_INCLUSIVE + 1 }>;
+
 const NUM_MEM_RANGES: usize = 2;
 
 /// The virtual memory layout.
 ///
 /// The layout must contain only special ranges, aka anything that is _not_ normal cacheable DRAM.
 /// It is agnostic of the paging granularity that the architecture's MMU will use.
-pub static LAYOUT: KernelVirtualLayout<{ NUM_MEM_RANGES }> = KernelVirtualLayout::new(
+pub static LAYOUT: KernelVirtualLayout<NUM_MEM_RANGES> = KernelVirtualLayout::new(
     memory_map::END_INCLUSIVE,
     [
         TranslationDescriptor {
@@ -62,17 +65,7 @@ fn mmio_range_inclusive() -> RangeInclusive<usize> {
 // Public Code
 //--------------------------------------------------------------------------------------------------
 
-/// Return the address space size in bytes.
-///
-/// Guarantees size to be a power of two.
-pub const fn addr_space_size() -> usize {
-    let size = memory_map::END_INCLUSIVE + 1;
-    assert!(size.is_power_of_two());
-
-    size
-}
-
 /// Return a reference to the virtual memory layout.
-pub fn virt_mem_layout() -> &'static KernelVirtualLayout<{ NUM_MEM_RANGES }> {
+pub fn virt_mem_layout() -> &'static KernelVirtualLayout<NUM_MEM_RANGES> {
     &LAYOUT
 }

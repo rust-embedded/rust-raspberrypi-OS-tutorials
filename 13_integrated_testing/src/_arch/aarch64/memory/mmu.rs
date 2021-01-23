@@ -4,146 +4,61 @@
 
 //! Memory Management Unit Driver.
 //!
-//! Static translation tables, compiled on boot; Everything 64 KiB granule.
+//! Only 64 KiB granule is supported.
+//!
+//! # Orientation
+//!
+//! Since arch modules are imported into generic modules using the path attribute, the path of this
+//! file is:
+//!
+//! crate::memory::mmu::arch_mmu
 
-use super::{AccessPermissions, AttributeFields, MemAttributes};
-use crate::{bsp, memory};
-use core::convert;
+use crate::{
+    bsp, memory,
+    memory::mmu::{translation_table::KernelTranslationTable, TranslationGranule},
+};
 use cortex_a::{barrier, regs::*};
-use register::{register_bitfields, InMemoryRegister};
 
 //--------------------------------------------------------------------------------------------------
 // Private Definitions
 //--------------------------------------------------------------------------------------------------
 
-// A table descriptor, as per ARMv8-A Architecture Reference Manual Figure D5-15.
-register_bitfields! {u64,
-    STAGE1_TABLE_DESCRIPTOR [
-        /// Physical address of the next descriptor.
-        NEXT_LEVEL_TABLE_ADDR_64KiB OFFSET(16) NUMBITS(32) [], // [47:16]
+/// Memory Management Unit type.
+struct MemoryManagementUnit;
 
-        TYPE  OFFSET(1) NUMBITS(1) [
-            Block = 0,
-            Table = 1
-        ],
+//--------------------------------------------------------------------------------------------------
+// Public Definitions
+//--------------------------------------------------------------------------------------------------
 
-        VALID OFFSET(0) NUMBITS(1) [
-            False = 0,
-            True = 1
-        ]
-    ]
-}
+pub type Granule512MiB = TranslationGranule<{ 512 * 1024 * 1024 }>;
+pub type Granule64KiB = TranslationGranule<{ 64 * 1024 }>;
 
-// A level 3 page descriptor, as per ARMv8-A Architecture Reference Manual Figure D5-17.
-register_bitfields! {u64,
-    STAGE1_PAGE_DESCRIPTOR [
-        /// Unprivileged execute-never.
-        UXN      OFFSET(54) NUMBITS(1) [
-            False = 0,
-            True = 1
-        ],
+/// The min supported address space size.
+pub const MIN_ADDR_SPACE_SIZE: usize = 1024 * 1024 * 1024; // 1 GiB
 
-        /// Privileged execute-never.
-        PXN      OFFSET(53) NUMBITS(1) [
-            False = 0,
-            True = 1
-        ],
+/// The max supported address space size.
+pub const MAX_ADDR_SPACE_SIZE: usize = 32 * 1024 * 1024 * 1024; // 32 GiB
 
-        /// Physical address of the next table descriptor (lvl2) or the page descriptor (lvl3).
-        OUTPUT_ADDR_64KiB OFFSET(16) NUMBITS(32) [], // [47:16]
-
-        /// Access flag.
-        AF       OFFSET(10) NUMBITS(1) [
-            False = 0,
-            True = 1
-        ],
-
-        /// Shareability field.
-        SH       OFFSET(8) NUMBITS(2) [
-            OuterShareable = 0b10,
-            InnerShareable = 0b11
-        ],
-
-        /// Access Permissions.
-        AP       OFFSET(6) NUMBITS(2) [
-            RW_EL1 = 0b00,
-            RW_EL1_EL0 = 0b01,
-            RO_EL1 = 0b10,
-            RO_EL1_EL0 = 0b11
-        ],
-
-        /// Memory attributes index into the MAIR_EL1 register.
-        AttrIndx OFFSET(2) NUMBITS(3) [],
-
-        TYPE     OFFSET(1) NUMBITS(1) [
-            Block = 0,
-            Table = 1
-        ],
-
-        VALID    OFFSET(0) NUMBITS(1) [
-            False = 0,
-            True = 1
-        ]
-    ]
-}
-
-const SIXTYFOUR_KIB_SHIFT: usize = 16; //  log2(64 * 1024)
-const FIVETWELVE_MIB_SHIFT: usize = 29; // log2(512 * 1024 * 1024)
-
-/// A table descriptor for 64 KiB aperture.
-///
-/// The output points to the next table.
-#[derive(Copy, Clone)]
-#[repr(transparent)]
-struct TableDescriptor(u64);
-
-/// A page descriptor with 64 KiB aperture.
-///
-/// The output points to physical memory.
-#[derive(Copy, Clone)]
-#[repr(transparent)]
-struct PageDescriptor(u64);
-
-/// Big monolithic struct for storing the translation tables. Individual levels must be 64 KiB
-/// aligned, hence the "reverse" order of appearance.
-#[repr(C)]
-#[repr(align(65536))]
-struct FixedSizeTranslationTable<const NUM_TABLES: usize> {
-    /// Page descriptors, covering 64 KiB windows per entry.
-    lvl3: [[PageDescriptor; 8192]; NUM_TABLES],
-
-    /// Table descriptors, covering 512 MiB windows.
-    lvl2: [TableDescriptor; NUM_TABLES],
-}
-
-const NUM_LVL2_TABLES: usize = bsp::memory::mmu::addr_space_size() >> FIVETWELVE_MIB_SHIFT;
-type ArchTranslationTable = FixedSizeTranslationTable<NUM_LVL2_TABLES>;
-
-trait BaseAddr {
-    fn base_addr_u64(&self) -> u64;
-    fn base_addr_usize(&self) -> usize;
-}
+/// The supported address space size granule.
+pub type AddrSpaceSizeGranule = Granule512MiB;
 
 /// Constants for indexing the MAIR_EL1.
 #[allow(dead_code)]
-mod mair {
+pub mod mair {
     pub const DEVICE: u64 = 0;
     pub const NORMAL: u64 = 1;
 }
-
-/// Memory Management Unit type.
-struct MemoryManagementUnit;
 
 //--------------------------------------------------------------------------------------------------
 // Global instances
 //--------------------------------------------------------------------------------------------------
 
-/// The translation tables.
+/// The kernel translation tables.
 ///
 /// # Safety
 ///
 /// - Supposed to land in `.bss`. Therefore, ensure that all initial member values boil down to "0".
-static mut KERNEL_TABLES: ArchTranslationTable = ArchTranslationTable::new();
+static mut KERNEL_TABLES: KernelTranslationTable = KernelTranslationTable::new();
 
 static MMU: MemoryManagementUnit = MemoryManagementUnit;
 
@@ -151,149 +66,37 @@ static MMU: MemoryManagementUnit = MemoryManagementUnit;
 // Private Code
 //--------------------------------------------------------------------------------------------------
 
-impl<T, const N: usize> BaseAddr for [T; N] {
-    fn base_addr_u64(&self) -> u64 {
-        self as *const T as u64
-    }
-
-    fn base_addr_usize(&self) -> usize {
-        self as *const _ as usize
-    }
-}
-
-impl convert::From<usize> for TableDescriptor {
-    fn from(next_lvl_table_addr: usize) -> Self {
-        let val = InMemoryRegister::<u64, STAGE1_TABLE_DESCRIPTOR::Register>::new(0);
-
-        let shifted = next_lvl_table_addr >> SIXTYFOUR_KIB_SHIFT;
-        val.write(
-            STAGE1_TABLE_DESCRIPTOR::VALID::True
-                + STAGE1_TABLE_DESCRIPTOR::TYPE::Table
-                + STAGE1_TABLE_DESCRIPTOR::NEXT_LEVEL_TABLE_ADDR_64KiB.val(shifted as u64),
-        );
-
-        TableDescriptor(val.get())
-    }
-}
-
-/// Convert the kernel's generic memory attributes to HW-specific attributes of the MMU.
-impl convert::From<AttributeFields>
-    for register::FieldValue<u64, STAGE1_PAGE_DESCRIPTOR::Register>
-{
-    fn from(attribute_fields: AttributeFields) -> Self {
-        // Memory attributes.
-        let mut desc = match attribute_fields.mem_attributes {
-            MemAttributes::CacheableDRAM => {
-                STAGE1_PAGE_DESCRIPTOR::SH::InnerShareable
-                    + STAGE1_PAGE_DESCRIPTOR::AttrIndx.val(mair::NORMAL)
-            }
-            MemAttributes::Device => {
-                STAGE1_PAGE_DESCRIPTOR::SH::OuterShareable
-                    + STAGE1_PAGE_DESCRIPTOR::AttrIndx.val(mair::DEVICE)
-            }
-        };
-
-        // Access Permissions.
-        desc += match attribute_fields.acc_perms {
-            AccessPermissions::ReadOnly => STAGE1_PAGE_DESCRIPTOR::AP::RO_EL1,
-            AccessPermissions::ReadWrite => STAGE1_PAGE_DESCRIPTOR::AP::RW_EL1,
-        };
-
-        // The execute-never attribute is mapped to PXN in AArch64.
-        desc += if attribute_fields.execute_never {
-            STAGE1_PAGE_DESCRIPTOR::PXN::True
-        } else {
-            STAGE1_PAGE_DESCRIPTOR::PXN::False
-        };
-
-        // Always set unprivileged exectue-never as long as userspace is not implemented yet.
-        desc += STAGE1_PAGE_DESCRIPTOR::UXN::True;
-
-        desc
-    }
-}
-
-impl PageDescriptor {
-    /// Create an instance.
-    fn new(output_addr: usize, attribute_fields: AttributeFields) -> Self {
-        let val = InMemoryRegister::<u64, STAGE1_PAGE_DESCRIPTOR::Register>::new(0);
-
-        let shifted = output_addr as u64 >> SIXTYFOUR_KIB_SHIFT;
-        val.write(
-            STAGE1_PAGE_DESCRIPTOR::VALID::True
-                + STAGE1_PAGE_DESCRIPTOR::AF::True
-                + attribute_fields.into()
-                + STAGE1_PAGE_DESCRIPTOR::TYPE::Table
-                + STAGE1_PAGE_DESCRIPTOR::OUTPUT_ADDR_64KiB.val(shifted),
-        );
-
-        Self(val.get())
-    }
-}
-
-impl<const NUM_TABLES: usize> FixedSizeTranslationTable<{ NUM_TABLES }> {
-    /// Create an instance.
-    pub const fn new() -> Self {
-        assert!(NUM_TABLES > 0);
-
-        Self {
-            lvl3: [[PageDescriptor(0); 8192]; NUM_TABLES],
-            lvl2: [TableDescriptor(0); NUM_TABLES],
-        }
-    }
-}
-
-/// Setup function for the MAIR_EL1 register.
-fn set_up_mair() {
-    // Define the memory types being mapped.
-    MAIR_EL1.write(
-        // Attribute 1 - Cacheable normal DRAM.
-        MAIR_EL1::Attr1_Normal_Outer::WriteBack_NonTransient_ReadWriteAlloc +
+impl MemoryManagementUnit {
+    /// Setup function for the MAIR_EL1 register.
+    fn set_up_mair(&self) {
+        // Define the memory types being mapped.
+        MAIR_EL1.write(
+            // Attribute 1 - Cacheable normal DRAM.
+            MAIR_EL1::Attr1_Normal_Outer::WriteBack_NonTransient_ReadWriteAlloc +
         MAIR_EL1::Attr1_Normal_Inner::WriteBack_NonTransient_ReadWriteAlloc +
 
         // Attribute 0 - Device.
         MAIR_EL1::Attr0_Device::nonGathering_nonReordering_EarlyWriteAck,
-    );
-}
-
-/// Iterates over all static translation table entries and fills them at once.
-///
-/// # Safety
-///
-/// - Modifies a `static mut`. Ensure it only happens from here.
-unsafe fn populate_tt_entries() -> Result<(), &'static str> {
-    for (l2_nr, l2_entry) in KERNEL_TABLES.lvl2.iter_mut().enumerate() {
-        *l2_entry = KERNEL_TABLES.lvl3[l2_nr].base_addr_usize().into();
-
-        for (l3_nr, l3_entry) in KERNEL_TABLES.lvl3[l2_nr].iter_mut().enumerate() {
-            let virt_addr = (l2_nr << FIVETWELVE_MIB_SHIFT) + (l3_nr << SIXTYFOUR_KIB_SHIFT);
-
-            let (output_addr, attribute_fields) =
-                bsp::memory::mmu::virt_mem_layout().virt_addr_properties(virt_addr)?;
-
-            *l3_entry = PageDescriptor::new(output_addr, attribute_fields);
-        }
+        );
     }
 
-    Ok(())
-}
+    /// Configure various settings of stage 1 of the EL1 translation regime.
+    fn configure_translation_control(&self) {
+        let ips = ID_AA64MMFR0_EL1.read(ID_AA64MMFR0_EL1::PARange);
+        let t0sz = (64 - bsp::memory::mmu::KernelAddrSpaceSize::SHIFT) as u64;
 
-/// Configure various settings of stage 1 of the EL1 translation regime.
-fn configure_translation_control() {
-    let ips = ID_AA64MMFR0_EL1.read(ID_AA64MMFR0_EL1::PARange);
-    let t0sz: u64 = bsp::memory::mmu::addr_space_size().trailing_zeros().into();
-
-    TCR_EL1.write(
-        TCR_EL1::TBI0::Ignored
-            + TCR_EL1::IPS.val(ips)
-            + TCR_EL1::EPD1::DisableTTBR1Walks
-            + TCR_EL1::TG0::KiB_64
-            + TCR_EL1::SH0::Inner
-            + TCR_EL1::ORGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
-            + TCR_EL1::IRGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
-            + TCR_EL1::EPD0::EnableTTBR0Walks
-            + TCR_EL1::T0SZ.val(t0sz),
-    );
+        TCR_EL1.write(
+            TCR_EL1::TBI0::Ignored
+                + TCR_EL1::IPS.val(ips)
+                + TCR_EL1::EPD1::DisableTTBR1Walks
+                + TCR_EL1::TG0::KiB_64
+                + TCR_EL1::SH0::Inner
+                + TCR_EL1::ORGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
+                + TCR_EL1::IRGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
+                + TCR_EL1::EPD0::EnableTTBR0Walks
+                + TCR_EL1::T0SZ.val(t0sz),
+        );
+    }
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -317,15 +120,15 @@ impl memory::mmu::interface::MMU for MemoryManagementUnit {
         }
 
         // Prepare the memory attribute indirection register.
-        set_up_mair();
+        self.set_up_mair();
 
         // Populate translation tables.
-        populate_tt_entries()?;
+        KERNEL_TABLES.populate_tt_entries()?;
 
         // Set the "Translation Table Base Register".
-        TTBR0_EL1.set_baddr(KERNEL_TABLES.lvl2.base_addr_u64());
+        TTBR0_EL1.set_baddr(KERNEL_TABLES.base_address());
 
-        configure_translation_control();
+        self.configure_translation_control();
 
         // Switch the MMU on.
         //
@@ -350,24 +153,6 @@ impl memory::mmu::interface::MMU for MemoryManagementUnit {
 mod tests {
     use super::*;
     use test_macros::kernel_test;
-
-    /// Check if the size of `struct TableDescriptor` is as expected.
-    #[kernel_test]
-    fn size_of_tabledescriptor_equals_64_bit() {
-        assert_eq!(
-            core::mem::size_of::<TableDescriptor>(),
-            core::mem::size_of::<u64>()
-        );
-    }
-
-    /// Check if the size of `struct PageDescriptor` is as expected.
-    #[kernel_test]
-    fn size_of_pagedescriptor_equals_64_bit() {
-        assert_eq!(
-            core::mem::size_of::<PageDescriptor>(),
-            core::mem::size_of::<u64>()
-        );
-    }
 
     /// Check if KERNEL_TABLES is in .bss.
     #[kernel_test]

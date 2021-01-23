@@ -24,20 +24,23 @@ tutorials in a quick manner.
 Our chainloader is called `MiniLoad` and is inspired by [raspbootin].
 
 You can try it with this tutorial already:
-1. Depending on your target hardware:`make` or `BSP=rpi4 make`.
+1. Depending on your target hardware, run:`make` or `BSP=rpi4 make`.
 1. Copy `kernel8.img` to the SD card.
-1. Execute `make chainboot` or `BSP=rpi4 make chainboot`.
+1. Run `make chainboot` or `BSP=rpi4 make chainboot`.
 1. Connect the USB serial to your host PC.
     - Wiring diagram at [top-level README](../README.md#-usb-serial-output).
     - Make sure that you **DID NOT** connect the power pin of the USB serial. Only RX/TX and GND.
 1. Connect the RPi to the (USB) power cable.
 1. Observe the loader fetching a kernel over `UART`:
 
-> ❗ **NOTE**: By default, `make chainboot` tries to connect to `/dev/ttyUSB0`.
-> Should the USB serial on your system have a different name, you have to provide it explicitly. For
-> example:
->
-> `DEV_SERIAL=/dev/tty.usbserial-0001 make chainboot`
+> ❗ **NOTE**: `make chainboot` assumes a default serial device name of `/dev/ttyUSB0`. Depending on
+> your host operating system, the device name might differ. For example, on `macOS`, it might be
+> something like `/dev/tty.usbserial-0001`. In this case, please give the name explicitly:
+
+
+```console
+$ DEV_SERIAL=/dev/tty.usbserial-0001 make chainboot
+```
 
 [raspbootin]: https://github.com/mrvn/raspbootin
 
@@ -127,7 +130,7 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
  endif
 
  # Export for build.rs
-@@ -67,13 +69,14 @@
+@@ -68,13 +70,14 @@
  ifeq ($(UNAME_S),Linux)
      DOCKER_CMD_DEV = $(DOCKER_CMD_INTERACT) $(DOCKER_ARG_DEV)
 
@@ -145,7 +148,7 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
 
  all: $(KERNEL_BIN)
 
-@@ -87,15 +90,18 @@
+@@ -88,15 +91,18 @@
  	$(DOC_CMD) --document-private-items --open
 
  ifeq ($(QEMU_MACHINE_TYPE),)
@@ -167,7 +170,7 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
 
  clippy:
  	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD)
-@@ -107,7 +113,10 @@
+@@ -108,7 +114,10 @@
  	readelf --headers $(KERNEL_ELF)
 
  objdump: $(KERNEL_ELF)
@@ -180,10 +183,10 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
  nm: $(KERNEL_ELF)
  	@$(DOCKER_ELFTOOLS) $(NM_BINARY) --demangle --print-size $(KERNEL_ELF) | sort | rustfilt
 
-diff -uNr 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs 07_uart_chainloader/src/_arch/aarch64/cpu.rs
---- 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs
-+++ 07_uart_chainloader/src/_arch/aarch64/cpu.rs
-@@ -22,11 +22,11 @@
+diff -uNr 06_drivers_gpio_uart/src/_arch/aarch64/cpu/boot.rs 07_uart_chainloader/src/_arch/aarch64/cpu/boot.rs
+--- 06_drivers_gpio_uart/src/_arch/aarch64/cpu/boot.rs
++++ 07_uart_chainloader/src/_arch/aarch64/cpu/boot.rs
+@@ -29,11 +29,11 @@
  ///   actually set (`SP.set()`).
  #[no_mangle]
  pub unsafe fn _start() -> ! {
@@ -196,8 +199,12 @@ diff -uNr 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs 07_uart_chainloader/src/
 +        relocate::relocate_self()
      } else {
          // If not core0, infinitely wait for events.
-         wait_forever()
-@@ -54,3 +54,19 @@
+         cpu::wait_forever()
+
+diff -uNr 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs 07_uart_chainloader/src/_arch/aarch64/cpu.rs
+--- 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs
++++ 07_uart_chainloader/src/_arch/aarch64/cpu.rs
+@@ -34,3 +34,19 @@
          asm::wfe()
      }
  }
@@ -383,12 +390,28 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs 07_uart_chainloader
      unsafe {
          range = RangeInclusive::new(__bss_start.get(), __bss_end_inclusive.get());
 
+diff -uNr 06_drivers_gpio_uart/src/cpu.rs 07_uart_chainloader/src/cpu.rs
+--- 06_drivers_gpio_uart/src/cpu.rs
++++ 07_uart_chainloader/src/cpu.rs
+@@ -15,4 +15,4 @@
+ //--------------------------------------------------------------------------------------------------
+ // Architectural Public Reexports
+ //--------------------------------------------------------------------------------------------------
+-pub use arch_cpu::{nop, spin_for_cycles, wait_forever};
++pub use arch_cpu::{branch_to_raw_addr, nop, spin_for_cycles, wait_forever};
+
 diff -uNr 06_drivers_gpio_uart/src/main.rs 07_uart_chainloader/src/main.rs
 --- 06_drivers_gpio_uart/src/main.rs
 +++ 07_uart_chainloader/src/main.rs
-@@ -100,7 +100,9 @@
- //! - `crate::memory::*`
- //! - `crate::bsp::memory::*`
+@@ -102,11 +102,14 @@
+ //!
+ //! 1. The kernel's entry point is the function [`cpu::boot::arch_boot::_start()`].
+ //!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.rs`.
+-//! 2. Once finished with architectural setup, the arch code calls [`runtime_init::runtime_init()`].
++//! 2. Once finished with architectural setup, the arch code calls [`relocate::relocate_self()`].
++//! 3. Finally, [`runtime_init::runtime_init()`] is called.
+ //!
+ //! [`cpu::boot::arch_boot::_start()`]: cpu/boot/arch_boot/fn._start.html
 
 +#![feature(asm)]
  #![feature(const_fn_fn_ptr_basics)]
@@ -396,17 +419,7 @@ diff -uNr 06_drivers_gpio_uart/src/main.rs 07_uart_chainloader/src/main.rs
  #![feature(format_args_nl)]
  #![feature(panic_info_message)]
  #![feature(trait_alias)]
-@@ -108,7 +110,8 @@
- #![no_std]
-
- // `mod cpu` provides the `_start()` function, the first function to run. `_start()` then calls
--// `runtime_init()`, which jumps to `kernel_init()`.
-+// `relocate::relocate_self()`. `relocate::relocate_self()` calls `runtime_init()`, which jumps to
-+// `kernel_init()`.
-
- mod bsp;
- mod console;
-@@ -117,6 +120,7 @@
+@@ -120,6 +123,7 @@
  mod memory;
  mod panic_wait;
  mod print;
@@ -414,7 +427,7 @@ diff -uNr 06_drivers_gpio_uart/src/main.rs 07_uart_chainloader/src/main.rs
  mod runtime_init;
  mod synchronization;
 
-@@ -145,29 +149,49 @@
+@@ -148,29 +152,49 @@
  fn kernel_main() -> ! {
      use bsp::console::console;
      use console::interface::All;
@@ -478,7 +491,7 @@ diff -uNr 06_drivers_gpio_uart/src/main.rs 07_uart_chainloader/src/main.rs
 +    println!("[ML] Loaded! Executing the payload now\n");
 +    console().flush();
 +
-+    // Use black magic to get a function pointer.
++    // Use black magic to create a function pointer.
 +    let kernel: fn() -> ! = unsafe { core::mem::transmute(kernel_addr) };
 +
 +    // Jump to loaded kernel!
