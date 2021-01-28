@@ -204,7 +204,7 @@ diff -uNr 06_drivers_gpio_uart/src/_arch/aarch64/cpu/boot.rs 07_uart_chainloader
 diff -uNr 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs 07_uart_chainloader/src/_arch/aarch64/cpu.rs
 --- 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs
 +++ 07_uart_chainloader/src/_arch/aarch64/cpu.rs
-@@ -34,3 +34,19 @@
+@@ -35,3 +35,19 @@
          asm::wfe()
      }
  }
@@ -241,7 +241,7 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 07_uart
 diff -uNr 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 --- 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -257,7 +257,7 @@
+@@ -279,7 +279,7 @@
      }
 
      /// Retrieve a character.
@@ -250,7 +250,7 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 0
          // If RX FIFO is empty,
          if self.registers.FR.matches_all(FR::RXFE::SET) {
              // immediately return in non-blocking mode.
-@@ -272,12 +272,7 @@
+@@ -294,12 +294,7 @@
          }
 
          // Read one character.
@@ -264,7 +264,7 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 0
 
          // Update statistics.
          self.chars_read += 1;
-@@ -357,14 +352,14 @@
+@@ -379,14 +374,14 @@
  impl console::interface::Read for PL011Uart {
      fn read_char(&self) -> char {
          self.inner
@@ -393,12 +393,15 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs 07_uart_chainloader
 diff -uNr 06_drivers_gpio_uart/src/cpu.rs 07_uart_chainloader/src/cpu.rs
 --- 06_drivers_gpio_uart/src/cpu.rs
 +++ 07_uart_chainloader/src/cpu.rs
-@@ -15,4 +15,4 @@
+@@ -15,7 +15,7 @@
  //--------------------------------------------------------------------------------------------------
  // Architectural Public Reexports
  //--------------------------------------------------------------------------------------------------
--pub use arch_cpu::{nop, spin_for_cycles, wait_forever};
-+pub use arch_cpu::{branch_to_raw_addr, nop, spin_for_cycles, wait_forever};
+-pub use arch_cpu::{nop, wait_forever};
++pub use arch_cpu::{branch_to_raw_addr, nop, wait_forever};
+
+ #[cfg(feature = "bsp_rpi3")]
+ pub use arch_cpu::spin_for_cycles;
 
 diff -uNr 06_drivers_gpio_uart/src/main.rs 07_uart_chainloader/src/main.rs
 --- 06_drivers_gpio_uart/src/main.rs

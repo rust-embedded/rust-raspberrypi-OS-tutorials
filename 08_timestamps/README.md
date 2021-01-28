@@ -5,7 +5,7 @@
 - We add abstractions for timer hardware, and implement them for the ARM architectural timer in
   `_arch/aarch64`.
 - The new timer functions are used to annotate UART prints with timestamps, and to get rid of the
-  cycle-based delays in the `GPIO` and `UART` device drivers, which boosts accuracy.
+  cycle-based delays in the `GPIO` device driver, which boosts accuracy.
 - A `warn!()` macro is added.
 
 ## Test it
@@ -135,11 +135,12 @@ diff -uNr 07_uart_chainloader/src/_arch/aarch64/cpu/boot.rs 08_timestamps/src/_a
 diff -uNr 07_uart_chainloader/src/_arch/aarch64/cpu.rs 08_timestamps/src/_arch/aarch64/cpu.rs
 --- 07_uart_chainloader/src/_arch/aarch64/cpu.rs
 +++ 08_timestamps/src/_arch/aarch64/cpu.rs
-@@ -19,14 +19,6 @@
+@@ -19,15 +19,6 @@
 
  pub use asm::nop;
 
 -/// Spin for `n` cycles.
+-#[cfg(feature = "bsp_rpi3")]
 -#[inline(always)]
 -pub fn spin_for_cycles(n: usize) {
 -    for _ in 0..n {
@@ -150,7 +151,7 @@ diff -uNr 07_uart_chainloader/src/_arch/aarch64/cpu.rs 08_timestamps/src/_arch/a
  /// Pause execution on the core.
  #[inline(always)]
  pub fn wait_forever() -> ! {
-@@ -34,19 +26,3 @@
+@@ -35,19 +26,3 @@
          asm::wfe()
      }
  }
@@ -320,33 +321,7 @@ diff -uNr 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 08_times
 diff -uNr 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 08_timestamps/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 --- 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 08_timestamps/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -235,16 +235,13 @@
-
-     /// Block execution until the last buffered character has been physically put on the TX wire.
-     fn flush(&self) {
-+        use crate::{time, time::interface::TimeManager};
-+        use core::time::Duration;
-+
-         // The bit time for 921_600 baud is 1 / 921_600 = 1.09 µs. 8N1 has a total of 10 bits per
-         // symbol (start bit, 8 data bits, stop bit), so one symbol takes round about 10 * 1.09 =
-         // 10.9 µs, or 10_900 ns. Round it up to 12_000 ns to be on the safe side.
--        //
--        // Now make an educated guess for a good delay value. According to Wikipedia, the fastest
--        // RPi4 clocks around 1.5 GHz.
--        //
--        // So lets try to be on the safe side and default to 24_000 cycles, which would equal 12_000
--        // ns would the CPU be clocked at 2 GHz.
--        const CHAR_TIME_SAFE: usize = 24_000;
-+        const CHAR_TIME_SAFE: Duration = Duration::from_nanos(12_000);
-
-         // Spin until TX FIFO empty is set.
-         while !self.registers.FR.matches_all(FR::TXFE::SET) {
-@@ -253,11 +250,11 @@
-
-         // After the last character has been queued for transmission, wait for the time of one
-         // character + some extra time for safety.
--        cpu::spin_for_cycles(CHAR_TIME_SAFE);
-+        time::time_manager().spin_for(CHAR_TIME_SAFE);
+@@ -279,7 +279,7 @@
      }
 
      /// Retrieve a character.
@@ -355,7 +330,7 @@ diff -uNr 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 08
          // If RX FIFO is empty,
          if self.registers.FR.matches_all(FR::RXFE::SET) {
              // immediately return in non-blocking mode.
-@@ -272,7 +269,12 @@
+@@ -294,7 +294,12 @@
          }
 
          // Read one character.
@@ -369,7 +344,7 @@ diff -uNr 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 08
 
          // Update statistics.
          self.chars_read += 1;
-@@ -352,14 +354,14 @@
+@@ -374,14 +379,14 @@
  impl console::interface::Read for PL011Uart {
      fn read_char(&self) -> char {
          self.inner
@@ -498,11 +473,14 @@ diff -uNr 07_uart_chainloader/src/bsp/raspberrypi/memory.rs 08_timestamps/src/bs
 diff -uNr 07_uart_chainloader/src/cpu.rs 08_timestamps/src/cpu.rs
 --- 07_uart_chainloader/src/cpu.rs
 +++ 08_timestamps/src/cpu.rs
-@@ -15,4 +15,4 @@
+@@ -15,7 +15,4 @@
  //--------------------------------------------------------------------------------------------------
  // Architectural Public Reexports
  //--------------------------------------------------------------------------------------------------
--pub use arch_cpu::{branch_to_raw_addr, nop, spin_for_cycles, wait_forever};
+-pub use arch_cpu::{branch_to_raw_addr, nop, wait_forever};
+-
+-#[cfg(feature = "bsp_rpi3")]
+-pub use arch_cpu::spin_for_cycles;
 +pub use arch_cpu::{nop, wait_forever};
 
 diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs

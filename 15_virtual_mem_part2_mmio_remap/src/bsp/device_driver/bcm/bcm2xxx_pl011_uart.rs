@@ -3,6 +3,11 @@
 // Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
 
 //! PL011 UART driver.
+//!
+//! # Resources
+//!
+//! - https://github.com/raspberrypi/documentation/files/1888662/BCM2837-ARM-Peripherals.-.Revised.-.V2-1.pdf
+//! - https://developer.arm.com/documentation/ddi0183/latest
 
 use crate::{
     bsp, bsp::device_driver::common::MMIODerefWrapper, console, cpu, driver, exception, memory,
@@ -20,50 +25,63 @@ use register::{mmio::*, register_bitfields, register_structs};
 
 // PL011 UART registers.
 //
-// Descriptions taken from
-// https://github.com/raspberrypi/documentation/files/1888662/BCM2837-ARM-Peripherals.-.Revised.-.V2-1.pdf
+// Descriptions taken from "PrimeCell UART (PL011) Technical Reference Manual" r1p5.
 register_bitfields! {
     u32,
 
-    /// Flag Register
+    /// Flag Register.
     FR [
         /// Transmit FIFO empty. The meaning of this bit depends on the state of the FEN bit in the
-        /// Line Control Register, UARTLCR_ LCRH.
+        /// Line Control Register, LCR_H.
         ///
-        /// If the FIFO is disabled, this bit is set when the transmit holding register is empty. If
-        /// the FIFO is enabled, the TXFE bit is set when the transmit FIFO is empty. This bit does
-        /// not indicate if there is data in the transmit shift register.
+        /// - If the FIFO is disabled, this bit is set when the transmit holding register is empty.
+        /// - If the FIFO is enabled, the TXFE bit is set when the transmit FIFO is empty.
+        /// - This bit does not indicate if there is data in the transmit shift register.
         TXFE OFFSET(7) NUMBITS(1) [],
 
         /// Transmit FIFO full. The meaning of this bit depends on the state of the FEN bit in the
-        /// UARTLCR_ LCRH Register.
+        /// LCR_H Register.
         ///
-        /// If the FIFO is disabled, this bit is set when the transmit holding register is full. If
-        /// the FIFO is enabled, the TXFF bit is set when the transmit FIFO is full.
+        /// - If the FIFO is disabled, this bit is set when the transmit holding register is full.
+        /// - If the FIFO is enabled, the TXFF bit is set when the transmit FIFO is full.
         TXFF OFFSET(5) NUMBITS(1) [],
 
         /// Receive FIFO empty. The meaning of this bit depends on the state of the FEN bit in the
-        /// UARTLCR_H Register.
+        /// LCR_H Register.
         ///
         /// If the FIFO is disabled, this bit is set when the receive holding register is empty. If
         /// the FIFO is enabled, the RXFE bit is set when the receive FIFO is empty.
-        RXFE OFFSET(4) NUMBITS(1) []
+
+        /// Receive FIFO empty. The meaning of this bit depends on the state of the FEN bit in the
+        /// LCR_H Register.
+        ///
+        /// - If the FIFO is disabled, this bit is set when the receive holding register is empty.
+        /// - If the FIFO is enabled, the RXFE bit is set when the receive FIFO is empty.
+        RXFE OFFSET(4) NUMBITS(1) [],
+
+        /// UART busy. If this bit is set to 1, the UART is busy transmitting data. This bit remains
+        /// set until the complete byte, including all the stop bits, has been sent from the shift
+        /// register.
+        ///
+        /// This bit is set as soon as the transmit FIFO becomes non-empty, regardless of whether
+        /// the UART is enabled or not.
+        BUSY OFFSET(3) NUMBITS(1) []
     ],
 
-    /// Integer Baud rate divisor
+    /// Integer Baud Rate Divisor.
     IBRD [
-        /// Integer Baud rate divisor
-        IBRD OFFSET(0) NUMBITS(16) []
+        /// The integer baud rate divisor.
+        BAUD_DIVINT OFFSET(0) NUMBITS(16) []
     ],
 
-    /// Fractional Baud rate divisor
+    /// Fractional Baud Rate Divisor.
     FBRD [
-        /// Fractional Baud rate divisor
-        FBRD OFFSET(0) NUMBITS(6) []
+        ///  The fractional baud rate divisor.
+        BAUD_DIVFRAC OFFSET(0) NUMBITS(6) []
     ],
 
-    /// Line Control register
-    LCRH [
+    /// Line Control Register.
+    LCR_H [
         /// Word length. These bits indicate the number of data bits transmitted or received in a
         /// frame.
         WLEN OFFSET(5) NUMBITS(2) [
@@ -76,34 +94,42 @@ register_bitfields! {
         /// Enable FIFOs:
         ///
         /// 0 = FIFOs are disabled (character mode) that is, the FIFOs become 1-byte-deep holding
-        /// registers
+        /// registers.
         ///
-        /// 1 = transmit and receive FIFO buffers are enabled (FIFO mode).
+        /// 1 = Transmit and receive FIFO buffers are enabled (FIFO mode).
         FEN  OFFSET(4) NUMBITS(1) [
             FifosDisabled = 0,
             FifosEnabled = 1
         ]
     ],
 
-    /// Control Register
+    /// Control Register.
     CR [
         /// Receive enable. If this bit is set to 1, the receive section of the UART is enabled.
-        /// Data reception occurs for UART signals. When the UART is disabled in the middle of
-        /// reception, it completes the current character before stopping.
-        RXE    OFFSET(9) NUMBITS(1) [
+        /// Data reception occurs for either UART signals or SIR signals depending on the setting of
+        /// the SIREN bit. When the UART is disabled in the middle of reception, it completes the
+        /// current character before stopping.
+        RXE OFFSET(9) NUMBITS(1) [
             Disabled = 0,
             Enabled = 1
         ],
 
         /// Transmit enable. If this bit is set to 1, the transmit section of the UART is enabled.
-        /// Data transmission occurs for UART signals. When the UART is disabled in the middle of
-        /// transmission, it completes the current character before stopping.
-        TXE    OFFSET(8) NUMBITS(1) [
+        /// Data transmission occurs for either UART signals, or SIR signals depending on the
+        /// setting of the SIREN bit. When the UART is disabled in the middle of transmission, it
+        /// completes the current character before stopping.
+        TXE OFFSET(8) NUMBITS(1) [
             Disabled = 0,
             Enabled = 1
         ],
 
-        /// UART enable
+        /// UART enable:
+        ///
+        /// 0 = UART is disabled. If the UART is disabled in the middle of transmission or
+        /// reception, it completes the current character before stopping.
+        ///
+        /// 1 = The UART is enabled. Data transmission and reception occurs for either UART signals
+        /// or SIR signals depending on the setting of the SIREN bit
         UARTEN OFFSET(0) NUMBITS(1) [
             /// If the UART is disabled in the middle of transmission or reception, it completes the
             /// current character before stopping.
@@ -112,7 +138,7 @@ register_bitfields! {
         ]
     ],
 
-    /// Interrupt FIFO Level Select Register
+    /// Interrupt FIFO Level Select Register.
     IFLS [
         /// Receive interrupt FIFO level select. The trigger points for the receive interrupt are as
         /// follows.
@@ -125,25 +151,29 @@ register_bitfields! {
         ]
     ],
 
-    /// Interrupt Mask Set Clear Register
+    /// Interrupt Mask Set/Clear Register.
     IMSC [
         /// Receive timeout interrupt mask. A read returns the current mask for the UARTRTINTR
-        /// interrupt. On a write of 1, the mask of the interrupt is set. A write of 0 clears the
-        /// mask.
+        /// interrupt.
+        ///
+        /// - On a write of 1, the mask of the UARTRTINTR interrupt is set.
+        /// - A write of 0 clears the mask.
         RTIM OFFSET(6) NUMBITS(1) [
             Disabled = 0,
             Enabled = 1
         ],
 
-        /// Receive interrupt mask. A read returns the current mask for the UARTRXINTR interrupt. On
-        /// a write of 1, the mask of the interrupt is set. A write of 0 clears the mask.
+        /// Receive interrupt mask. A read returns the current mask for the UARTRXINTR interrupt.
+        ///
+        /// - On a write of 1, the mask of the UARTRXINTR interrupt is set.
+        /// - A write of 0 clears the mask.
         RXIM OFFSET(4) NUMBITS(1) [
             Disabled = 0,
             Enabled = 1
         ]
     ],
 
-    /// Masked Interrupt Status Register
+    /// Masked Interrupt Status Register.
     MIS [
         /// Receive timeout masked interrupt status. Returns the masked interrupt state of the
         /// UARTRTINTR interrupt.
@@ -154,9 +184,9 @@ register_bitfields! {
         RXMIS OFFSET(4) NUMBITS(1) []
     ],
 
-    /// Interrupt Clear Register
+    /// Interrupt Clear Register.
     ICR [
-        /// Meta field for all pending interrupts
+        /// Meta field for all pending interrupts.
         ALL OFFSET(0) NUMBITS(11) []
     ]
 }
@@ -170,7 +200,7 @@ register_structs! {
         (0x1c => _reserved2),
         (0x24 => IBRD: WriteOnly<u32, IBRD::Register>),
         (0x28 => FBRD: WriteOnly<u32, FBRD::Register>),
-        (0x2c => LCRH: WriteOnly<u32, LCRH::Register>),
+        (0x2c => LCR_H: WriteOnly<u32, LCR_H::Register>),
         (0x30 => CR: WriteOnly<u32, CR::Register>),
         (0x34 => IFLS: ReadWrite<u32, IFLS::Register>),
         (0x38 => IMSC: ReadWrite<u32, IMSC::Register>),
@@ -234,11 +264,18 @@ impl PL011UartInner {
     /// This results in 8N1 and 921_600 baud.
     ///
     /// The calculation for the BRD is (we set the clock to 48 MHz in config.txt):
-    /// `(48_000_000 / 16) / 921_600 = 3.2552083`. `3` goes to the `IBRD` (integer field).
+    /// `(48_000_000 / 16) / 921_600 = 3.2552083`.
     ///
-    /// The `FBRD` (fractional field) is only 6 bits so `0.2552083 * 64 = 16.3 rounded to 16` will
-    /// give the best approximation we can get. A 5% error margin is acceptable for UART and we're
-    /// now at 0.02%.
+    /// This means the integer part is `3` and goes into the `IBRD`.
+    /// The fractional part is `0.2552083`.
+    ///
+    /// `FBRD` calculation according to the PL011 Technical Reference Manual:
+    /// `INTEGER((0.2552083 * 64) + 0.5) = 16`.
+    ///
+    /// Therefore, the generated baud rate divider is: `3 + 16/64 = 3.25`. Which results in a
+    /// genrated baud rate of `48_000_000 / (16 * 3.25) = 923_077`.
+    ///
+    /// Error = `((923_077 - 921_600) / 921_600) * 100 = 0.16%`.
     ///
     /// # Safety
     ///
@@ -264,14 +301,18 @@ impl PL011UartInner {
         // Clear all pending interrupts.
         self.registers.ICR.write(ICR::ALL::CLEAR);
 
-        // Set the baud rate.
-        self.registers.IBRD.write(IBRD::IBRD.val(3));
-        self.registers.FBRD.write(FBRD::FBRD.val(16));
-
-        // Set 8N1 + FIFO on.
+        // From the PL011 Technical Reference Manual:
+        //
+        // The LCR_H, IBRD, and FBRD registers form the single 30-bit wide LCR Register that is
+        // updated on a single write strobe generated by a LCR_H write. So, to internally update the
+        // contents of IBRD or FBRD, a LCR_H write must always be performed at the end.
+        //
+        // Set the baud rate, 8N1 and FIFO enabled.
+        self.registers.IBRD.write(IBRD::BAUD_DIVINT.val(3));
+        self.registers.FBRD.write(FBRD::BAUD_DIVFRAC.val(16));
         self.registers
-            .LCRH
-            .write(LCRH::WLEN::EightBit + LCRH::FEN::FifosEnabled);
+            .LCR_H
+            .write(LCR_H::WLEN::EightBit + LCR_H::FEN::FifosEnabled);
 
         // Set RX FIFO fill level at 1/8.
         self.registers.IFLS.write(IFLS::RXIFLSEL::OneEigth);
@@ -304,22 +345,10 @@ impl PL011UartInner {
 
     /// Block execution until the last buffered character has been physically put on the TX wire.
     fn flush(&self) {
-        use crate::{time, time::interface::TimeManager};
-        use core::time::Duration;
-
-        // The bit time for 921_600 baud is 1 / 921_600 = 1.09 µs. 8N1 has a total of 10 bits per
-        // symbol (start bit, 8 data bits, stop bit), so one symbol takes round about 10 * 1.09 =
-        // 10.9 µs, or 10_900 ns. Round it up to 12_000 ns to be on the safe side.
-        const CHAR_TIME_SAFE: Duration = Duration::from_nanos(12_000);
-
-        // Spin until TX FIFO empty is set.
-        while !self.registers.FR.matches_all(FR::TXFE::SET) {
+        // Spin until the busy bit is cleared.
+        while self.registers.FR.matches_all(FR::BUSY::SET) {
             cpu::nop();
         }
-
-        // After the last character has been queued for transmission, wait for the time of one
-        // character + some extra time for safety.
-        time::time_manager().spin_for(CHAR_TIME_SAFE);
     }
 
     /// Retrieve a character.

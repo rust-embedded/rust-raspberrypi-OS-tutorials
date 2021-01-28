@@ -1775,8 +1775,8 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 --- 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -5,8 +5,8 @@
- //! PL011 UART driver.
+@@ -10,8 +10,8 @@
+ //! - https://developer.arm.com/documentation/ddi0183/latest
 
  use crate::{
 -    bsp::device_driver::common::MMIODerefWrapper, console, cpu, driver, synchronization,
@@ -1786,11 +1786,11 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
  };
  use core::fmt;
  use register::{mmio::*, register_bitfields, register_structs};
-@@ -109,6 +109,48 @@
+@@ -135,6 +135,52 @@
          ]
      ],
 
-+    /// Interrupt FIFO Level Select Register
++    /// Interrupt FIFO Level Select Register.
 +    IFLS [
 +        /// Receive interrupt FIFO level select. The trigger points for the receive interrupt are as
 +        /// follows.
@@ -1803,25 +1803,29 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
 +        ]
 +    ],
 +
-+    /// Interrupt Mask Set Clear Register
++    /// Interrupt Mask Set/Clear Register.
 +    IMSC [
 +        /// Receive timeout interrupt mask. A read returns the current mask for the UARTRTINTR
-+        /// interrupt. On a write of 1, the mask of the interrupt is set. A write of 0 clears the
-+        /// mask.
++        /// interrupt.
++        ///
++        /// - On a write of 1, the mask of the UARTRTINTR interrupt is set.
++        /// - A write of 0 clears the mask.
 +        RTIM OFFSET(6) NUMBITS(1) [
 +            Disabled = 0,
 +            Enabled = 1
 +        ],
 +
-+        /// Receive interrupt mask. A read returns the current mask for the UARTRXINTR interrupt. On
-+        /// a write of 1, the mask of the interrupt is set. A write of 0 clears the mask.
++        /// Receive interrupt mask. A read returns the current mask for the UARTRXINTR interrupt.
++        ///
++        /// - On a write of 1, the mask of the UARTRXINTR interrupt is set.
++        /// - A write of 0 clears the mask.
 +        RXIM OFFSET(4) NUMBITS(1) [
 +            Disabled = 0,
 +            Enabled = 1
 +        ]
 +    ],
 +
-+    /// Masked Interrupt Status Register
++    /// Masked Interrupt Status Register.
 +    MIS [
 +        /// Receive timeout masked interrupt status. Returns the masked interrupt state of the
 +        /// UARTRTINTR interrupt.
@@ -1832,12 +1836,12 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
 +        RXMIS OFFSET(4) NUMBITS(1) []
 +    ],
 +
-     /// Interrupt Clear Register
+     /// Interrupt Clear Register.
      ICR [
-         /// Meta field for all pending interrupts
-@@ -127,7 +169,10 @@
+         /// Meta field for all pending interrupts.
+@@ -153,7 +199,10 @@
          (0x28 => FBRD: WriteOnly<u32, FBRD::Register>),
-         (0x2c => LCRH: WriteOnly<u32, LCRH::Register>),
+         (0x2c => LCR_H: WriteOnly<u32, LCR_H::Register>),
          (0x30 => CR: WriteOnly<u32, CR::Register>),
 -        (0x34 => _reserved3),
 +        (0x34 => IFLS: ReadWrite<u32, IFLS::Register>),
@@ -1847,7 +1851,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
          (0x44 => ICR: WriteOnly<u32, ICR::Register>),
          (0x48 => @END),
      }
-@@ -157,7 +202,8 @@
+@@ -183,7 +232,8 @@
 
  /// Representation of the UART.
  pub struct PL011Uart {
@@ -1857,9 +1861,9 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -214,6 +260,14 @@
-             .LCRH
-             .write(LCRH::WLEN::EightBit + LCRH::FEN::FifosEnabled);
+@@ -251,6 +301,14 @@
+             .LCR_H
+             .write(LCR_H::WLEN::EightBit + LCR_H::FEN::FifosEnabled);
 
 +        // Set RX FIFO fill level at 1/8.
 +        self.registers.IFLS.write(IFLS::RXIFLSEL::OneEigth);
@@ -1872,7 +1876,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
          // Turn the UART on.
          self.registers
              .CR
-@@ -308,9 +362,13 @@
+@@ -333,9 +391,13 @@
      /// # Safety
      ///
      /// - The user must ensure to provide a correct MMIO start address.
@@ -1888,7 +1892,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
          }
      }
  }
-@@ -330,6 +388,21 @@
+@@ -355,6 +417,21 @@
 
          Ok(())
      }
@@ -1910,7 +1914,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
  }
 
  impl console::interface::Write for PL011Uart {
-@@ -376,3 +449,24 @@
+@@ -401,3 +478,24 @@
          self.inner.lock(|inner| inner.chars_read)
      }
  }
