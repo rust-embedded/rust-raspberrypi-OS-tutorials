@@ -38,7 +38,7 @@ pub struct IRQDescriptor {
 /// context, aka executing an interrupt vector or subcalls of it.
 ///
 /// Concept and implementation derived from the `CriticalSection` introduced in
-/// https://github.com/rust-embedded/bare-metal
+/// <https://github.com/rust-embedded/bare-metal>
 #[derive(Clone, Copy)]
 pub struct IRQContext<'irq_context> {
     _0: PhantomData<&'irq_context ()>,

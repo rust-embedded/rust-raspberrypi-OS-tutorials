@@ -6,8 +6,8 @@
 //!
 //! # Resources
 //!
-//! - https://github.com/raspberrypi/documentation/files/1888662/BCM2837-ARM-Peripherals.-.Revised.-.V2-1.pdf
-//! - https://developer.arm.com/documentation/ddi0183/latest
+//! - <https://github.com/raspberrypi/documentation/files/1888662/BCM2837-ARM-Peripherals.-.Revised.-.V2-1.pdf>
+//! - <https://developer.arm.com/documentation/ddi0183/latest>
 
 use crate::{
     bsp, bsp::device_driver::common::MMIODerefWrapper, console, cpu, driver, exception,

@@ -106,6 +106,8 @@
 //! 3. Finally, [`runtime_init::runtime_init()`] is called.
 //!
 //! [`cpu::boot::arch_boot::_start()`]: cpu/boot/arch_boot/fn._start.html
+//! [`relocate::relocate_self()`]: relocate/fn.relocate_self.html
+//! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
 
 #![feature(asm)]
 #![feature(const_fn_fn_ptr_basics)]

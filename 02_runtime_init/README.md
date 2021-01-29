@@ -199,15 +199,18 @@ diff -uNr 01_wait_forever/src/cpu.rs 02_runtime_init/src/cpu.rs
 diff -uNr 01_wait_forever/src/main.rs 02_runtime_init/src/main.rs
 --- 01_wait_forever/src/main.rs
 +++ 02_runtime_init/src/main.rs
-@@ -102,6 +102,7 @@
+@@ -102,8 +102,10 @@
  //!
- //! 1. The kernel's entry point is the function `cpu::boot::arch_boot::_start()`.
+ //! 1. The kernel's entry point is the function [`cpu::boot::arch_boot::_start()`].
  //!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.S`.
 +//! 2. Once finished with architectural setup, the arch code calls [`runtime_init::runtime_init()`].
+ //!
+ //! [`cpu::boot::arch_boot::_start()`]: ../src/kernel/cpu/up/_arch/aarch64/cpu/boot.rs.html
++//! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
 
  #![feature(asm)]
  #![feature(global_asm)]
-@@ -110,6 +111,15 @@
+@@ -112,6 +114,15 @@
 
  mod bsp;
  mod cpu;

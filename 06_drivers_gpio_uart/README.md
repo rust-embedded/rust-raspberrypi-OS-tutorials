@@ -445,8 +445,8 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 06_dri
 +//!
 +//! # Resources
 +//!
-+//! - https://github.com/raspberrypi/documentation/files/1888662/BCM2837-ARM-Peripherals.-.Revised.-.V2-1.pdf
-+//! - https://developer.arm.com/documentation/ddi0183/latest
++//! - <https://github.com/raspberrypi/documentation/files/1888662/BCM2837-ARM-Peripherals.-.Revised.-.V2-1.pdf>
++//! - <https://developer.arm.com/documentation/ddi0183/latest>
 +
 +use crate::{
 +    bsp::device_driver::common::MMIODerefWrapper, console, cpu, driver, synchronization,
@@ -1302,15 +1302,15 @@ diff -uNr 05_safe_globals/src/driver.rs 06_drivers_gpio_uart/src/driver.rs
 diff -uNr 05_safe_globals/src/main.rs 06_drivers_gpio_uart/src/main.rs
 --- 05_safe_globals/src/main.rs
 +++ 06_drivers_gpio_uart/src/main.rs
-@@ -106,6 +106,7 @@
- //!
+@@ -107,6 +107,7 @@
  //! [`cpu::boot::arch_boot::_start()`]: cpu/boot/arch_boot/fn._start.html
+ //! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
 
 +#![feature(const_fn_fn_ptr_basics)]
  #![feature(format_args_nl)]
  #![feature(panic_info_message)]
  #![feature(trait_alias)]
-@@ -115,6 +116,7 @@
+@@ -116,6 +117,7 @@
  mod bsp;
  mod console;
  mod cpu;
@@ -1318,7 +1318,7 @@ diff -uNr 05_safe_globals/src/main.rs 06_drivers_gpio_uart/src/main.rs
  mod memory;
  mod panic_wait;
  mod print;
-@@ -126,16 +128,49 @@
+@@ -127,16 +129,49 @@
  /// # Safety
  ///
  /// - Only a single core must be active and running this function.
@@ -1398,7 +1398,7 @@ diff -uNr 05_safe_globals/src/panic_wait.rs 06_drivers_gpio_uart/src/panic_wait.
 +
 +/// Prints with a newline - only use from the panic handler.
 +///
-+/// Carbon copy from https://doc.rust-lang.org/src/std/macros.rs.html
++/// Carbon copy from <https://doc.rust-lang.org/src/std/macros.rs.html>
 +#[macro_export]
 +macro_rules! panic_println {
 +    ($($arg:tt)*) => ({

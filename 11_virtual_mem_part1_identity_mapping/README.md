@@ -1006,9 +1006,9 @@ diff -uNr 10_privilege_level/src/bsp.rs 11_virtual_mem_part1_identity_mapping/sr
 diff -uNr 10_privilege_level/src/main.rs 11_virtual_mem_part1_identity_mapping/src/main.rs
 --- 10_privilege_level/src/main.rs
 +++ 11_virtual_mem_part1_identity_mapping/src/main.rs
-@@ -106,7 +106,10 @@
- //!
+@@ -107,7 +107,10 @@
  //! [`cpu::boot::arch_boot::_start()`]: cpu/boot/arch_boot/fn._start.html
+ //! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
 
 +#![allow(incomplete_features)]
  #![feature(const_fn_fn_ptr_basics)]
@@ -1017,7 +1017,7 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_mem_part1_identity_mapping/s
  #![feature(format_args_nl)]
  #![feature(panic_info_message)]
  #![feature(trait_alias)]
-@@ -130,9 +133,18 @@
+@@ -131,9 +134,18 @@
  /// # Safety
  ///
  /// - Only a single core must be active and running this function.
@@ -1037,7 +1037,7 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_mem_part1_identity_mapping/s
 
      for i in bsp::driver::driver_manager().all_device_drivers().iter() {
          if let Err(x) = i.init() {
-@@ -156,6 +168,9 @@
+@@ -157,6 +169,9 @@
 
      info!("Booting on: {}", bsp::board_name());
 
@@ -1047,7 +1047,7 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_mem_part1_identity_mapping/s
      let (_, privilege_level) = exception::current_privilege_level();
      info!("Current privilege level: {}", privilege_level);
 
-@@ -179,6 +194,13 @@
+@@ -180,6 +195,13 @@
      info!("Timer test, spinning for 1 second");
      time::time_manager().spin_for(Duration::from_secs(1));
 

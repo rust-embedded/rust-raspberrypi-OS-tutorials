@@ -211,7 +211,7 @@ diff -uNr 04_zero_overhead_abstraction/src/console.rs 05_safe_globals/src/consol
 diff -uNr 04_zero_overhead_abstraction/src/main.rs 05_safe_globals/src/main.rs
 --- 04_zero_overhead_abstraction/src/main.rs
 +++ 05_safe_globals/src/main.rs
-@@ -108,6 +108,7 @@
+@@ -109,6 +109,7 @@
 
  #![feature(format_args_nl)]
  #![feature(panic_info_message)]
@@ -219,7 +219,7 @@ diff -uNr 04_zero_overhead_abstraction/src/main.rs 05_safe_globals/src/main.rs
  #![no_main]
  #![no_std]
 
-@@ -118,6 +119,7 @@
+@@ -119,6 +120,7 @@
  mod panic_wait;
  mod print;
  mod runtime_init;
@@ -227,7 +227,7 @@ diff -uNr 04_zero_overhead_abstraction/src/main.rs 05_safe_globals/src/main.rs
 
  /// Early init code.
  ///
-@@ -125,8 +127,15 @@
+@@ -126,8 +128,15 @@
  ///
  /// - Only a single core must be active and running this function.
  unsafe fn kernel_init() -> ! {
@@ -248,17 +248,18 @@ diff -uNr 04_zero_overhead_abstraction/src/main.rs 05_safe_globals/src/main.rs
 diff -uNr 04_zero_overhead_abstraction/src/synchronization.rs 05_safe_globals/src/synchronization.rs
 --- 04_zero_overhead_abstraction/src/synchronization.rs
 +++ 05_safe_globals/src/synchronization.rs
-@@ -0,0 +1,76 @@
+@@ -0,0 +1,77 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Synchronization primitives.
 +//!
-+//! Suggested literature:
-+//!   - https://doc.rust-lang.org/book/ch16-04-extensible-concurrency-sync-and-send.html
-+//!   - https://stackoverflow.com/questions/59428096/understanding-the-send-trait
-+//!   - https://doc.rust-lang.org/std/cell/index.html
++//! # Resources
++//!
++//!   - <https://doc.rust-lang.org/book/ch16-04-extensible-concurrency-sync-and-send.html>
++//!   - <https://stackoverflow.com/questions/59428096/understanding-the-send-trait>
++//!   - <https://doc.rust-lang.org/std/cell/index.html>
 +
 +use core::cell::UnsafeCell;
 +

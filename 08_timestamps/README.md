@@ -499,7 +499,7 @@ diff -uNr 07_uart_chainloader/src/cpu.rs 08_timestamps/src/cpu.rs
 diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
 --- 07_uart_chainloader/src/main.rs
 +++ 08_timestamps/src/main.rs
-@@ -102,14 +102,11 @@
+@@ -102,16 +102,12 @@
  //!
  //! 1. The kernel's entry point is the function [`cpu::boot::arch_boot::_start()`].
  //!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.rs`.
@@ -508,6 +508,8 @@ diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
 +//! 2. Once finished with architectural setup, the arch code calls [`runtime_init::runtime_init()`].
  //!
  //! [`cpu::boot::arch_boot::_start()`]: cpu/boot/arch_boot/fn._start.html
+-//! [`relocate::relocate_self()`]: relocate/fn.relocate_self.html
+ //! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
 
 -#![feature(asm)]
  #![feature(const_fn_fn_ptr_basics)]
@@ -515,7 +517,7 @@ diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
  #![feature(format_args_nl)]
  #![feature(panic_info_message)]
  #![feature(trait_alias)]
-@@ -123,9 +120,9 @@
+@@ -125,9 +121,9 @@
  mod memory;
  mod panic_wait;
  mod print;
@@ -526,7 +528,7 @@ diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
 
  /// Early init code.
  ///
-@@ -150,51 +147,31 @@
+@@ -152,51 +148,31 @@
 
  /// The main function running after the early init.
  fn kernel_main() -> ! {

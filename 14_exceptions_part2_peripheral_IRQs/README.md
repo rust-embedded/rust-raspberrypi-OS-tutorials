@@ -1776,7 +1776,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
 --- 13_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 @@ -10,8 +10,8 @@
- //! - https://developer.arm.com/documentation/ddi0183/latest
+ //! - <https://developer.arm.com/documentation/ddi0183/latest>
 
  use crate::{
 -    bsp::device_driver::common::MMIODerefWrapper, console, cpu, driver, synchronization,
@@ -2180,7 +2180,7 @@ diff -uNr 13_integrated_testing/src/exception/asynchronous.rs 14_exceptions_part
 +/// context, aka executing an interrupt vector or subcalls of it.
 +///
 +/// Concept and implementation derived from the `CriticalSection` introduced in
-+/// https://github.com/rust-embedded/bare-metal
++/// <https://github.com/rust-embedded/bare-metal>
 +#[derive(Clone, Copy)]
 +pub struct IRQContext<'irq_context> {
 +    _0: PhantomData<&'irq_context ()>,
@@ -2296,8 +2296,8 @@ diff -uNr 13_integrated_testing/src/exception/asynchronous.rs 14_exceptions_part
 diff -uNr 13_integrated_testing/src/lib.rs 14_exceptions_part2_peripheral_IRQs/src/lib.rs
 --- 13_integrated_testing/src/lib.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/lib.rs
-@@ -109,9 +109,11 @@
- //! [`cpu::boot::arch_boot::_start()`]: cpu/boot/arch_boot/fn._start.html
+@@ -110,9 +110,11 @@
+ //! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
 
  #![allow(incomplete_features)]
 +#![feature(asm)]
@@ -2308,7 +2308,7 @@ diff -uNr 13_integrated_testing/src/lib.rs 14_exceptions_part2_peripheral_IRQs/s
  #![feature(format_args_nl)]
  #![feature(global_asm)]
  #![feature(linkage)]
-@@ -135,6 +137,7 @@
+@@ -136,6 +138,7 @@
  pub mod exception;
  pub mod memory;
  pub mod print;
@@ -2510,7 +2510,7 @@ diff -uNr 13_integrated_testing/src/state.rs 14_exceptions_part2_peripheral_IRQs
 diff -uNr 13_integrated_testing/src/synchronization.rs 14_exceptions_part2_peripheral_IRQs/src/synchronization.rs
 --- 13_integrated_testing/src/synchronization.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/synchronization.rs
-@@ -27,6 +27,21 @@
+@@ -28,6 +28,21 @@
          /// Locks the mutex and grants the closure temporary mutable access to the wrapped data.
          fn lock<R>(&self, f: impl FnOnce(&mut Self::Data) -> R) -> R;
      }
@@ -2532,7 +2532,7 @@ diff -uNr 13_integrated_testing/src/synchronization.rs 14_exceptions_part2_perip
  }
 
  /// A pseudo-lock for teaching purposes.
-@@ -35,8 +50,18 @@
+@@ -36,8 +51,18 @@
  /// other cores to the contained data. This part is preserved for later lessons.
  ///
  /// The lock will only be used as long as it is safe to do so, i.e. as long as the kernel is
@@ -2553,7 +2553,7 @@ diff -uNr 13_integrated_testing/src/synchronization.rs 14_exceptions_part2_perip
  where
      T: ?Sized,
  {
-@@ -47,10 +72,22 @@
+@@ -48,10 +73,22 @@
  // Public Code
  //--------------------------------------------------------------------------------------------------
 
@@ -2579,7 +2579,7 @@ diff -uNr 13_integrated_testing/src/synchronization.rs 14_exceptions_part2_perip
      /// Create an instance.
      pub const fn new(data: T) -> Self {
          Self {
-@@ -62,8 +99,9 @@
+@@ -63,8 +100,9 @@
  //------------------------------------------------------------------------------
  // OS Interface Code
  //------------------------------------------------------------------------------
@@ -2590,7 +2590,7 @@ diff -uNr 13_integrated_testing/src/synchronization.rs 14_exceptions_part2_perip
      type Data = T;
 
      fn lock<R>(&self, f: impl FnOnce(&mut Self::Data) -> R) -> R {
-@@ -71,6 +109,32 @@
+@@ -72,6 +110,32 @@
          // mutable reference will ever only be given out once at a time.
          let data = unsafe { &mut *self.data.get() };
 

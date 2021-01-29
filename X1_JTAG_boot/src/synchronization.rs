@@ -4,10 +4,11 @@
 
 //! Synchronization primitives.
 //!
-//! Suggested literature:
-//!   - https://doc.rust-lang.org/book/ch16-04-extensible-concurrency-sync-and-send.html
-//!   - https://stackoverflow.com/questions/59428096/understanding-the-send-trait
-//!   - https://doc.rust-lang.org/std/cell/index.html
+//! # Resources
+//!
+//!   - <https://doc.rust-lang.org/book/ch16-04-extensible-concurrency-sync-and-send.html>
+//!   - <https://stackoverflow.com/questions/59428096/understanding-the-send-trait>
+//!   - <https://doc.rust-lang.org/std/cell/index.html>
 
 use core::cell::UnsafeCell;
 

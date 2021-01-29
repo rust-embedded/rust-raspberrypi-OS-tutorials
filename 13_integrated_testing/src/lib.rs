@@ -107,6 +107,7 @@
 //! 2. Once finished with architectural setup, the arch code calls [`runtime_init::runtime_init()`].
 //!
 //! [`cpu::boot::arch_boot::_start()`]: cpu/boot/arch_boot/fn._start.html
+//! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
 
 #![allow(incomplete_features)]
 #![feature(const_fn_fn_ptr_basics)]

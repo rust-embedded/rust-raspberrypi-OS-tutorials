@@ -242,9 +242,9 @@ diff -uNr 03_hacky_hello_world/src/cpu.rs 04_zero_overhead_abstraction/src/cpu.r
 diff -uNr 03_hacky_hello_world/src/main.rs 04_zero_overhead_abstraction/src/main.rs
 --- 03_hacky_hello_world/src/main.rs
 +++ 04_zero_overhead_abstraction/src/main.rs
-@@ -106,9 +106,7 @@
- //!
+@@ -107,9 +107,7 @@
  //! [`cpu::boot::arch_boot::_start()`]: cpu/boot/arch_boot/fn._start.html
+ //! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
 
 -#![feature(asm)]
  #![feature(format_args_nl)]
@@ -252,7 +252,7 @@ diff -uNr 03_hacky_hello_world/src/main.rs 04_zero_overhead_abstraction/src/main
  #![feature(panic_info_message)]
  #![no_main]
  #![no_std]
-@@ -127,7 +125,8 @@
+@@ -128,7 +126,8 @@
  ///
  /// - Only a single core must be active and running this function.
  unsafe fn kernel_init() -> ! {

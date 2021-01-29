@@ -1190,7 +1190,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
 --- 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 15_virtual_mem_part2_mmio_remap/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 @@ -10,10 +10,13 @@
- //! - https://developer.arm.com/documentation/ddi0183/latest
+ //! - <https://developer.arm.com/documentation/ddi0183/latest>
 
  use crate::{
 -    bsp, bsp::device_driver::common::MMIODerefWrapper, console, cpu, driver, exception,
@@ -1939,7 +1939,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/driver.rs 15_virtual_mem_part2
 diff -uNr 14_exceptions_part2_peripheral_IRQs/src/lib.rs 15_virtual_mem_part2_mmio_remap/src/lib.rs
 --- 14_exceptions_part2_peripheral_IRQs/src/lib.rs
 +++ 15_virtual_mem_part2_mmio_remap/src/lib.rs
-@@ -110,6 +110,7 @@
+@@ -111,6 +111,7 @@
 
  #![allow(incomplete_features)]
  #![feature(asm)]
@@ -1947,7 +1947,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/lib.rs 15_virtual_mem_part2_mm
  #![feature(const_fn_fn_ptr_basics)]
  #![feature(const_generics)]
  #![feature(const_panic)]
-@@ -131,6 +132,7 @@
+@@ -132,6 +133,7 @@
  mod synchronization;
 
  pub mod bsp;

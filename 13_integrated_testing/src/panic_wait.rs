@@ -36,7 +36,7 @@ fn _panic_exit() -> ! {
 
 /// Prints with a newline - only use from the panic handler.
 ///
-/// Carbon copy from https://doc.rust-lang.org/src/std/macros.rs.html
+/// Carbon copy from <https://doc.rust-lang.org/src/std/macros.rs.html>
 #[macro_export]
 macro_rules! panic_println {
     ($($arg:tt)*) => ({

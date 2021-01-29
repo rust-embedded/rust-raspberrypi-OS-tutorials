@@ -406,7 +406,7 @@ diff -uNr 06_drivers_gpio_uart/src/cpu.rs 07_uart_chainloader/src/cpu.rs
 diff -uNr 06_drivers_gpio_uart/src/main.rs 07_uart_chainloader/src/main.rs
 --- 06_drivers_gpio_uart/src/main.rs
 +++ 07_uart_chainloader/src/main.rs
-@@ -102,11 +102,14 @@
+@@ -102,12 +102,16 @@
  //!
  //! 1. The kernel's entry point is the function [`cpu::boot::arch_boot::_start()`].
  //!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.rs`.
@@ -415,6 +415,8 @@ diff -uNr 06_drivers_gpio_uart/src/main.rs 07_uart_chainloader/src/main.rs
 +//! 3. Finally, [`runtime_init::runtime_init()`] is called.
  //!
  //! [`cpu::boot::arch_boot::_start()`]: cpu/boot/arch_boot/fn._start.html
++//! [`relocate::relocate_self()`]: relocate/fn.relocate_self.html
+ //! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
 
 +#![feature(asm)]
  #![feature(const_fn_fn_ptr_basics)]
@@ -422,7 +424,7 @@ diff -uNr 06_drivers_gpio_uart/src/main.rs 07_uart_chainloader/src/main.rs
  #![feature(format_args_nl)]
  #![feature(panic_info_message)]
  #![feature(trait_alias)]
-@@ -120,6 +123,7 @@
+@@ -121,6 +125,7 @@
  mod memory;
  mod panic_wait;
  mod print;
@@ -430,7 +432,7 @@ diff -uNr 06_drivers_gpio_uart/src/main.rs 07_uart_chainloader/src/main.rs
  mod runtime_init;
  mod synchronization;
 
-@@ -148,29 +152,49 @@
+@@ -149,29 +154,49 @@
  fn kernel_main() -> ! {
      use bsp::console::console;
      use console::interface::All;

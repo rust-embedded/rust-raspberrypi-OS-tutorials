@@ -139,17 +139,17 @@ diff -uNr 02_runtime_init/src/console.rs 03_hacky_hello_world/src/console.rs
 diff -uNr 02_runtime_init/src/main.rs 03_hacky_hello_world/src/main.rs
 --- 02_runtime_init/src/main.rs
 +++ 03_hacky_hello_world/src/main.rs
-@@ -100,19 +100,25 @@
- //!
+@@ -101,21 +101,25 @@
  //! # Boot flow
  //!
--//! 1. The kernel's entry point is the function `cpu::boot::arch_boot::_start()`.
+ //! 1. The kernel's entry point is the function [`cpu::boot::arch_boot::_start()`].
 -//!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.S`.
-+//! 1. The kernel's entry point is the function [`cpu::boot::arch_boot::_start()`].
 +//!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.rs`.
  //! 2. Once finished with architectural setup, the arch code calls [`runtime_init::runtime_init()`].
-+//!
+ //!
+-//! [`cpu::boot::arch_boot::_start()`]: ../src/kernel/cpu/up/_arch/aarch64/cpu/boot.rs.html
 +//! [`cpu::boot::arch_boot::_start()`]: cpu/boot/arch_boot/fn._start.html
+ //! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
 
  #![feature(asm)]
 +#![feature(format_args_nl)]
@@ -167,7 +167,7 @@ diff -uNr 02_runtime_init/src/main.rs 03_hacky_hello_world/src/main.rs
  mod runtime_init;
 
  /// Early init code.
-@@ -121,5 +127,7 @@
+@@ -124,5 +128,7 @@
  ///
  /// - Only a single core must be active and running this function.
  unsafe fn kernel_init() -> ! {
@@ -226,7 +226,7 @@ diff -uNr 02_runtime_init/src/print.rs 03_hacky_hello_world/src/print.rs
 +
 +/// Prints without a newline.
 +///
-+/// Carbon copy from https://doc.rust-lang.org/src/std/macros.rs.html
++/// Carbon copy from <https://doc.rust-lang.org/src/std/macros.rs.html>
 +#[macro_export]
 +macro_rules! print {
 +    ($($arg:tt)*) => ($crate::print::_print(format_args!($($arg)*)));
@@ -234,7 +234,7 @@ diff -uNr 02_runtime_init/src/print.rs 03_hacky_hello_world/src/print.rs
 +
 +/// Prints with a newline.
 +///
-+/// Carbon copy from https://doc.rust-lang.org/src/std/macros.rs.html
++/// Carbon copy from <https://doc.rust-lang.org/src/std/macros.rs.html>
 +#[macro_export]
 +macro_rules! println {
 +    () => ($crate::print!("\n"));
