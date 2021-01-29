@@ -13,7 +13,7 @@
 
 use crate::{time, warn};
 use core::time::Duration;
-use cortex_a::regs::*;
+use cortex_a::{barrier, regs::*};
 
 //--------------------------------------------------------------------------------------------------
 // Private Definitions
@@ -29,6 +29,19 @@ struct GenericTimer;
 //--------------------------------------------------------------------------------------------------
 
 static TIME_MANAGER: GenericTimer = GenericTimer;
+
+//--------------------------------------------------------------------------------------------------
+// Private Code
+//--------------------------------------------------------------------------------------------------
+
+impl GenericTimer {
+    #[inline(always)]
+    fn read_cntpct(&self) -> u64 {
+        // Prevent that the counter is read ahead of time due to out-of-order execution.
+        unsafe { barrier::isb(barrier::SY) };
+        CNTPCT_EL0.get()
+    }
+}
 
 //--------------------------------------------------------------------------------------------------
 // Public Code
@@ -49,8 +62,8 @@ impl time::interface::TimeManager for GenericTimer {
     }
 
     fn uptime(&self) -> Duration {
+        let current_count: u64 = self.read_cntpct() * NS_PER_S;
         let frq: u64 = CNTFRQ_EL0.get() as u64;
-        let current_count: u64 = CNTPCT_EL0.get() * NS_PER_S;
 
         Duration::from_nanos(current_count / frq)
     }
