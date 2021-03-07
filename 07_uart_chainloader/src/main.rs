@@ -109,6 +109,7 @@
 //! [`relocate::relocate_self()`]: relocate/fn.relocate_self.html
 //! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
 
+#![allow(clippy::clippy::upper_case_acronyms)]
 #![feature(asm)]
 #![feature(const_fn_fn_ptr_basics)]
 #![feature(core_intrinsics)]

@@ -1939,15 +1939,15 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/driver.rs 15_virtual_mem_part2
 diff -uNr 14_exceptions_part2_peripheral_IRQs/src/lib.rs 15_virtual_mem_part2_mmio_remap/src/lib.rs
 --- 14_exceptions_part2_peripheral_IRQs/src/lib.rs
 +++ 15_virtual_mem_part2_mmio_remap/src/lib.rs
-@@ -111,6 +111,7 @@
-
+@@ -112,6 +112,7 @@
+ #![allow(clippy::clippy::upper_case_acronyms)]
  #![allow(incomplete_features)]
  #![feature(asm)]
 +#![feature(const_fn)]
  #![feature(const_fn_fn_ptr_basics)]
  #![feature(const_generics)]
  #![feature(const_panic)]
-@@ -132,6 +133,7 @@
+@@ -133,6 +134,7 @@
  mod synchronization;
 
  pub mod bsp;

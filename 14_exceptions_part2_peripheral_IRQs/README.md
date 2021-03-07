@@ -2296,9 +2296,9 @@ diff -uNr 13_integrated_testing/src/exception/asynchronous.rs 14_exceptions_part
 diff -uNr 13_integrated_testing/src/lib.rs 14_exceptions_part2_peripheral_IRQs/src/lib.rs
 --- 13_integrated_testing/src/lib.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/lib.rs
-@@ -110,9 +110,11 @@
- //! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
+@@ -111,9 +111,11 @@
 
+ #![allow(clippy::clippy::upper_case_acronyms)]
  #![allow(incomplete_features)]
 +#![feature(asm)]
  #![feature(const_fn_fn_ptr_basics)]
@@ -2308,7 +2308,7 @@ diff -uNr 13_integrated_testing/src/lib.rs 14_exceptions_part2_peripheral_IRQs/s
  #![feature(format_args_nl)]
  #![feature(global_asm)]
  #![feature(linkage)]
-@@ -136,6 +138,7 @@
+@@ -137,6 +139,7 @@
  pub mod exception;
  pub mod memory;
  pub mod print;

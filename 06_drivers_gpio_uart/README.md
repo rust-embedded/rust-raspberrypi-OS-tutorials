@@ -1302,15 +1302,16 @@ diff -uNr 05_safe_globals/src/driver.rs 06_drivers_gpio_uart/src/driver.rs
 diff -uNr 05_safe_globals/src/main.rs 06_drivers_gpio_uart/src/main.rs
 --- 05_safe_globals/src/main.rs
 +++ 06_drivers_gpio_uart/src/main.rs
-@@ -107,6 +107,7 @@
+@@ -107,6 +107,8 @@
  //! [`cpu::boot::arch_boot::_start()`]: cpu/boot/arch_boot/fn._start.html
  //! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
 
++#![allow(clippy::clippy::upper_case_acronyms)]
 +#![feature(const_fn_fn_ptr_basics)]
  #![feature(format_args_nl)]
  #![feature(panic_info_message)]
  #![feature(trait_alias)]
-@@ -116,6 +117,7 @@
+@@ -116,6 +118,7 @@
  mod bsp;
  mod console;
  mod cpu;
@@ -1318,7 +1319,7 @@ diff -uNr 05_safe_globals/src/main.rs 06_drivers_gpio_uart/src/main.rs
  mod memory;
  mod panic_wait;
  mod print;
-@@ -127,16 +129,49 @@
+@@ -127,16 +130,49 @@
  /// # Safety
  ///
  /// - Only a single core must be active and running this function.

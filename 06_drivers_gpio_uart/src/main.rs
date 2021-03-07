@@ -107,6 +107,7 @@
 //! [`cpu::boot::arch_boot::_start()`]: cpu/boot/arch_boot/fn._start.html
 //! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
 
+#![allow(clippy::clippy::upper_case_acronyms)]
 #![feature(const_fn_fn_ptr_basics)]
 #![feature(format_args_nl)]
 #![feature(panic_info_message)]

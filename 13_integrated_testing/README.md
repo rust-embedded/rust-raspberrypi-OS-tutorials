@@ -1157,7 +1157,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/exception.rs 13_integrated_testing/
 diff -uNr 12_exceptions_part1_groundwork/src/lib.rs 13_integrated_testing/src/lib.rs
 --- 12_exceptions_part1_groundwork/src/lib.rs
 +++ 13_integrated_testing/src/lib.rs
-@@ -0,0 +1,169 @@
+@@ -0,0 +1,170 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -1269,6 +1269,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/lib.rs 13_integrated_testing/src/li
 +//! [`cpu::boot::arch_boot::_start()`]: cpu/boot/arch_boot/fn._start.html
 +//! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
 +
++#![allow(clippy::clippy::upper_case_acronyms)]
 +#![allow(incomplete_features)]
 +#![feature(const_fn_fn_ptr_basics)]
 +#![feature(const_generics)]
@@ -1331,7 +1332,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/lib.rs 13_integrated_testing/src/li
 diff -uNr 12_exceptions_part1_groundwork/src/main.rs 13_integrated_testing/src/main.rs
 --- 12_exceptions_part1_groundwork/src/main.rs
 +++ 13_integrated_testing/src/main.rs
-@@ -6,129 +6,12 @@
+@@ -6,130 +6,12 @@
  #![doc(html_logo_url = "https://git.io/JeGIp")]
 
  //! The `kernel` binary.
@@ -1436,6 +1437,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/main.rs 13_integrated_testing/src/m
 -//! [`cpu::boot::arch_boot::_start()`]: cpu/boot/arch_boot/fn._start.html
 -//! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
 -
+-#![allow(clippy::clippy::upper_case_acronyms)]
 -#![allow(incomplete_features)]
 -#![feature(const_fn_fn_ptr_basics)]
 -#![feature(const_generics)]
@@ -1463,7 +1465,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/main.rs 13_integrated_testing/src/m
 
  /// Early init code.
  ///
-@@ -140,6 +23,7 @@
+@@ -141,6 +23,7 @@
  ///       - Without it, any atomic operations, e.g. the yet-to-be-introduced spinlocks in the device
  ///         drivers (which currently employ NullLocks instead of spinlocks), will fail to work on
  ///         the RPi SoCs.
@@ -1471,7 +1473,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/main.rs 13_integrated_testing/src/m
  unsafe fn kernel_init() -> ! {
      use driver::interface::DriverManager;
      use memory::mmu::interface::MMU;
-@@ -166,9 +50,7 @@
+@@ -167,9 +50,7 @@
  fn kernel_main() -> ! {
      use bsp::console::console;
      use console::interface::All;
@@ -1481,7 +1483,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/main.rs 13_integrated_testing/src/m
 
      info!("Booting on: {}", bsp::board_name());
 
-@@ -195,31 +77,6 @@
+@@ -196,31 +77,6 @@
          info!("      {}. {}", i + 1, driver.compatible());
      }
 

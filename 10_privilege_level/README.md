@@ -484,7 +484,7 @@ diff -uNr 09_hw_debug_JTAG/src/exception.rs 10_privilege_level/src/exception.rs
 diff -uNr 09_hw_debug_JTAG/src/main.rs 10_privilege_level/src/main.rs
 --- 09_hw_debug_JTAG/src/main.rs
 +++ 10_privilege_level/src/main.rs
-@@ -118,6 +118,7 @@
+@@ -119,6 +119,7 @@
  mod console;
  mod cpu;
  mod driver;
@@ -492,7 +492,7 @@ diff -uNr 09_hw_debug_JTAG/src/main.rs 10_privilege_level/src/main.rs
  mod memory;
  mod panic_wait;
  mod print;
-@@ -148,12 +149,20 @@
+@@ -149,12 +150,20 @@
 
  /// The main function running after the early init.
  fn kernel_main() -> ! {
@@ -513,7 +513,7 @@ diff -uNr 09_hw_debug_JTAG/src/main.rs 10_privilege_level/src/main.rs
      info!(
          "Architectural timer resolution: {} ns",
          time::time_manager().resolution().as_nanos()
-@@ -168,11 +177,15 @@
+@@ -169,11 +178,15 @@
          info!("      {}. {}", i + 1, driver.compatible());
      }
 
