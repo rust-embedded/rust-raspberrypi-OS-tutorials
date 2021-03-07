@@ -14,38 +14,39 @@ LABEL maintainer="The resources team <resources@teams.rust-embedded.org>, Andre 
 # Ruby gems
 COPY Gemfile .
 
-RUN set -ex;                                        \
-    tempPkgs='                                      \
-        automake                                    \
-        bison                                       \
-        build-essential                             \
-        flex                                        \
-        git                                         \
-        libtool                                     \
-        pkg-config                                  \
-        wget                                        \
-    ';                                              \
-    apt-get update;                                 \
-    apt-get install -q -y --no-install-recommends   \
-        $tempPkgs                                   \
+RUN set -ex;                                      \
+    tempPkgs='                                    \
+        automake                                  \
+        bison                                     \
+        build-essential                           \
+        flex                                      \
+        git                                       \
+        libtool                                   \
+        ninja-build                               \
+        pkg-config                                \
+        wget                                      \
+    ';                                            \
+    apt-get update;                               \
+    apt-get install -q -y --no-install-recommends \
+        $tempPkgs                                 \
         # persistent packages
-        ca-certificates                             \
-        gdb-multiarch                               \
-        libpixman-1-dev                             \
-        libglib2.0-dev                              \
-        libusb-1.0.0-dev                            \
-        locales                                     \
-        python3                                     \
-        ruby                                        \
-        ruby-dev                                    \
-    ;                                               \
+        ca-certificates                           \
+        gdb-multiarch                             \
+        libpixman-1-dev                           \
+        libglib2.0-dev                            \
+        libusb-1.0.0-dev                          \
+        locales                                   \
+        python3                                   \
+        ruby                                      \
+        ruby-dev                                  \
+    ;                                             \
     # Ruby dependencies
     gem install bundler;                            \
     bundle install --retry 3 --without development; \
     # QEMU
     git clone git://git.qemu.org/qemu.git;                     \
     cd qemu;                                                   \
-    git checkout tags/v5.1.0;                                  \
+    git checkout tags/v5.2.0;                                  \
     ./configure --target-list=aarch64-softmmu --enable-modules \
         --enable-tcg-interpreter --enable-debug-tcg            \
         --python=/usr/bin/python3;                             \
@@ -61,16 +62,20 @@ RUN set -ex;                                        \
     make -j8;                                                           \
     make install;                                                       \
     # GDB
-    wget -P ~ git.io/.gdbinit;                      \
+    wget -P ~ git.io/.gdbinit; \
     # GCC AArch64 tools
-    wget https://developer.arm.com/-/media/Files/downloads/gnu-a/9.2-2019.12/binrel/gcc-arm-9.2-2019.12-x86_64-aarch64-none-elf.tar.xz; \
-    tar -xf gcc-arm-9*;                                                                                                                 \
-    cp gcc-arm-9*/bin/aarch64-none-elf-objdump gcc-arm-9*/bin/aarch64-none-elf-nm /usr/local/bin/;                                      \
-    rm -rf gcc-arm-9*;                                                                                                                  \
+    wget https://developer.arm.com/-/media/Files/downloads/gnu-a/10.2-2020.11/binrel/gcc-arm-10.2-2020.11-x86_64-aarch64-none-elf.tar.xz; \
+    tar -xf gcc-arm-10*;                                                                                                                  \
+    cp                                                                                                                                    \
+        gcc-arm-10*/bin/aarch64-none-elf-objdump                                                                                          \
+        gcc-arm-10*/bin/aarch64-none-elf-readelf                                                                                          \
+        gcc-arm-10*/bin/aarch64-none-elf-nm                                                                                               \
+        /usr/local/bin/;                                                                                                                  \
+    rm -rf gcc-arm-10*;                                                                                                                   \
     # Cleanup
-    apt-get purge -y --auto-remove $tempPkgs;       \
-    apt-get autoremove -q -y;                       \
-    apt-get clean -q -y;                            \
+    apt-get purge -y --auto-remove $tempPkgs; \
+    apt-get autoremove -q -y;                 \
+    apt-get clean -q -y;                      \
     rm -rf /var/lib/apt/lists/*
 
 # Locales
