@@ -210,13 +210,13 @@ The convetion is that as long as the test function does not `panic!`, the test w
 
 The last of the attributes we added is `#![reexport_test_harness_main = "test_main"]`. Remember that
 our kernel uses the `no_main` attribute, and that we also set it for the test compilation. We did
-that because we wrote our own `_start()` function (in `aarch64.rs`), which kicks off the following
-call chain during kernel boot:
+that because we wrote our own `_start()` function, which kicks off the following call chain during
+kernel boot:
 
 | | Function  | File |
 | - | - | - |
 | 1. | `_start()` | `lib.rs` |
-| 2. | (some more arch64 code) | `lib.rs` |
+| 2. | (some more aarch64 code) | `lib.rs` |
 | 3. | `runtime_init()` | `lib.rs` |
 | 4. | `kernel_init()` | `main.rs` |
 | 5. | `kernel_main()` | `main.rs` |
@@ -237,6 +237,7 @@ implementation in `lib.rs`:
 #[cfg(test)]
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
+    exception::handling_init();
     bsp::console::qemu_bring_up_console();
 
     test_main();
@@ -245,12 +246,12 @@ unsafe fn kernel_init() -> ! {
 }
 ```
 
-Note that we first call `bsp::console::qemu_bring_up_console()`. Since we are running all our tests
-inside `QEMU`, we need to ensure that whatever peripheral implements the kernel's `console`
-interface is initialized, so that we can print from our tests. If you recall [tutorial 03], bringing
-up peripherals in `QEMU` might not need the full initialization as is needed on real hardware
-(setting clocks, config registers, etc...) due to the abstractions in `QEMU`'s emulation code. So
-this is an opportunity to cut down on setup code.
+Note the call to `bsp::console::qemu_bring_up_console()`. Since we are running all our tests inside
+`QEMU`, we need to ensure that whatever peripheral implements the kernel's `console` interface is
+initialized, so that we can print from our tests. If you recall [tutorial 03], bringing up
+peripherals in `QEMU` might not need the full initialization as is needed on real hardware (setting
+clocks, config registers, etc...) due to the abstractions in `QEMU`'s emulation code. So this is an
+opportunity to cut down on setup code.
 
 [tutorial 03]: ../03_hacky_hello_world
 
@@ -290,16 +291,20 @@ following exit calls for the kernel:
 //--------------------------------------------------------------------------------------------------
 // Testing
 //--------------------------------------------------------------------------------------------------
+#[cfg(feature = "test_build")]
 use qemu_exit::QEMUExit;
 
+#[cfg(feature = "test_build")]
 const QEMU_EXIT_HANDLE: qemu_exit::AArch64 = qemu_exit::AArch64::new();
 
 /// Make the host QEMU binary execute `exit(1)`.
+#[cfg(feature = "test_build")]
 pub fn qemu_exit_failure() -> ! {
     QEMU_EXIT_HANDLE.exit_failure()
 }
 
 /// Make the host QEMU binary execute `exit(0)`.
+#[cfg(feature = "test_build")]
 pub fn qemu_exit_success() -> ! {
     QEMU_EXIT_HANDLE.exit_success()
 }
@@ -307,6 +312,10 @@ pub fn qemu_exit_success() -> ! {
 
 [Click here] in case you are interested in the implementation. Note that for the functions to work,
 the `-semihosting` flag must be added to the `QEMU` invocation.
+
+You might have also noted the `#[cfg(feature = "test_build")]`. In the `Makefile`, we ensure that
+this feature is only enabled when `cargo test` runs. This way, it is ensured that testing-specific
+code is conditionally compiled only for testing.
 
 [exit status]: https://en.wikipedia.org/wiki/Exit_status
 [@phil-opp]: https://github.com/phil-opp
@@ -322,19 +331,29 @@ Unit test failure shall be triggered by the `panic!` macro, either directly or b
 safely park the panicked CPU core in a busy loop. This can't be used for the unit tests, because
 `cargo` would wait forever for `QEMU` to exit and stall the whole test run. Again, conditional
 compilation is used to differentiate between a release and testing version of how a `panic!`
-concludes. Here is the new testing version:
+concludes:
 
 ```rust
-/// The point of exit when the library is compiled for testing.
-#[cfg(test)]
+/// The point of exit for `libkernel`.
+///
+/// It is linked weakly, so that the integration tests can overload its standard behavior.
+#[linkage = "weak"]
 #[no_mangle]
 fn _panic_exit() -> ! {
-    cpu::qemu_exit_failure()
+    #[cfg(not(test_build))]
+    {
+        cpu::wait_forever()
+    }
+
+    #[cfg(test_build)]
+    {
+        cpu::qemu_exit_failure()
+    }
 }
 ```
 
-In case none of the unit tests panicked, `lib.rs`'s  `kernel_init()` calls
-`cpu::qemu_exit_success()` to successfully conclude the unit test run.
+In case none of the unit tests panicked, `lib.rs`'s `kernel_init()` calls `cpu::qemu_exit_success()`
+to successfully conclude the unit test run.
 
 ### Controlling Test Kernel Execution
 
@@ -363,12 +382,15 @@ The file `kernel_test_runner.sh` does not exist by default. We generate it on de
 define KERNEL_TEST_RUNNER
     #!/usr/bin/env bash
 
-    $(OBJCOPY_CMD) $$1 $$1.img
+    TEST_ELF=$$(echo $$1 | sed -e 's/.*target/target/g')
     TEST_BINARY=$$(echo $$1.img | sed -e 's/.*target/target/g')
+
+    $(OBJCOPY_CMD) $$TEST_ELF $$TEST_BINARY
     $(DOCKER_TEST) ruby tests/runner.rb $(EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
 endef
 
 export KERNEL_TEST_RUNNER
+test: FEATURES += --features test_build
 test:
 	@mkdir -p target
 	@echo "$$KERNEL_TEST_RUNNER" > target/kernel_test_runner.sh
@@ -525,14 +547,13 @@ your test code into individual chunks. For example, take a look at `tests/01_tim
 #![reexport_test_harness_main = "test_main"]
 #![test_runner(libkernel::test_runner)]
 
-mod panic_exit_failure;
-
 use core::time::Duration;
-use libkernel::{bsp, cpu, time, time::interface::TimeManager};
+use libkernel::{bsp, cpu, exception, time, time::interface::TimeManager};
 use test_macros::kernel_test;
 
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
+    exception::handling_init();
     bsp::console::qemu_bring_up_console();
 
     // Depending on CPU arch, some timer bring-up code could go here. Not needed for the RPi.
@@ -579,30 +600,34 @@ harness = false
 
 #### Overriding Panic Behavior
 
-It is also important to understand that the `libkernel` made available to the integration tests is
-the _release_ version. Therefore, it won't contain any code attributed with `#[cfg(test)]`!
-
-One of the implications of this is that the `panic handler` provided by `libkernel` will be the
-version from the release kernel that spins forever, and not the test version that exits `QEMU`.
-
-One way to navigate around this is to declare the _release version of the panic exit function_ in
-`lib.rs` as a [weak symbol]:
+Did you notice the `#[linkage = "weak"]` attribute some chapters earlier at the `_panic_exit()`
+function? This marks the function in `lib.rs` as a [weak symbol]. Let's look at it again:
 
 ```rust
-#[cfg(not(test))]
+/// The point of exit for `libkernel`.
+///
+/// It is linked weakly, so that the integration tests can overload its standard behavior.
 #[linkage = "weak"]
 #[no_mangle]
 fn _panic_exit() -> ! {
-    cpu::wait_forever()
+    #[cfg(not(test_build))]
+    {
+        cpu::wait_forever()
+    }
+
+    #[cfg(test_build)]
+    {
+        cpu::qemu_exit_failure()
+    }
 }
 ```
 
 [weak symbol]: https://en.wikipedia.org/wiki/Weak_symbol
 
-Integration tests in `$CRATE/tests/` can now override it according to their needs, because depending
-on the kind of test, a `panic!` could mean success or failure. For example,
-`tests/02_exception_sync_page_fault.rs` is intentionally causing a page fault, so the wanted outcome
-is a `panic!`. Here is the whole test (minus some inline comments):
+This enables integration tests in `$CRATE/tests/` to override this function according to their
+needs. This is useful because depending on the kind of test, a `panic!` could mean success or
+failure. For example, `tests/02_exception_sync_page_fault.rs` is intentionally causing a page fault,
+so the wanted outcome is a `panic!`. Here is the whole test (minus some inline comments):
 
 ```rust
 //! Page faults must result in synchronous exceptions.
@@ -619,12 +644,11 @@ use libkernel::{bsp, cpu, exception, memory, println};
 unsafe fn kernel_init() -> ! {
     use memory::mmu::interface::MMU;
 
+    exception::handling_init();
     bsp::console::qemu_bring_up_console();
 
     println!("Testing synchronous exception handling by causing a page fault");
     println!("-------------------------------------------------------------------\n");
-
-    exception::handling_init();
 
     if let Err(string) = memory::mmu::mmu().init() {
         println!("MMU: {}", string);
@@ -638,11 +662,11 @@ unsafe fn kernel_init() -> ! {
     // If execution reaches here, the memory access above did not cause a page fault exception.
     cpu::qemu_exit_failure()
 }
+
 ```
 
 The `_panic_exit()` version that makes `QEMU` return `0` (indicating test success) is pulled in by
-`mod panic_exit_success;`. The counterpart would be `mod panic_exit_failure;`. We provide both in
-the `tests` folder, so each integration test can import the one that it needs.
+`mod panic_exit_success;`, and it will take precedence over the `weak` version from `lib.rs`.
 
 ### Console Tests
 
@@ -685,16 +709,15 @@ The subtest first sends `"ABC"` over the console to the kernel, and then expects
 #![no_main]
 #![no_std]
 
-mod panic_exit_failure;
-
-use libkernel::{bsp, console, print};
+use libkernel::{bsp, console, exception, print};
 
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
-    use bsp::console::{console, qemu_bring_up_console};
+    use bsp::console::console;
     use console::interface::*;
 
-    qemu_bring_up_console();
+    exception::handling_init();
+    bsp::console::qemu_bring_up_console();
 
     // Handshake
     assert_eq!(console().read_char(), 'A');
@@ -796,16 +819,28 @@ diff -uNr 12_exceptions_part1_groundwork/.cargo/config.toml 13_integrated_testin
 diff -uNr 12_exceptions_part1_groundwork/Cargo.toml 13_integrated_testing/Cargo.toml
 --- 12_exceptions_part1_groundwork/Cargo.toml
 +++ 13_integrated_testing/Cargo.toml
-@@ -18,11 +18,38 @@
+@@ -7,22 +7,49 @@
+ [profile.release]
+ lto = true
+
+-# The features section is used to select the target board.
+ [features]
+ default = []
+ bsp_rpi3 = ["register"]
+ bsp_rpi4 = ["register"]
++test_build = ["qemu-exit"]
+
+ ##--------------------------------------------------------------------------------------------------
+ ## Dependencies
  ##--------------------------------------------------------------------------------------------------
 
  [dependencies]
-+qemu-exit = "1.x.x"
 +test-types = { path = "test-types" }
 
  # Optional dependencies
 -register = { version = "1.x.x", optional = true }
 +register = { version = "1.x.x", features = ["no_std_unit_tests"], optional = true }
++qemu-exit = { version = "1.x.x", optional = true }
 
  # Platform specific dependencies
  [target.'cfg(target_arch = "aarch64")'.dependencies]
@@ -856,7 +891,7 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
      OBJDUMP_BINARY    = aarch64-none-elf-objdump
      NM_BINARY         = aarch64-none-elf-nm
      OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi4.cfg
-@@ -41,6 +43,17 @@
+@@ -41,18 +43,30 @@
  # Export for build.rs
  export LINKER_FILE
 
@@ -874,7 +909,14 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
  RUSTFLAGS          = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
  RUSTFLAGS_PEDANTIC = $(RUSTFLAGS) -D warnings -D missing_docs
 
-@@ -53,6 +66,7 @@
+-FEATURES      = bsp_$(BSP)
++FEATURES      = --features bsp_$(BSP)
+ COMPILER_ARGS = --target=$(TARGET) \
+-    --features $(FEATURES)         \
++    $(FEATURES)                    \
+     --release
+
+ RUSTC_CMD   = cargo rustc $(COMPILER_ARGS)
  DOC_CMD     = cargo doc $(COMPILER_ARGS)
  CLIPPY_CMD  = cargo clippy $(COMPILER_ARGS)
  CHECK_CMD   = cargo check $(COMPILER_ARGS)
@@ -901,7 +943,7 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
 
  all: $(KERNEL_BIN)
 
-@@ -100,11 +115,26 @@
+@@ -100,11 +115,29 @@
  	$(DOC_CMD) --document-private-items --open
 
  ifeq ($(QEMU_MACHINE_TYPE),)
@@ -916,12 +958,15 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
 +define KERNEL_TEST_RUNNER
 +    #!/usr/bin/env bash
 +
-+    $(OBJCOPY_CMD) $$1 $$1.img
++    TEST_ELF=$$(echo $$1 | sed -e 's/.*target/target/g')
 +    TEST_BINARY=$$(echo $$1.img | sed -e 's/.*target/target/g')
++
++    $(OBJCOPY_CMD) $$TEST_ELF $$TEST_BINARY
 +    $(DOCKER_TEST) ruby tests/runner.rb $(EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
 +endef
 +
 +export KERNEL_TEST_RUNNER
++test: FEATURES += --features test_build
 +test:
 +	@mkdir -p target
 +	@echo "$$KERNEL_TEST_RUNNER" > target/kernel_test_runner.sh
@@ -934,7 +979,7 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
 diff -uNr 12_exceptions_part1_groundwork/src/_arch/aarch64/cpu.rs 13_integrated_testing/src/_arch/aarch64/cpu.rs
 --- 12_exceptions_part1_groundwork/src/_arch/aarch64/cpu.rs
 +++ 13_integrated_testing/src/_arch/aarch64/cpu.rs
-@@ -26,3 +26,20 @@
+@@ -26,3 +26,24 @@
          asm::wfe()
      }
  }
@@ -942,16 +987,20 @@ diff -uNr 12_exceptions_part1_groundwork/src/_arch/aarch64/cpu.rs 13_integrated_
 +//--------------------------------------------------------------------------------------------------
 +// Testing
 +//--------------------------------------------------------------------------------------------------
++#[cfg(feature = "test_build")]
 +use qemu_exit::QEMUExit;
 +
++#[cfg(feature = "test_build")]
 +const QEMU_EXIT_HANDLE: qemu_exit::AArch64 = qemu_exit::AArch64::new();
 +
 +/// Make the host QEMU binary execute `exit(1)`.
++#[cfg(feature = "test_build")]
 +pub fn qemu_exit_failure() -> ! {
 +    QEMU_EXIT_HANDLE.exit_failure()
 +}
 +
 +/// Make the host QEMU binary execute `exit(0)`.
++#[cfg(feature = "test_build")]
 +pub fn qemu_exit_success() -> ! {
 +    QEMU_EXIT_HANDLE.exit_success()
 +}
@@ -1121,12 +1170,13 @@ diff -uNr 12_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs 13_in
 diff -uNr 12_exceptions_part1_groundwork/src/cpu.rs 13_integrated_testing/src/cpu.rs
 --- 12_exceptions_part1_groundwork/src/cpu.rs
 +++ 13_integrated_testing/src/cpu.rs
-@@ -15,4 +15,4 @@
- //--------------------------------------------------------------------------------------------------
+@@ -16,3 +16,6 @@
  // Architectural Public Reexports
  //--------------------------------------------------------------------------------------------------
--pub use arch_cpu::{nop, wait_forever};
-+pub use arch_cpu::{nop, qemu_exit_failure, qemu_exit_success, wait_forever};
+ pub use arch_cpu::{nop, wait_forever};
++
++#[cfg(feature = "test_build")]
++pub use arch_cpu::{qemu_exit_failure, qemu_exit_success};
 
 diff -uNr 12_exceptions_part1_groundwork/src/exception.rs 13_integrated_testing/src/exception.rs
 --- 12_exceptions_part1_groundwork/src/exception.rs
@@ -1157,7 +1207,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/exception.rs 13_integrated_testing/
 diff -uNr 12_exceptions_part1_groundwork/src/lib.rs 13_integrated_testing/src/lib.rs
 --- 12_exceptions_part1_groundwork/src/lib.rs
 +++ 13_integrated_testing/src/lib.rs
-@@ -0,0 +1,170 @@
+@@ -0,0 +1,171 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -1322,6 +1372,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/lib.rs 13_integrated_testing/src/li
 +#[cfg(test)]
 +#[no_mangle]
 +unsafe fn kernel_init() -> ! {
++    exception::handling_init();
 +    bsp::console::qemu_bring_up_console();
 +
 +    test_main();
@@ -1590,43 +1641,32 @@ diff -uNr 12_exceptions_part1_groundwork/src/panic_wait.rs 13_integrated_testing
      unsafe { bsp::console::panic_console_out().write_fmt(args).unwrap() };
  }
 
-+/// The point of exit for the "standard" (non-testing) `libkernel`.
++/// The point of exit for `libkernel`.
 +///
-+/// This code will be used by the release kernel binary and the `integration tests`. It is linked
-+/// weakly, so that the integration tests can overload it to exit `QEMU` instead of spinning
-+/// forever.
-+///
-+/// This is one possible approach to solve the problem that `cargo` can not know who the consumer of
-+/// the library will be:
-+///   - The release kernel binary that should safely park the paniced core,
-+///   - or an `integration test` that is executed in QEMU, which should just exit QEMU.
-+#[cfg(not(test))]
++/// It is linked weakly, so that the integration tests can overload its standard behavior.
 +#[linkage = "weak"]
 +#[no_mangle]
 +fn _panic_exit() -> ! {
-+    cpu::wait_forever()
++    #[cfg(not(test_build))]
++    {
++        cpu::wait_forever()
++    }
++
++    #[cfg(test_build)]
++    {
++        cpu::qemu_exit_failure()
++    }
 +}
 +
  /// Prints with a newline - only use from the panic handler.
  ///
  /// Carbon copy from <https://doc.rust-lang.org/src/std/macros.rs.html>
-@@ -35,5 +52,16 @@
+@@ -35,5 +52,5 @@
          panic_println!("\nKernel panic!");
      }
 
 -    cpu::wait_forever()
 +    _panic_exit()
-+}
-+
-+//--------------------------------------------------------------------------------------------------
-+// Testing
-+//--------------------------------------------------------------------------------------------------
-+
-+/// The point of exit when the library is compiled for testing.
-+#[cfg(test)]
-+#[no_mangle]
-+fn _panic_exit() -> ! {
-+    cpu::qemu_exit_failure()
  }
 
 diff -uNr 12_exceptions_part1_groundwork/src/runtime_init.rs 13_integrated_testing/src/runtime_init.rs
@@ -1757,7 +1797,7 @@ diff -uNr 12_exceptions_part1_groundwork/tests/00_console_sanity.rb 13_integrate
 diff -uNr 12_exceptions_part1_groundwork/tests/00_console_sanity.rs 13_integrated_testing/tests/00_console_sanity.rs
 --- 12_exceptions_part1_groundwork/tests/00_console_sanity.rs
 +++ 13_integrated_testing/tests/00_console_sanity.rs
-@@ -0,0 +1,36 @@
+@@ -0,0 +1,35 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2019-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -1768,16 +1808,15 @@ diff -uNr 12_exceptions_part1_groundwork/tests/00_console_sanity.rs 13_integrate
 +#![no_main]
 +#![no_std]
 +
-+mod panic_exit_failure;
-+
-+use libkernel::{bsp, console, print};
++use libkernel::{bsp, console, exception, print};
 +
 +#[no_mangle]
 +unsafe fn kernel_init() -> ! {
-+    use bsp::console::{console, qemu_bring_up_console};
++    use bsp::console::console;
 +    use console::interface::*;
 +
-+    qemu_bring_up_console();
++    exception::handling_init();
++    bsp::console::qemu_bring_up_console();
 +
 +    // Handshake
 +    assert_eq!(console().read_char(), 'A');
@@ -1798,7 +1837,7 @@ diff -uNr 12_exceptions_part1_groundwork/tests/00_console_sanity.rs 13_integrate
 diff -uNr 12_exceptions_part1_groundwork/tests/01_timer_sanity.rs 13_integrated_testing/tests/01_timer_sanity.rs
 --- 12_exceptions_part1_groundwork/tests/01_timer_sanity.rs
 +++ 13_integrated_testing/tests/01_timer_sanity.rs
-@@ -0,0 +1,50 @@
+@@ -0,0 +1,49 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2019-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -1811,14 +1850,13 @@ diff -uNr 12_exceptions_part1_groundwork/tests/01_timer_sanity.rs 13_integrated_
 +#![reexport_test_harness_main = "test_main"]
 +#![test_runner(libkernel::test_runner)]
 +
-+mod panic_exit_failure;
-+
 +use core::time::Duration;
-+use libkernel::{bsp, cpu, time, time::interface::TimeManager};
++use libkernel::{bsp, cpu, exception, time, time::interface::TimeManager};
 +use test_macros::kernel_test;
 +
 +#[no_mangle]
 +unsafe fn kernel_init() -> ! {
++    exception::handling_init();
 +    bsp::console::qemu_bring_up_console();
 +
 +    // Depending on CPU arch, some timer bring-up code could go here. Not needed for the RPi.
@@ -1853,7 +1891,7 @@ diff -uNr 12_exceptions_part1_groundwork/tests/01_timer_sanity.rs 13_integrated_
 diff -uNr 12_exceptions_part1_groundwork/tests/02_exception_sync_page_fault.rs 13_integrated_testing/tests/02_exception_sync_page_fault.rs
 --- 12_exceptions_part1_groundwork/tests/02_exception_sync_page_fault.rs
 +++ 13_integrated_testing/tests/02_exception_sync_page_fault.rs
-@@ -0,0 +1,44 @@
+@@ -0,0 +1,43 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2019-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -1864,10 +1902,10 @@ diff -uNr 12_exceptions_part1_groundwork/tests/02_exception_sync_page_fault.rs 1
 +#![no_main]
 +#![no_std]
 +
-+/// Overwrites libkernel's `panic_wait::_panic_exit()` with the QEMU-exit version.
++/// Overwrites libkernel's `panic_wait::_panic_exit()` so that it returns a "success" code.
 +///
-+/// Reaching this code is a success, because it is called from the synchronous exception handler,
-+/// which is what this test wants to achieve.
++/// In this test, teaching the panic is a success, because it is called from the synchronous
++/// exception handler, which is what this test wants to achieve.
 +///
 +/// It also means that this integration test can not use any other code that calls panic!() directly
 +/// or indirectly.
@@ -1879,12 +1917,11 @@ diff -uNr 12_exceptions_part1_groundwork/tests/02_exception_sync_page_fault.rs 1
 +unsafe fn kernel_init() -> ! {
 +    use memory::mmu::interface::MMU;
 +
++    exception::handling_init();
 +    bsp::console::qemu_bring_up_console();
 +
 +    println!("Testing synchronous exception handling by causing a page fault");
 +    println!("-------------------------------------------------------------------\n");
-+
-+    exception::handling_init();
 +
 +    if let Err(string) = memory::mmu::mmu().init() {
 +        println!("MMU: {}", string);
@@ -1897,20 +1934,6 @@ diff -uNr 12_exceptions_part1_groundwork/tests/02_exception_sync_page_fault.rs 1
 +
 +    // If execution reaches here, the memory access above did not cause a page fault exception.
 +    cpu::qemu_exit_failure()
-+}
-
-diff -uNr 12_exceptions_part1_groundwork/tests/panic_exit_failure/mod.rs 13_integrated_testing/tests/panic_exit_failure/mod.rs
---- 12_exceptions_part1_groundwork/tests/panic_exit_failure/mod.rs
-+++ 13_integrated_testing/tests/panic_exit_failure/mod.rs
-@@ -0,0 +1,9 @@
-+// SPDX-License-Identifier: MIT OR Apache-2.0
-+//
-+// Copyright (c) 2019-2021 Andre Richter <andre.o.richter@gmail.com>
-+
-+/// Overwrites libkernel's `panic_wait::_panic_exit()` with the QEMU-exit version.
-+#[no_mangle]
-+fn _panic_exit() -> ! {
-+    libkernel::cpu::qemu_exit_failure()
 +}
 
 diff -uNr 12_exceptions_part1_groundwork/tests/panic_exit_success/mod.rs 13_integrated_testing/tests/panic_exit_success/mod.rs

@@ -3022,11 +3022,11 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/tests/02_exception_sync_page_fault
 -    use memory::mmu::interface::MMU;
 +    use libkernel::driver::interface::DriverManager;
 
-     bsp::console::qemu_bring_up_console();
-
-@@ -30,10 +30,22 @@
-
      exception::handling_init();
+     bsp::console::qemu_bring_up_console();
+@@ -29,10 +29,22 @@
+     println!("Testing synchronous exception handling by causing a page fault");
+     println!("-------------------------------------------------------------------\n");
 
 -    if let Err(string) = memory::mmu::mmu().init() {
 -        println!("MMU: {}", string);

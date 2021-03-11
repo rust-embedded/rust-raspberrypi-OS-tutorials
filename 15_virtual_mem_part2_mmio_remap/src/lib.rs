@@ -167,6 +167,7 @@ pub fn test_runner(tests: &[&test_types::UnitTest]) {
 #[cfg(test)]
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
+    exception::handling_init();
     bsp::console::qemu_bring_up_console();
 
     test_main();

@@ -8,10 +8,10 @@
 #![no_main]
 #![no_std]
 
-/// Overwrites libkernel's `panic_wait::_panic_exit()` with the QEMU-exit version.
+/// Overwrites libkernel's `panic_wait::_panic_exit()` so that it returns a "success" code.
 ///
-/// Reaching this code is a success, because it is called from the synchronous exception handler,
-/// which is what this test wants to achieve.
+/// In this test, teaching the panic is a success, because it is called from the synchronous
+/// exception handler, which is what this test wants to achieve.
 ///
 /// It also means that this integration test can not use any other code that calls panic!() directly
 /// or indirectly.
@@ -23,12 +23,11 @@ use libkernel::{bsp, cpu, exception, memory, println};
 unsafe fn kernel_init() -> ! {
     use libkernel::driver::interface::DriverManager;
 
+    exception::handling_init();
     bsp::console::qemu_bring_up_console();
 
     println!("Testing synchronous exception handling by causing a page fault");
     println!("-------------------------------------------------------------------\n");
-
-    exception::handling_init();
 
     if let Err(string) = memory::mmu::kernel_map_binary_and_enable_mmu() {
         println!("Enabling MMU failed: {}", string);

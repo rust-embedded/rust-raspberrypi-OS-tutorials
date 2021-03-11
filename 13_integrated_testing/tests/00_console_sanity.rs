@@ -8,16 +8,15 @@
 #![no_main]
 #![no_std]
 
-mod panic_exit_failure;
-
-use libkernel::{bsp, console, print};
+use libkernel::{bsp, console, exception, print};
 
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
-    use bsp::console::{console, qemu_bring_up_console};
+    use bsp::console::console;
     use console::interface::*;
 
-    qemu_bring_up_console();
+    exception::handling_init();
+    bsp::console::qemu_bring_up_console();
 
     // Handshake
     assert_eq!(console().read_char(), 'A');

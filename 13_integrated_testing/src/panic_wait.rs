@@ -17,21 +17,21 @@ fn _panic_print(args: fmt::Arguments) {
     unsafe { bsp::console::panic_console_out().write_fmt(args).unwrap() };
 }
 
-/// The point of exit for the "standard" (non-testing) `libkernel`.
+/// The point of exit for `libkernel`.
 ///
-/// This code will be used by the release kernel binary and the `integration tests`. It is linked
-/// weakly, so that the integration tests can overload it to exit `QEMU` instead of spinning
-/// forever.
-///
-/// This is one possible approach to solve the problem that `cargo` can not know who the consumer of
-/// the library will be:
-///   - The release kernel binary that should safely park the paniced core,
-///   - or an `integration test` that is executed in QEMU, which should just exit QEMU.
-#[cfg(not(test))]
+/// It is linked weakly, so that the integration tests can overload its standard behavior.
 #[linkage = "weak"]
 #[no_mangle]
 fn _panic_exit() -> ! {
-    cpu::wait_forever()
+    #[cfg(not(test_build))]
+    {
+        cpu::wait_forever()
+    }
+
+    #[cfg(test_build)]
+    {
+        cpu::qemu_exit_failure()
+    }
 }
 
 /// Prints with a newline - only use from the panic handler.
@@ -53,15 +53,4 @@ fn panic(info: &PanicInfo) -> ! {
     }
 
     _panic_exit()
-}
-
-//--------------------------------------------------------------------------------------------------
-// Testing
-//--------------------------------------------------------------------------------------------------
-
-/// The point of exit when the library is compiled for testing.
-#[cfg(test)]
-#[no_mangle]
-fn _panic_exit() -> ! {
-    cpu::qemu_exit_failure()
 }

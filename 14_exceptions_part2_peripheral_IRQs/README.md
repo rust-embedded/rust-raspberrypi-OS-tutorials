@@ -2627,7 +2627,7 @@ diff -uNr 13_integrated_testing/src/synchronization.rs 14_exceptions_part2_perip
 diff -uNr 13_integrated_testing/tests/03_exception_irq_sanity.rs 14_exceptions_part2_peripheral_IRQs/tests/03_exception_irq_sanity.rs
 --- 13_integrated_testing/tests/03_exception_irq_sanity.rs
 +++ 14_exceptions_part2_peripheral_IRQs/tests/03_exception_irq_sanity.rs
-@@ -0,0 +1,68 @@
+@@ -0,0 +1,66 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -2639,8 +2639,6 @@ diff -uNr 13_integrated_testing/tests/03_exception_irq_sanity.rs 14_exceptions_p
 +#![no_std]
 +#![reexport_test_harness_main = "test_main"]
 +#![test_runner(libkernel::test_runner)]
-+
-+mod panic_exit_failure;
 +
 +use libkernel::{bsp, cpu, exception};
 +use test_macros::kernel_test;

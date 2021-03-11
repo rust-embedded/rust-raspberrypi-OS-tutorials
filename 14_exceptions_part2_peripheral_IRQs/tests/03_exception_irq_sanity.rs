@@ -10,8 +10,6 @@
 #![reexport_test_harness_main = "test_main"]
 #![test_runner(libkernel::test_runner)]
 
-mod panic_exit_failure;
-
 use libkernel::{bsp, cpu, exception};
 use test_macros::kernel_test;
 

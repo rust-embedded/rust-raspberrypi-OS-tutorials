@@ -57,9 +57,9 @@ QEMU_MISSING_STRING = "This board is not yet supported for QEMU."
 RUSTFLAGS          = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
 RUSTFLAGS_PEDANTIC = $(RUSTFLAGS) -D warnings -D missing_docs
 
-FEATURES      = bsp_$(BSP)
+FEATURES      = --features bsp_$(BSP)
 COMPILER_ARGS = --target=$(TARGET) \
-    --features $(FEATURES)         \
+    $(FEATURES)                    \
     --release
 
 RUSTC_CMD   = cargo rustc $(COMPILER_ARGS)
@@ -124,12 +124,15 @@ qemu: $(KERNEL_BIN)
 define KERNEL_TEST_RUNNER
     #!/usr/bin/env bash
 
-    $(OBJCOPY_CMD) $$1 $$1.img
+    TEST_ELF=$$(echo $$1 | sed -e 's/.*target/target/g')
     TEST_BINARY=$$(echo $$1.img | sed -e 's/.*target/target/g')
+
+    $(OBJCOPY_CMD) $$TEST_ELF $$TEST_BINARY
     $(DOCKER_TEST) ruby tests/runner.rb $(EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
 endef
 
 export KERNEL_TEST_RUNNER
+test: FEATURES += --features test_build
 test:
 	@mkdir -p target
 	@echo "$$KERNEL_TEST_RUNNER" > target/kernel_test_runner.sh

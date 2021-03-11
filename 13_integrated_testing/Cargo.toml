@@ -7,22 +7,22 @@ edition = "2018"
 [profile.release]
 lto = true
 
-# The features section is used to select the target board.
 [features]
 default = []
 bsp_rpi3 = ["register"]
 bsp_rpi4 = ["register"]
+test_build = ["qemu-exit"]
 
 ##--------------------------------------------------------------------------------------------------
 ## Dependencies
 ##--------------------------------------------------------------------------------------------------
 
 [dependencies]
-qemu-exit = "1.x.x"
 test-types = { path = "test-types" }
 
 # Optional dependencies
 register = { version = "1.x.x", features = ["no_std_unit_tests"], optional = true }
+qemu-exit = { version = "1.x.x", optional = true }
 
 # Platform specific dependencies
 [target.'cfg(target_arch = "aarch64")'.dependencies]
