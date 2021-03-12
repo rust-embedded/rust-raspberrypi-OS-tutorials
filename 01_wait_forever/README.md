@@ -33,6 +33,7 @@
 ### Test it
 
 In the project folder, invoke QEMU and observe the CPU core spinning on `wfe`:
+
 ```console
 $ make qemu
 [...]
