@@ -49,9 +49,9 @@ Binary files 07_uart_chainloader/demo_payload_rpi4.img and 08_timestamps/demo_pa
 diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
 --- 07_uart_chainloader/Makefile
 +++ 08_timestamps/Makefile
-@@ -21,8 +21,7 @@
-     OBJDUMP_BINARY    = aarch64-none-elf-objdump
+@@ -24,8 +24,7 @@
      NM_BINARY         = aarch64-none-elf-nm
+     READELF_BINARY    = aarch64-none-elf-readelf
      LINKER_FILE       = src/bsp/raspberrypi/link.ld
 -    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53 -C relocation-model=pic
 -    CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi3.img
@@ -59,9 +59,9 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
  else ifeq ($(BSP),rpi4)
      TARGET            = aarch64-unknown-none-softfloat
      KERNEL_BIN        = kernel8.img
-@@ -32,8 +31,7 @@
-     OBJDUMP_BINARY    = aarch64-none-elf-objdump
+@@ -36,8 +35,7 @@
      NM_BINARY         = aarch64-none-elf-nm
+     READELF_BINARY    = aarch64-none-elf-readelf
      LINKER_FILE       = src/bsp/raspberrypi/link.ld
 -    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72 -C relocation-model=pic
 -    CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi4.img
@@ -69,7 +69,7 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
  endif
 
  # Export for build.rs
-@@ -76,8 +74,7 @@
+@@ -82,8 +80,7 @@
  EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
  EXEC_MINIPUSH = ruby ../utils/minipush.rb
 
@@ -79,18 +79,13 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
 
  all: $(KERNEL_BIN)
 
-@@ -91,18 +88,15 @@
- 	$(DOC_CMD) --document-private-items --open
-
- ifeq ($(QEMU_MACHINE_TYPE),)
--qemu qemuasm:
-+qemu:
- 	@echo "This board is not yet supported for QEMU."
- else
+@@ -105,14 +102,10 @@
  qemu: $(KERNEL_BIN)
+ 	$(call colorecho, "\nLaunching QEMU")
  	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
 -
 -qemuasm: $(KERNEL_BIN)
+-	$(call colorecho, "\nLaunching QEMU with ASM output")
 -	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN) -d in_asm
  endif
 
@@ -100,19 +95,15 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
 +	@$(DOCKER_CHAINBOOT) $(EXEC_MINIPUSH) $(DEV_SERIAL) $(KERNEL_BIN)
 
  clippy:
- 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD)
-@@ -114,10 +108,7 @@
- 	readelf --headers $(KERNEL_ELF)
-
- objdump: $(KERNEL_ELF)
--	@$(DOCKER_ELFTOOLS) $(OBJDUMP_BINARY) --disassemble --demangle \
--                --section .text \
--                --section .got  \
--                $(KERNEL_ELF) | rustfilt
-+	@$(DOCKER_ELFTOOLS) $(OBJDUMP_BINARY) --disassemble --demangle $(KERNEL_ELF) | rustfilt
+ 	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD)
+@@ -129,7 +122,6 @@
+ 	@$(DOCKER_TOOLS) $(OBJDUMP_BINARY) --disassemble --demangle \
+                 --section .text   \
+                 --section .rodata \
+-                --section .got    \
+                 $(KERNEL_ELF) | rustfilt
 
  nm: $(KERNEL_ELF)
- 	@$(DOCKER_ELFTOOLS) $(NM_BINARY) --demangle --print-size $(KERNEL_ELF) | sort | rustfilt
 
 diff -uNr 07_uart_chainloader/src/_arch/aarch64/cpu/boot.rs 08_timestamps/src/_arch/aarch64/cpu/boot.rs
 --- 07_uart_chainloader/src/_arch/aarch64/cpu/boot.rs

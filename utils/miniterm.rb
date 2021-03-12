@@ -126,6 +126,7 @@ class MiniTerm
 end
 
 if __FILE__ == $PROGRAM_NAME
+    puts
     puts 'Miniterm 1.0'.cyan
     puts
 

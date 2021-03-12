@@ -819,12 +819,7 @@ diff -uNr 12_exceptions_part1_groundwork/.cargo/config.toml 13_integrated_testin
 diff -uNr 12_exceptions_part1_groundwork/Cargo.toml 13_integrated_testing/Cargo.toml
 --- 12_exceptions_part1_groundwork/Cargo.toml
 +++ 13_integrated_testing/Cargo.toml
-@@ -7,22 +7,49 @@
- [profile.release]
- lto = true
-
--# The features section is used to select the target board.
- [features]
+@@ -11,17 +11,45 @@
  default = []
  bsp_rpi3 = ["register"]
  bsp_rpi4 = ["register"]
@@ -875,23 +870,23 @@ diff -uNr 12_exceptions_part1_groundwork/Cargo.toml 13_integrated_testing/Cargo.
 diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
 --- 12_exceptions_part1_groundwork/Makefile
 +++ 13_integrated_testing/Makefile
-@@ -18,6 +18,7 @@
+@@ -20,6 +20,7 @@
      QEMU_BINARY       = qemu-system-aarch64
      QEMU_MACHINE_TYPE = raspi3
      QEMU_RELEASE_ARGS = -serial stdio -display none
 +    QEMU_TEST_ARGS    = $(QEMU_RELEASE_ARGS) -semihosting
      OBJDUMP_BINARY    = aarch64-none-elf-objdump
      NM_BINARY         = aarch64-none-elf-nm
-     OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi3.cfg
-@@ -30,6 +31,7 @@
+     READELF_BINARY    = aarch64-none-elf-readelf
+@@ -33,6 +34,7 @@
      QEMU_BINARY       = qemu-system-aarch64
      QEMU_MACHINE_TYPE =
      QEMU_RELEASE_ARGS = -serial stdio -display none
 +    QEMU_TEST_ARGS    = $(QEMU_RELEASE_ARGS) -semihosting
      OBJDUMP_BINARY    = aarch64-none-elf-objdump
      NM_BINARY         = aarch64-none-elf-nm
-     OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi4.cfg
-@@ -41,18 +43,30 @@
+     READELF_BINARY    = aarch64-none-elf-readelf
+@@ -45,6 +47,15 @@
  # Export for build.rs
  export LINKER_FILE
 
@@ -904,19 +899,10 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
 +    endif
 +endif
 +
-+QEMU_MISSING_STRING = "This board is not yet supported for QEMU."
-+
+ QEMU_MISSING_STRING = "This board is not yet supported for QEMU."
+
  RUSTFLAGS          = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
- RUSTFLAGS_PEDANTIC = $(RUSTFLAGS) -D warnings -D missing_docs
-
--FEATURES      = bsp_$(BSP)
-+FEATURES      = --features bsp_$(BSP)
- COMPILER_ARGS = --target=$(TARGET) \
--    --features $(FEATURES)         \
-+    $(FEATURES)                    \
-     --release
-
- RUSTC_CMD   = cargo rustc $(COMPILER_ARGS)
+@@ -59,6 +70,7 @@
  DOC_CMD     = cargo doc $(COMPILER_ARGS)
  CLIPPY_CMD  = cargo clippy $(COMPILER_ARGS)
  CHECK_CMD   = cargo check $(COMPILER_ARGS)
@@ -924,15 +910,15 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
  OBJCOPY_CMD = rust-objcopy \
      --strip-all            \
      -O binary
-@@ -69,6 +83,7 @@
+@@ -75,6 +87,7 @@
 
- DOCKER_QEMU     = $(DOCKER_CMD_INTERACT) $(DOCKER_IMAGE)
- DOCKER_GDB      = $(DOCKER_CMD_INTERACT) $(DOCKER_ARG_NET) $(DOCKER_IMAGE)
-+DOCKER_TEST     = $(DOCKER_CMD) $(DOCKER_IMAGE)
- DOCKER_ELFTOOLS = $(DOCKER_CMD) $(DOCKER_IMAGE)
+ DOCKER_QEMU  = $(DOCKER_CMD_INTERACT) $(DOCKER_IMAGE)
+ DOCKER_GDB   = $(DOCKER_CMD_INTERACT) $(DOCKER_ARG_NET) $(DOCKER_IMAGE)
++DOCKER_TEST  = $(DOCKER_CMD) $(DOCKER_IMAGE)
+ DOCKER_TOOLS = $(DOCKER_CMD) $(DOCKER_IMAGE)
 
  # Dockerize commands that require USB device passthrough only on Linux
-@@ -85,8 +100,8 @@
+@@ -91,8 +104,8 @@
  EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
  EXEC_MINIPUSH = ruby ../utils/minipush.rb
 
@@ -943,16 +929,16 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
 
  all: $(KERNEL_BIN)
 
-@@ -100,11 +115,29 @@
- 	$(DOC_CMD) --document-private-items --open
+@@ -108,12 +121,31 @@
+ 	@$(DOC_CMD) --document-private-items --open
 
  ifeq ($(QEMU_MACHINE_TYPE),)
 -qemu:
--	@echo "This board is not yet supported for QEMU."
 +qemu test:
-+	@echo $(QEMU_MISSING_STRING)
+ 	$(call colorecho, "\n$(QEMU_MISSING_STRING)")
  else
  qemu: $(KERNEL_BIN)
+ 	$(call colorecho, "\nLaunching QEMU")
  	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
 +
 +define KERNEL_TEST_RUNNER
@@ -968,10 +954,11 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
 +export KERNEL_TEST_RUNNER
 +test: FEATURES += --features test_build
 +test:
++	$(call colorecho, "\nCompiling test(s) - $(BSP)")
 +	@mkdir -p target
 +	@echo "$$KERNEL_TEST_RUNNER" > target/kernel_test_runner.sh
 +	@chmod +x target/kernel_test_runner.sh
-+	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(TEST_CMD) $(TEST_ARG)
++	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(TEST_CMD) $(TEST_ARG)
  endif
 
  chainboot: $(KERNEL_BIN)

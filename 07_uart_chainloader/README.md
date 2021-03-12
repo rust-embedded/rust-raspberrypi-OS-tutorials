@@ -110,9 +110,9 @@ Binary files 06_drivers_gpio_uart/demo_payload_rpi4.img and 07_uart_chainloader/
 diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
 --- 06_drivers_gpio_uart/Makefile
 +++ 07_uart_chainloader/Makefile
-@@ -21,7 +21,8 @@
-     OBJDUMP_BINARY    = aarch64-none-elf-objdump
+@@ -24,7 +24,8 @@
      NM_BINARY         = aarch64-none-elf-nm
+     READELF_BINARY    = aarch64-none-elf-readelf
      LINKER_FILE       = src/bsp/raspberrypi/link.ld
 -    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
 +    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53 -C relocation-model=pic
@@ -120,9 +120,9 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
  else ifeq ($(BSP),rpi4)
      TARGET            = aarch64-unknown-none-softfloat
      KERNEL_BIN        = kernel8.img
-@@ -31,7 +32,8 @@
-     OBJDUMP_BINARY    = aarch64-none-elf-objdump
+@@ -35,7 +36,8 @@
      NM_BINARY         = aarch64-none-elf-nm
+     READELF_BINARY    = aarch64-none-elf-readelf
      LINKER_FILE       = src/bsp/raspberrypi/link.ld
 -    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
 +    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72 -C relocation-model=pic
@@ -130,7 +130,7 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
  endif
 
  # Export for build.rs
-@@ -68,13 +70,14 @@
+@@ -74,13 +76,14 @@
  ifeq ($(UNAME_S),Linux)
      DOCKER_CMD_DEV = $(DOCKER_CMD_INTERACT) $(DOCKER_ARG_DEV)
 
@@ -148,18 +148,13 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
 
  all: $(KERNEL_BIN)
 
-@@ -88,15 +91,18 @@
- 	$(DOC_CMD) --document-private-items --open
-
- ifeq ($(QEMU_MACHINE_TYPE),)
--qemu:
-+qemu qemuasm:
- 	@echo "This board is not yet supported for QEMU."
- else
+@@ -102,10 +105,14 @@
  qemu: $(KERNEL_BIN)
+ 	$(call colorecho, "\nLaunching QEMU")
  	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
 +
 +qemuasm: $(KERNEL_BIN)
++	$(call colorecho, "\nLaunching QEMU with ASM output")
 +	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN) -d in_asm
  endif
 
@@ -169,19 +164,15 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
 +	@$(DOCKER_CHAINBOOT) $(EXEC_MINIPUSH) $(DEV_SERIAL) $(CHAINBOOT_DEMO_PAYLOAD)
 
  clippy:
- 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD)
-@@ -108,7 +114,10 @@
- 	readelf --headers $(KERNEL_ELF)
-
- objdump: $(KERNEL_ELF)
--	@$(DOCKER_ELFTOOLS) $(OBJDUMP_BINARY) --disassemble --demangle $(KERNEL_ELF) | rustfilt
-+	@$(DOCKER_ELFTOOLS) $(OBJDUMP_BINARY) --disassemble --demangle \
-+                --section .text \
-+                --section .got  \
-+                $(KERNEL_ELF) | rustfilt
+ 	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD)
+@@ -122,6 +129,7 @@
+ 	@$(DOCKER_TOOLS) $(OBJDUMP_BINARY) --disassemble --demangle \
+                 --section .text   \
+                 --section .rodata \
++                --section .got    \
+                 $(KERNEL_ELF) | rustfilt
 
  nm: $(KERNEL_ELF)
- 	@$(DOCKER_ELFTOOLS) $(NM_BINARY) --demangle --print-size $(KERNEL_ELF) | sort | rustfilt
 
 diff -uNr 06_drivers_gpio_uart/src/_arch/aarch64/cpu/boot.rs 07_uart_chainloader/src/_arch/aarch64/cpu/boot.rs
 --- 06_drivers_gpio_uart/src/_arch/aarch64/cpu/boot.rs

@@ -112,6 +112,7 @@ class MiniPush < MiniTerm
     end
 end
 
+puts
 puts 'Minipush 1.0'.cyan
 puts
 

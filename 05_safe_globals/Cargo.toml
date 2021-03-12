@@ -7,7 +7,6 @@ edition = "2018"
 [profile.release]
 lto = true
 
-# The features section is used to select the target board.
 [features]
 default = []
 bsp_rpi3 = []

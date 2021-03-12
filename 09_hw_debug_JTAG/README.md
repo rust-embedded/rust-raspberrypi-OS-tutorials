@@ -306,25 +306,25 @@ Thanks to [@naotaco](https://github.com/naotaco) for laying the groundwork for t
 diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
 --- 08_timestamps/Makefile
 +++ 09_hw_debug_JTAG/Makefile
-@@ -20,6 +20,8 @@
-     QEMU_RELEASE_ARGS = -serial stdio -display none
+@@ -23,6 +23,8 @@
      OBJDUMP_BINARY    = aarch64-none-elf-objdump
      NM_BINARY         = aarch64-none-elf-nm
+     READELF_BINARY    = aarch64-none-elf-readelf
 +    OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi3.cfg
 +    JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi3.img
      LINKER_FILE       = src/bsp/raspberrypi/link.ld
      RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
  else ifeq ($(BSP),rpi4)
-@@ -30,6 +32,8 @@
-     QEMU_RELEASE_ARGS = -serial stdio -display none
+@@ -34,6 +36,8 @@
      OBJDUMP_BINARY    = aarch64-none-elf-objdump
      NM_BINARY         = aarch64-none-elf-nm
+     READELF_BINARY    = aarch64-none-elf-readelf
 +    OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi4.cfg
 +    JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi4.img
      LINKER_FILE       = src/bsp/raspberrypi/link.ld
      RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
  endif
-@@ -59,9 +63,12 @@
+@@ -65,9 +69,12 @@
  DOCKER_CMD           = docker run --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
  DOCKER_CMD_INTERACT  = $(DOCKER_CMD) -i -t
  DOCKER_ARG_DIR_UTILS = -v $(shell pwd)/../utils:/work/utils
@@ -332,12 +332,12 @@ diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
  DOCKER_ARG_DEV       = --privileged -v /dev:/dev
 +DOCKER_ARG_NET       = --network host
 
- DOCKER_QEMU     = $(DOCKER_CMD_INTERACT) $(DOCKER_IMAGE)
-+DOCKER_GDB      = $(DOCKER_CMD_INTERACT) $(DOCKER_ARG_NET) $(DOCKER_IMAGE)
- DOCKER_ELFTOOLS = $(DOCKER_CMD) $(DOCKER_IMAGE)
+ DOCKER_QEMU  = $(DOCKER_CMD_INTERACT) $(DOCKER_IMAGE)
++DOCKER_GDB   = $(DOCKER_CMD_INTERACT) $(DOCKER_ARG_NET) $(DOCKER_IMAGE)
+ DOCKER_TOOLS = $(DOCKER_CMD) $(DOCKER_IMAGE)
 
  # Dockerize commands that require USB device passthrough only on Linux
-@@ -69,12 +76,17 @@
+@@ -75,12 +82,17 @@
      DOCKER_CMD_DEV = $(DOCKER_CMD_INTERACT) $(DOCKER_ARG_DEV)
 
      DOCKER_CHAINBOOT = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_IMAGE)
@@ -356,7 +356,7 @@ diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
 
  all: $(KERNEL_BIN)
 
-@@ -98,6 +110,23 @@
+@@ -107,6 +119,19 @@
  chainboot: $(KERNEL_BIN)
  	@$(DOCKER_CHAINBOOT) $(EXEC_MINIPUSH) $(DEV_SERIAL) $(KERNEL_BIN)
 
@@ -364,20 +364,16 @@ diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
 +	@$(DOCKER_JTAGBOOT) $(EXEC_MINIPUSH) $(DEV_SERIAL) $(JTAG_BOOT_IMAGE)
 +
 +openocd:
++	$(call colorecho, "\nLaunching OpenOCD")
 +	@$(DOCKER_OPENOCD) openocd $(OPENOCD_ARG)
 +
-+define gen_gdb
-+    RUSTFLAGS="$(RUSTFLAGS_PEDANTIC) $1" $(RUSTC_CMD)
-+    @$(DOCKER_GDB) gdb-multiarch -q $(KERNEL_ELF)
-+endef
-+
-+gdb:
-+	$(call gen_gdb,-C debuginfo=2)
-+
-+gdb-opt0:
-+	$(call gen_gdb,-C debuginfo=2 -C opt-level=0)
++gdb: RUSTC_MISC_ARGS += -C debuginfo=2
++gdb-opt0: RUSTC_MISC_ARGS += -C debuginfo=2 -C opt-level=0
++gdb gdb-opt0: $(KERNEL_ELF)
++	$(call colorecho, "\nLaunching GDB")
++	@$(DOCKER_GDB) gdb-multiarch -q $(KERNEL_ELF)
 +
  clippy:
- 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD)
+ 	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD)
 
 ```

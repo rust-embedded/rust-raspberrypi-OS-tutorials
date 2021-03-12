@@ -31,7 +31,7 @@ Kernel panic: Stopping here.
 diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
 --- 02_runtime_init/Makefile
 +++ 03_hacky_hello_world/Makefile
-@@ -11,7 +11,7 @@
+@@ -13,7 +13,7 @@
      KERNEL_BIN        = kernel8.img
      QEMU_BINARY       = qemu-system-aarch64
      QEMU_MACHINE_TYPE = raspi3
@@ -39,8 +39,8 @@ diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
 +    QEMU_RELEASE_ARGS = -serial stdio -display none
      OBJDUMP_BINARY    = aarch64-none-elf-objdump
      NM_BINARY         = aarch64-none-elf-nm
-     LINKER_FILE       = src/bsp/raspberrypi/link.ld
-@@ -21,7 +21,7 @@
+     READELF_BINARY    = aarch64-none-elf-readelf
+@@ -24,7 +24,7 @@
      KERNEL_BIN        = kernel8.img
      QEMU_BINARY       = qemu-system-aarch64
      QEMU_MACHINE_TYPE =
@@ -48,7 +48,7 @@ diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
 +    QEMU_RELEASE_ARGS = -serial stdio -display none
      OBJDUMP_BINARY    = aarch64-none-elf-objdump
      NM_BINARY         = aarch64-none-elf-nm
-     LINKER_FILE       = src/bsp/raspberrypi/link.ld
+     READELF_BINARY    = aarch64-none-elf-readelf
 
 diff -uNr 02_runtime_init/src/bsp/raspberrypi/console.rs 03_hacky_hello_world/src/bsp/raspberrypi/console.rs
 --- 02_runtime_init/src/bsp/raspberrypi/console.rs

@@ -110,8 +110,8 @@ Miniterm 1.0
 diff -uNr 05_safe_globals/Cargo.toml 06_drivers_gpio_uart/Cargo.toml
 --- 05_safe_globals/Cargo.toml
 +++ 06_drivers_gpio_uart/Cargo.toml
-@@ -10,8 +10,8 @@
- # The features section is used to select the target board.
+@@ -9,8 +9,8 @@
+
  [features]
  default = []
 -bsp_rpi3 = []
@@ -121,7 +121,7 @@ diff -uNr 05_safe_globals/Cargo.toml 06_drivers_gpio_uart/Cargo.toml
 
  ##--------------------------------------------------------------------------------------------------
  ## Dependencies
-@@ -19,6 +19,9 @@
+@@ -18,6 +18,9 @@
 
  [dependencies]
 
@@ -135,7 +135,7 @@ diff -uNr 05_safe_globals/Cargo.toml 06_drivers_gpio_uart/Cargo.toml
 diff -uNr 05_safe_globals/Makefile 06_drivers_gpio_uart/Makefile
 --- 05_safe_globals/Makefile
 +++ 06_drivers_gpio_uart/Makefile
-@@ -5,6 +5,12 @@
+@@ -7,6 +7,12 @@
  # Default to the RPi3
  BSP ?= rpi3
 
@@ -148,15 +148,15 @@ diff -uNr 05_safe_globals/Makefile 06_drivers_gpio_uart/Makefile
  # BSP-specific arguments
  ifeq ($(BSP),rpi3)
      TARGET            = aarch64-unknown-none-softfloat
-@@ -52,13 +58,23 @@
+@@ -58,13 +64,23 @@
  DOCKER_IMAGE         = rustembedded/osdev-utils
  DOCKER_CMD           = docker run --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
  DOCKER_CMD_INTERACT  = $(DOCKER_CMD) -i -t
 +DOCKER_ARG_DIR_UTILS = -v $(shell pwd)/../utils:/work/utils
 +DOCKER_ARG_DEV       = --privileged -v /dev:/dev
 
- DOCKER_QEMU     = $(DOCKER_CMD_INTERACT) $(DOCKER_IMAGE)
- DOCKER_ELFTOOLS = $(DOCKER_CMD) $(DOCKER_IMAGE)
+ DOCKER_QEMU  = $(DOCKER_CMD_INTERACT) $(DOCKER_IMAGE)
+ DOCKER_TOOLS = $(DOCKER_CMD) $(DOCKER_IMAGE)
 
 -EXEC_QEMU = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
 +# Dockerize commands that require USB device passthrough only on Linux
@@ -174,7 +174,7 @@ diff -uNr 05_safe_globals/Makefile 06_drivers_gpio_uart/Makefile
 
  all: $(KERNEL_BIN)
 
-@@ -79,6 +95,9 @@
+@@ -88,6 +104,9 @@
  	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
  endif
 
@@ -182,7 +182,7 @@ diff -uNr 05_safe_globals/Makefile 06_drivers_gpio_uart/Makefile
 +	@$(DOCKER_MINITERM) $(EXEC_MINITERM) $(DEV_SERIAL)
 +
  clippy:
- 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD)
+ 	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD)
 
 
 diff -uNr 05_safe_globals/src/_arch/aarch64/cpu.rs 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs

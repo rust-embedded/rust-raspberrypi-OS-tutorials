@@ -2,6 +2,8 @@
 ##
 ## Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
 
+include ../utils/color.mk.in
+
 # Default to the RPi3
 BSP ?= rpi3
 
@@ -21,6 +23,7 @@ ifeq ($(BSP),rpi3)
     QEMU_TEST_ARGS    = $(QEMU_RELEASE_ARGS) -semihosting
     OBJDUMP_BINARY    = aarch64-none-elf-objdump
     NM_BINARY         = aarch64-none-elf-nm
+    READELF_BINARY    = aarch64-none-elf-readelf
     OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi3.cfg
     JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi3.img
     LINKER_FILE       = src/bsp/raspberrypi/link.ld
@@ -34,6 +37,7 @@ else ifeq ($(BSP),rpi4)
     QEMU_TEST_ARGS    = $(QEMU_RELEASE_ARGS) -semihosting
     OBJDUMP_BINARY    = aarch64-none-elf-objdump
     NM_BINARY         = aarch64-none-elf-nm
+    READELF_BINARY    = aarch64-none-elf-readelf
     OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi4.cfg
     JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi4.img
     LINKER_FILE       = src/bsp/raspberrypi/link.ld
@@ -81,10 +85,10 @@ DOCKER_ARG_DIR_JTAG  = -v $(shell pwd)/../X1_JTAG_boot:/work/X1_JTAG_boot
 DOCKER_ARG_DEV       = --privileged -v /dev:/dev
 DOCKER_ARG_NET       = --network host
 
-DOCKER_QEMU     = $(DOCKER_CMD_INTERACT) $(DOCKER_IMAGE)
-DOCKER_GDB      = $(DOCKER_CMD_INTERACT) $(DOCKER_ARG_NET) $(DOCKER_IMAGE)
-DOCKER_TEST     = $(DOCKER_CMD) $(DOCKER_IMAGE)
-DOCKER_ELFTOOLS = $(DOCKER_CMD) $(DOCKER_IMAGE)
+DOCKER_QEMU  = $(DOCKER_CMD_INTERACT) $(DOCKER_IMAGE)
+DOCKER_GDB   = $(DOCKER_CMD_INTERACT) $(DOCKER_ARG_NET) $(DOCKER_IMAGE)
+DOCKER_TEST  = $(DOCKER_CMD) $(DOCKER_IMAGE)
+DOCKER_TOOLS = $(DOCKER_CMD) $(DOCKER_IMAGE)
 
 # Dockerize commands that require USB device passthrough only on Linux
 ifeq ($(UNAME_S),Linux)
@@ -106,19 +110,22 @@ EXEC_MINIPUSH = ruby ../utils/minipush.rb
 all: $(KERNEL_BIN)
 
 $(KERNEL_ELF):
-	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(RUSTC_CMD)
+	$(call colorecho, "\nCompiling kernel - $(BSP)")
+	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(RUSTC_CMD)
 
 $(KERNEL_BIN): $(KERNEL_ELF)
 	@$(OBJCOPY_CMD) $(KERNEL_ELF) $(KERNEL_BIN)
 
 doc:
-	$(DOC_CMD) --document-private-items --open
+	$(call colorecho, "\nGenerating docs")
+	@$(DOC_CMD) --document-private-items --open
 
 ifeq ($(QEMU_MACHINE_TYPE),)
 qemu test:
-	@echo $(QEMU_MISSING_STRING)
+	$(call colorecho, "\n$(QEMU_MISSING_STRING)")
 else
 qemu: $(KERNEL_BIN)
+	$(call colorecho, "\nLaunching QEMU")
 	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
 
 define KERNEL_TEST_RUNNER
@@ -134,10 +141,11 @@ endef
 export KERNEL_TEST_RUNNER
 test: FEATURES += --features test_build
 test:
+	$(call colorecho, "\nCompiling test(s) - $(BSP)")
 	@mkdir -p target
 	@echo "$$KERNEL_TEST_RUNNER" > target/kernel_test_runner.sh
 	@chmod +x target/kernel_test_runner.sh
-	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(TEST_CMD) $(TEST_ARG)
+	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(TEST_CMD) $(TEST_ARG)
 endif
 
 chainboot: $(KERNEL_BIN)
@@ -147,33 +155,35 @@ jtagboot:
 	@$(DOCKER_JTAGBOOT) $(EXEC_MINIPUSH) $(DEV_SERIAL) $(JTAG_BOOT_IMAGE)
 
 openocd:
+	$(call colorecho, "\nLaunching OpenOCD")
 	@$(DOCKER_OPENOCD) openocd $(OPENOCD_ARG)
 
-define gen_gdb
-    RUSTFLAGS="$(RUSTFLAGS_PEDANTIC) $1" $(RUSTC_CMD)
-    @$(DOCKER_GDB) gdb-multiarch -q $(KERNEL_ELF)
-endef
-
-gdb:
-	$(call gen_gdb,-C debuginfo=2)
-
-gdb-opt0:
-	$(call gen_gdb,-C debuginfo=2 -C opt-level=0)
+gdb: RUSTC_MISC_ARGS += -C debuginfo=2
+gdb-opt0: RUSTC_MISC_ARGS += -C debuginfo=2 -C opt-level=0
+gdb gdb-opt0: $(KERNEL_ELF)
+	$(call colorecho, "\nLaunching GDB")
+	@$(DOCKER_GDB) gdb-multiarch -q $(KERNEL_ELF)
 
 clippy:
-	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD)
+	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD)
 
 clean:
 	rm -rf target $(KERNEL_BIN)
 
 readelf: $(KERNEL_ELF)
-	readelf --headers $(KERNEL_ELF)
+	$(call colorecho, "\nLaunching readelf")
+	@$(DOCKER_TOOLS) $(READELF_BINARY) --headers $(KERNEL_ELF)
 
 objdump: $(KERNEL_ELF)
-	@$(DOCKER_ELFTOOLS) $(OBJDUMP_BINARY) --disassemble --demangle $(KERNEL_ELF) | rustfilt
+	$(call colorecho, "\nLaunching objdump")
+	@$(DOCKER_TOOLS) $(OBJDUMP_BINARY) --disassemble --demangle \
+                --section .text   \
+                --section .rodata \
+                $(KERNEL_ELF) | rustfilt
 
 nm: $(KERNEL_ELF)
-	@$(DOCKER_ELFTOOLS) $(NM_BINARY) --demangle --print-size $(KERNEL_ELF) | sort | rustfilt
+	$(call colorecho, "\nLaunching nm")
+	@$(DOCKER_TOOLS) $(NM_BINARY) --demangle --print-size $(KERNEL_ELF) | sort | rustfilt
 
 # For rust-analyzer
 check:

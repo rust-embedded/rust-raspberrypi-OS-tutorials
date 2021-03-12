@@ -33,9 +33,9 @@ diff -uNr 01_wait_forever/Cargo.toml 02_runtime_init/Cargo.toml
 +[profile.release]
 +lto = true
 +
- # The features section is used to select the target board.
  [features]
  default = []
+ bsp_rpi3 = []
 
 diff -uNr 01_wait_forever/src/_arch/aarch64/cpu/boot.S 02_runtime_init/src/_arch/aarch64/cpu/boot.S
 --- 01_wait_forever/src/_arch/aarch64/cpu/boot.S
