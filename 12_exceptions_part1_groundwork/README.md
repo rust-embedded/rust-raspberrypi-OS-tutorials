@@ -900,8 +900,8 @@ diff -uNr 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory/mmu.r
 --- 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory/mmu.rs
 +++ 12_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs
 @@ -15,7 +15,7 @@
- /// The address space size chosen by this BSP.
- pub type KernelAddrSpaceSize = AddressSpaceSize<{ memory_map::END_INCLUSIVE + 1 }>;
+ /// The kernel's address space defined by this BSP.
+ pub type KernelAddrSpace = AddressSpace<{ memory_map::END_INCLUSIVE + 1 }>;
 
 -const NUM_MEM_RANGES: usize = 3;
 +const NUM_MEM_RANGES: usize = 2;
@@ -967,24 +967,24 @@ diff -uNr 11_virtual_mem_part1_identity_mapping/src/exception.rs 12_exceptions_p
 diff -uNr 11_virtual_mem_part1_identity_mapping/src/main.rs 12_exceptions_part1_groundwork/src/main.rs
 --- 11_virtual_mem_part1_identity_mapping/src/main.rs
 +++ 12_exceptions_part1_groundwork/src/main.rs
-@@ -113,6 +113,7 @@
- #![feature(const_generics)]
+@@ -114,6 +114,7 @@
  #![feature(const_panic)]
+ #![feature(core_intrinsics)]
  #![feature(format_args_nl)]
 +#![feature(global_asm)]
  #![feature(panic_info_message)]
  #![feature(trait_alias)]
  #![no_main]
-@@ -144,6 +145,8 @@
+@@ -145,6 +146,8 @@
      use driver::interface::DriverManager;
      use memory::mmu::interface::MMU;
 
 +    exception::handling_init();
 +
-     if let Err(string) = memory::mmu::mmu().init() {
+     if let Err(string) = memory::mmu::mmu().enable_mmu_and_caching() {
          panic!("MMU: {}", string);
      }
-@@ -196,13 +199,28 @@
+@@ -197,13 +200,28 @@
      info!("Timer test, spinning for 1 second");
      time::time_manager().spin_for(Duration::from_secs(1));
 

@@ -139,3 +139,21 @@ impl<T> interface::ReadWriteEx for InitStateLock<T> {
         f(data)
     }
 }
+
+//--------------------------------------------------------------------------------------------------
+// Testing
+//--------------------------------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use test_macros::kernel_test;
+
+    /// InitStateLock must be transparent.
+    #[kernel_test]
+    fn init_state_lock_is_transparent() {
+        use core::mem::size_of;
+
+        assert_eq!(size_of::<InitStateLock<u64>>(), size_of::<u64>());
+    }
+}

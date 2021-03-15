@@ -29,11 +29,19 @@ unsafe fn kernel_init() -> ! {
     println!("Testing synchronous exception handling by causing a page fault");
     println!("-------------------------------------------------------------------\n");
 
-    if let Err(string) = memory::mmu::kernel_map_binary_and_enable_mmu() {
-        println!("Enabling MMU failed: {}", string);
+    let phys_kernel_tables_base_addr = match memory::mmu::kernel_map_binary() {
+        Err(string) => {
+            println!("Error mapping kernel binary: {}", string);
+            cpu::qemu_exit_failure()
+        }
+        Ok(addr) => addr,
+    };
+
+    if let Err(e) = memory::mmu::enable_mmu_and_caching(phys_kernel_tables_base_addr) {
+        println!("Enabling MMU failed: {}", e);
         cpu::qemu_exit_failure()
     }
-    // Printing will silently fail fail from here on, because the driver's MMIO is not remapped yet.
+    // Printing will silently fail from here on, because the driver's MMIO is not remapped yet.
 
     // Bring up the drivers needed for printing first.
     for i in bsp::driver::driver_manager()

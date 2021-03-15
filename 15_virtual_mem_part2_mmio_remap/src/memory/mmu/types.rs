@@ -8,7 +8,7 @@ use crate::{
     bsp, common,
     memory::{Address, AddressType, Physical, Virtual},
 };
-use core::{convert::From, marker::PhantomData, ops::RangeInclusive};
+use core::{convert::From, marker::PhantomData};
 
 //--------------------------------------------------------------------------------------------------
 // Public Definitions
@@ -121,6 +121,11 @@ impl<ATYPE: AddressType> PageSliceDescriptor<ATYPE> {
         self.start + (self.size() - 1)
     }
 
+    /// Check if an address is contained within this descriptor.
+    pub fn contains(&self, addr: Address<ATYPE>) -> bool {
+        (addr >= self.start_addr()) && (addr <= self.end_addr_inclusive())
+    }
+
     /// Return a non-mutable slice of Pages.
     ///
     /// # Safety
@@ -128,14 +133,6 @@ impl<ATYPE: AddressType> PageSliceDescriptor<ATYPE> {
     /// - Same as applies for `core::slice::from_raw_parts`.
     pub unsafe fn as_slice(&self) -> &[Page<ATYPE>] {
         core::slice::from_raw_parts(self.first_page_ptr(), self.num_pages)
-    }
-
-    /// Return the inclusive address range of the slice.
-    pub fn into_usize_range_inclusive(self) -> RangeInclusive<usize> {
-        RangeInclusive::new(
-            self.start_addr().into_usize(),
-            self.end_addr_inclusive().into_usize(),
-        )
     }
 }
 

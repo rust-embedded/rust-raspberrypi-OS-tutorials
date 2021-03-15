@@ -12,8 +12,8 @@ use core::ops::RangeInclusive;
 // Public Definitions
 //--------------------------------------------------------------------------------------------------
 
-/// The address space size chosen by this BSP.
-pub type KernelAddrSpaceSize = AddressSpaceSize<{ memory_map::END_INCLUSIVE + 1 }>;
+/// The kernel's address space defined by this BSP.
+pub type KernelAddrSpace = AddressSpace<{ memory_map::END_INCLUSIVE + 1 }>;
 
 const NUM_MEM_RANGES: usize = 2;
 

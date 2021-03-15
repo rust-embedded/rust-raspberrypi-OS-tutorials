@@ -87,8 +87,8 @@ register_bitfields! {u64,
         AttrIndx OFFSET(2) NUMBITS(3) [],
 
         TYPE     OFFSET(1) NUMBITS(1) [
-            Block = 0,
-            Table = 1
+            Reserved_Invalid = 0,
+            Page = 1
         ],
 
         VALID    OFFSET(0) NUMBITS(1) [
@@ -116,19 +116,19 @@ struct PageDescriptor {
     value: u64,
 }
 
-trait BaseAddr {
-    fn base_addr_u64(&self) -> u64;
-    fn base_addr_usize(&self) -> usize;
+trait StartAddr {
+    fn phys_start_addr_u64(&self) -> u64;
+    fn phys_start_addr_usize(&self) -> usize;
 }
 
-const NUM_LVL2_TABLES: usize = bsp::memory::mmu::KernelAddrSpaceSize::SIZE >> Granule512MiB::SHIFT;
+const NUM_LVL2_TABLES: usize = bsp::memory::mmu::KernelAddrSpace::SIZE >> Granule512MiB::SHIFT;
 
 //--------------------------------------------------------------------------------------------------
 // Public Definitions
 //--------------------------------------------------------------------------------------------------
 
 /// Big monolithic struct for storing the translation tables. Individual levels must be 64 KiB
-/// aligned, hence the "reverse" order of appearance.
+/// aligned, so the lvl3 is put first.
 #[repr(C)]
 #[repr(align(65536))]
 pub struct FixedSizeTranslationTable<const NUM_TABLES: usize> {
@@ -146,12 +146,13 @@ pub type KernelTranslationTable = FixedSizeTranslationTable<NUM_LVL2_TABLES>;
 // Private Code
 //--------------------------------------------------------------------------------------------------
 
-impl<T, const N: usize> BaseAddr for [T; N] {
-    fn base_addr_u64(&self) -> u64 {
+// The binary is still identity mapped, so we don't need to convert here.
+impl<T, const N: usize> StartAddr for [T; N] {
+    fn phys_start_addr_u64(&self) -> u64 {
         self as *const T as u64
     }
 
-    fn base_addr_usize(&self) -> usize {
+    fn phys_start_addr_usize(&self) -> usize {
         self as *const _ as usize
     }
 }
@@ -165,14 +166,14 @@ impl TableDescriptor {
     }
 
     /// Create an instance pointing to the supplied address.
-    pub fn from_next_lvl_table_addr(next_lvl_table_addr: usize) -> Self {
+    pub fn from_next_lvl_table_addr(phys_next_lvl_table_addr: usize) -> Self {
         let val = InMemoryRegister::<u64, STAGE1_TABLE_DESCRIPTOR::Register>::new(0);
 
-        let shifted = next_lvl_table_addr >> Granule64KiB::SHIFT;
+        let shifted = phys_next_lvl_table_addr >> Granule64KiB::SHIFT;
         val.write(
-            STAGE1_TABLE_DESCRIPTOR::VALID::True
+            STAGE1_TABLE_DESCRIPTOR::NEXT_LEVEL_TABLE_ADDR_64KiB.val(shifted as u64)
                 + STAGE1_TABLE_DESCRIPTOR::TYPE::Table
-                + STAGE1_TABLE_DESCRIPTOR::NEXT_LEVEL_TABLE_ADDR_64KiB.val(shifted as u64),
+                + STAGE1_TABLE_DESCRIPTOR::VALID::True,
         );
 
         TableDescriptor { value: val.get() }
@@ -225,16 +226,16 @@ impl PageDescriptor {
     }
 
     /// Create an instance.
-    pub fn from_output_addr(output_addr: usize, attribute_fields: AttributeFields) -> Self {
+    pub fn from_output_addr(phys_output_addr: usize, attribute_fields: &AttributeFields) -> Self {
         let val = InMemoryRegister::<u64, STAGE1_PAGE_DESCRIPTOR::Register>::new(0);
 
-        let shifted = output_addr as u64 >> Granule64KiB::SHIFT;
+        let shifted = phys_output_addr as u64 >> Granule64KiB::SHIFT;
         val.write(
-            STAGE1_PAGE_DESCRIPTOR::VALID::True
+            STAGE1_PAGE_DESCRIPTOR::OUTPUT_ADDR_64KiB.val(shifted)
                 + STAGE1_PAGE_DESCRIPTOR::AF::True
-                + attribute_fields.into()
-                + STAGE1_PAGE_DESCRIPTOR::TYPE::Table
-                + STAGE1_PAGE_DESCRIPTOR::OUTPUT_ADDR_64KiB.val(shifted),
+                + STAGE1_PAGE_DESCRIPTOR::TYPE::Page
+                + STAGE1_PAGE_DESCRIPTOR::VALID::True
+                + attribute_fields.clone().into(),
         );
 
         Self { value: val.get() }
@@ -247,10 +248,9 @@ impl PageDescriptor {
 
 impl<const NUM_TABLES: usize> FixedSizeTranslationTable<NUM_TABLES> {
     /// Create an instance.
-    #[allow(clippy::assertions_on_constants)]
     pub const fn new() -> Self {
+        // Can't have a zero-sized address space.
         assert!(NUM_TABLES > 0);
-        assert!((bsp::memory::mmu::KernelAddrSpaceSize::SIZE % Granule512MiB::SIZE) == 0);
 
         Self {
             lvl3: [[PageDescriptor::new_zeroed(); 8192]; NUM_TABLES],
@@ -266,15 +266,15 @@ impl<const NUM_TABLES: usize> FixedSizeTranslationTable<NUM_TABLES> {
     pub unsafe fn populate_tt_entries(&mut self) -> Result<(), &'static str> {
         for (l2_nr, l2_entry) in self.lvl2.iter_mut().enumerate() {
             *l2_entry =
-                TableDescriptor::from_next_lvl_table_addr(self.lvl3[l2_nr].base_addr_usize());
+                TableDescriptor::from_next_lvl_table_addr(self.lvl3[l2_nr].phys_start_addr_usize());
 
             for (l3_nr, l3_entry) in self.lvl3[l2_nr].iter_mut().enumerate() {
                 let virt_addr = (l2_nr << Granule512MiB::SHIFT) + (l3_nr << Granule64KiB::SHIFT);
 
-                let (output_addr, attribute_fields) =
+                let (phys_output_addr, attribute_fields) =
                     bsp::memory::mmu::virt_mem_layout().virt_addr_properties(virt_addr)?;
 
-                *l3_entry = PageDescriptor::from_output_addr(output_addr, attribute_fields);
+                *l3_entry = PageDescriptor::from_output_addr(phys_output_addr, &attribute_fields);
             }
         }
 
@@ -282,7 +282,7 @@ impl<const NUM_TABLES: usize> FixedSizeTranslationTable<NUM_TABLES> {
     }
 
     /// The translation table's base address to be used for programming the MMU.
-    pub fn base_address(&self) -> u64 {
-        self.lvl2.base_addr_u64()
+    pub fn phys_base_address(&self) -> u64 {
+        self.lvl2.phys_start_addr_u64()
     }
 }

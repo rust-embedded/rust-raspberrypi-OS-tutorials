@@ -19,7 +19,7 @@ use libkernel::{bsp, console, driver, exception, info, memory, time};
 ///
 /// - Only a single core must be active and running this function.
 /// - The init calls in this function must appear in the correct order:
-///     - Virtual memory must be activated before the device drivers.
+///     - Caching must be activated before the device drivers.
 ///       - Without it, any atomic operations, e.g. the yet-to-be-introduced spinlocks in the device
 ///         drivers (which currently employ NullLocks instead of spinlocks), will fail to work on
 ///         the RPi SoCs.
@@ -30,7 +30,7 @@ unsafe fn kernel_init() -> ! {
 
     exception::handling_init();
 
-    if let Err(string) = memory::mmu::mmu().init() {
+    if let Err(string) = memory::mmu::mmu().enable_mmu_and_caching() {
         panic!("MMU: {}", string);
     }
 

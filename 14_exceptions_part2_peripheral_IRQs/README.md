@@ -2296,7 +2296,7 @@ diff -uNr 13_integrated_testing/src/exception/asynchronous.rs 14_exceptions_part
 diff -uNr 13_integrated_testing/src/lib.rs 14_exceptions_part2_peripheral_IRQs/src/lib.rs
 --- 13_integrated_testing/src/lib.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/lib.rs
-@@ -111,9 +111,11 @@
+@@ -111,6 +111,7 @@
 
  #![allow(clippy::clippy::upper_case_acronyms)]
  #![allow(incomplete_features)]
@@ -2304,11 +2304,7 @@ diff -uNr 13_integrated_testing/src/lib.rs 14_exceptions_part2_peripheral_IRQs/s
  #![feature(const_fn_fn_ptr_basics)]
  #![feature(const_generics)]
  #![feature(const_panic)]
-+#![feature(core_intrinsics)]
- #![feature(format_args_nl)]
- #![feature(global_asm)]
- #![feature(linkage)]
-@@ -137,6 +139,7 @@
+@@ -138,6 +139,7 @@
  pub mod exception;
  pub mod memory;
  pub mod print;
@@ -2331,7 +2327,7 @@ diff -uNr 13_integrated_testing/src/main.rs 14_exceptions_part2_peripheral_IRQs/
  ///
 @@ -21,8 +21,8 @@
  /// - The init calls in this function must appear in the correct order:
- ///     - Virtual memory must be activated before the device drivers.
+ ///     - Caching must be activated before the device drivers.
  ///       - Without it, any atomic operations, e.g. the yet-to-be-introduced spinlocks in the device
 -///         drivers (which currently employ NullLocks instead of spinlocks), will fail to work on
 -///         the RPi SoCs.
@@ -2590,7 +2586,7 @@ diff -uNr 13_integrated_testing/src/synchronization.rs 14_exceptions_part2_perip
      type Data = T;
 
      fn lock<R>(&self, f: impl FnOnce(&mut Self::Data) -> R) -> R {
-@@ -72,6 +110,32 @@
+@@ -72,6 +110,50 @@
          // mutable reference will ever only be given out once at a time.
          let data = unsafe { &mut *self.data.get() };
 
@@ -2614,14 +2610,32 @@ diff -uNr 13_integrated_testing/src/synchronization.rs 14_exceptions_part2_perip
 +
 +        let data = unsafe { &mut *self.data.get() };
 +
-+        f(data)
-+    }
+         f(data)
+     }
 +
 +    fn read<R>(&self, f: impl FnOnce(&Self::Data) -> R) -> R {
 +        let data = unsafe { &*self.data.get() };
 +
-         f(data)
-     }
++        f(data)
++    }
++}
++
++//--------------------------------------------------------------------------------------------------
++// Testing
++//--------------------------------------------------------------------------------------------------
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use test_macros::kernel_test;
++
++    /// InitStateLock must be transparent.
++    #[kernel_test]
++    fn init_state_lock_is_transparent() {
++        use core::mem::size_of;
++
++        assert_eq!(size_of::<InitStateLock<u64>>(), size_of::<u64>());
++    }
  }
 
 diff -uNr 13_integrated_testing/tests/03_exception_irq_sanity.rs 14_exceptions_part2_peripheral_IRQs/tests/03_exception_irq_sanity.rs

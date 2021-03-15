@@ -17,6 +17,7 @@ use crate::{
     memory::{Address, Physical, Virtual},
     synchronization, warn,
 };
+use core::fmt;
 
 pub use types::*;
 
@@ -24,30 +25,48 @@ pub use types::*;
 // Public Definitions
 //--------------------------------------------------------------------------------------------------
 
+/// MMU enable errors variants.
+#[allow(missing_docs)]
+#[derive(Debug)]
+pub enum MMUEnableError {
+    AlreadyEnabled,
+    Other(&'static str),
+}
+
 /// Memory Management interfaces.
 pub mod interface {
     use super::*;
 
     /// MMU functions.
     pub trait MMU {
-        /// Turns on the MMU.
+        /// Turns on the MMU for the first time and enables data and instruction caching.
         ///
         /// # Safety
         ///
-        /// - Must only be called after the kernel translation tables have been init()'ed.
         /// - Changes the HW's global state.
-        unsafe fn enable(
+        unsafe fn enable_mmu_and_caching(
             &self,
-            kernel_table_phys_base_addr: Address<Physical>,
-        ) -> Result<(), &'static str>;
+            phys_tables_base_addr: Address<Physical>,
+        ) -> Result<(), MMUEnableError>;
+
+        /// Returns true if the MMU is enabled, false otherwise.
+        fn is_enabled(&self) -> bool;
     }
 }
 
 /// Describes the characteristics of a translation granule.
 pub struct TranslationGranule<const GRANULE_SIZE: usize>;
 
-/// Describes the size of an address space.
-pub struct AddressSpaceSize<const AS_SIZE: usize>;
+/// Describes properties of an address space.
+pub struct AddressSpace<const AS_SIZE: usize>;
+
+/// Intended to be implemented for [`AddressSpace`].
+pub trait AssociatedTranslationTable {
+    /// A translation table whose address range is:
+    ///
+    /// [0, AS_SIZE - 1]
+    type TableStartFromBottom;
+}
 
 //--------------------------------------------------------------------------------------------------
 // Private Code
@@ -70,7 +89,7 @@ unsafe fn kernel_map_pages_at_unchecked(
     phys_pages: &PageSliceDescriptor<Physical>,
     attr: &AttributeFields,
 ) -> Result<(), &'static str> {
-    arch_mmu::kernel_translation_tables()
+    bsp::memory::mmu::kernel_translation_tables()
         .write(|tables| tables.map_pages_at(virt_pages, phys_pages, attr))?;
 
     if let Err(x) = mapping_record::kernel_add(name, virt_pages, phys_pages, attr) {
@@ -83,6 +102,15 @@ unsafe fn kernel_map_pages_at_unchecked(
 //--------------------------------------------------------------------------------------------------
 // Public Code
 //--------------------------------------------------------------------------------------------------
+
+impl fmt::Display for MMUEnableError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            MMUEnableError::AlreadyEnabled => write!(f, "MMU is already enabled"),
+            MMUEnableError::Other(x) => write!(f, "{}", x),
+        }
+    }
+}
 
 impl<const GRANULE_SIZE: usize> TranslationGranule<GRANULE_SIZE> {
     /// The granule's size.
@@ -101,22 +129,18 @@ impl<const GRANULE_SIZE: usize> TranslationGranule<GRANULE_SIZE> {
     }
 }
 
-impl<const AS_SIZE: usize> AddressSpaceSize<AS_SIZE> {
+impl<const AS_SIZE: usize> AddressSpace<AS_SIZE> {
     /// The address space size.
     pub const SIZE: usize = Self::size_checked();
 
     /// The address space shift, aka log2(size).
-    pub const SHIFT: usize = Self::SIZE.trailing_zeros() as usize;
+    pub const SIZE_SHIFT: usize = Self::SIZE.trailing_zeros() as usize;
 
     const fn size_checked() -> usize {
         assert!(AS_SIZE.is_power_of_two());
-        assert!(arch_mmu::MIN_ADDR_SPACE_SIZE.is_power_of_two());
-        assert!(arch_mmu::MAX_ADDR_SPACE_SIZE.is_power_of_two());
 
-        // Must adhere to architectural restrictions.
-        assert!(AS_SIZE >= arch_mmu::MIN_ADDR_SPACE_SIZE);
-        assert!(AS_SIZE <= arch_mmu::MAX_ADDR_SPACE_SIZE);
-        assert!((AS_SIZE % arch_mmu::AddrSpaceSizeGranule::SIZE) == 0);
+        // Check for architectural restrictions as well.
+        Self::arch_address_space_size_sanity_checks();
 
         AS_SIZE
     }
@@ -136,7 +160,7 @@ pub unsafe fn kernel_map_pages_at(
     phys_pages: &PageSliceDescriptor<Physical>,
     attr: &AttributeFields,
 ) -> Result<(), &'static str> {
-    let is_mmio = arch_mmu::kernel_translation_tables()
+    let is_mmio = bsp::memory::mmu::kernel_translation_tables()
         .read(|tables| tables.is_virt_page_slice_mmio(virt_pages));
     if is_mmio {
         return Err("Attempt to manually map into MMIO region");
@@ -169,8 +193,9 @@ pub unsafe fn kernel_map_mmio(
         addr
     // Otherwise, allocate a new virtual page slice and map it.
     } else {
-        let virt_pages: PageSliceDescriptor<Virtual> = arch_mmu::kernel_translation_tables()
-            .write(|tables| tables.next_mmio_virt_page_slice(phys_pages.num_pages()))?;
+        let virt_pages: PageSliceDescriptor<Virtual> =
+            bsp::memory::mmu::kernel_translation_tables()
+                .write(|tables| tables.next_mmio_virt_page_slice(phys_pages.num_pages()))?;
 
         kernel_map_pages_at_unchecked(
             name,
@@ -189,19 +214,32 @@ pub unsafe fn kernel_map_mmio(
     Ok(virt_addr + offset_into_start_page)
 }
 
-/// Map the kernel's binary and enable the MMU.
+/// Map the kernel's binary. Returns the translation table's base address.
+///
+/// # Safety
+///
+/// - See [`bsp::memory::mmu::kernel_map_binary()`].
+pub unsafe fn kernel_map_binary() -> Result<Address<Physical>, &'static str> {
+    let phys_kernel_tables_base_addr =
+        bsp::memory::mmu::kernel_translation_tables().write(|tables| {
+            tables.init();
+            tables.phys_base_address()
+        });
+
+    bsp::memory::mmu::kernel_map_binary()?;
+
+    Ok(phys_kernel_tables_base_addr)
+}
+
+/// Enable the MMU and data + instruction caching.
 ///
 /// # Safety
 ///
 /// - Crucial function during kernel init. Changes the the complete memory view of the processor.
-pub unsafe fn kernel_map_binary_and_enable_mmu() -> Result<(), &'static str> {
-    let phys_base_addr = arch_mmu::kernel_translation_tables().write(|tables| {
-        tables.init();
-        tables.phys_base_address()
-    });
-
-    bsp::memory::mmu::kernel_map_binary()?;
-    arch_mmu::mmu().enable(phys_base_addr)
+pub unsafe fn enable_mmu_and_caching(
+    phys_tables_base_addr: Address<Physical>,
+) -> Result<(), MMUEnableError> {
+    arch_mmu::mmu().enable_mmu_and_caching(phys_tables_base_addr)
 }
 
 /// Human-readable print of all recorded kernel mappings.

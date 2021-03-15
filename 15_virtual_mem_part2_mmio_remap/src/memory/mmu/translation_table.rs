@@ -16,7 +16,8 @@ use crate::memory::{
 //--------------------------------------------------------------------------------------------------
 // Architectural Public Reexports
 //--------------------------------------------------------------------------------------------------
-pub use arch_translation_table::KernelTranslationTable;
+#[cfg(target_arch = "aarch64")]
+pub use arch_translation_table::FixedSizeTranslationTable;
 
 //--------------------------------------------------------------------------------------------------
 // Public Definitions
@@ -34,7 +35,7 @@ pub mod interface {
         ///
         /// - Implementor must ensure that this function can run only once or is harmless if invoked
         ///   multiple times.
-        unsafe fn init(&mut self);
+        fn init(&mut self);
 
         /// The translation table's base address to be used for programming the MMU.
         fn phys_base_address(&self) -> Address<Physical>;
@@ -80,17 +81,17 @@ pub mod interface {
 mod tests {
     use super::*;
     use crate::bsp;
-    use arch_translation_table::MinSizeKernelTranslationTable;
+    use arch_translation_table::MinSizeTranslationTable;
     use interface::TranslationTable;
     use test_macros::kernel_test;
 
-    /// Sanity checks for the kernel TranslationTable implementation.
+    /// Sanity checks for the TranslationTable implementation.
     #[kernel_test]
     fn translationtable_implementation_sanity() {
-        // Need to take care that `tables` fits into the stack.
-        let mut tables = MinSizeKernelTranslationTable::new();
+        // This will occupy a lot of space on the stack.
+        let mut tables = MinSizeTranslationTable::new();
 
-        unsafe { tables.init() };
+        tables.init();
 
         let x = tables.next_mmio_virt_page_slice(0);
         assert!(x.is_err());

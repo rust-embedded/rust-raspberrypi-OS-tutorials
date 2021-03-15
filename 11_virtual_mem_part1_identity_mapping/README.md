@@ -115,12 +115,12 @@ descriptors).
 In `translation_table.rs`, there is a definition of the actual translation table struct which is
 generic over the number of `LVL2` tables. The latter depends on the size of the target board's
 memory. Naturally, the `BSP` knows these details about the target board, and provides the size
-through the constant `bsp::memory::mmu::KernelAddrSpaceSize::SIZE`.
+through the constant `bsp::memory::mmu::KernelAddrSpace::SIZE`.
 
 This information is used by `translation_table.rs` to calculate the number of needed `LVL2` tables.
 Since one `LVL2` table in a `64 KiB` configuration covers `512 MiB`, all that needs to be done is to
-divide `KernelAddrSpaceSize::SIZE` by `512 MiB` (there are several compile-time checks in place that
-ensure that `KernelAddrSpaceSize` is a multiple of `512 MiB`).
+divide `KernelAddrSpace::SIZE` by `512 MiB` (there are several compile-time checks in place that
+ensure that `KernelAddrSpace::SIZE` is a multiple of `512 MiB`).
 
 The final table type is exported as `KernelTranslationTable`. Below is the respective excerpt from
 `translation_table.rs`:
@@ -144,7 +144,7 @@ struct PageDescriptor {
     value: u64,
 }
 
-const NUM_LVL2_TABLES: usize = bsp::memory::mmu::KernelAddrSpaceSize::SIZE >> Granule512MiB::SHIFT;
+const NUM_LVL2_TABLES: usize = bsp::memory::mmu::KernelAddrSpace::SIZE >> Granule512MiB::SHIFT;
 
 //--------------------------------------------------------------------------------------------------
 // Public Definitions
@@ -175,10 +175,6 @@ tables:
 //--------------------------------------------------------------------------------------------------
 
 /// The kernel translation tables.
-///
-/// # Safety
-///
-/// - Supposed to land in `.bss`. Therefore, ensure that all initial member values boil down to "0".
 static mut KERNEL_TABLES: KernelTranslationTable = KernelTranslationTable::new();
 ```
 
@@ -213,10 +209,10 @@ Afterwards, the [Translation Table Base Register 0 - EL1] is set up with the bas
 `lvl2` tables and the [Translation Control Register - EL1] is configured:
 
 ```rust
-    // Set the "Translation Table Base Register".
-    TTBR0_EL1.set_baddr(KERNEL_TABLES.base_address());
+// Set the "Translation Table Base Register".
+TTBR0_EL1.set_baddr(KERNEL_TABLES.phys_base_address());
 
-    self.configure_translation_control();
+self.configure_translation_control();
 ```
 
 Finally, the `MMU` is turned on through the [System Control Register - EL1]. The last step also
@@ -297,7 +293,7 @@ unsafe fn kernel_init() -> ! {
     use driver::interface::DriverManager;
     use memory::mmu::interface::MMU;
 
-    if let Err(string) = memory::mmu::mmu().init() {
+    if let Err(string) = memory::mmu::mmu().enable_mmu_and_caching() {
         panic!("MMU: {}", string);
     }
 ```
@@ -439,8 +435,8 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu/translation_table.rs 1
 +        AttrIndx OFFSET(2) NUMBITS(3) [],
 +
 +        TYPE     OFFSET(1) NUMBITS(1) [
-+            Block = 0,
-+            Table = 1
++            Reserved_Invalid = 0,
++            Page = 1
 +        ],
 +
 +        VALID    OFFSET(0) NUMBITS(1) [
@@ -468,19 +464,19 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu/translation_table.rs 1
 +    value: u64,
 +}
 +
-+trait BaseAddr {
-+    fn base_addr_u64(&self) -> u64;
-+    fn base_addr_usize(&self) -> usize;
++trait StartAddr {
++    fn phys_start_addr_u64(&self) -> u64;
++    fn phys_start_addr_usize(&self) -> usize;
 +}
 +
-+const NUM_LVL2_TABLES: usize = bsp::memory::mmu::KernelAddrSpaceSize::SIZE >> Granule512MiB::SHIFT;
++const NUM_LVL2_TABLES: usize = bsp::memory::mmu::KernelAddrSpace::SIZE >> Granule512MiB::SHIFT;
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Definitions
 +//--------------------------------------------------------------------------------------------------
 +
 +/// Big monolithic struct for storing the translation tables. Individual levels must be 64 KiB
-+/// aligned, hence the "reverse" order of appearance.
++/// aligned, so the lvl3 is put first.
 +#[repr(C)]
 +#[repr(align(65536))]
 +pub struct FixedSizeTranslationTable<const NUM_TABLES: usize> {
@@ -498,12 +494,13 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu/translation_table.rs 1
 +// Private Code
 +//--------------------------------------------------------------------------------------------------
 +
-+impl<T, const N: usize> BaseAddr for [T; N] {
-+    fn base_addr_u64(&self) -> u64 {
++// The binary is still identity mapped, so we don't need to convert here.
++impl<T, const N: usize> StartAddr for [T; N] {
++    fn phys_start_addr_u64(&self) -> u64 {
 +        self as *const T as u64
 +    }
 +
-+    fn base_addr_usize(&self) -> usize {
++    fn phys_start_addr_usize(&self) -> usize {
 +        self as *const _ as usize
 +    }
 +}
@@ -517,14 +514,14 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu/translation_table.rs 1
 +    }
 +
 +    /// Create an instance pointing to the supplied address.
-+    pub fn from_next_lvl_table_addr(next_lvl_table_addr: usize) -> Self {
++    pub fn from_next_lvl_table_addr(phys_next_lvl_table_addr: usize) -> Self {
 +        let val = InMemoryRegister::<u64, STAGE1_TABLE_DESCRIPTOR::Register>::new(0);
 +
-+        let shifted = next_lvl_table_addr >> Granule64KiB::SHIFT;
++        let shifted = phys_next_lvl_table_addr >> Granule64KiB::SHIFT;
 +        val.write(
-+            STAGE1_TABLE_DESCRIPTOR::VALID::True
++            STAGE1_TABLE_DESCRIPTOR::NEXT_LEVEL_TABLE_ADDR_64KiB.val(shifted as u64)
 +                + STAGE1_TABLE_DESCRIPTOR::TYPE::Table
-+                + STAGE1_TABLE_DESCRIPTOR::NEXT_LEVEL_TABLE_ADDR_64KiB.val(shifted as u64),
++                + STAGE1_TABLE_DESCRIPTOR::VALID::True,
 +        );
 +
 +        TableDescriptor { value: val.get() }
@@ -577,16 +574,16 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu/translation_table.rs 1
 +    }
 +
 +    /// Create an instance.
-+    pub fn from_output_addr(output_addr: usize, attribute_fields: AttributeFields) -> Self {
++    pub fn from_output_addr(phys_output_addr: usize, attribute_fields: &AttributeFields) -> Self {
 +        let val = InMemoryRegister::<u64, STAGE1_PAGE_DESCRIPTOR::Register>::new(0);
 +
-+        let shifted = output_addr as u64 >> Granule64KiB::SHIFT;
++        let shifted = phys_output_addr as u64 >> Granule64KiB::SHIFT;
 +        val.write(
-+            STAGE1_PAGE_DESCRIPTOR::VALID::True
++            STAGE1_PAGE_DESCRIPTOR::OUTPUT_ADDR_64KiB.val(shifted)
 +                + STAGE1_PAGE_DESCRIPTOR::AF::True
-+                + attribute_fields.into()
-+                + STAGE1_PAGE_DESCRIPTOR::TYPE::Table
-+                + STAGE1_PAGE_DESCRIPTOR::OUTPUT_ADDR_64KiB.val(shifted),
++                + STAGE1_PAGE_DESCRIPTOR::TYPE::Page
++                + STAGE1_PAGE_DESCRIPTOR::VALID::True
++                + attribute_fields.clone().into(),
 +        );
 +
 +        Self { value: val.get() }
@@ -599,10 +596,9 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu/translation_table.rs 1
 +
 +impl<const NUM_TABLES: usize> FixedSizeTranslationTable<NUM_TABLES> {
 +    /// Create an instance.
-+    #[allow(clippy::assertions_on_constants)]
 +    pub const fn new() -> Self {
++        // Can't have a zero-sized address space.
 +        assert!(NUM_TABLES > 0);
-+        assert!((bsp::memory::mmu::KernelAddrSpaceSize::SIZE modulo Granule512MiB::SIZE) == 0);
 +
 +        Self {
 +            lvl3: [[PageDescriptor::new_zeroed(); 8192]; NUM_TABLES],
@@ -618,15 +614,15 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu/translation_table.rs 1
 +    pub unsafe fn populate_tt_entries(&mut self) -> Result<(), &'static str> {
 +        for (l2_nr, l2_entry) in self.lvl2.iter_mut().enumerate() {
 +            *l2_entry =
-+                TableDescriptor::from_next_lvl_table_addr(self.lvl3[l2_nr].base_addr_usize());
++                TableDescriptor::from_next_lvl_table_addr(self.lvl3[l2_nr].phys_start_addr_usize());
 +
 +            for (l3_nr, l3_entry) in self.lvl3[l2_nr].iter_mut().enumerate() {
 +                let virt_addr = (l2_nr << Granule512MiB::SHIFT) + (l3_nr << Granule64KiB::SHIFT);
 +
-+                let (output_addr, attribute_fields) =
++                let (phys_output_addr, attribute_fields) =
 +                    bsp::memory::mmu::virt_mem_layout().virt_addr_properties(virt_addr)?;
 +
-+                *l3_entry = PageDescriptor::from_output_addr(output_addr, attribute_fields);
++                *l3_entry = PageDescriptor::from_output_addr(phys_output_addr, &attribute_fields);
 +            }
 +        }
 +
@@ -634,15 +630,15 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu/translation_table.rs 1
 +    }
 +
 +    /// The translation table's base address to be used for programming the MMU.
-+    pub fn base_address(&self) -> u64 {
-+        self.lvl2.base_addr_u64()
++    pub fn phys_base_address(&self) -> u64 {
++        self.lvl2.phys_start_addr_u64()
 +    }
 +}
 
 diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/memory/mmu.rs
 --- 10_privilege_level/src/_arch/aarch64/memory/mmu.rs
 +++ 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/memory/mmu.rs
-@@ -0,0 +1,146 @@
+@@ -0,0 +1,164 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -662,6 +658,7 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_mem_part
 +    bsp, memory,
 +    memory::mmu::{translation_table::KernelTranslationTable, TranslationGranule},
 +};
++use core::intrinsics::unlikely;
 +use cortex_a::{barrier, regs::*};
 +
 +//--------------------------------------------------------------------------------------------------
@@ -677,15 +674,6 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_mem_part
 +
 +pub type Granule512MiB = TranslationGranule<{ 512 * 1024 * 1024 }>;
 +pub type Granule64KiB = TranslationGranule<{ 64 * 1024 }>;
-+
-+/// The min supported address space size.
-+pub const MIN_ADDR_SPACE_SIZE: usize = 1024 * 1024 * 1024; // 1 GiB
-+
-+/// The max supported address space size.
-+pub const MAX_ADDR_SPACE_SIZE: usize = 32 * 1024 * 1024 * 1024; // 32 GiB
-+
-+/// The supported address space size granule.
-+pub type AddrSpaceSizeGranule = Granule512MiB;
 +
 +/// Constants for indexing the MAIR_EL1.
 +#[allow(dead_code)]
@@ -711,6 +699,18 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_mem_part
 +// Private Code
 +//--------------------------------------------------------------------------------------------------
 +
++impl<const AS_SIZE: usize> memory::mmu::AddressSpace<AS_SIZE> {
++    /// Checks for architectural restrictions.
++    pub const fn arch_address_space_size_sanity_checks() {
++        // Size must be at least one full 512 MiB table.
++        assert!((AS_SIZE modulo Granule512MiB::SIZE) == 0);
++
++        // Check for 48 bit virtual address size as maximum, which is supported by any ARMv8
++        // version.
++        assert!(AS_SIZE <= (1 << 48));
++    }
++}
++
 +impl MemoryManagementUnit {
 +    /// Setup function for the MAIR_EL1 register.
 +    fn set_up_mair(&self) {
@@ -727,19 +727,19 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_mem_part
 +
 +    /// Configure various settings of stage 1 of the EL1 translation regime.
 +    fn configure_translation_control(&self) {
-+        let ips = ID_AA64MMFR0_EL1.read(ID_AA64MMFR0_EL1::PARange);
-+        let t0sz = (64 - bsp::memory::mmu::KernelAddrSpaceSize::SHIFT) as u64;
++        let t0sz = (64 - bsp::memory::mmu::KernelAddrSpace::SIZE_SHIFT) as u64;
 +
 +        TCR_EL1.write(
-+            TCR_EL1::TBI0::Ignored
-+                + TCR_EL1::IPS.val(ips)
-+                + TCR_EL1::EPD1::DisableTTBR1Walks
++            TCR_EL1::TBI0::Used
++                + TCR_EL1::IPS::Bits_40
 +                + TCR_EL1::TG0::KiB_64
 +                + TCR_EL1::SH0::Inner
 +                + TCR_EL1::ORGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
 +                + TCR_EL1::IRGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
 +                + TCR_EL1::EPD0::EnableTTBR0Walks
-+                + TCR_EL1::T0SZ.val(t0sz),
++                + TCR_EL1::A1::TTBR0
++                + TCR_EL1::T0SZ.val(t0sz)
++                + TCR_EL1::EPD1::DisableTTBR1Walks,
 +        );
 +    }
 +}
@@ -756,22 +756,31 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_mem_part
 +//------------------------------------------------------------------------------
 +// OS Interface Code
 +//------------------------------------------------------------------------------
++use memory::mmu::MMUEnableError;
 +
 +impl memory::mmu::interface::MMU for MemoryManagementUnit {
-+    unsafe fn init(&self) -> Result<(), &'static str> {
-+        // Fail early if translation granule is not supported. Both RPis support it, though.
-+        if !ID_AA64MMFR0_EL1.matches_all(ID_AA64MMFR0_EL1::TGran64::Supported) {
-+            return Err("Translation granule not supported in HW");
++    unsafe fn enable_mmu_and_caching(&self) -> Result<(), MMUEnableError> {
++        if unlikely(self.is_enabled()) {
++            return Err(MMUEnableError::AlreadyEnabled);
++        }
++
++        // Fail early if translation granule is not supported.
++        if unlikely(!ID_AA64MMFR0_EL1.matches_all(ID_AA64MMFR0_EL1::TGran64::Supported)) {
++            return Err(MMUEnableError::Other(
++                "Translation granule not supported in HW",
++            ));
 +        }
 +
 +        // Prepare the memory attribute indirection register.
 +        self.set_up_mair();
 +
 +        // Populate translation tables.
-+        KERNEL_TABLES.populate_tt_entries()?;
++        KERNEL_TABLES
++            .populate_tt_entries()
++            .map_err(|e| MMUEnableError::Other(e))?;
 +
 +        // Set the "Translation Table Base Register".
-+        TTBR0_EL1.set_baddr(KERNEL_TABLES.base_address());
++        TTBR0_EL1.set_baddr(KERNEL_TABLES.phys_base_address());
 +
 +        self.configure_translation_control();
 +
@@ -787,6 +796,11 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_mem_part
 +        barrier::isb(barrier::SY);
 +
 +        Ok(())
++    }
++
++    #[inline(always)]
++    fn is_enabled(&self) -> bool {
++        SCTLR_EL1.matches_all(SCTLR_EL1::M::Enable)
 +    }
 +}
 
@@ -829,8 +843,8 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory/mmu.rs 11_virtual_mem_pa
 +// Public Definitions
 +//--------------------------------------------------------------------------------------------------
 +
-+/// The address space size chosen by this BSP.
-+pub type KernelAddrSpaceSize = AddressSpaceSize<{ memory_map::END_INCLUSIVE + 1 }>;
++/// The kernel's address space defined by this BSP.
++pub type KernelAddrSpace = AddressSpace<{ memory_map::END_INCLUSIVE + 1 }>;
 +
 +const NUM_MEM_RANGES: usize = 3;
 +
@@ -1006,7 +1020,7 @@ diff -uNr 10_privilege_level/src/bsp.rs 11_virtual_mem_part1_identity_mapping/sr
 diff -uNr 10_privilege_level/src/main.rs 11_virtual_mem_part1_identity_mapping/src/main.rs
 --- 10_privilege_level/src/main.rs
 +++ 11_virtual_mem_part1_identity_mapping/src/main.rs
-@@ -108,7 +108,10 @@
+@@ -108,7 +108,11 @@
  //! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
 
  #![allow(clippy::clippy::upper_case_acronyms)]
@@ -1014,16 +1028,17 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_mem_part1_identity_mapping/s
  #![feature(const_fn_fn_ptr_basics)]
 +#![feature(const_generics)]
 +#![feature(const_panic)]
++#![feature(core_intrinsics)]
  #![feature(format_args_nl)]
  #![feature(panic_info_message)]
  #![feature(trait_alias)]
-@@ -132,9 +135,18 @@
+@@ -132,9 +136,18 @@
  /// # Safety
  ///
  /// - Only a single core must be active and running this function.
 -/// - The init calls in this function must appear in the correct order.
 +/// - The init calls in this function must appear in the correct order:
-+///     - Virtual memory must be activated before the device drivers.
++///     - Caching must be activated before the device drivers.
 +///       - Without it, any atomic operations, e.g. the yet-to-be-introduced spinlocks in the device
 +///         drivers (which currently employ NullLocks instead of spinlocks), will fail to work on
 +///         the RPi SoCs.
@@ -1031,13 +1046,13 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_mem_part1_identity_mapping/s
      use driver::interface::DriverManager;
 +    use memory::mmu::interface::MMU;
 +
-+    if let Err(string) = memory::mmu::mmu().init() {
++    if let Err(string) = memory::mmu::mmu().enable_mmu_and_caching() {
 +        panic!("MMU: {}", string);
 +    }
 
      for i in bsp::driver::driver_manager().all_device_drivers().iter() {
          if let Err(x) = i.init() {
-@@ -158,6 +170,9 @@
+@@ -158,6 +171,9 @@
 
      info!("Booting on: {}", bsp::board_name());
 
@@ -1047,7 +1062,7 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_mem_part1_identity_mapping/s
      let (_, privilege_level) = exception::current_privilege_level();
      info!("Current privilege level: {}", privilege_level);
 
-@@ -181,6 +196,13 @@
+@@ -181,6 +197,13 @@
      info!("Timer test, spinning for 1 second");
      time::time_manager().spin_for(Duration::from_secs(1));
 
@@ -1084,7 +1099,7 @@ diff -uNr 10_privilege_level/src/memory/mmu/translation_table.rs 11_virtual_mem_
 diff -uNr 10_privilege_level/src/memory/mmu.rs 11_virtual_mem_part1_identity_mapping/src/memory/mmu.rs
 --- 10_privilege_level/src/memory/mmu.rs
 +++ 11_virtual_mem_part1_identity_mapping/src/memory/mmu.rs
-@@ -0,0 +1,247 @@
+@@ -0,0 +1,264 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -1118,8 +1133,17 @@ diff -uNr 10_privilege_level/src/memory/mmu.rs 11_virtual_mem_part1_identity_map
 +// Public Definitions
 +//--------------------------------------------------------------------------------------------------
 +
++/// MMU enable errors variants.
++#[allow(missing_docs)]
++#[derive(Debug)]
++pub enum MMUEnableError {
++    AlreadyEnabled,
++    Other(&'static str),
++}
++
 +/// Memory Management interfaces.
 +pub mod interface {
++    use super::*;
 +
 +    /// MMU functions.
 +    pub trait MMU {
@@ -1129,15 +1153,18 @@ diff -uNr 10_privilege_level/src/memory/mmu.rs 11_virtual_mem_part1_identity_map
 +        /// # Safety
 +        ///
 +        /// - Changes the HW's global state.
-+        unsafe fn init(&self) -> Result<(), &'static str>;
++        unsafe fn enable_mmu_and_caching(&self) -> Result<(), MMUEnableError>;
++
++        /// Returns true if the MMU is enabled, false otherwise.
++        fn is_enabled(&self) -> bool;
 +    }
 +}
 +
 +/// Describes the characteristics of a translation granule.
 +pub struct TranslationGranule<const GRANULE_SIZE: usize>;
 +
-+/// Describes the size of an address space.
-+pub struct AddressSpaceSize<const AS_SIZE: usize>;
++/// Describes properties of an address space.
++pub struct AddressSpace<const AS_SIZE: usize>;
 +
 +/// Architecture agnostic translation types.
 +#[allow(missing_docs)]
@@ -1195,6 +1222,15 @@ diff -uNr 10_privilege_level/src/memory/mmu.rs 11_virtual_mem_part1_identity_map
 +// Public Code
 +//--------------------------------------------------------------------------------------------------
 +
++impl fmt::Display for MMUEnableError {
++    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
++        match self {
++            MMUEnableError::AlreadyEnabled => write!(f, "MMU is already enabled"),
++            MMUEnableError::Other(x) => write!(f, "{}", x),
++        }
++    }
++}
++
 +impl<const GRANULE_SIZE: usize> TranslationGranule<GRANULE_SIZE> {
 +    /// The granule's size.
 +    pub const SIZE: usize = Self::size_checked();
@@ -1209,22 +1245,18 @@ diff -uNr 10_privilege_level/src/memory/mmu.rs 11_virtual_mem_part1_identity_map
 +    }
 +}
 +
-+impl<const AS_SIZE: usize> AddressSpaceSize<AS_SIZE> {
++impl<const AS_SIZE: usize> AddressSpace<AS_SIZE> {
 +    /// The address space size.
 +    pub const SIZE: usize = Self::size_checked();
 +
 +    /// The address space shift, aka log2(size).
-+    pub const SHIFT: usize = Self::SIZE.trailing_zeros() as usize;
++    pub const SIZE_SHIFT: usize = Self::SIZE.trailing_zeros() as usize;
 +
 +    const fn size_checked() -> usize {
 +        assert!(AS_SIZE.is_power_of_two());
-+        assert!(arch_mmu::MIN_ADDR_SPACE_SIZE.is_power_of_two());
-+        assert!(arch_mmu::MAX_ADDR_SPACE_SIZE.is_power_of_two());
 +
-+        // Must adhere to architectural restrictions.
-+        assert!(AS_SIZE >= arch_mmu::MIN_ADDR_SPACE_SIZE);
-+        assert!(AS_SIZE <= arch_mmu::MAX_ADDR_SPACE_SIZE);
-+        assert!((AS_SIZE modulo arch_mmu::AddrSpaceSizeGranule::SIZE) == 0);
++        // Check for architectural restrictions as well.
++        Self::arch_address_space_size_sanity_checks();
 +
 +        AS_SIZE
 +    }

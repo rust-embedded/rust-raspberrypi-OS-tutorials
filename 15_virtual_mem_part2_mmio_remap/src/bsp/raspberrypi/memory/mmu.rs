@@ -7,14 +7,22 @@
 use crate::{
     common,
     memory::{
-        mmu as kernel_mmu,
+        mmu as generic_mmu,
         mmu::{
-            AccessPermissions, AddressSpaceSize, AttributeFields, MemAttributes, Page,
-            PageSliceDescriptor, TranslationGranule,
+            AccessPermissions, AddressSpace, AssociatedTranslationTable, AttributeFields,
+            MemAttributes, Page, PageSliceDescriptor, TranslationGranule,
         },
         Physical, Virtual,
     },
+    synchronization::InitStateLock,
 };
+
+//--------------------------------------------------------------------------------------------------
+// Private Definitions
+//--------------------------------------------------------------------------------------------------
+
+type KernelTranslationTable =
+    <KernelVirtAddrSpace as AssociatedTranslationTable>::TableStartFromBottom;
 
 //--------------------------------------------------------------------------------------------------
 // Public Definitions
@@ -24,8 +32,21 @@ use crate::{
 /// derive respective data structures and their sizes. For example, the `crate::memory::mmu::Page`.
 pub type KernelGranule = TranslationGranule<{ 64 * 1024 }>;
 
-/// The address space size chosen by this BSP.
-pub type KernelVirtAddrSpaceSize = AddressSpaceSize<{ 8 * 1024 * 1024 * 1024 }>;
+/// The kernel's virtual address space defined by this BSP.
+pub type KernelVirtAddrSpace = AddressSpace<{ 8 * 1024 * 1024 * 1024 }>;
+
+//--------------------------------------------------------------------------------------------------
+// Global instances
+//--------------------------------------------------------------------------------------------------
+
+/// The kernel translation tables.
+///
+/// It is mandatory that InitStateLock is transparent.
+///
+/// That is, `size_of(InitStateLock<KernelTranslationTable>) == size_of(KernelTranslationTable)`.
+/// There is a unit tests that checks this porperty.
+static KERNEL_TABLES: InitStateLock<KernelTranslationTable> =
+    InitStateLock::new(KernelTranslationTable::new());
 
 //--------------------------------------------------------------------------------------------------
 // Private Code
@@ -81,6 +102,11 @@ fn phys_data_page_desc() -> PageSliceDescriptor<Physical> {
 // Public Code
 //--------------------------------------------------------------------------------------------------
 
+/// Return a reference to the kernel's translation tables.
+pub fn kernel_translation_tables() -> &'static InitStateLock<KernelTranslationTable> {
+    &KERNEL_TABLES
+}
+
 /// Pointer to the last page of the physical address space.
 pub fn phys_addr_space_end_page() -> *const Page<Physical> {
     common::align_down(
@@ -95,7 +121,7 @@ pub fn phys_addr_space_end_page() -> *const Page<Physical> {
 ///
 /// - Any miscalculation or attribute error will likely be fatal. Needs careful manual checking.
 pub unsafe fn kernel_map_binary() -> Result<(), &'static str> {
-    kernel_mmu::kernel_map_pages_at(
+    generic_mmu::kernel_map_pages_at(
         "Kernel boot-core stack",
         &virt_stack_page_desc(),
         &phys_stack_page_desc(),
@@ -106,7 +132,7 @@ pub unsafe fn kernel_map_binary() -> Result<(), &'static str> {
         },
     )?;
 
-    kernel_mmu::kernel_map_pages_at(
+    generic_mmu::kernel_map_pages_at(
         "Kernel code and RO data",
         &virt_ro_page_desc(),
         &phys_ro_page_desc(),
@@ -117,7 +143,7 @@ pub unsafe fn kernel_map_binary() -> Result<(), &'static str> {
         },
     )?;
 
-    kernel_mmu::kernel_map_pages_at(
+    generic_mmu::kernel_map_pages_at(
         "Kernel data and bss",
         &virt_data_page_desc(),
         &phys_data_page_desc(),
@@ -157,18 +183,27 @@ mod tests {
     #[kernel_test]
     fn virt_mem_layout_has_no_overlaps() {
         let layout = [
-            virt_stack_page_desc().into_usize_range_inclusive(),
-            virt_ro_page_desc().into_usize_range_inclusive(),
-            virt_data_page_desc().into_usize_range_inclusive(),
+            virt_stack_page_desc(),
+            virt_ro_page_desc(),
+            virt_data_page_desc(),
         ];
 
         for (i, first_range) in layout.iter().enumerate() {
             for second_range in layout.iter().skip(i + 1) {
-                assert!(!first_range.contains(second_range.start()));
-                assert!(!first_range.contains(second_range.end()));
-                assert!(!second_range.contains(first_range.start()));
-                assert!(!second_range.contains(first_range.end()));
+                assert!(!first_range.contains(second_range.start_addr()));
+                assert!(!first_range.contains(second_range.end_addr_inclusive()));
+                assert!(!second_range.contains(first_range.start_addr()));
+                assert!(!second_range.contains(first_range.end_addr_inclusive()));
             }
         }
+    }
+
+    /// Check if KERNEL_TABLES is in .bss.
+    #[kernel_test]
+    fn kernel_tables_in_bss() {
+        let bss_range = super::super::bss_range_inclusive();
+        let kernel_tables_addr = &KERNEL_TABLES as *const _ as usize as *mut u64;
+
+        assert!(bss_range.contains(&kernel_tables_addr));
     }
 }

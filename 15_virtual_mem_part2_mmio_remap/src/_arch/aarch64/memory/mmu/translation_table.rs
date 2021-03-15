@@ -20,7 +20,7 @@ use crate::{
             arch_mmu::{Granule512MiB, Granule64KiB},
             AccessPermissions, AttributeFields, MemAttributes, Page, PageSliceDescriptor,
         },
-        Address, AddressType, Physical, Virtual,
+        Address, Physical, Virtual,
     },
 };
 use core::convert;
@@ -90,8 +90,8 @@ register_bitfields! {u64,
         AttrIndx OFFSET(2) NUMBITS(3) [],
 
         TYPE     OFFSET(1) NUMBITS(1) [
-            Block = 0,
-            Table = 1
+            Reserved_Invalid = 0,
+            Page = 1
         ],
 
         VALID    OFFSET(0) NUMBITS(1) [
@@ -119,19 +119,16 @@ struct PageDescriptor {
     value: u64,
 }
 
-trait BaseAddr {
-    fn phys_base_addr(&self) -> Address<Physical>;
+trait StartAddr {
+    fn phys_start_addr(&self) -> Address<Physical>;
 }
-
-const NUM_LVL2_TABLES: usize =
-    bsp::memory::mmu::KernelVirtAddrSpaceSize::SIZE >> Granule512MiB::SHIFT;
 
 //--------------------------------------------------------------------------------------------------
 // Public Definitions
 //--------------------------------------------------------------------------------------------------
 
 /// Big monolithic struct for storing the translation tables. Individual levels must be 64 KiB
-/// aligned, hence the "reverse" order of appearance.
+/// aligned, so the lvl3 is put first.
 #[repr(C)]
 #[repr(align(65536))]
 pub struct FixedSizeTranslationTable<const NUM_TABLES: usize> {
@@ -148,16 +145,13 @@ pub struct FixedSizeTranslationTable<const NUM_TABLES: usize> {
     initialized: bool,
 }
 
-/// A translation table type for the kernel space.
-pub type KernelTranslationTable = FixedSizeTranslationTable<NUM_LVL2_TABLES>;
-
 //--------------------------------------------------------------------------------------------------
 // Private Code
 //--------------------------------------------------------------------------------------------------
 
-impl<T, const N: usize> BaseAddr for [T; N] {
-    fn phys_base_addr(&self) -> Address<Physical> {
-        // The binary is still identity mapped, so we don't need to convert here.
+// The binary is still identity mapped, so we don't need to convert here.
+impl<T, const N: usize> StartAddr for [T; N] {
+    fn phys_start_addr(&self) -> Address<Physical> {
         Address::new(self as *const _ as usize)
     }
 }
@@ -171,14 +165,14 @@ impl TableDescriptor {
     }
 
     /// Create an instance pointing to the supplied address.
-    pub fn from_next_lvl_table_addr(next_lvl_table_addr: usize) -> Self {
+    pub fn from_next_lvl_table_addr(phys_next_lvl_table_addr: Address<Physical>) -> Self {
         let val = InMemoryRegister::<u64, STAGE1_TABLE_DESCRIPTOR::Register>::new(0);
 
-        let shifted = next_lvl_table_addr >> Granule64KiB::SHIFT;
+        let shifted = phys_next_lvl_table_addr.into_usize() >> Granule64KiB::SHIFT;
         val.write(
-            STAGE1_TABLE_DESCRIPTOR::VALID::True
+            STAGE1_TABLE_DESCRIPTOR::NEXT_LEVEL_TABLE_ADDR_64KiB.val(shifted as u64)
                 + STAGE1_TABLE_DESCRIPTOR::TYPE::Table
-                + STAGE1_TABLE_DESCRIPTOR::NEXT_LEVEL_TABLE_ADDR_64KiB.val(shifted as u64),
+                + STAGE1_TABLE_DESCRIPTOR::VALID::True,
         );
 
         TableDescriptor { value: val.get() }
@@ -232,18 +226,18 @@ impl PageDescriptor {
 
     /// Create an instance.
     pub fn from_output_addr(
-        output_addr: *const Page<Physical>,
+        phys_output_addr: *const Page<Physical>,
         attribute_fields: &AttributeFields,
     ) -> Self {
         let val = InMemoryRegister::<u64, STAGE1_PAGE_DESCRIPTOR::Register>::new(0);
 
-        let shifted = output_addr as u64 >> Granule64KiB::SHIFT;
+        let shifted = phys_output_addr as u64 >> Granule64KiB::SHIFT;
         val.write(
-            STAGE1_PAGE_DESCRIPTOR::VALID::True
+            STAGE1_PAGE_DESCRIPTOR::OUTPUT_ADDR_64KiB.val(shifted)
                 + STAGE1_PAGE_DESCRIPTOR::AF::True
-                + attribute_fields.clone().into()
-                + STAGE1_PAGE_DESCRIPTOR::TYPE::Table
-                + STAGE1_PAGE_DESCRIPTOR::OUTPUT_ADDR_64KiB.val(shifted),
+                + STAGE1_PAGE_DESCRIPTOR::TYPE::Page
+                + STAGE1_PAGE_DESCRIPTOR::VALID::True
+                + attribute_fields.clone().into(),
         );
 
         Self { value: val.get() }
@@ -260,6 +254,14 @@ impl PageDescriptor {
 // Public Code
 //--------------------------------------------------------------------------------------------------
 
+impl<const AS_SIZE: usize> memory::mmu::AssociatedTranslationTable
+    for memory::mmu::AddressSpace<AS_SIZE>
+where
+    [u8; Self::SIZE >> Granule512MiB::SHIFT]: Sized,
+{
+    type TableStartFromBottom = FixedSizeTranslationTable<{ Self::SIZE >> Granule512MiB::SHIFT }>;
+}
+
 impl<const NUM_TABLES: usize> FixedSizeTranslationTable<NUM_TABLES> {
     // Reserve the last 256 MiB of the address space for MMIO mappings.
     const L2_MMIO_START_INDEX: usize = NUM_TABLES - 1;
@@ -269,8 +271,9 @@ impl<const NUM_TABLES: usize> FixedSizeTranslationTable<NUM_TABLES> {
     #[allow(clippy::assertions_on_constants)]
     pub const fn new() -> Self {
         assert!(bsp::memory::mmu::KernelGranule::SIZE == Granule64KiB::SIZE);
+
+        // Can't have a zero-sized address space.
         assert!(NUM_TABLES > 0);
-        assert!((bsp::memory::mmu::KernelVirtAddrSpaceSize::SIZE % Granule512MiB::SIZE) == 0);
 
         Self {
             lvl3: [[PageDescriptor::new_zeroed(); 8192]; NUM_TABLES],
@@ -282,7 +285,7 @@ impl<const NUM_TABLES: usize> FixedSizeTranslationTable<NUM_TABLES> {
 
     /// The start address of the table's MMIO range.
     #[inline(always)]
-    const fn mmio_start_addr(&self) -> Address<Virtual> {
+    fn mmio_start_addr(&self) -> Address<Virtual> {
         Address::new(
             (Self::L2_MMIO_START_INDEX << Granule512MiB::SHIFT)
                 | (Self::L3_MMIO_START_INDEX << Granule64KiB::SHIFT),
@@ -291,7 +294,7 @@ impl<const NUM_TABLES: usize> FixedSizeTranslationTable<NUM_TABLES> {
 
     /// The inclusive end address of the table's MMIO range.
     #[inline(always)]
-    const fn mmio_end_addr_inclusive(&self) -> Address<Virtual> {
+    fn mmio_end_addr_inclusive(&self) -> Address<Virtual> {
         Address::new(
             (Self::L2_MMIO_START_INDEX << Granule512MiB::SHIFT)
                 | (8191 << Granule64KiB::SHIFT)
@@ -301,12 +304,13 @@ impl<const NUM_TABLES: usize> FixedSizeTranslationTable<NUM_TABLES> {
 
     /// Helper to calculate the lvl2 and lvl3 indices from an address.
     #[inline(always)]
-    fn lvl2_lvl3_index_from<ATYPE: AddressType>(
+    fn lvl2_lvl3_index_from(
         &self,
-        addr: *const Page<ATYPE>,
+        addr: *const Page<Virtual>,
     ) -> Result<(usize, usize), &'static str> {
-        let lvl2_index = addr as usize >> Granule512MiB::SHIFT;
-        let lvl3_index = (addr as usize & Granule512MiB::MASK) >> Granule64KiB::SHIFT;
+        let addr = addr as usize;
+        let lvl2_index = addr >> Granule512MiB::SHIFT;
+        let lvl3_index = (addr & Granule512MiB::MASK) >> Granule64KiB::SHIFT;
 
         if lvl2_index > (NUM_TABLES - 1) {
             return Err("Virtual page is out of bounds of translation table");
@@ -334,16 +338,15 @@ impl<const NUM_TABLES: usize> FixedSizeTranslationTable<NUM_TABLES> {
 impl<const NUM_TABLES: usize> memory::mmu::translation_table::interface::TranslationTable
     for FixedSizeTranslationTable<NUM_TABLES>
 {
-    unsafe fn init(&mut self) {
+    fn init(&mut self) {
         if self.initialized {
             return;
         }
 
         // Populate the l2 entries.
         for (lvl2_nr, lvl2_entry) in self.lvl2.iter_mut().enumerate() {
-            let desc = TableDescriptor::from_next_lvl_table_addr(
-                self.lvl3[lvl2_nr].phys_base_addr().into_usize(),
-            );
+            let desc =
+                TableDescriptor::from_next_lvl_table_addr(self.lvl3[lvl2_nr].phys_start_addr());
             *lvl2_entry = desc;
         }
 
@@ -352,7 +355,7 @@ impl<const NUM_TABLES: usize> memory::mmu::translation_table::interface::Transla
     }
 
     fn phys_base_address(&self) -> Address<Physical> {
-        self.lvl2.phys_base_addr()
+        self.lvl2.phys_start_addr()
     }
 
     unsafe fn map_pages_at(
@@ -366,13 +369,13 @@ impl<const NUM_TABLES: usize> memory::mmu::translation_table::interface::Transla
         let p = phys_pages.as_slice();
         let v = virt_pages.as_slice();
 
-        if p.len() != v.len() {
-            return Err("Tried to map page slices with unequal sizes");
+        // No work to do for empty slices.
+        if v.is_empty() {
+            return Ok(());
         }
 
-        // No work to do for empty slices.
-        if p.is_empty() {
-            return Ok(());
+        if v.len() != p.len() {
+            return Err("Tried to map page slices with unequal sizes");
         }
 
         if p.last().unwrap().as_ptr() >= bsp::memory::mmu::phys_addr_space_end_page() {
@@ -406,14 +409,13 @@ impl<const NUM_TABLES: usize> memory::mmu::translation_table::interface::Transla
             return Err("Not enough MMIO space left");
         }
 
-        let addr = (Self::L2_MMIO_START_INDEX << Granule512MiB::SHIFT)
-            | (self.cur_l3_mmio_index << Granule64KiB::SHIFT);
+        let addr = Address::new(
+            (Self::L2_MMIO_START_INDEX << Granule512MiB::SHIFT)
+                | (self.cur_l3_mmio_index << Granule64KiB::SHIFT),
+        );
         self.cur_l3_mmio_index += num_pages;
 
-        Ok(PageSliceDescriptor::from_addr(
-            Address::new(addr),
-            num_pages,
-        ))
+        Ok(PageSliceDescriptor::from_addr(addr, num_pages))
     }
 
     fn is_virt_page_slice_mmio(&self, virt_pages: &PageSliceDescriptor<Virtual>) -> bool {
@@ -435,7 +437,7 @@ impl<const NUM_TABLES: usize> memory::mmu::translation_table::interface::Transla
 //--------------------------------------------------------------------------------------------------
 
 #[cfg(test)]
-pub type MinSizeKernelTranslationTable = FixedSizeTranslationTable<1>;
+pub type MinSizeTranslationTable = FixedSizeTranslationTable<1>;
 
 #[cfg(test)]
 mod tests {

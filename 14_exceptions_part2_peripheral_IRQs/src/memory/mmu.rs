@@ -31,8 +31,17 @@ pub use arch_mmu::mmu;
 // Public Definitions
 //--------------------------------------------------------------------------------------------------
 
+/// MMU enable errors variants.
+#[allow(missing_docs)]
+#[derive(Debug)]
+pub enum MMUEnableError {
+    AlreadyEnabled,
+    Other(&'static str),
+}
+
 /// Memory Management interfaces.
 pub mod interface {
+    use super::*;
 
     /// MMU functions.
     pub trait MMU {
@@ -42,15 +51,18 @@ pub mod interface {
         /// # Safety
         ///
         /// - Changes the HW's global state.
-        unsafe fn init(&self) -> Result<(), &'static str>;
+        unsafe fn enable_mmu_and_caching(&self) -> Result<(), MMUEnableError>;
+
+        /// Returns true if the MMU is enabled, false otherwise.
+        fn is_enabled(&self) -> bool;
     }
 }
 
 /// Describes the characteristics of a translation granule.
 pub struct TranslationGranule<const GRANULE_SIZE: usize>;
 
-/// Describes the size of an address space.
-pub struct AddressSpaceSize<const AS_SIZE: usize>;
+/// Describes properties of an address space.
+pub struct AddressSpace<const AS_SIZE: usize>;
 
 /// Architecture agnostic translation types.
 #[allow(missing_docs)]
@@ -107,6 +119,15 @@ pub struct KernelVirtualLayout<const NUM_SPECIAL_RANGES: usize> {
 // Public Code
 //--------------------------------------------------------------------------------------------------
 
+impl fmt::Display for MMUEnableError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            MMUEnableError::AlreadyEnabled => write!(f, "MMU is already enabled"),
+            MMUEnableError::Other(x) => write!(f, "{}", x),
+        }
+    }
+}
+
 impl<const GRANULE_SIZE: usize> TranslationGranule<GRANULE_SIZE> {
     /// The granule's size.
     pub const SIZE: usize = Self::size_checked();
@@ -121,22 +142,18 @@ impl<const GRANULE_SIZE: usize> TranslationGranule<GRANULE_SIZE> {
     }
 }
 
-impl<const AS_SIZE: usize> AddressSpaceSize<AS_SIZE> {
+impl<const AS_SIZE: usize> AddressSpace<AS_SIZE> {
     /// The address space size.
     pub const SIZE: usize = Self::size_checked();
 
     /// The address space shift, aka log2(size).
-    pub const SHIFT: usize = Self::SIZE.trailing_zeros() as usize;
+    pub const SIZE_SHIFT: usize = Self::SIZE.trailing_zeros() as usize;
 
     const fn size_checked() -> usize {
         assert!(AS_SIZE.is_power_of_two());
-        assert!(arch_mmu::MIN_ADDR_SPACE_SIZE.is_power_of_two());
-        assert!(arch_mmu::MAX_ADDR_SPACE_SIZE.is_power_of_two());
 
-        // Must adhere to architectural restrictions.
-        assert!(AS_SIZE >= arch_mmu::MIN_ADDR_SPACE_SIZE);
-        assert!(AS_SIZE <= arch_mmu::MAX_ADDR_SPACE_SIZE);
-        assert!((AS_SIZE % arch_mmu::AddrSpaceSizeGranule::SIZE) == 0);
+        // Check for architectural restrictions as well.
+        Self::arch_address_space_size_sanity_checks();
 
         AS_SIZE
     }

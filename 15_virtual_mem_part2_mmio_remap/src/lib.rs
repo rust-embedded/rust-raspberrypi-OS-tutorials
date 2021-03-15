@@ -112,6 +112,7 @@
 #![allow(clippy::clippy::upper_case_acronyms)]
 #![allow(incomplete_features)]
 #![feature(asm)]
+#![feature(const_evaluatable_checked)]
 #![feature(const_fn)]
 #![feature(const_fn_fn_ptr_basics)]
 #![feature(const_generics)]

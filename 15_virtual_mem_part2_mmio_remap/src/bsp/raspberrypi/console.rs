@@ -5,7 +5,7 @@
 //! BSP console facilities.
 
 use super::memory;
-use crate::{bsp::device_driver, console, cpu};
+use crate::{bsp::device_driver, console, cpu, driver};
 use core::fmt;
 
 //--------------------------------------------------------------------------------------------------
@@ -23,7 +23,7 @@ use core::fmt;
 ///
 /// - Use only for printing during a panic.
 pub unsafe fn panic_console_out() -> impl fmt::Write {
-    use crate::driver::interface::DeviceDriver;
+    use driver::interface::DeviceDriver;
 
     let mut panic_gpio = device_driver::PanicGPIO::new(memory::map::mmio::GPIO_START.into_usize());
     let mut panic_uart =

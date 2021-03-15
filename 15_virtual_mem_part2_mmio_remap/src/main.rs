@@ -19,7 +19,7 @@ use libkernel::{bsp, cpu, driver, exception, info, memory, state, time, warn};
 ///
 /// - Only a single core must be active and running this function.
 /// - The init calls in this function must appear in the correct order:
-///     - Virtual memory must be activated before the device drivers.
+///     - Caching must be activated before the device drivers.
 ///       - Without it, any atomic operations, e.g. the yet-to-be-introduced spinlocks in the device
 ///         drivers (which currently employ IRQSafeNullLocks instead of spinlocks), will fail to
 ///         work on the RPi SoCs.
@@ -29,10 +29,15 @@ unsafe fn kernel_init() -> ! {
 
     exception::handling_init();
 
-    if let Err(string) = memory::mmu::kernel_map_binary_and_enable_mmu() {
-        panic!("Enabling MMU failed: {}", string);
+    let phys_kernel_tables_base_addr = match memory::mmu::kernel_map_binary() {
+        Err(string) => panic!("Error mapping kernel binary: {}", string),
+        Ok(addr) => addr,
+    };
+
+    if let Err(e) = memory::mmu::enable_mmu_and_caching(phys_kernel_tables_base_addr) {
+        panic!("Enabling MMU failed: {}", e);
     }
-    // Printing will silently fail fail from here on, because the driver's MMIO is not remapped yet.
+    // Printing will silently fail from here on, because the driver's MMIO is not remapped yet.
 
     // Bring up the drivers needed for printing first.
     for i in bsp::driver::driver_manager()

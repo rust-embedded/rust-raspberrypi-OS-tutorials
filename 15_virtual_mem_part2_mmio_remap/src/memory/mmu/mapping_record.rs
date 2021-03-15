@@ -111,12 +111,12 @@ impl MappingRecord {
         const KIB_RSHIFT: u32 = 10; // log2(1024).
         const MIB_RSHIFT: u32 = 20; // log2(1024 * 1024).
 
-        info!("      -----------------------------------------------------------------------------------------------------------------");
+        info!("      -------------------------------------------------------------------------------------------------------------------------------------------");
         info!(
-            "      {:^24}     {:^24}   {:^7}   {:^9}   {:^35}",
+            "      {:^44}     {:^30}   {:^7}   {:^9}   {:^35}",
             "Virtual", "Physical", "Size", "Attr", "Entity"
         );
-        info!("      -----------------------------------------------------------------------------------------------------------------");
+        info!("      -------------------------------------------------------------------------------------------------------------------------------------------");
 
         for i in self
             .inner
@@ -124,10 +124,10 @@ impl MappingRecord {
             .filter(|x| x.is_some())
             .map(|x| x.unwrap())
         {
-            let virt_start = i.virt_start_addr.into_usize();
+            let virt_start = i.virt_start_addr;
             let virt_end_inclusive = virt_start + i.phys_pages.size() - 1;
-            let phys_start = i.phys_pages.start_addr().into_usize();
-            let phys_end_inclusive = i.phys_pages.end_addr_inclusive().into_usize();
+            let phys_start = i.phys_pages.start_addr();
+            let phys_end_inclusive = i.phys_pages.end_addr_inclusive();
             let size = i.phys_pages.size();
 
             let (size, unit) = if (size >> MIB_RSHIFT) > 0 {
@@ -155,7 +155,7 @@ impl MappingRecord {
             };
 
             info!(
-                "      {:#011X}..{:#011X} --> {:#011X}..{:#011X} | \
+                "      {}..{} --> {}..{} | \
                         {: >3} {} | {: <3} {} {: <2} | {}",
                 virt_start,
                 virt_end_inclusive,
@@ -172,14 +172,14 @@ impl MappingRecord {
             for k in i.users[1..].iter() {
                 if let Some(additional_user) = *k {
                     info!(
-                        "                                                                                  | {}",
+                        "                                                                                                            | {}",
                         additional_user
                     );
                 }
             }
         }
 
-        info!("      -----------------------------------------------------------------------------------------------------------------");
+        info!("      -------------------------------------------------------------------------------------------------------------------------------------------");
     }
 }
 

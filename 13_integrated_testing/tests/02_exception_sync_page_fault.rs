@@ -29,7 +29,7 @@ unsafe fn kernel_init() -> ! {
     println!("Testing synchronous exception handling by causing a page fault");
     println!("-------------------------------------------------------------------\n");
 
-    if let Err(string) = memory::mmu::mmu().init() {
+    if let Err(string) = memory::mmu::mmu().enable_mmu_and_caching() {
         println!("MMU: {}", string);
         cpu::qemu_exit_failure()
     }

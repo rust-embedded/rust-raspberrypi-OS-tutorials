@@ -1026,7 +1026,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu/translatio
 --- 12_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu/translation_table.rs
 +++ 13_integrated_testing/src/_arch/aarch64/memory/mmu/translation_table.rs
 @@ -286,3 +286,31 @@
-         self.lvl2.base_addr_u64()
+         self.lvl2.phys_start_addr_u64()
      }
  }
 +
@@ -1061,8 +1061,8 @@ diff -uNr 12_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu/translatio
 diff -uNr 12_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu.rs 13_integrated_testing/src/_arch/aarch64/memory/mmu.rs
 --- 12_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu.rs
 +++ 13_integrated_testing/src/_arch/aarch64/memory/mmu.rs
-@@ -144,3 +144,22 @@
-         Ok(())
+@@ -162,3 +162,22 @@
+         SCTLR_EL1.matches_all(SCTLR_EL1::M::Enable)
      }
  }
 +
@@ -1194,7 +1194,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/exception.rs 13_integrated_testing/
 diff -uNr 12_exceptions_part1_groundwork/src/lib.rs 13_integrated_testing/src/lib.rs
 --- 12_exceptions_part1_groundwork/src/lib.rs
 +++ 13_integrated_testing/src/lib.rs
-@@ -0,0 +1,171 @@
+@@ -0,0 +1,172 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -1311,6 +1311,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/lib.rs 13_integrated_testing/src/li
 +#![feature(const_fn_fn_ptr_basics)]
 +#![feature(const_generics)]
 +#![feature(const_panic)]
++#![feature(core_intrinsics)]
 +#![feature(format_args_nl)]
 +#![feature(global_asm)]
 +#![feature(linkage)]
@@ -1370,7 +1371,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/lib.rs 13_integrated_testing/src/li
 diff -uNr 12_exceptions_part1_groundwork/src/main.rs 13_integrated_testing/src/main.rs
 --- 12_exceptions_part1_groundwork/src/main.rs
 +++ 13_integrated_testing/src/main.rs
-@@ -6,130 +6,12 @@
+@@ -6,131 +6,12 @@
  #![doc(html_logo_url = "https://git.io/JeGIp")]
 
  //! The `kernel` binary.
@@ -1480,6 +1481,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/main.rs 13_integrated_testing/src/m
 -#![feature(const_fn_fn_ptr_basics)]
 -#![feature(const_generics)]
 -#![feature(const_panic)]
+-#![feature(core_intrinsics)]
 +
  #![feature(format_args_nl)]
 -#![feature(global_asm)]
@@ -1503,7 +1505,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/main.rs 13_integrated_testing/src/m
 
  /// Early init code.
  ///
-@@ -141,6 +23,7 @@
+@@ -142,6 +23,7 @@
  ///       - Without it, any atomic operations, e.g. the yet-to-be-introduced spinlocks in the device
  ///         drivers (which currently employ NullLocks instead of spinlocks), will fail to work on
  ///         the RPi SoCs.
@@ -1511,7 +1513,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/main.rs 13_integrated_testing/src/m
  unsafe fn kernel_init() -> ! {
      use driver::interface::DriverManager;
      use memory::mmu::interface::MMU;
-@@ -167,9 +50,7 @@
+@@ -168,9 +50,7 @@
  fn kernel_main() -> ! {
      use bsp::console::console;
      use console::interface::All;
@@ -1521,7 +1523,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/main.rs 13_integrated_testing/src/m
 
      info!("Booting on: {}", bsp::board_name());
 
-@@ -196,31 +77,6 @@
+@@ -197,31 +77,6 @@
          info!("      {}. {}", i + 1, driver.compatible());
      }
 
@@ -1557,7 +1559,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/main.rs 13_integrated_testing/src/m
 diff -uNr 12_exceptions_part1_groundwork/src/memory/mmu.rs 13_integrated_testing/src/memory/mmu.rs
 --- 12_exceptions_part1_groundwork/src/memory/mmu.rs
 +++ 13_integrated_testing/src/memory/mmu.rs
-@@ -54,7 +54,6 @@
+@@ -66,7 +66,6 @@
 
  /// Architecture agnostic translation types.
  #[allow(missing_docs)]
@@ -1565,7 +1567,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/memory/mmu.rs 13_integrated_testing
  #[derive(Copy, Clone)]
  pub enum Translation {
      Identity,
-@@ -244,4 +243,9 @@
+@@ -261,4 +260,9 @@
              info!("{}", i);
          }
      }
@@ -1910,7 +1912,7 @@ diff -uNr 12_exceptions_part1_groundwork/tests/02_exception_sync_page_fault.rs 1
 +    println!("Testing synchronous exception handling by causing a page fault");
 +    println!("-------------------------------------------------------------------\n");
 +
-+    if let Err(string) = memory::mmu::mmu().init() {
++    if let Err(string) = memory::mmu::mmu().enable_mmu_and_caching() {
 +        println!("MMU: {}", string);
 +        cpu::qemu_exit_failure()
 +    }

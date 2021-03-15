@@ -7,7 +7,11 @@
 pub mod mmu;
 
 use crate::common;
-use core::{marker::PhantomData, ops::RangeInclusive};
+use core::{
+    fmt,
+    marker::PhantomData,
+    ops::{AddAssign, RangeInclusive, SubAssign},
+};
 
 //--------------------------------------------------------------------------------------------------
 // Public Definitions
@@ -74,6 +78,15 @@ impl<ATYPE: AddressType> core::ops::Add<usize> for Address<ATYPE> {
     }
 }
 
+impl<ATYPE: AddressType> AddAssign for Address<ATYPE> {
+    fn add_assign(&mut self, other: Self) {
+        *self = Self {
+            value: self.value + other.into_usize(),
+            _address_type: PhantomData,
+        };
+    }
+}
+
 impl<ATYPE: AddressType> core::ops::Sub<usize> for Address<ATYPE> {
     type Output = Self;
 
@@ -82,6 +95,44 @@ impl<ATYPE: AddressType> core::ops::Sub<usize> for Address<ATYPE> {
             value: self.value - other,
             _address_type: PhantomData,
         }
+    }
+}
+
+impl<ATYPE: AddressType> SubAssign for Address<ATYPE> {
+    fn sub_assign(&mut self, other: Self) {
+        *self = Self {
+            value: self.value - other.into_usize(),
+            _address_type: PhantomData,
+        };
+    }
+}
+
+impl fmt::Display for Address<Physical> {
+    // Don't expect to see physical addresses greater than 40 bit.
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let q3: u8 = ((self.value >> 32) & 0xff) as u8;
+        let q2: u16 = ((self.value >> 16) & 0xffff) as u16;
+        let q1: u16 = (self.value & 0xffff) as u16;
+
+        write!(f, "0x")?;
+        write!(f, "{:02x}_", q3)?;
+        write!(f, "{:04x}_", q2)?;
+        write!(f, "{:04x}", q1)
+    }
+}
+
+impl fmt::Display for Address<Virtual> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let q4: u16 = ((self.value >> 48) & 0xffff) as u16;
+        let q3: u16 = ((self.value >> 32) & 0xffff) as u16;
+        let q2: u16 = ((self.value >> 16) & 0xffff) as u16;
+        let q1: u16 = (self.value & 0xffff) as u16;
+
+        write!(f, "0x")?;
+        write!(f, "{:04x}_", q4)?;
+        write!(f, "{:04x}_", q3)?;
+        write!(f, "{:04x}_", q2)?;
+        write!(f, "{:04x}", q1)
     }
 }
 
