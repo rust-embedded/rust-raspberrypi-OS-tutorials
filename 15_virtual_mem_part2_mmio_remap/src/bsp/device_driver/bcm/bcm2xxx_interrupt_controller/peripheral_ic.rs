@@ -7,9 +7,7 @@
 use super::{InterruptController, PendingIRQs, PeripheralIRQ};
 use crate::{
     bsp::device_driver::common::MMIODerefWrapper,
-    driver, exception, memory,
-    memory::Physical,
-    synchronization,
+    driver, exception, memory, synchronization,
     synchronization::{IRQSafeNullLock, InitStateLock},
 };
 use register::{mmio::*, register_structs};
@@ -53,7 +51,7 @@ type HandlerTable =
 
 /// Representation of the peripheral interrupt controller.
 pub struct PeripheralIC {
-    phys_mmio_descriptor: memory::mmu::MMIODescriptor<Physical>,
+    mmio_descriptor: memory::mmu::MMIODescriptor,
 
     /// Access to write registers is guarded with a lock.
     wo_registers: IRQSafeNullLock<WriteOnlyRegisters>,
@@ -75,11 +73,11 @@ impl PeripheralIC {
     /// # Safety
     ///
     /// - The user must ensure to provide correct MMIO descriptors.
-    pub const unsafe fn new(phys_mmio_descriptor: memory::mmu::MMIODescriptor<Physical>) -> Self {
-        let addr = phys_mmio_descriptor.start_addr().into_usize();
+    pub const unsafe fn new(mmio_descriptor: memory::mmu::MMIODescriptor) -> Self {
+        let addr = mmio_descriptor.start_addr().into_usize();
 
         Self {
-            phys_mmio_descriptor,
+            mmio_descriptor,
             wo_registers: IRQSafeNullLock::new(WriteOnlyRegisters::new(addr)),
             ro_registers: InitStateLock::new(ReadOnlyRegisters::new(addr)),
             handler_table: InitStateLock::new([None; InterruptController::NUM_PERIPHERAL_IRQS]),
@@ -109,8 +107,7 @@ impl driver::interface::DeviceDriver for PeripheralIC {
 
     unsafe fn init(&self) -> Result<(), &'static str> {
         let virt_addr =
-            memory::mmu::kernel_map_mmio(self.compatible(), &self.phys_mmio_descriptor)?
-                .into_usize();
+            memory::mmu::kernel_map_mmio(self.compatible(), &self.mmio_descriptor)?.into_usize();
 
         self.wo_registers
             .lock(|regs| *regs = WriteOnlyRegisters::new(virt_addr));

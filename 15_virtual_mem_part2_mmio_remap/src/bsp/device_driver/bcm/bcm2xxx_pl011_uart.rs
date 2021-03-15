@@ -11,7 +11,7 @@
 
 use crate::{
     bsp, bsp::device_driver::common::MMIODerefWrapper, console, cpu, driver, exception, memory,
-    memory::Physical, synchronization, synchronization::IRQSafeNullLock,
+    synchronization, synchronization::IRQSafeNullLock,
 };
 use core::{
     fmt,
@@ -235,7 +235,7 @@ pub use PL011UartInner as PanicUart;
 
 /// Representation of the UART.
 pub struct PL011Uart {
-    phys_mmio_descriptor: memory::mmu::MMIODescriptor<Physical>,
+    mmio_descriptor: memory::mmu::MMIODescriptor,
     virt_mmio_start_addr: AtomicUsize,
     inner: IRQSafeNullLock<PL011UartInner>,
     irq_number: bsp::device_driver::IRQNumber,
@@ -408,14 +408,14 @@ impl PL011Uart {
     /// - The user must ensure to provide correct MMIO descriptors.
     /// - The user must ensure to provide correct IRQ numbers.
     pub const unsafe fn new(
-        phys_mmio_descriptor: memory::mmu::MMIODescriptor<Physical>,
+        mmio_descriptor: memory::mmu::MMIODescriptor,
         irq_number: bsp::device_driver::IRQNumber,
     ) -> Self {
         Self {
-            phys_mmio_descriptor,
+            mmio_descriptor,
             virt_mmio_start_addr: AtomicUsize::new(0),
             inner: IRQSafeNullLock::new(PL011UartInner::new(
-                phys_mmio_descriptor.start_addr().into_usize(),
+                mmio_descriptor.start_addr().into_usize(),
             )),
             irq_number,
         }
@@ -433,8 +433,7 @@ impl driver::interface::DeviceDriver for PL011Uart {
     }
 
     unsafe fn init(&self) -> Result<(), &'static str> {
-        let virt_addr =
-            memory::mmu::kernel_map_mmio(self.compatible(), &self.phys_mmio_descriptor)?;
+        let virt_addr = memory::mmu::kernel_map_mmio(self.compatible(), &self.mmio_descriptor)?;
 
         self.inner
             .lock(|inner| inner.init(Some(virt_addr.into_usize())))?;

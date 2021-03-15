@@ -55,8 +55,8 @@ pub struct AttributeFields {
 
 /// An MMIO descriptor for use in device drivers.
 #[derive(Copy, Clone)]
-pub struct MMIODescriptor<ATYPE: AddressType> {
-    start_addr: Address<ATYPE>,
+pub struct MMIODescriptor {
+    start_addr: Address<Physical>,
     size: usize,
 }
 
@@ -145,8 +145,8 @@ impl From<PageSliceDescriptor<Virtual>> for PageSliceDescriptor<Physical> {
     }
 }
 
-impl<ATYPE: AddressType> From<MMIODescriptor<ATYPE>> for PageSliceDescriptor<ATYPE> {
-    fn from(desc: MMIODescriptor<ATYPE>) -> Self {
+impl From<MMIODescriptor> for PageSliceDescriptor<Physical> {
+    fn from(desc: MMIODescriptor) -> Self {
         let start_page_addr = desc
             .start_addr
             .align_down(bsp::memory::mmu::KernelGranule::SIZE);
@@ -166,21 +166,21 @@ impl<ATYPE: AddressType> From<MMIODescriptor<ATYPE>> for PageSliceDescriptor<ATY
 // MMIODescriptor
 //------------------------------------------------------------------------------
 
-impl<ATYPE: AddressType> MMIODescriptor<ATYPE> {
+impl MMIODescriptor {
     /// Create an instance.
-    pub const fn new(start_addr: Address<ATYPE>, size: usize) -> Self {
+    pub const fn new(start_addr: Address<Physical>, size: usize) -> Self {
         assert!(size > 0);
 
         Self { start_addr, size }
     }
 
     /// Return the start address.
-    pub const fn start_addr(&self) -> Address<ATYPE> {
+    pub const fn start_addr(&self) -> Address<Physical> {
         self.start_addr
     }
 
     /// Return the inclusive end address.
-    pub fn end_addr_inclusive(&self) -> Address<ATYPE> {
+    pub fn end_addr_inclusive(&self) -> Address<Physical> {
         self.start_addr + (self.size - 1)
     }
 

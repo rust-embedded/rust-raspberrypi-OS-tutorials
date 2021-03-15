@@ -79,10 +79,7 @@
 mod gicc;
 mod gicd;
 
-use crate::{
-    bsp, cpu, driver, exception, memory, memory::Physical, synchronization,
-    synchronization::InitStateLock,
-};
+use crate::{bsp, cpu, driver, exception, memory, synchronization, synchronization::InitStateLock};
 use core::sync::atomic::{AtomicBool, Ordering};
 
 //--------------------------------------------------------------------------------------------------
@@ -100,8 +97,8 @@ pub type IRQNumber = exception::asynchronous::IRQNumber<{ GICv2::MAX_IRQ_NUMBER 
 
 /// Representation of the GIC.
 pub struct GICv2 {
-    gicd_phys_mmio_descriptor: memory::mmu::MMIODescriptor<Physical>,
-    gicc_phys_mmio_descriptor: memory::mmu::MMIODescriptor<Physical>,
+    gicd_mmio_descriptor: memory::mmu::MMIODescriptor,
+    gicc_mmio_descriptor: memory::mmu::MMIODescriptor,
 
     /// The Distributor.
     gicd: gicd::GICD,
@@ -130,14 +127,14 @@ impl GICv2 {
     ///
     /// - The user must ensure to provide correct MMIO descriptors.
     pub const unsafe fn new(
-        gicd_phys_mmio_descriptor: memory::mmu::MMIODescriptor<Physical>,
-        gicc_phys_mmio_descriptor: memory::mmu::MMIODescriptor<Physical>,
+        gicd_mmio_descriptor: memory::mmu::MMIODescriptor,
+        gicc_mmio_descriptor: memory::mmu::MMIODescriptor,
     ) -> Self {
         Self {
-            gicd_phys_mmio_descriptor,
-            gicc_phys_mmio_descriptor,
-            gicd: gicd::GICD::new(gicd_phys_mmio_descriptor.start_addr().into_usize()),
-            gicc: gicc::GICC::new(gicc_phys_mmio_descriptor.start_addr().into_usize()),
+            gicd_mmio_descriptor,
+            gicc_mmio_descriptor,
+            gicd: gicd::GICD::new(gicd_mmio_descriptor.start_addr().into_usize()),
+            gicc: gicc::GICC::new(gicc_mmio_descriptor.start_addr().into_usize()),
             is_mmio_remapped: AtomicBool::new(false),
             handler_table: InitStateLock::new([None; Self::NUM_IRQS]),
         }
@@ -160,11 +157,11 @@ impl driver::interface::DeviceDriver for GICv2 {
             let mut virt_addr;
 
             // GICD
-            virt_addr = memory::mmu::kernel_map_mmio("GICD", &self.gicd_phys_mmio_descriptor)?;
+            virt_addr = memory::mmu::kernel_map_mmio("GICD", &self.gicd_mmio_descriptor)?;
             self.gicd.set_mmio(virt_addr.into_usize());
 
             // GICC
-            virt_addr = memory::mmu::kernel_map_mmio("GICC", &self.gicc_phys_mmio_descriptor)?;
+            virt_addr = memory::mmu::kernel_map_mmio("GICC", &self.gicc_mmio_descriptor)?;
             self.gicc.set_mmio(virt_addr.into_usize());
 
             // Conclude remapping.

@@ -941,25 +941,22 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gi
 diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2.rs 15_virtual_mem_part2_mmio_remap/src/bsp/device_driver/arm/gicv2.rs
 --- 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2.rs
 +++ 15_virtual_mem_part2_mmio_remap/src/bsp/device_driver/arm/gicv2.rs
-@@ -79,7 +79,11 @@
+@@ -79,7 +79,8 @@
  mod gicc;
  mod gicd;
 
 -use crate::{bsp, cpu, driver, exception, synchronization, synchronization::InitStateLock};
-+use crate::{
-+    bsp, cpu, driver, exception, memory, memory::Physical, synchronization,
-+    synchronization::InitStateLock,
-+};
++use crate::{bsp, cpu, driver, exception, memory, synchronization, synchronization::InitStateLock};
 +use core::sync::atomic::{AtomicBool, Ordering};
 
  //--------------------------------------------------------------------------------------------------
  // Private Definitions
-@@ -96,12 +100,18 @@
+@@ -96,12 +97,18 @@
 
  /// Representation of the GIC.
  pub struct GICv2 {
-+    gicd_phys_mmio_descriptor: memory::mmu::MMIODescriptor<Physical>,
-+    gicc_phys_mmio_descriptor: memory::mmu::MMIODescriptor<Physical>,
++    gicd_mmio_descriptor: memory::mmu::MMIODescriptor,
++    gicc_mmio_descriptor: memory::mmu::MMIODescriptor,
 +
      /// The Distributor.
      gicd: gicd::GICD,
@@ -973,7 +970,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2.rs
      /// Stores registered IRQ handlers. Writable only during kernel init. RO afterwards.
      handler_table: InitStateLock<HandlerTable>,
  }
-@@ -118,11 +128,17 @@
+@@ -118,11 +125,17 @@
      ///
      /// # Safety
      ///
@@ -981,21 +978,21 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2.rs
 -    pub const unsafe fn new(gicd_mmio_start_addr: usize, gicc_mmio_start_addr: usize) -> Self {
 +    /// - The user must ensure to provide correct MMIO descriptors.
 +    pub const unsafe fn new(
-+        gicd_phys_mmio_descriptor: memory::mmu::MMIODescriptor<Physical>,
-+        gicc_phys_mmio_descriptor: memory::mmu::MMIODescriptor<Physical>,
++        gicd_mmio_descriptor: memory::mmu::MMIODescriptor,
++        gicc_mmio_descriptor: memory::mmu::MMIODescriptor,
 +    ) -> Self {
          Self {
 -            gicd: gicd::GICD::new(gicd_mmio_start_addr),
 -            gicc: gicc::GICC::new(gicc_mmio_start_addr),
-+            gicd_phys_mmio_descriptor,
-+            gicc_phys_mmio_descriptor,
-+            gicd: gicd::GICD::new(gicd_phys_mmio_descriptor.start_addr().into_usize()),
-+            gicc: gicc::GICC::new(gicc_phys_mmio_descriptor.start_addr().into_usize()),
++            gicd_mmio_descriptor,
++            gicc_mmio_descriptor,
++            gicd: gicd::GICD::new(gicd_mmio_descriptor.start_addr().into_usize()),
++            gicc: gicc::GICC::new(gicc_mmio_descriptor.start_addr().into_usize()),
 +            is_mmio_remapped: AtomicBool::new(false),
              handler_table: InitStateLock::new([None; Self::NUM_IRQS]),
          }
      }
-@@ -139,6 +155,22 @@
+@@ -139,6 +152,22 @@
      }
 
      unsafe fn init(&self) -> Result<(), &'static str> {
@@ -1004,11 +1001,11 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2.rs
 +            let mut virt_addr;
 +
 +            // GICD
-+            virt_addr = memory::mmu::kernel_map_mmio("GICD", &self.gicd_phys_mmio_descriptor)?;
++            virt_addr = memory::mmu::kernel_map_mmio("GICD", &self.gicd_mmio_descriptor)?;
 +            self.gicd.set_mmio(virt_addr.into_usize());
 +
 +            // GICC
-+            virt_addr = memory::mmu::kernel_map_mmio("GICC", &self.gicc_phys_mmio_descriptor)?;
++            virt_addr = memory::mmu::kernel_map_mmio("GICC", &self.gicc_mmio_descriptor)?;
 +            self.gicc.set_mmio(virt_addr.into_usize());
 +
 +            // Conclude remapping.
@@ -1027,9 +1024,8 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
 
  use crate::{
 -    bsp::device_driver::common::MMIODerefWrapper, driver, synchronization,
--    synchronization::IRQSafeNullLock,
-+    bsp::device_driver::common::MMIODerefWrapper, driver, memory, memory::Physical,
-+    synchronization, synchronization::IRQSafeNullLock,
++    bsp::device_driver::common::MMIODerefWrapper, driver, memory, synchronization,
+     synchronization::IRQSafeNullLock,
  };
 +use core::sync::atomic::{AtomicUsize, Ordering};
  use register::{mmio::*, register_bitfields, register_structs};
@@ -1039,7 +1035,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
 
  /// Representation of the GPIO HW.
  pub struct GPIO {
-+    phys_mmio_descriptor: memory::mmu::MMIODescriptor<Physical>,
++    mmio_descriptor: memory::mmu::MMIODescriptor,
 +    virt_mmio_start_addr: AtomicUsize,
      inner: IRQSafeNullLock<GPIOInner>,
  }
@@ -1064,32 +1060,29 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
      /// Disable pull-up/down on pins 14 and 15.
      #[cfg(feature = "bsp_rpi3")]
      fn disable_pud_14_15_bcm2837(&mut self) {
-@@ -190,10 +206,14 @@
+@@ -190,10 +206,12 @@
      ///
      /// # Safety
      ///
 -    /// - The user must ensure to provide a correct MMIO start address.
 -    pub const unsafe fn new(mmio_start_addr: usize) -> Self {
 +    /// - The user must ensure to provide correct MMIO descriptors.
-+    pub const unsafe fn new(phys_mmio_descriptor: memory::mmu::MMIODescriptor<Physical>) -> Self {
++    pub const unsafe fn new(mmio_descriptor: memory::mmu::MMIODescriptor) -> Self {
          Self {
 -            inner: IRQSafeNullLock::new(GPIOInner::new(mmio_start_addr)),
-+            phys_mmio_descriptor,
++            mmio_descriptor,
 +            virt_mmio_start_addr: AtomicUsize::new(0),
-+            inner: IRQSafeNullLock::new(GPIOInner::new(
-+                phys_mmio_descriptor.start_addr().into_usize(),
-+            )),
++            inner: IRQSafeNullLock::new(GPIOInner::new(mmio_descriptor.start_addr().into_usize())),
          }
      }
 
-@@ -212,4 +232,27 @@
+@@ -212,4 +230,26 @@
      fn compatible(&self) -> &'static str {
          "BCM GPIO"
      }
 +
 +    unsafe fn init(&self) -> Result<(), &'static str> {
-+        let virt_addr =
-+            memory::mmu::kernel_map_mmio(self.compatible(), &self.phys_mmio_descriptor)?;
++        let virt_addr = memory::mmu::kernel_map_mmio(self.compatible(), &self.mmio_descriptor)?;
 +
 +        self.inner
 +            .lock(|inner| inner.init(Some(virt_addr.into_usize())))?;
@@ -1114,7 +1107,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
 diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs 15_virtual_mem_part2_mmio_remap/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
 --- 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
 +++ 15_virtual_mem_part2_mmio_remap/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
-@@ -2,12 +2,14 @@
+@@ -2,12 +2,12 @@
  //
  // Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
 
@@ -1125,17 +1118,15 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
  use crate::{
      bsp::device_driver::common::MMIODerefWrapper,
 -    exception, synchronization,
-+    driver, exception, memory,
-+    memory::Physical,
-+    synchronization,
++    driver, exception, memory, synchronization,
      synchronization::{IRQSafeNullLock, InitStateLock},
  };
  use register::{mmio::*, register_structs};
-@@ -51,11 +53,13 @@
+@@ -51,11 +51,13 @@
 
  /// Representation of the peripheral interrupt controller.
  pub struct PeripheralIC {
-+    phys_mmio_descriptor: memory::mmu::MMIODescriptor<Physical>,
++    mmio_descriptor: memory::mmu::MMIODescriptor,
 +
      /// Access to write registers is guarded with a lock.
      wo_registers: IRQSafeNullLock<WriteOnlyRegisters>,
@@ -1146,20 +1137,20 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
 
      /// Stores registered IRQ handlers. Writable only during kernel init. RO afterwards.
      handler_table: InitStateLock<HandlerTable>,
-@@ -70,21 +74,26 @@
+@@ -70,21 +72,26 @@
      ///
      /// # Safety
      ///
 -    /// - The user must ensure to provide a correct MMIO start address.
 -    pub const unsafe fn new(mmio_start_addr: usize) -> Self {
 +    /// - The user must ensure to provide correct MMIO descriptors.
-+    pub const unsafe fn new(phys_mmio_descriptor: memory::mmu::MMIODescriptor<Physical>) -> Self {
-+        let addr = phys_mmio_descriptor.start_addr().into_usize();
++    pub const unsafe fn new(mmio_descriptor: memory::mmu::MMIODescriptor) -> Self {
++        let addr = mmio_descriptor.start_addr().into_usize();
 +
          Self {
 -            wo_registers: IRQSafeNullLock::new(WriteOnlyRegisters::new(mmio_start_addr)),
 -            ro_registers: ReadOnlyRegisters::new(mmio_start_addr),
-+            phys_mmio_descriptor,
++            mmio_descriptor,
 +            wo_registers: IRQSafeNullLock::new(WriteOnlyRegisters::new(addr)),
 +            ro_registers: InitStateLock::new(ReadOnlyRegisters::new(addr)),
              handler_table: InitStateLock::new([None; InterruptController::NUM_PERIPHERAL_IRQS]),
@@ -1180,7 +1171,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
      }
  }
 
-@@ -93,6 +102,25 @@
+@@ -93,6 +100,24 @@
  //------------------------------------------------------------------------------
  use synchronization::interface::{Mutex, ReadWriteEx};
 
@@ -1191,8 +1182,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
 +
 +    unsafe fn init(&self) -> Result<(), &'static str> {
 +        let virt_addr =
-+            memory::mmu::kernel_map_mmio(self.compatible(), &self.phys_mmio_descriptor)?
-+                .into_usize();
++            memory::mmu::kernel_map_mmio(self.compatible(), &self.mmio_descriptor)?.into_usize();
 +
 +        self.wo_registers
 +            .lock(|regs| *regs = WriteOnlyRegisters::new(virt_addr));
@@ -1215,7 +1205,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
  mod peripheral_ic;
 
 -use crate::{driver, exception};
-+use crate::{driver, exception, memory, memory::Physical};
++use crate::{driver, exception, memory};
 
  //--------------------------------------------------------------------------------------------------
  // Private Definitions
@@ -1227,12 +1217,12 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
 -    pub const unsafe fn new(_local_mmio_start_addr: usize, periph_mmio_start_addr: usize) -> Self {
 +    /// - The user must ensure to provide correct MMIO descriptors.
 +    pub const unsafe fn new(
-+        _phys_local_mmio_descriptor: memory::mmu::MMIODescriptor<Physical>,
-+        phys_periph_mmio_descriptor: memory::mmu::MMIODescriptor<Physical>,
++        _local_mmio_descriptor: memory::mmu::MMIODescriptor,
++        periph_mmio_descriptor: memory::mmu::MMIODescriptor,
 +    ) -> Self {
          Self {
 -            periph: peripheral_ic::PeripheralIC::new(periph_mmio_start_addr),
-+            periph: peripheral_ic::PeripheralIC::new(phys_periph_mmio_descriptor),
++            periph: peripheral_ic::PeripheralIC::new(periph_mmio_descriptor),
          }
      }
  }
@@ -1256,15 +1246,14 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
 
  use crate::{
 -    bsp, bsp::device_driver::common::MMIODerefWrapper, console, cpu, driver, exception,
--    synchronization, synchronization::IRQSafeNullLock,
 +    bsp, bsp::device_driver::common::MMIODerefWrapper, console, cpu, driver, exception, memory,
-+    memory::Physical, synchronization, synchronization::IRQSafeNullLock,
-+};
+     synchronization, synchronization::IRQSafeNullLock,
+ };
+-use core::fmt;
 +use core::{
 +    fmt,
 +    sync::atomic::{AtomicUsize, Ordering},
- };
--use core::fmt;
++};
  use register::{mmio::*, register_bitfields, register_structs};
 
  //--------------------------------------------------------------------------------------------------
@@ -1272,7 +1261,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
 
  /// Representation of the UART.
  pub struct PL011Uart {
-+    phys_mmio_descriptor: memory::mmu::MMIODescriptor<Physical>,
++    mmio_descriptor: memory::mmu::MMIODescriptor,
 +    virt_mmio_start_addr: AtomicUsize,
      inner: IRQSafeNullLock<PL011UartInner>,
      irq_number: bsp::device_driver::IRQNumber,
@@ -1312,26 +1301,25 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
 +    /// - The user must ensure to provide correct IRQ numbers.
      pub const unsafe fn new(
 -        mmio_start_addr: usize,
-+        phys_mmio_descriptor: memory::mmu::MMIODescriptor<Physical>,
++        mmio_descriptor: memory::mmu::MMIODescriptor,
          irq_number: bsp::device_driver::IRQNumber,
      ) -> Self {
          Self {
 -            inner: IRQSafeNullLock::new(PL011UartInner::new(mmio_start_addr)),
-+            phys_mmio_descriptor,
++            mmio_descriptor,
 +            virt_mmio_start_addr: AtomicUsize::new(0),
 +            inner: IRQSafeNullLock::new(PL011UartInner::new(
-+                phys_mmio_descriptor.start_addr().into_usize(),
++                mmio_descriptor.start_addr().into_usize(),
 +            )),
              irq_number,
          }
      }
-@@ -413,7 +433,14 @@
+@@ -413,7 +433,13 @@
      }
 
      unsafe fn init(&self) -> Result<(), &'static str> {
 -        self.inner.lock(|inner| inner.init());
-+        let virt_addr =
-+            memory::mmu::kernel_map_mmio(self.compatible(), &self.phys_mmio_descriptor)?;
++        let virt_addr = memory::mmu::kernel_map_mmio(self.compatible(), &self.mmio_descriptor)?;
 +
 +        self.inner
 +            .lock(|inner| inner.init(Some(virt_addr.into_usize())))?;
@@ -1341,7 +1329,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
 
          Ok(())
      }
-@@ -432,6 +459,16 @@
+@@ -432,6 +458,16 @@
 
          Ok(())
      }
@@ -2319,10 +2307,10 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/memory/mmu/mapping_record.rs 1
 +}
 +
 +pub fn kernel_find_and_insert_mmio_duplicate(
-+    phys_mmio_descriptor: &MMIODescriptor<Physical>,
++    mmio_descriptor: &MMIODescriptor,
 +    new_user: &'static str,
 +) -> Option<Address<Virtual>> {
-+    let phys_pages: PageSliceDescriptor<Physical> = phys_mmio_descriptor.clone().into();
++    let phys_pages: PageSliceDescriptor<Physical> = mmio_descriptor.clone().into();
 +
 +    KERNEL_MAPPING_RECORD.write(|mr| {
 +        let dup = mr.find_duplicate(&phys_pages)?;
@@ -2512,8 +2500,8 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/memory/mmu/types.rs 15_virtual
 +
 +/// An MMIO descriptor for use in device drivers.
 +#[derive(Copy, Clone)]
-+pub struct MMIODescriptor<ATYPE: AddressType> {
-+    start_addr: Address<ATYPE>,
++pub struct MMIODescriptor {
++    start_addr: Address<Physical>,
 +    size: usize,
 +}
 +
@@ -2602,8 +2590,8 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/memory/mmu/types.rs 15_virtual
 +    }
 +}
 +
-+impl<ATYPE: AddressType> From<MMIODescriptor<ATYPE>> for PageSliceDescriptor<ATYPE> {
-+    fn from(desc: MMIODescriptor<ATYPE>) -> Self {
++impl From<MMIODescriptor> for PageSliceDescriptor<Physical> {
++    fn from(desc: MMIODescriptor) -> Self {
 +        let start_page_addr = desc
 +            .start_addr
 +            .align_down(bsp::memory::mmu::KernelGranule::SIZE);
@@ -2623,21 +2611,21 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/memory/mmu/types.rs 15_virtual
 +// MMIODescriptor
 +//------------------------------------------------------------------------------
 +
-+impl<ATYPE: AddressType> MMIODescriptor<ATYPE> {
++impl MMIODescriptor {
 +    /// Create an instance.
-+    pub const fn new(start_addr: Address<ATYPE>, size: usize) -> Self {
++    pub const fn new(start_addr: Address<Physical>, size: usize) -> Self {
 +        assert!(size > 0);
 +
 +        Self { start_addr, size }
 +    }
 +
 +    /// Return the start address.
-+    pub const fn start_addr(&self) -> Address<ATYPE> {
++    pub const fn start_addr(&self) -> Address<Physical> {
 +        self.start_addr
 +    }
 +
 +    /// Return the inclusive end address.
-+    pub fn end_addr_inclusive(&self) -> Address<ATYPE> {
++    pub fn end_addr_inclusive(&self) -> Address<Physical> {
 +        self.start_addr + (self.size - 1)
 +    }
 +
@@ -2970,15 +2958,15 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/memory/mmu.rs 15_virtual_mem_p
 +/// - Same as `kernel_map_pages_at_unchecked()`, minus the aliasing part.
 +pub unsafe fn kernel_map_mmio(
 +    name: &'static str,
-+    phys_mmio_descriptor: &MMIODescriptor<Physical>,
++    mmio_descriptor: &MMIODescriptor,
 +) -> Result<Address<Virtual>, &'static str> {
-+    let phys_pages: PageSliceDescriptor<Physical> = phys_mmio_descriptor.clone().into();
++    let phys_pages: PageSliceDescriptor<Physical> = mmio_descriptor.clone().into();
 +    let offset_into_start_page =
-+        phys_mmio_descriptor.start_addr().into_usize() & bsp::memory::mmu::KernelGranule::MASK;
++        mmio_descriptor.start_addr().into_usize() & bsp::memory::mmu::KernelGranule::MASK;
 +
 +    // Check if an identical page slice has been mapped for another driver. If so, reuse it.
 +    let virt_addr = if let Some(addr) =
-+        mapping_record::kernel_find_and_insert_mmio_duplicate(phys_mmio_descriptor, name)
++        mapping_record::kernel_find_and_insert_mmio_duplicate(mmio_descriptor, name)
 +    {
 +        addr
 +    // Otherwise, allocate a new virtual page slice and map it.

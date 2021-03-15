@@ -5,8 +5,8 @@
 //! GPIO Driver.
 
 use crate::{
-    bsp::device_driver::common::MMIODerefWrapper, driver, memory, memory::Physical,
-    synchronization, synchronization::IRQSafeNullLock,
+    bsp::device_driver::common::MMIODerefWrapper, driver, memory, synchronization,
+    synchronization::IRQSafeNullLock,
 };
 use core::sync::atomic::{AtomicUsize, Ordering};
 use register::{mmio::*, register_bitfields, register_structs};
@@ -118,7 +118,7 @@ pub use GPIOInner as PanicGPIO;
 
 /// Representation of the GPIO HW.
 pub struct GPIO {
-    phys_mmio_descriptor: memory::mmu::MMIODescriptor<Physical>,
+    mmio_descriptor: memory::mmu::MMIODescriptor,
     virt_mmio_start_addr: AtomicUsize,
     inner: IRQSafeNullLock<GPIOInner>,
 }
@@ -207,13 +207,11 @@ impl GPIO {
     /// # Safety
     ///
     /// - The user must ensure to provide correct MMIO descriptors.
-    pub const unsafe fn new(phys_mmio_descriptor: memory::mmu::MMIODescriptor<Physical>) -> Self {
+    pub const unsafe fn new(mmio_descriptor: memory::mmu::MMIODescriptor) -> Self {
         Self {
-            phys_mmio_descriptor,
+            mmio_descriptor,
             virt_mmio_start_addr: AtomicUsize::new(0),
-            inner: IRQSafeNullLock::new(GPIOInner::new(
-                phys_mmio_descriptor.start_addr().into_usize(),
-            )),
+            inner: IRQSafeNullLock::new(GPIOInner::new(mmio_descriptor.start_addr().into_usize())),
         }
     }
 
@@ -234,8 +232,7 @@ impl driver::interface::DeviceDriver for GPIO {
     }
 
     unsafe fn init(&self) -> Result<(), &'static str> {
-        let virt_addr =
-            memory::mmu::kernel_map_mmio(self.compatible(), &self.phys_mmio_descriptor)?;
+        let virt_addr = memory::mmu::kernel_map_mmio(self.compatible(), &self.mmio_descriptor)?;
 
         self.inner
             .lock(|inner| inner.init(Some(virt_addr.into_usize())))?;

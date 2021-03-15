@@ -6,7 +6,7 @@
 
 mod peripheral_ic;
 
-use crate::{driver, exception, memory, memory::Physical};
+use crate::{driver, exception, memory};
 
 //--------------------------------------------------------------------------------------------------
 // Private Definitions
@@ -80,11 +80,11 @@ impl InterruptController {
     ///
     /// - The user must ensure to provide correct MMIO descriptors.
     pub const unsafe fn new(
-        _phys_local_mmio_descriptor: memory::mmu::MMIODescriptor<Physical>,
-        phys_periph_mmio_descriptor: memory::mmu::MMIODescriptor<Physical>,
+        _local_mmio_descriptor: memory::mmu::MMIODescriptor,
+        periph_mmio_descriptor: memory::mmu::MMIODescriptor,
     ) -> Self {
         Self {
-            periph: peripheral_ic::PeripheralIC::new(phys_periph_mmio_descriptor),
+            periph: peripheral_ic::PeripheralIC::new(periph_mmio_descriptor),
         }
     }
 }

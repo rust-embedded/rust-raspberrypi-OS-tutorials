@@ -199,10 +199,10 @@ pub fn kernel_add(
 }
 
 pub fn kernel_find_and_insert_mmio_duplicate(
-    phys_mmio_descriptor: &MMIODescriptor<Physical>,
+    mmio_descriptor: &MMIODescriptor,
     new_user: &'static str,
 ) -> Option<Address<Virtual>> {
-    let phys_pages: PageSliceDescriptor<Physical> = phys_mmio_descriptor.clone().into();
+    let phys_pages: PageSliceDescriptor<Physical> = mmio_descriptor.clone().into();
 
     KERNEL_MAPPING_RECORD.write(|mr| {
         let dup = mr.find_duplicate(&phys_pages)?;

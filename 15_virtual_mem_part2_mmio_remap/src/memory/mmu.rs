@@ -180,15 +180,15 @@ pub unsafe fn kernel_map_pages_at(
 /// - Same as `kernel_map_pages_at_unchecked()`, minus the aliasing part.
 pub unsafe fn kernel_map_mmio(
     name: &'static str,
-    phys_mmio_descriptor: &MMIODescriptor<Physical>,
+    mmio_descriptor: &MMIODescriptor,
 ) -> Result<Address<Virtual>, &'static str> {
-    let phys_pages: PageSliceDescriptor<Physical> = phys_mmio_descriptor.clone().into();
+    let phys_pages: PageSliceDescriptor<Physical> = mmio_descriptor.clone().into();
     let offset_into_start_page =
-        phys_mmio_descriptor.start_addr().into_usize() & bsp::memory::mmu::KernelGranule::MASK;
+        mmio_descriptor.start_addr().into_usize() & bsp::memory::mmu::KernelGranule::MASK;
 
     // Check if an identical page slice has been mapped for another driver. If so, reuse it.
     let virt_addr = if let Some(addr) =
-        mapping_record::kernel_find_and_insert_mmio_duplicate(phys_mmio_descriptor, name)
+        mapping_record::kernel_find_and_insert_mmio_duplicate(mmio_descriptor, name)
     {
         addr
     // Otherwise, allocate a new virtual page slice and map it.
