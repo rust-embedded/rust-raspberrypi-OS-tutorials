@@ -1077,7 +1077,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2.rs
 +            self.is_mmio_remapped.store(true, Ordering::Relaxed);
 +        }
 +
-         if cpu::smp::core_id::<usize>() == bsp::cpu::BOOT_CORE_ID {
+         if bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id() {
              self.gicd.boot_core_init();
          }
 

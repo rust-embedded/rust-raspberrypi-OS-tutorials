@@ -1357,7 +1357,7 @@ diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2.rs 14_exceptions
 +    }
 +
 +    unsafe fn init(&self) -> Result<(), &'static str> {
-+        if cpu::smp::core_id::<usize>() == bsp::cpu::BOOT_CORE_ID {
++        if bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id() {
 +            self.gicd.boot_core_init();
 +        }
 +

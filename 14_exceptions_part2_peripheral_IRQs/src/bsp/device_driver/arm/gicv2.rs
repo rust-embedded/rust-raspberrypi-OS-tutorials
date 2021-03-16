@@ -139,7 +139,7 @@ impl driver::interface::DeviceDriver for GICv2 {
     }
 
     unsafe fn init(&self) -> Result<(), &'static str> {
-        if cpu::smp::core_id::<usize>() == bsp::cpu::BOOT_CORE_ID {
+        if bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id() {
             self.gicd.boot_core_init();
         }
 

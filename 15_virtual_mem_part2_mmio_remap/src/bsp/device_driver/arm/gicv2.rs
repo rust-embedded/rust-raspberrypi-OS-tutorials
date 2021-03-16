@@ -168,7 +168,7 @@ impl driver::interface::DeviceDriver for GICv2 {
             self.is_mmio_remapped.store(true, Ordering::Relaxed);
         }
 
-        if cpu::smp::core_id::<usize>() == bsp::cpu::BOOT_CORE_ID {
+        if bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id() {
             self.gicd.boot_core_init();
         }
 

@@ -165,7 +165,7 @@ diff -uNr 03_hacky_hello_world/src/bsp/raspberrypi/cpu.rs 04_zero_overhead_abstr
 +//--------------------------------------------------------------------------------------------------
 +
 +/// Used by `arch` code to find the early boot core.
-+pub const BOOT_CORE_ID: usize = 0;
++pub const BOOT_CORE_ID: u64 = 0;
 
 diff -uNr 03_hacky_hello_world/src/bsp/raspberrypi/link.ld 04_zero_overhead_abstraction/src/bsp/raspberrypi/link.ld
 --- 03_hacky_hello_world/src/bsp/raspberrypi/link.ld

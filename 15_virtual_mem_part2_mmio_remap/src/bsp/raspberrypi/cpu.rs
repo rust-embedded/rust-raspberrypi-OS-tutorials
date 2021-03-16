@@ -9,4 +9,4 @@
 //--------------------------------------------------------------------------------------------------
 
 /// Used by `arch` code to find the early boot core.
-pub const BOOT_CORE_ID: usize = 0;
+pub const BOOT_CORE_ID: u64 = 0;
