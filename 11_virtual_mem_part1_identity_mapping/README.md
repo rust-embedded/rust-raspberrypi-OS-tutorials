@@ -1018,16 +1018,15 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_mem_part1_identity_mapping/s
  #![feature(format_args_nl)]
  #![feature(panic_info_message)]
  #![feature(trait_alias)]
-@@ -132,9 +136,18 @@
+@@ -132,9 +136,17 @@
  /// # Safety
  ///
  /// - Only a single core must be active and running this function.
 -/// - The init calls in this function must appear in the correct order.
 +/// - The init calls in this function must appear in the correct order:
-+///     - Caching must be activated before the device drivers.
-+///       - Without it, any atomic operations, e.g. the yet-to-be-introduced spinlocks in the device
-+///         drivers (which currently employ NullLocks instead of spinlocks), will fail to work on
-+///         the RPi SoCs.
++///     - MMU + Data caching must be activated at the earliest. Without it, any atomic operations,
++///       e.g. the yet-to-be-introduced spinlocks in the device drivers (which currently employ
++///       NullLocks instead of spinlocks), will fail to work (properly) on the RPi SoCs.
  unsafe fn kernel_init() -> ! {
      use driver::interface::DriverManager;
 +    use memory::mmu::interface::MMU;
@@ -1038,7 +1037,7 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_mem_part1_identity_mapping/s
 
      for i in bsp::driver::driver_manager().all_device_drivers().iter() {
          if let Err(x) = i.init() {
-@@ -158,6 +171,9 @@
+@@ -158,6 +170,9 @@
 
      info!("Booting on: {}", bsp::board_name());
 
@@ -1048,7 +1047,7 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_mem_part1_identity_mapping/s
      let (_, privilege_level) = exception::current_privilege_level();
      info!("Current privilege level: {}", privilege_level);
 
-@@ -181,6 +197,13 @@
+@@ -181,6 +196,13 @@
      info!("Timer test, spinning for 1 second");
      time::time_manager().spin_for(Duration::from_secs(1));
 

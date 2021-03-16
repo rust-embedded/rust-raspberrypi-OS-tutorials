@@ -19,10 +19,9 @@ use libkernel::{bsp, console, driver, exception, info, memory, time};
 ///
 /// - Only a single core must be active and running this function.
 /// - The init calls in this function must appear in the correct order:
-///     - Caching must be activated before the device drivers.
-///       - Without it, any atomic operations, e.g. the yet-to-be-introduced spinlocks in the device
-///         drivers (which currently employ NullLocks instead of spinlocks), will fail to work on
-///         the RPi SoCs.
+///     - MMU + Data caching must be activated at the earliest. Without it, any atomic operations,
+///       e.g. the yet-to-be-introduced spinlocks in the device drivers (which currently employ
+///       NullLocks instead of spinlocks), will fail to work (properly) on the RPi SoCs.
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
     use driver::interface::DriverManager;

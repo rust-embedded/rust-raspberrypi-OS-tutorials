@@ -138,10 +138,9 @@ mod time;
 ///
 /// - Only a single core must be active and running this function.
 /// - The init calls in this function must appear in the correct order:
-///     - Caching must be activated before the device drivers.
-///       - Without it, any atomic operations, e.g. the yet-to-be-introduced spinlocks in the device
-///         drivers (which currently employ NullLocks instead of spinlocks), will fail to work on
-///         the RPi SoCs.
+///     - MMU + Data caching must be activated at the earliest. Without it, any atomic operations,
+///       e.g. the yet-to-be-introduced spinlocks in the device drivers (which currently employ
+///       NullLocks instead of spinlocks), will fail to work (properly) on the RPi SoCs.
 unsafe fn kernel_init() -> ! {
     use driver::interface::DriverManager;
     use memory::mmu::interface::MMU;

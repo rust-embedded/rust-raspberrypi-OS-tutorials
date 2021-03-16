@@ -1505,15 +1505,15 @@ diff -uNr 12_exceptions_part1_groundwork/src/main.rs 13_integrated_testing/src/m
 
  /// Early init code.
  ///
-@@ -142,6 +23,7 @@
- ///       - Without it, any atomic operations, e.g. the yet-to-be-introduced spinlocks in the device
- ///         drivers (which currently employ NullLocks instead of spinlocks), will fail to work on
- ///         the RPi SoCs.
+@@ -141,6 +22,7 @@
+ ///     - MMU + Data caching must be activated at the earliest. Without it, any atomic operations,
+ ///       e.g. the yet-to-be-introduced spinlocks in the device drivers (which currently employ
+ ///       NullLocks instead of spinlocks), will fail to work (properly) on the RPi SoCs.
 +#[no_mangle]
  unsafe fn kernel_init() -> ! {
      use driver::interface::DriverManager;
      use memory::mmu::interface::MMU;
-@@ -168,9 +50,7 @@
+@@ -167,9 +49,7 @@
  fn kernel_main() -> ! {
      use bsp::console::console;
      use console::interface::All;
@@ -1523,7 +1523,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/main.rs 13_integrated_testing/src/m
 
      info!("Booting on: {}", bsp::board_name());
 
-@@ -197,31 +77,6 @@
+@@ -196,31 +76,6 @@
          info!("      {}. {}", i + 1, driver.compatible());
      }
 

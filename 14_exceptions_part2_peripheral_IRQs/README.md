@@ -857,6 +857,19 @@ diff -uNr 13_integrated_testing/src/_arch/aarch64/exception.rs 14_exceptions_par
 
  #[no_mangle]
 
+diff -uNr 13_integrated_testing/src/_arch/aarch64/memory/mmu.rs 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs
+--- 13_integrated_testing/src/_arch/aarch64/memory/mmu.rs
++++ 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs
+@@ -149,7 +149,7 @@
+         barrier::isb(barrier::SY);
+
+         // Enable the MMU and turn on data and instruction caching.
+-        SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
++        SCTLR_EL1.modify(SCTLR_EL1::M::Enable);
+
+         // Force MMU init to complete before next instruction.
+         barrier::isb(barrier::SY);
+
 diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2/gicc.rs 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gicc.rs
 --- 13_integrated_testing/src/bsp/device_driver/arm/gicv2/gicc.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gicc.rs
@@ -2325,18 +2338,16 @@ diff -uNr 13_integrated_testing/src/main.rs 14_exceptions_part2_peripheral_IRQs/
 
  /// Early init code.
  ///
-@@ -21,8 +21,8 @@
+@@ -21,7 +21,7 @@
  /// - The init calls in this function must appear in the correct order:
- ///     - Caching must be activated before the device drivers.
- ///       - Without it, any atomic operations, e.g. the yet-to-be-introduced spinlocks in the device
--///         drivers (which currently employ NullLocks instead of spinlocks), will fail to work on
--///         the RPi SoCs.
-+///         drivers (which currently employ IRQSafeNullLocks instead of spinlocks), will fail to
-+///         work on the RPi SoCs.
+ ///     - MMU + Data caching must be activated at the earliest. Without it, any atomic operations,
+ ///       e.g. the yet-to-be-introduced spinlocks in the device drivers (which currently employ
+-///       NullLocks instead of spinlocks), will fail to work (properly) on the RPi SoCs.
++///       IRQSafeNullLocks instead of spinlocks), will fail to work (properly) on the RPi SoCs.
  #[no_mangle]
  unsafe fn kernel_init() -> ! {
      use driver::interface::DriverManager;
-@@ -42,15 +42,27 @@
+@@ -41,15 +41,27 @@
      bsp::driver::driver_manager().post_device_driver_init();
      // println! is usable from here on.
 
@@ -2366,7 +2377,7 @@ diff -uNr 13_integrated_testing/src/main.rs 14_exceptions_part2_peripheral_IRQs/
 
      info!("Booting on: {}", bsp::board_name());
 
-@@ -77,12 +89,9 @@
+@@ -76,12 +88,9 @@
          info!("      {}. {}", i + 1, driver.compatible());
      }
 

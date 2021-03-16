@@ -805,6 +805,15 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
 
          self.configure_translation_control();
 
+@@ -149,7 +140,7 @@
+         barrier::isb(barrier::SY);
+
+         // Enable the MMU and turn on data and instruction caching.
+-        SCTLR_EL1.modify(SCTLR_EL1::M::Enable);
++        SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
+
+         // Force MMU init to complete before next instruction.
+         barrier::isb(barrier::SY);
 @@ -162,22 +153,3 @@
          SCTLR_EL1.matches_all(SCTLR_EL1::M::Enable)
      }
@@ -1800,7 +1809,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs 15_v
 +//! | .got                                        |
 +//! |                                             | rx_end_inclusive
 +//! +---------------------------------------------+
-+//! |                                             | rw_start == ro_end
++//! |                                             | rw_start == rx_end
 +//! | .data                                       |
 +//! | .bss                                        |
 +//! |                                             | rw_end_inclusive
@@ -2150,7 +2159,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/lib.rs 15_virtual_mem_part2_mm
 diff -uNr 14_exceptions_part2_peripheral_IRQs/src/main.rs 15_virtual_mem_part2_mmio_remap/src/main.rs
 --- 14_exceptions_part2_peripheral_IRQs/src/main.rs
 +++ 15_virtual_mem_part2_mmio_remap/src/main.rs
-@@ -26,21 +26,39 @@
+@@ -25,21 +25,39 @@
  #[no_mangle]
  unsafe fn kernel_init() -> ! {
      use driver::interface::DriverManager;
@@ -2196,7 +2205,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/main.rs 15_virtual_mem_part2_m
 
      // Let device drivers register and enable their handlers with the interrupt controller.
      for i in bsp::driver::driver_manager().all_device_drivers() {
-@@ -66,8 +84,8 @@
+@@ -65,8 +83,8 @@
 
      info!("Booting on: {}", bsp::board_name());
 
