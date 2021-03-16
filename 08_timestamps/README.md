@@ -96,14 +96,6 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
 
  clippy:
  	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD)
-@@ -129,7 +122,6 @@
- 	@$(DOCKER_TOOLS) $(OBJDUMP_BINARY) --disassemble --demangle \
-                 --section .text   \
-                 --section .rodata \
--                --section .got    \
-                 $(KERNEL_ELF) | rustfilt
-
- nm: $(KERNEL_ELF)
 
 diff -uNr 07_uart_chainloader/src/_arch/aarch64/cpu/boot.rs 08_timestamps/src/_arch/aarch64/cpu/boot.rs
 --- 07_uart_chainloader/src/_arch/aarch64/cpu/boot.rs
@@ -369,65 +361,60 @@ diff -uNr 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 08
 diff -uNr 07_uart_chainloader/src/bsp/raspberrypi/link.ld 08_timestamps/src/bsp/raspberrypi/link.ld
 --- 07_uart_chainloader/src/bsp/raspberrypi/link.ld
 +++ 08_timestamps/src/bsp/raspberrypi/link.ld
-@@ -5,15 +5,12 @@
+@@ -16,13 +16,12 @@
 
  SECTIONS
  {
 -    /* Set the link address to 32 MiB */
 -    . = 0x2000000;
-+    /* Set current address to the value from which the RPi starts execution */
-+    . = 0x80000;
++    . =  __rpi_load_addr;
 
+     /***********************************************************************************************
+     * Code + RO Data + Global Offset Table
+     ***********************************************************************************************/
 -    __binary_start = .;
++    __rx_start = .;
      .text :
      {
--        *(.text._start)
--        KEEP(*(.text.runtime_init))
--        *(.text*);
-+        *(.text._start) *(.text*)
-     }
-
-     .rodata :
-@@ -38,16 +35,5 @@
+         KEEP(*(.text._start))
+@@ -47,10 +46,4 @@
+         . += 8; /* Fill for the bss == 0 case, so that __bss_start <= __bss_end_inclusive holds */
          __bss_end_inclusive = . - 8;
-     }
-
--    .got :
--    {
--        *(.got*)
--    }
+     } :NONE
 -
 -    /* Fill up to 8 byte, b/c relocating the binary is done in u64 chunks */
 -    . = ALIGN(8);
 -    __binary_end_inclusive = . - 8;
 -
 -    __runtime_init_reloc = runtime_init;
--
-     /DISCARD/ : { *(.comment*) }
  }
 
 diff -uNr 07_uart_chainloader/src/bsp/raspberrypi/memory.rs 08_timestamps/src/bsp/raspberrypi/memory.rs
 --- 07_uart_chainloader/src/bsp/raspberrypi/memory.rs
 +++ 08_timestamps/src/bsp/raspberrypi/memory.rs
-@@ -12,9 +12,6 @@
+@@ -12,12 +12,10 @@
 
  // Symbols from the linker script.
  extern "Rust" {
 -    static __binary_start: UnsafeCell<u64>;
--    static __binary_end_inclusive: UnsafeCell<u64>;
--    static __runtime_init_reloc: UnsafeCell<u64>;
++    static __rx_start: UnsafeCell<()>;
++
      static __bss_start: UnsafeCell<u64>;
      static __bss_end_inclusive: UnsafeCell<u64>;
+-    static __binary_end_inclusive: UnsafeCell<u64>;
+-
+-    static __runtime_init_reloc: UnsafeCell<u64>;
  }
-@@ -26,12 +23,10 @@
- /// The board's memory map.
+
+ //--------------------------------------------------------------------------------------------------
+@@ -27,12 +25,9 @@
+ /// The board's physical memory map.
  #[rustfmt::skip]
  pub(super) mod map {
 -    pub const BOOT_CORE_STACK_END:        usize =        0x8_0000;
-+    pub const BOOT_CORE_STACK_END: usize = 0x8_0000;
-
--    pub const BOARD_DEFAULT_LOAD_ADDRESS: usize =        0x8_0000;
 -
+-    pub const BOARD_DEFAULT_LOAD_ADDRESS: usize =        0x8_0000;
+
 -    pub const GPIO_OFFSET:                usize =        0x0020_0000;
 -    pub const UART_OFFSET:                usize =        0x0020_1000;
 +    pub const GPIO_OFFSET:         usize = 0x0020_0000;
@@ -435,10 +422,20 @@ diff -uNr 07_uart_chainloader/src/bsp/raspberrypi/memory.rs 08_timestamps/src/bs
 
      /// Physical devices.
      #[cfg(feature = "bsp_rpi3")]
-@@ -64,35 +59,13 @@
-     map::BOOT_CORE_STACK_END
+@@ -56,44 +51,36 @@
  }
 
+ //--------------------------------------------------------------------------------------------------
+-// Public Code
++// Private Code
+ //--------------------------------------------------------------------------------------------------
+
+-/// Exclusive end address of the boot core's stack.
+-#[inline(always)]
+-pub fn boot_core_stack_end() -> usize {
+-    map::BOOT_CORE_STACK_END
+-}
+-
 -/// The address on which the Raspberry firmware loads every binary by default.
 -#[inline(always)]
 -pub fn board_default_load_addr() -> *const u64 {
@@ -446,21 +443,33 @@ diff -uNr 07_uart_chainloader/src/bsp/raspberrypi/memory.rs 08_timestamps/src/bs
 -}
 -
 -/// Return the inclusive range spanning the relocated kernel binary.
--///
--/// # Safety
--///
++/// Start address of the Read+Execute (RX) range.
+ ///
+ /// # Safety
+ ///
 -/// - Values are provided by the linker script and must be trusted as-is.
 -/// - The linker-provided addresses must be u64 aligned.
 -pub fn relocated_binary_range_inclusive() -> RangeInclusive<*mut u64> {
 -    unsafe { RangeInclusive::new(__binary_start.get(), __binary_end_inclusive.get()) }
--}
--
++/// - Value is provided by the linker script and must be trusted as-is.
++#[inline(always)]
++fn rx_start() -> usize {
++    unsafe { __rx_start.get() as usize }
+ }
+
 -/// The relocated address of function `runtime_init()`.
--#[inline(always)]
++//--------------------------------------------------------------------------------------------------
++// Public Code
++//--------------------------------------------------------------------------------------------------
++
++/// Exclusive end address of the boot core's stack.
+ #[inline(always)]
 -pub fn relocated_runtime_init_addr() -> *const u64 {
 -    unsafe { __runtime_init_reloc.get() as _ }
--}
--
++pub fn boot_core_stack_end() -> usize {
++    rx_start()
+ }
+
 -/// Return the inclusive range spanning the relocated .bss section.
 +/// Return the inclusive range spanning the .bss section.
  ///
@@ -674,7 +683,7 @@ diff -uNr 07_uart_chainloader/src/print.rs 08_timestamps/src/print.rs
 diff -uNr 07_uart_chainloader/src/relocate.rs 08_timestamps/src/relocate.rs
 --- 07_uart_chainloader/src/relocate.rs
 +++ 08_timestamps/src/relocate.rs
-@@ -1,51 +0,0 @@
+@@ -1,49 +0,0 @@
 -// SPDX-License-Identifier: MIT OR Apache-2.0
 -//
 -// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -713,16 +722,14 @@ diff -uNr 07_uart_chainloader/src/relocate.rs 08_timestamps/src/relocate.rs
 -        current_binary_start_addr = current_binary_start_addr.offset(1);
 -    }
 -
--    // The following function calls form a hack to achieve an "absolute jump" to
--    // `runtime_init::runtime_init()` by forcing an indirection through the global offset table
--    // (GOT), so that execution continues from the relocated binary.
+-    // The following function calls realize an "absolute jump" to `runtime_init::runtime_init()` by
+-    // forcing an indirection through the global offset table (GOT), so that execution continues
+-    // from the relocated binary.
 -    //
--    // Without this, the address of `runtime_init()` would be calculated as a relative offset from
--    // the current program counter, since we are compiling as `position independent code`. This
--    // would cause us to keep executing from the address to which the firmware loaded us, instead of
--    // the relocated position.
--    //
--    // There likely is a more elegant way to do this.
+-    // Without the indirection through the assembly, the address of `runtime_init()` would be
+-    // calculated as a relative offset from the current program counter, since we are compiling as
+-    // `position independent code`. This would cause us to keep executing from the address to which
+-    // the firmware loaded us, instead of the relocated position.
 -    let relocated_runtime_init_addr = bsp::memory::relocated_runtime_init_addr() as usize;
 -    cpu::branch_to_raw_addr(relocated_runtime_init_addr)
 -}

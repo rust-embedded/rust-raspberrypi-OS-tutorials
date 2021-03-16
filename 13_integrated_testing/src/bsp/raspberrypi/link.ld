@@ -3,45 +3,50 @@
  * Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
  */
 
+/* The address at which the the kernel binary will be loaded by the Raspberry's firmware */
+__rpi_load_addr = 0x80000;
+
+ENTRY(__rpi_load_addr)
+
+PHDRS
+{
+    segment_rx PT_LOAD FLAGS(5); /* 5 == RX */
+    segment_rw PT_LOAD FLAGS(6); /* 6 == RW */
+}
+
 SECTIONS
 {
-    /* Set current address to the value from which the RPi starts execution */
-    . = 0x80000;
+    . =  __rpi_load_addr;
 
-    __ro_start = .;
+    /***********************************************************************************************
+    * Code + RO Data + Global Offset Table
+    ***********************************************************************************************/
+    __rx_start = .;
     .text :
     {
-        *(.text._start) *(.text*)
-    }
+        KEEP(*(.text._start))
+        *(.text*)
+    } :segment_rx
 
-    .exception_vectors :
-    {
-        *(.exception_vectors*)
-    }
+    .rodata : ALIGN(8) { *(.rodata*) } :segment_rx
+    .got    : ALIGN(8) { *(.got)     } :segment_rx
 
-    .rodata :
-    {
-        *(.rodata*)
-    }
-    . = ALIGN(65536); /* Fill up to 64 KiB */
-    __ro_end = .;
+    . = ALIGN(64K); /* Align to page boundary */
+    __rx_end_exclusive = .;
 
-    .data :
-    {
-        *(.data*)
-    }
+    /***********************************************************************************************
+    * Data + BSS
+    ***********************************************************************************************/
+    .data : { *(.data*) } :segment_rw
 
     /* Section is zeroed in u64 chunks, align start and end to 8 bytes */
-    .bss ALIGN(8):
+    .bss : ALIGN(8)
     {
         __bss_start = .;
         *(.bss*);
         . = ALIGN(8);
 
-        /* Fill for the bss == 0 case, so that __bss_start <= __bss_end_inclusive holds */
-        . += 8;
+        . += 8; /* Fill for the bss == 0 case, so that __bss_start <= __bss_end_inclusive holds */
         __bss_end_inclusive = . - 8;
-    }
-
-    /DISCARD/ : { *(.comment*) }
+    } :NONE
 }

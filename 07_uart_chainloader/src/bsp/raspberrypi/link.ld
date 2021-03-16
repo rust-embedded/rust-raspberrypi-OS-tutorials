@@ -3,51 +3,54 @@
  * Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
  */
 
+/* The address at which the the kernel binary will be loaded by the Raspberry's firmware */
+__rpi_load_addr = 0x80000;
+
+ENTRY(__rpi_load_addr)
+
+PHDRS
+{
+    segment_rx PT_LOAD FLAGS(5); /* 5 == RX */
+    segment_rw PT_LOAD FLAGS(6); /* 6 == RW */
+}
+
 SECTIONS
 {
     /* Set the link address to 32 MiB */
     . = 0x2000000;
 
+    /***********************************************************************************************
+    * Code + RO Data + Global Offset Table
+    ***********************************************************************************************/
     __binary_start = .;
     .text :
     {
-        *(.text._start)
-        KEEP(*(.text.runtime_init))
-        *(.text*);
-    }
+        KEEP(*(.text._start))
+        *(.text*)
+    } :segment_rx
 
-    .rodata :
-    {
-        *(.rodata*)
-    }
+    .rodata : ALIGN(8) { *(.rodata*) } :segment_rx
+    .got    : ALIGN(8) { *(.got)     } :segment_rx
 
-    .data :
-    {
-        *(.data*)
-    }
+    /***********************************************************************************************
+    * Data + BSS
+    ***********************************************************************************************/
+    .data : { *(.data*) } :segment_rw
 
     /* Section is zeroed in u64 chunks, align start and end to 8 bytes */
-    .bss ALIGN(8):
+    .bss : ALIGN(8)
     {
         __bss_start = .;
         *(.bss*);
         . = ALIGN(8);
 
-        /* Fill for the bss == 0 case, so that __bss_start <= __bss_end_inclusive holds */
-        . += 8;
+        . += 8; /* Fill for the bss == 0 case, so that __bss_start <= __bss_end_inclusive holds */
         __bss_end_inclusive = . - 8;
-    }
-
-    .got :
-    {
-        *(.got*)
-    }
+    } :NONE
 
     /* Fill up to 8 byte, b/c relocating the binary is done in u64 chunks */
     . = ALIGN(8);
     __binary_end_inclusive = . - 8;
 
     __runtime_init_reloc = runtime_init;
-
-    /DISCARD/ : { *(.comment*) }
 }

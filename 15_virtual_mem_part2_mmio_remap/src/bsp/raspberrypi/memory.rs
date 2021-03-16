@@ -8,31 +8,30 @@
 //! copies the binary to 0x8_0000:
 //!
 //! +---------------------------------------------+
-//! |                                             | 0x0
+//! |                                             |
 //! | Unmapped                                    |
-//! |                                             | 0x6_FFFF
-//! +---------------------------------------------+
-//! | BOOT_CORE_STACK_START                       | 0x7_0000
-//! |                                             |            ^
-//! | ...                                         |            | Stack growth direction
-//! |                                             |            |
-//! | BOOT_CORE_STACK_END_INCLUSIVE               | 0x7_FFFF
-//! +---------------------------------------------+
-//! | RO_START == BOOT_CORE_STACK_END             | 0x8_0000
 //! |                                             |
-//! |                                             |
+//! +---------------------------------------------+
+//! |                                             | rx_start @ 0x8_0000
 //! | .text                                       |
-//! | .exception_vectors                          |
 //! | .rodata                                     |
-//! |                                             |
-//! | RO_END_INCLUSIVE                            | 0x8_0000 + __ro_size - 1
+//! | .got                                        |
+//! |                                             | rx_end_inclusive
 //! +---------------------------------------------+
-//! | RO_END == DATA_START                        | 0x8_0000 + __ro_size
-//! |                                             |
+//! |                                             | rw_start == rx_end
 //! | .data                                       |
 //! | .bss                                        |
+//! |                                             | rw_end_inclusive
+//! +---------------------------------------------+
+//! |                                             | rw_end
+//! | Unmapped Boot-core Stack Guard Page         |
 //! |                                             |
-//! | DATA_END_INCLUSIVE                          | 0x8_0000 + __ro_size + __data_size - 1
+//! +---------------------------------------------+
+//! |                                             | boot_core_stack_start          ^
+//! |                                             |                                | stack
+//! | Boot-core Stack                             |                                | growth
+//! |                                             |                                | direction
+//! |                                             | boot_core_stack_end_inclusive  |
 //! +---------------------------------------------+
 
 pub mod mmu;
@@ -46,11 +45,19 @@ use core::{cell::UnsafeCell, ops::RangeInclusive};
 
 // Symbols from the linker script.
 extern "Rust" {
+    static __rx_start: UnsafeCell<()>;
+    static __rx_end_exclusive: UnsafeCell<()>;
+
+    static __rw_start: UnsafeCell<()>;
     static __bss_start: UnsafeCell<u64>;
     static __bss_end_inclusive: UnsafeCell<u64>;
-    static __ro_start: UnsafeCell<()>;
-    static __ro_size: UnsafeCell<()>;
-    static __data_size: UnsafeCell<()>;
+    static __rw_end_exclusive: UnsafeCell<()>;
+
+    static __boot_core_stack_start: UnsafeCell<()>;
+    static __boot_core_stack_end_exclusive: UnsafeCell<()>;
+
+    static __boot_core_stack_guard_page_start: UnsafeCell<()>;
+    static __boot_core_stack_guard_page_end_exclusive: UnsafeCell<()>;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -61,8 +68,6 @@ extern "Rust" {
 #[rustfmt::skip]
 pub(super) mod map {
     use super::*;
-
-    pub const BOOT_CORE_STACK_SIZE:                  usize = 0x1_0000;
 
     /// Physical devices.
     #[cfg(feature = "bsp_rpi3")]
@@ -111,52 +116,69 @@ pub(super) mod map {
 // Private Code
 //--------------------------------------------------------------------------------------------------
 
-/// Start address of the Read-Only (RO) range.
+/// Start address of the Read+Execute (RX) range.
 ///
 /// # Safety
 ///
 /// - Value is provided by the linker script and must be trusted as-is.
 #[inline(always)]
-fn virt_ro_start() -> Address<Virtual> {
-    Address::new(unsafe { __ro_start.get() as usize })
+fn virt_rx_start() -> Address<Virtual> {
+    Address::new(unsafe { __rx_start.get() as usize })
 }
 
-/// Size of the Read-Only (RO) range of the kernel binary.
+/// Size of the Read+Execute (RX) range.
 ///
 /// # Safety
 ///
 /// - Value is provided by the linker script and must be trusted as-is.
 #[inline(always)]
-fn ro_size() -> usize {
-    unsafe { __ro_size.get() as usize }
+fn rx_size() -> usize {
+    unsafe { (__rx_end_exclusive.get() as usize) - (__rx_start.get() as usize) }
 }
 
-/// Start address of the data range.
+/// Start address of the Read+Write (RW) range.
 #[inline(always)]
-fn virt_data_start() -> Address<Virtual> {
-    virt_ro_start() + ro_size()
+fn virt_rw_start() -> Address<Virtual> {
+    Address::new(unsafe { __rw_start.get() as usize })
 }
 
-/// Size of the data range.
+/// Size of the Read+Write (RW) range.
 ///
 /// # Safety
 ///
 /// - Value is provided by the linker script and must be trusted as-is.
 #[inline(always)]
-fn data_size() -> usize {
-    unsafe { __data_size.get() as usize }
+fn rw_size() -> usize {
+    unsafe { (__rw_end_exclusive.get() as usize) - (__rw_start.get() as usize) }
 }
 
 /// Start address of the boot core's stack.
 #[inline(always)]
 fn virt_boot_core_stack_start() -> Address<Virtual> {
-    virt_ro_start() - map::BOOT_CORE_STACK_SIZE
+    Address::new(unsafe { __boot_core_stack_start.get() as usize })
 }
 
 /// Size of the boot core's stack.
 #[inline(always)]
 fn boot_core_stack_size() -> usize {
-    map::BOOT_CORE_STACK_SIZE
+    unsafe {
+        (__boot_core_stack_end_exclusive.get() as usize) - (__boot_core_stack_start.get() as usize)
+    }
+}
+
+/// Start address of the boot core's stack guard page.
+#[inline(always)]
+fn virt_boot_core_stack_guard_page_start() -> Address<Virtual> {
+    Address::new(unsafe { __boot_core_stack_guard_page_start.get() as usize })
+}
+
+/// Size of the boot core's stack guard page.
+#[inline(always)]
+fn boot_core_stack_guard_page_size() -> usize {
+    unsafe {
+        (__boot_core_stack_guard_page_end_exclusive.get() as usize)
+            - (__boot_core_stack_guard_page_start.get() as usize)
+    }
 }
 
 /// Exclusive end address of the physical address space.

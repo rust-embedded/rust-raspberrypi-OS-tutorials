@@ -14,17 +14,18 @@ use core::{cell::UnsafeCell, ops::RangeInclusive};
 
 // Symbols from the linker script.
 extern "Rust" {
+    static __rx_start: UnsafeCell<()>;
+    static __rx_end_exclusive: UnsafeCell<()>;
+
     static __bss_start: UnsafeCell<u64>;
     static __bss_end_inclusive: UnsafeCell<u64>;
-    static __ro_start: UnsafeCell<()>;
-    static __ro_end: UnsafeCell<()>;
 }
 
 //--------------------------------------------------------------------------------------------------
 // Public Definitions
 //--------------------------------------------------------------------------------------------------
 
-/// The board's memory map.
+/// The board's physical memory map.
 #[rustfmt::skip]
 pub(super) mod map {
     /// The inclusive end address of the memory map.
@@ -41,8 +42,6 @@ pub(super) mod map {
     /// physical address that is not backed by any DRAM (e.g. accessing an address close to 4 GiB on
     /// an RPi3 that comes with 1 GiB of RAM). This would result in a crash or other kind of error.
     pub const END_INCLUSIVE:       usize = 0xFFFF_FFFF;
-
-    pub const BOOT_CORE_STACK_END: usize = 0x8_0000;
 
     pub const GPIO_OFFSET:         usize = 0x0020_0000;
     pub const UART_OFFSET:         usize = 0x0020_1000;
@@ -78,24 +77,24 @@ pub(super) mod map {
 // Private Code
 //--------------------------------------------------------------------------------------------------
 
-/// Start address of the Read-Only (RO) range.
+/// Start address of the Read+Execute (RX) range.
 ///
 /// # Safety
 ///
 /// - Value is provided by the linker script and must be trusted as-is.
 #[inline(always)]
-fn ro_start() -> usize {
-    unsafe { __ro_start.get() as usize }
+fn rx_start() -> usize {
+    unsafe { __rx_start.get() as usize }
 }
 
-/// Size of the Read-Only (RO) range of the kernel binary.
+/// Exclusive end address of the Read+Execute (RX) range.
 ///
 /// # Safety
 ///
 /// - Value is provided by the linker script and must be trusted as-is.
 #[inline(always)]
-fn ro_end() -> usize {
-    unsafe { __ro_end.get() as usize }
+fn rx_end_exclusive() -> usize {
+    unsafe { __rx_end_exclusive.get() as usize }
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -105,7 +104,7 @@ fn ro_end() -> usize {
 /// Exclusive end address of the boot core's stack.
 #[inline(always)]
 pub fn boot_core_stack_end() -> usize {
-    map::BOOT_CORE_STACK_END
+    rx_start()
 }
 
 /// Return the inclusive range spanning the .bss section.

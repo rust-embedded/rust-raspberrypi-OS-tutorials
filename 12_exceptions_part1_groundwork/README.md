@@ -238,7 +238,7 @@ because `Rust` has no stable convention ([yet](https://github.com/rust-lang/rfcs
 Next, we craft the exception vector table:
 
 ```asm
-.section .exception_vectors, "ax", @progbits
+.section .text
 
 // Align by 2^11 bytes, as demanded by ARMv8-A. Same as ALIGN(2048) in an ld script.
 .align 11
@@ -324,7 +324,7 @@ The actual handlers referenced from the assembly can now branch to it for the ti
 
 ```rust
 #[no_mangle]
-unsafe extern "C" fn current_el0_synchronous(e: &mut ExceptionContext) {
+unsafe extern "C" fn current_elx_irq(e: &mut ExceptionContext) {
     default_exception_handler(e);
 }
 ```
@@ -480,7 +480,7 @@ General purpose register:
 diff -uNr 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 12_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs
 --- 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs
 +++ 12_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs
-@@ -11,7 +11,230 @@
+@@ -11,7 +11,224 @@
  //!
  //! crate::exception::arch_exception
 
@@ -541,18 +541,18 @@ diff -uNr 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
 +//------------------------------------------------------------------------------
 +
 +#[no_mangle]
-+unsafe extern "C" fn current_el0_synchronous(e: &mut ExceptionContext) {
-+    default_exception_handler(e);
++unsafe extern "C" fn current_el0_synchronous(_e: &mut ExceptionContext) {
++    panic!("Should not be here. Use of SP_EL0 in EL1 is not supported.")
 +}
 +
 +#[no_mangle]
-+unsafe extern "C" fn current_el0_irq(e: &mut ExceptionContext) {
-+    default_exception_handler(e);
++unsafe extern "C" fn current_el0_irq(_e: &mut ExceptionContext) {
++    panic!("Should not be here. Use of SP_EL0 in EL1 is not supported.")
 +}
 +
 +#[no_mangle]
-+unsafe extern "C" fn current_el0_serror(e: &mut ExceptionContext) {
-+    default_exception_handler(e);
++unsafe extern "C" fn current_el0_serror(_e: &mut ExceptionContext) {
++    panic!("Should not be here. Use of SP_EL0 in EL1 is not supported.")
 +}
 +
 +//------------------------------------------------------------------------------
@@ -646,9 +646,7 @@ diff -uNr 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
 +        writeln!(f, " - {}", ec_translation)?;
 +
 +        // Raw print of instruction specific syndrome.
-+        write!(f, "      Instr Specific Syndrome (ISS): {:#x}", esr_el1.read(ESR_EL1::ISS))?;
-+
-+        Ok(())
++        write!(f, "      Instr Specific Syndrome (ISS): {:#x}", esr_el1.read(ESR_EL1::ISS))
 +    }
 +}
 +
@@ -681,9 +679,7 @@ diff -uNr 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
 +
 +        write!(f, "      Illegal Execution State (IL): {}",
 +            to_flag_str(self.0.is_set(SPSR_EL1::IL))
-+        )?;
-+
-+        Ok(())
++        )
 +    }
 +}
 +
@@ -704,15 +700,13 @@ diff -uNr 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
 +        for (i, reg) in self.gpr.iter().enumerate() {
 +            write!(f, "      x{: <2}: {: >#018x}{}", i, reg, alternating(i))?;
 +        }
-+        write!(f, "      lr : {:#018x}", self.lr)?;
-+
-+        Ok(())
++        write!(f, "      lr : {:#018x}", self.lr)
 +    }
 +}
 
  //--------------------------------------------------------------------------------------------------
  // Public Code
-@@ -28,3 +251,23 @@
+@@ -28,3 +245,23 @@
          _ => (PrivilegeLevel::Unknown, "Unknown"),
      }
  }
@@ -793,7 +787,7 @@ diff -uNr 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.S 12
 +//--------------------------------------------------------------------------------------------------
 +// The exception vector table.
 +//--------------------------------------------------------------------------------------------------
-+.section .exception_vectors, "ax", @progbits
++.section .text
 +
 +// Align by 2^11 bytes, as demanded by ARMv8-A. Same as ALIGN(2048) in an ld script.
 +.align 11
@@ -880,22 +874,6 @@ diff -uNr 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.S 12
 +
 +    eret
 
-diff -uNr 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/link.ld 12_exceptions_part1_groundwork/src/bsp/raspberrypi/link.ld
---- 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/link.ld
-+++ 12_exceptions_part1_groundwork/src/bsp/raspberrypi/link.ld
-@@ -14,6 +14,11 @@
-         *(.text._start) *(.text*)
-     }
-
-+    .exception_vectors :
-+    {
-+        *(.exception_vectors*)
-+    }
-+
-     .rodata :
-     {
-         *(.rodata*)
-
 diff -uNr 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory/mmu.rs 12_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs
 --- 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory/mmu.rs
 +++ 12_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs
@@ -926,7 +904,7 @@ diff -uNr 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory/mmu.r
              virtual_range: mmio_range_inclusive,
              physical_range_translation: Translation::Identity,
 @@ -67,11 +57,6 @@
-     RangeInclusive::new(super::ro_start(), super::ro_end() - 1)
+     RangeInclusive::new(super::rx_start(), super::rx_end_exclusive() - 1)
  }
 
 -fn remapped_mmio_range_inclusive() -> RangeInclusive<usize> {

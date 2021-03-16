@@ -136,7 +136,7 @@ Finally, we set the stack pointer for `SP_EL1` and call `ERET`:
 
 ```rust
 // Set up SP_EL1 (stack pointer), which will be used by EL1 once we "return" to it.
-SP_EL1.set(bsp::cpu::BOOT_CORE_STACK_START);
+SP_EL1.set(bsp::memory::boot_core_stack_end() as u64);
 
 // Use `eret` to "return" to EL1. This results in execution of runtime_init() in EL1.
 asm::eret()

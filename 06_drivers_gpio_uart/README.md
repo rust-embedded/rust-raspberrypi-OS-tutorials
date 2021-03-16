@@ -1110,10 +1110,16 @@ diff -uNr 05_safe_globals/src/bsp/raspberrypi/driver.rs 06_drivers_gpio_uart/src
 diff -uNr 05_safe_globals/src/bsp/raspberrypi/memory.rs 06_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs
 --- 05_safe_globals/src/bsp/raspberrypi/memory.rs
 +++ 06_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs
-@@ -24,6 +24,29 @@
- #[rustfmt::skip]
- pub(super) mod map {
-     pub const BOOT_CORE_STACK_END: usize = 0x8_0000;
+@@ -19,6 +19,38 @@
+ }
+
+ //--------------------------------------------------------------------------------------------------
++// Public Definitions
++//--------------------------------------------------------------------------------------------------
++
++/// The board's physical memory map.
++#[rustfmt::skip]
++pub(super) mod map {
 +
 +    pub const GPIO_OFFSET:         usize = 0x0020_0000;
 +    pub const UART_OFFSET:         usize = 0x0020_1000;
@@ -1137,9 +1143,12 @@ diff -uNr 05_safe_globals/src/bsp/raspberrypi/memory.rs 06_drivers_gpio_uart/src
 +        pub const GPIO_START:       usize = START + GPIO_OFFSET;
 +        pub const PL011_UART_START: usize = START + UART_OFFSET;
 +    }
- }
-
++}
++
++//--------------------------------------------------------------------------------------------------
+ // Private Code
  //--------------------------------------------------------------------------------------------------
+
 
 diff -uNr 05_safe_globals/src/bsp/raspberrypi.rs 06_drivers_gpio_uart/src/bsp/raspberrypi.rs
 --- 05_safe_globals/src/bsp/raspberrypi.rs

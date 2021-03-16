@@ -68,18 +68,18 @@ fn default_exception_handler(e: &ExceptionContext) {
 //------------------------------------------------------------------------------
 
 #[no_mangle]
-unsafe extern "C" fn current_el0_synchronous(e: &mut ExceptionContext) {
-    default_exception_handler(e);
+unsafe extern "C" fn current_el0_synchronous(_e: &mut ExceptionContext) {
+    panic!("Should not be here. Use of SP_EL0 in EL1 is not supported.")
 }
 
 #[no_mangle]
-unsafe extern "C" fn current_el0_irq(e: &mut ExceptionContext) {
-    default_exception_handler(e);
+unsafe extern "C" fn current_el0_irq(_e: &mut ExceptionContext) {
+    panic!("Should not be here. Use of SP_EL0 in EL1 is not supported.")
 }
 
 #[no_mangle]
-unsafe extern "C" fn current_el0_serror(e: &mut ExceptionContext) {
-    default_exception_handler(e);
+unsafe extern "C" fn current_el0_serror(_e: &mut ExceptionContext) {
+    panic!("Should not be here. Use of SP_EL0 in EL1 is not supported.")
 }
 
 //------------------------------------------------------------------------------
@@ -166,9 +166,7 @@ impl fmt::Display for EsrEL1 {
         writeln!(f, " - {}", ec_translation)?;
 
         // Raw print of instruction specific syndrome.
-        write!(f, "      Instr Specific Syndrome (ISS): {:#x}", esr_el1.read(ESR_EL1::ISS))?;
-
-        Ok(())
+        write!(f, "      Instr Specific Syndrome (ISS): {:#x}", esr_el1.read(ESR_EL1::ISS))
     }
 }
 
@@ -201,9 +199,7 @@ impl fmt::Display for SpsrEL1 {
 
         write!(f, "      Illegal Execution State (IL): {}",
             to_flag_str(self.0.is_set(SPSR_EL1::IL))
-        )?;
-
-        Ok(())
+        )
     }
 }
 
@@ -224,9 +220,7 @@ impl fmt::Display for ExceptionContext {
         for (i, reg) in self.gpr.iter().enumerate() {
             write!(f, "      x{: <2}: {: >#018x}{}", i, reg, alternating(i))?;
         }
-        write!(f, "      lr : {:#018x}", self.lr)?;
-
-        Ok(())
+        write!(f, "      lr : {:#018x}", self.lr)
     }
 }
 

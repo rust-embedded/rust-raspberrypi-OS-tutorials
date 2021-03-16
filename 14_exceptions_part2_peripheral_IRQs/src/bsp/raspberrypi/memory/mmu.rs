@@ -26,7 +26,7 @@ pub static LAYOUT: KernelVirtualLayout<NUM_MEM_RANGES> = KernelVirtualLayout::ne
     [
         TranslationDescriptor {
             name: "Kernel code and RO data",
-            virtual_range: ro_range_inclusive,
+            virtual_range: rx_range_inclusive,
             physical_range_translation: Translation::Identity,
             attribute_fields: AttributeFields {
                 mem_attributes: MemAttributes::CacheableDRAM,
@@ -51,10 +51,10 @@ pub static LAYOUT: KernelVirtualLayout<NUM_MEM_RANGES> = KernelVirtualLayout::ne
 // Private Code
 //--------------------------------------------------------------------------------------------------
 
-fn ro_range_inclusive() -> RangeInclusive<usize> {
+fn rx_range_inclusive() -> RangeInclusive<usize> {
     // Notice the subtraction to turn the exclusive end into an inclusive end.
     #[allow(clippy::range_minus_one)]
-    RangeInclusive::new(super::ro_start(), super::ro_end() - 1)
+    RangeInclusive::new(super::rx_start(), super::rx_end_exclusive() - 1)
 }
 
 fn mmio_range_inclusive() -> RangeInclusive<usize> {

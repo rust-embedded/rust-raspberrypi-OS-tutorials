@@ -36,16 +36,14 @@ pub unsafe fn relocate_self() -> ! {
         current_binary_start_addr = current_binary_start_addr.offset(1);
     }
 
-    // The following function calls form a hack to achieve an "absolute jump" to
-    // `runtime_init::runtime_init()` by forcing an indirection through the global offset table
-    // (GOT), so that execution continues from the relocated binary.
+    // The following function calls realize an "absolute jump" to `runtime_init::runtime_init()` by
+    // forcing an indirection through the global offset table (GOT), so that execution continues
+    // from the relocated binary.
     //
-    // Without this, the address of `runtime_init()` would be calculated as a relative offset from
-    // the current program counter, since we are compiling as `position independent code`. This
-    // would cause us to keep executing from the address to which the firmware loaded us, instead of
-    // the relocated position.
-    //
-    // There likely is a more elegant way to do this.
+    // Without the indirection through the assembly, the address of `runtime_init()` would be
+    // calculated as a relative offset from the current program counter, since we are compiling as
+    // `position independent code`. This would cause us to keep executing from the address to which
+    // the firmware loaded us, instead of the relocated position.
     let relocated_runtime_init_addr = bsp::memory::relocated_runtime_init_addr() as usize;
     cpu::branch_to_raw_addr(relocated_runtime_init_addr)
 }

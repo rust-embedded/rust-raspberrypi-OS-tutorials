@@ -50,7 +50,7 @@
 //--------------------------------------------------------------------------------------------------
 // The exception vector table.
 //--------------------------------------------------------------------------------------------------
-.section .exception_vectors, "ax", @progbits
+.section .text
 
 // Align by 2^11 bytes, as demanded by ARMv8-A. Same as ALIGN(2048) in an ld script.
 .align 11

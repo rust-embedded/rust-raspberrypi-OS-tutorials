@@ -13,17 +13,18 @@ use core::{cell::UnsafeCell, ops::RangeInclusive};
 // Symbols from the linker script.
 extern "Rust" {
     static __binary_start: UnsafeCell<u64>;
-    static __binary_end_inclusive: UnsafeCell<u64>;
-    static __runtime_init_reloc: UnsafeCell<u64>;
     static __bss_start: UnsafeCell<u64>;
     static __bss_end_inclusive: UnsafeCell<u64>;
+    static __binary_end_inclusive: UnsafeCell<u64>;
+
+    static __runtime_init_reloc: UnsafeCell<u64>;
 }
 
 //--------------------------------------------------------------------------------------------------
 // Public Definitions
 //--------------------------------------------------------------------------------------------------
 
-/// The board's memory map.
+/// The board's physical memory map.
 #[rustfmt::skip]
 pub(super) mod map {
     pub const BOOT_CORE_STACK_END:        usize =        0x8_0000;

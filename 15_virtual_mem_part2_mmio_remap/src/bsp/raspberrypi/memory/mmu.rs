@@ -60,42 +60,42 @@ const fn size_to_num_pages(size: usize) -> usize {
     size >> KernelGranule::SHIFT
 }
 
+/// The Read+Execute (RX) pages of the kernel binary.
+fn virt_rx_page_desc() -> PageSliceDescriptor<Virtual> {
+    let num_pages = size_to_num_pages(super::rx_size());
+
+    PageSliceDescriptor::from_addr(super::virt_rx_start(), num_pages)
+}
+
+/// The Read+Write (RW) pages of the kernel binary.
+fn virt_rw_page_desc() -> PageSliceDescriptor<Virtual> {
+    let num_pages = size_to_num_pages(super::rw_size());
+
+    PageSliceDescriptor::from_addr(super::virt_rw_start(), num_pages)
+}
+
 /// The boot core's stack.
-fn virt_stack_page_desc() -> PageSliceDescriptor<Virtual> {
+fn virt_boot_core_stack_page_desc() -> PageSliceDescriptor<Virtual> {
     let num_pages = size_to_num_pages(super::boot_core_stack_size());
 
     PageSliceDescriptor::from_addr(super::virt_boot_core_stack_start(), num_pages)
 }
 
-/// The Read-Only (RO) pages of the kernel binary.
-fn virt_ro_page_desc() -> PageSliceDescriptor<Virtual> {
-    let num_pages = size_to_num_pages(super::ro_size());
-
-    PageSliceDescriptor::from_addr(super::virt_ro_start(), num_pages)
-}
-
-/// The data pages of the kernel binary.
-fn virt_data_page_desc() -> PageSliceDescriptor<Virtual> {
-    let num_pages = size_to_num_pages(super::data_size());
-
-    PageSliceDescriptor::from_addr(super::virt_data_start(), num_pages)
-}
-
 // The binary is still identity mapped, so we don't need to convert in the following.
 
+/// The Read+Execute (RX) pages of the kernel binary.
+fn phys_rx_page_desc() -> PageSliceDescriptor<Physical> {
+    virt_rx_page_desc().into()
+}
+
+/// The Read+Write (RW) pages of the kernel binary.
+fn phys_rw_page_desc() -> PageSliceDescriptor<Physical> {
+    virt_rw_page_desc().into()
+}
+
 /// The boot core's stack.
-fn phys_stack_page_desc() -> PageSliceDescriptor<Physical> {
-    virt_stack_page_desc().into()
-}
-
-/// The Read-Only (RO) pages of the kernel binary.
-fn phys_ro_page_desc() -> PageSliceDescriptor<Physical> {
-    virt_ro_page_desc().into()
-}
-
-/// The data pages of the kernel binary.
-fn phys_data_page_desc() -> PageSliceDescriptor<Physical> {
-    virt_data_page_desc().into()
+fn phys_boot_core_stack_page_desc() -> PageSliceDescriptor<Physical> {
+    virt_boot_core_stack_page_desc().into()
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -105,6 +105,13 @@ fn phys_data_page_desc() -> PageSliceDescriptor<Physical> {
 /// Return a reference to the kernel's translation tables.
 pub fn kernel_translation_tables() -> &'static InitStateLock<KernelTranslationTable> {
     &KERNEL_TABLES
+}
+
+/// The boot core's stack guard page.
+pub fn virt_boot_core_stack_guard_page_desc() -> PageSliceDescriptor<Virtual> {
+    let num_pages = size_to_num_pages(super::boot_core_stack_guard_page_size());
+
+    PageSliceDescriptor::from_addr(super::virt_boot_core_stack_guard_page_start(), num_pages)
 }
 
 /// Pointer to the last page of the physical address space.
@@ -122,20 +129,9 @@ pub fn phys_addr_space_end_page() -> *const Page<Physical> {
 /// - Any miscalculation or attribute error will likely be fatal. Needs careful manual checking.
 pub unsafe fn kernel_map_binary() -> Result<(), &'static str> {
     generic_mmu::kernel_map_pages_at(
-        "Kernel boot-core stack",
-        &virt_stack_page_desc(),
-        &phys_stack_page_desc(),
-        &AttributeFields {
-            mem_attributes: MemAttributes::CacheableDRAM,
-            acc_perms: AccessPermissions::ReadWrite,
-            execute_never: true,
-        },
-    )?;
-
-    generic_mmu::kernel_map_pages_at(
         "Kernel code and RO data",
-        &virt_ro_page_desc(),
-        &phys_ro_page_desc(),
+        &virt_rx_page_desc(),
+        &phys_rx_page_desc(),
         &AttributeFields {
             mem_attributes: MemAttributes::CacheableDRAM,
             acc_perms: AccessPermissions::ReadOnly,
@@ -145,8 +141,19 @@ pub unsafe fn kernel_map_binary() -> Result<(), &'static str> {
 
     generic_mmu::kernel_map_pages_at(
         "Kernel data and bss",
-        &virt_data_page_desc(),
-        &phys_data_page_desc(),
+        &virt_rw_page_desc(),
+        &phys_rw_page_desc(),
+        &AttributeFields {
+            mem_attributes: MemAttributes::CacheableDRAM,
+            acc_perms: AccessPermissions::ReadWrite,
+            execute_never: true,
+        },
+    )?;
+
+    generic_mmu::kernel_map_pages_at(
+        "Kernel boot-core stack",
+        &virt_boot_core_stack_page_desc(),
+        &phys_boot_core_stack_page_desc(),
         &AttributeFields {
             mem_attributes: MemAttributes::CacheableDRAM,
             acc_perms: AccessPermissions::ReadWrite,
@@ -169,7 +176,13 @@ mod tests {
     /// Check alignment of the kernel's virtual memory layout sections.
     #[kernel_test]
     fn virt_mem_layout_sections_are_64KiB_aligned() {
-        for i in [virt_stack_page_desc, virt_ro_page_desc, virt_data_page_desc].iter() {
+        for i in [
+            virt_rx_page_desc,
+            virt_rw_page_desc,
+            virt_boot_core_stack_page_desc,
+        ]
+        .iter()
+        {
             let start: usize = i().start_addr().into_usize();
             let end: usize = i().end_addr().into_usize();
 
@@ -183,9 +196,9 @@ mod tests {
     #[kernel_test]
     fn virt_mem_layout_has_no_overlaps() {
         let layout = [
-            virt_stack_page_desc(),
-            virt_ro_page_desc(),
-            virt_data_page_desc(),
+            virt_rx_page_desc(),
+            virt_rw_page_desc(),
+            virt_boot_core_stack_page_desc(),
         ];
 
         for (i, first_range) in layout.iter().enumerate() {

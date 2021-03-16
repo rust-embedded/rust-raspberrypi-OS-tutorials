@@ -102,7 +102,6 @@ objdump: $(KERNEL_ELF)
 	$(call colorecho, "\nLaunching objdump")
 	@$(DOCKER_TOOLS) $(OBJDUMP_BINARY) --disassemble --demangle \
                 --section .text   \
-                --section .rodata \
                 $(KERNEL_ELF) | rustfilt
 
 nm: $(KERNEL_ELF)

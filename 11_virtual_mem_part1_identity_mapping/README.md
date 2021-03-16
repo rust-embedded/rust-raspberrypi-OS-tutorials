@@ -224,10 +224,16 @@ enables caching for data and instructions.
 
 ### `link.ld`
 
-We need to align the `ro` section to `64 KiB` so that it doesn't overlap with the next section that
-needs read/write attributes. This blows up the binary in size, but is a small price to pay
-considering that it reduces the amount of static paging entries significantly, when compared to the
-classical `4 KiB` granule.
+We need to align the `rx` segment to `64 KiB` so that it doesn't overlap with the next section that
+needs read/write attributes instead of read/execute attributes:
+
+```ld.s
+. = ALIGN(64K); /* Align to page boundary */
+__rx_end_exclusive = .;
+```
+
+This blows up the binary in size, but is a small price to pay considering that it reduces the amount
+of static paging entries significantly, when compared to the classical `4 KiB` granule.
 
 ## Address translation examples
 
@@ -807,23 +813,16 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_mem_part
 diff -uNr 10_privilege_level/src/bsp/raspberrypi/link.ld 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/link.ld
 --- 10_privilege_level/src/bsp/raspberrypi/link.ld
 +++ 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/link.ld
-@@ -8,6 +8,7 @@
-     /* Set current address to the value from which the RPi starts execution */
-     . = 0x80000;
+@@ -31,6 +31,9 @@
+     .rodata : ALIGN(8) { *(.rodata*) } :segment_rx
+     .got    : ALIGN(8) { *(.got)     } :segment_rx
 
-+    __ro_start = .;
-     .text :
-     {
-         *(.text._start) *(.text*)
-@@ -17,6 +18,8 @@
-     {
-         *(.rodata*)
-     }
-+    . = ALIGN(65536); /* Fill up to 64 KiB */
-+    __ro_end = .;
-
-     .data :
-     {
++    . = ALIGN(64K); /* Align to page boundary */
++    __rx_end_exclusive = .;
++
+     /***********************************************************************************************
+     * Data + BSS
+     ***********************************************************************************************/
 
 diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory/mmu.rs 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory/mmu.rs
 --- 10_privilege_level/src/bsp/raspberrypi/memory/mmu.rs
@@ -857,7 +856,7 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory/mmu.rs 11_virtual_mem_pa
 +    [
 +        TranslationDescriptor {
 +            name: "Kernel code and RO data",
-+            virtual_range: ro_range_inclusive,
++            virtual_range: rx_range_inclusive,
 +            physical_range_translation: Translation::Identity,
 +            attribute_fields: AttributeFields {
 +                mem_attributes: MemAttributes::CacheableDRAM,
@@ -892,10 +891,10 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory/mmu.rs 11_virtual_mem_pa
 +// Private Code
 +//--------------------------------------------------------------------------------------------------
 +
-+fn ro_range_inclusive() -> RangeInclusive<usize> {
++fn rx_range_inclusive() -> RangeInclusive<usize> {
 +    // Notice the subtraction to turn the exclusive end into an inclusive end.
 +    #[allow(clippy::range_minus_one)]
-+    RangeInclusive::new(super::ro_start(), super::ro_end() - 1)
++    RangeInclusive::new(super::rx_start(), super::rx_end_exclusive() - 1)
 +}
 +
 +fn remapped_mmio_range_inclusive() -> RangeInclusive<usize> {
@@ -928,17 +927,16 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory.rs 11_virtual_mem_part1_
  use core::{cell::UnsafeCell, ops::RangeInclusive};
 
  //--------------------------------------------------------------------------------------------------
-@@ -14,6 +16,8 @@
+@@ -13,6 +15,7 @@
+ // Symbols from the linker script.
  extern "Rust" {
+     static __rx_start: UnsafeCell<()>;
++    static __rx_end_exclusive: UnsafeCell<()>;
+
      static __bss_start: UnsafeCell<u64>;
      static __bss_end_inclusive: UnsafeCell<u64>;
-+    static __ro_start: UnsafeCell<()>;
-+    static __ro_end: UnsafeCell<()>;
- }
-
- //--------------------------------------------------------------------------------------------------
-@@ -23,6 +27,21 @@
- /// The board's memory map.
+@@ -25,6 +28,20 @@
+ /// The board's physical memory map.
  #[rustfmt::skip]
  pub(super) mod map {
 +    /// The inclusive end address of the memory map.
@@ -955,11 +953,10 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory.rs 11_virtual_mem_part1_
 +    /// physical address that is not backed by any DRAM (e.g. accessing an address close to 4 GiB on
 +    /// an RPi3 that comes with 1 GiB of RAM). This would result in a crash or other kind of error.
 +    pub const END_INCLUSIVE:       usize = 0xFFFF_FFFF;
-+
-     pub const BOOT_CORE_STACK_END: usize = 0x8_0000;
 
      pub const GPIO_OFFSET:         usize = 0x0020_0000;
-@@ -36,6 +55,7 @@
+     pub const UART_OFFSET:         usize = 0x0020_1000;
+@@ -37,6 +54,7 @@
          pub const START:            usize =         0x3F00_0000;
          pub const GPIO_START:       usize = START + GPIO_OFFSET;
          pub const PL011_UART_START: usize = START + UART_OFFSET;
@@ -967,7 +964,7 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory.rs 11_virtual_mem_part1_
      }
 
      /// Physical devices.
-@@ -46,10 +66,35 @@
+@@ -47,6 +65,7 @@
          pub const START:            usize =         0xFE00_0000;
          pub const GPIO_START:       usize = START + GPIO_OFFSET;
          pub const PL011_UART_START: usize = START + UART_OFFSET;
@@ -975,34 +972,23 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory.rs 11_virtual_mem_part1_
      }
  }
 
+@@ -64,6 +83,16 @@
+     unsafe { __rx_start.get() as usize }
+ }
+
++/// Exclusive end address of the Read+Execute (RX) range.
++///
++/// # Safety
++///
++/// - Value is provided by the linker script and must be trusted as-is.
++#[inline(always)]
++fn rx_end_exclusive() -> usize {
++    unsafe { __rx_end_exclusive.get() as usize }
++}
++
  //--------------------------------------------------------------------------------------------------
-+// Private Code
-+//--------------------------------------------------------------------------------------------------
-+
-+/// Start address of the Read-Only (RO) range.
-+///
-+/// # Safety
-+///
-+/// - Value is provided by the linker script and must be trusted as-is.
-+#[inline(always)]
-+fn ro_start() -> usize {
-+    unsafe { __ro_start.get() as usize }
-+}
-+
-+/// Size of the Read-Only (RO) range of the kernel binary.
-+///
-+/// # Safety
-+///
-+/// - Value is provided by the linker script and must be trusted as-is.
-+#[inline(always)]
-+fn ro_end() -> usize {
-+    unsafe { __ro_end.get() as usize }
-+}
-+
-+//--------------------------------------------------------------------------------------------------
  // Public Code
  //--------------------------------------------------------------------------------------------------
-
 
 diff -uNr 10_privilege_level/src/bsp.rs 11_virtual_mem_part1_identity_mapping/src/bsp.rs
 --- 10_privilege_level/src/bsp.rs

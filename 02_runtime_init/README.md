@@ -9,8 +9,7 @@
 ## Notable additions
 
 - More sections in linker script:
-     - `.rodata`, `.data`
-     - `.bss`
+     - `.rodata`, `.got`, `.data`, `.bss`
 - `_start()`:
      - Halt core if core != `core0`.
      - `core0` jumps to the `runtime_init()` Rust function.
@@ -36,6 +35,19 @@ diff -uNr 01_wait_forever/Cargo.toml 02_runtime_init/Cargo.toml
  [features]
  default = []
  bsp_rpi3 = []
+
+diff -uNr 01_wait_forever/Makefile 02_runtime_init/Makefile
+--- 01_wait_forever/Makefile
++++ 02_runtime_init/Makefile
+@@ -102,6 +102,8 @@
+ 	$(call colorecho, "\nLaunching objdump")
+ 	@$(DOCKER_TOOLS) $(OBJDUMP_BINARY) --disassemble --demangle \
+                 --section .text   \
++                --section .rodata \
++                --section .got    \
+                 $(KERNEL_ELF) | rustfilt
+
+ nm: $(KERNEL_ELF)
 
 diff -uNr 01_wait_forever/src/_arch/aarch64/cpu/boot.S 02_runtime_init/src/_arch/aarch64/cpu/boot.S
 --- 01_wait_forever/src/_arch/aarch64/cpu/boot.S
@@ -97,33 +109,45 @@ diff -uNr 01_wait_forever/src/_arch/aarch64/cpu.rs 02_runtime_init/src/_arch/aar
 diff -uNr 01_wait_forever/src/bsp/raspberrypi/link.ld 02_runtime_init/src/bsp/raspberrypi/link.ld
 --- 01_wait_forever/src/bsp/raspberrypi/link.ld
 +++ 02_runtime_init/src/bsp/raspberrypi/link.ld
-@@ -13,5 +13,27 @@
-         *(.text._start) *(.text*)
-     }
+@@ -11,6 +11,7 @@
+ PHDRS
+ {
+     segment_rx PT_LOAD FLAGS(5); /* 5 == RX */
++    segment_rw PT_LOAD FLAGS(6); /* 6 == RW */
+ }
 
-+    .rodata :
-+    {
-+        *(.rodata*)
-+    }
+ SECTIONS
+@@ -18,11 +19,30 @@
+     . =  __rpi_load_addr;
+
+     /***********************************************************************************************
+-    * Code
++    * Code + RO Data + Global Offset Table
+     ***********************************************************************************************/
+     .text :
+     {
+         KEEP(*(.text._start))
+         *(.text*)
+     } :segment_rx
 +
-+    .data :
-+    {
-+        *(.data*)
-+    }
++    .rodata : ALIGN(8) { *(.rodata*) } :segment_rx
++    .got    : ALIGN(8) { *(.got)     } :segment_rx
++
++    /***********************************************************************************************
++    * Data + BSS
++    ***********************************************************************************************/
++    .data : { *(.data*) } :segment_rw
 +
 +    /* Section is zeroed in u64 chunks, align start and end to 8 bytes */
-+    .bss ALIGN(8):
++    .bss : ALIGN(8)
 +    {
 +        __bss_start = .;
 +        *(.bss*);
 +        . = ALIGN(8);
 +
-+        /* Fill for the bss == 0 case, so that __bss_start <= __bss_end_inclusive holds */
-+        . += 8;
++        . += 8; /* Fill for the bss == 0 case, so that __bss_start <= __bss_end_inclusive holds */
 +        __bss_end_inclusive = . - 8;
-+    }
-+
-     /DISCARD/ : { *(.comment*) }
++    } :NONE
  }
 
 diff -uNr 01_wait_forever/src/bsp/raspberrypi/memory.rs 02_runtime_init/src/bsp/raspberrypi/memory.rs
