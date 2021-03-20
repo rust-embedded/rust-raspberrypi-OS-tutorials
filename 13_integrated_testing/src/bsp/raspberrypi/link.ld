@@ -17,6 +17,11 @@ PHDRS
 SECTIONS
 {
     . =  __rpi_load_addr;
+                                        /*   ^             */
+                                        /*   | stack       */
+                                        /*   | growth      */
+                                        /*   | direction   */
+   __boot_core_stack_end_exclusive = .; /*   |             */
 
     /***********************************************************************************************
     * Code + RO Data + Global Offset Table
@@ -25,7 +30,16 @@ SECTIONS
     .text :
     {
         KEEP(*(.text._start))
-        *(.text*)
+
+        /* Special constants (or statics in Rust speak) needed by _start().
+         *
+         * They are placed in close proximity to _start() from where they will be read. This ensures
+         * that position-independent, PC-relative loads can be emitted.
+         */
+        *(.text._start_arguments)
+
+        *(.text._start_rust) /* The Rust entry point */
+        *(.text*)            /* Everything else */
     } :segment_rx
 
     .rodata : ALIGN(8) { *(.rodata*) } :segment_rx

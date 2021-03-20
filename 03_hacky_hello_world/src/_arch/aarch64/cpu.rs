@@ -11,6 +11,8 @@
 //!
 //! crate::cpu::arch_cpu
 
+use cortex_a::asm;
+
 //--------------------------------------------------------------------------------------------------
 // Public Code
 //--------------------------------------------------------------------------------------------------
@@ -18,13 +20,7 @@
 /// Pause execution on the core.
 #[inline(always)]
 pub fn wait_forever() -> ! {
-    unsafe {
-        loop {
-            #[rustfmt::skip]
-            asm!(
-                "wfe",
-                options(nomem, nostack, preserves_flags)
-            );
-        }
+    loop {
+        asm::wfe()
     }
 }

@@ -744,6 +744,40 @@ Minipush 1.0
 ## Diff to previous
 ```diff
 
+diff -uNr 13_integrated_testing/src/_arch/aarch64/cpu/smp.rs 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/cpu/smp.rs
+--- 13_integrated_testing/src/_arch/aarch64/cpu/smp.rs
++++ 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/cpu/smp.rs
+@@ -0,0 +1,29 @@
++// SPDX-License-Identifier: MIT OR Apache-2.0
++//
++// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
++
++//! Architectural symmetric multiprocessing.
++//!
++//! # Orientation
++//!
++//! Since arch modules are imported into generic modules using the path attribute, the path of this
++//! file is:
++//!
++//! crate::cpu::smp::arch_smp
++
++use cortex_a::regs::*;
++
++//--------------------------------------------------------------------------------------------------
++// Public Code
++//--------------------------------------------------------------------------------------------------
++
++/// Return the executing core's id.
++#[inline(always)]
++pub fn core_id<T>() -> T
++where
++    T: From<u8>,
++{
++    const CORE_MASK: u64 = 0b11;
++
++    T::from((MPIDR_EL1.get() & CORE_MASK) as u8)
++}
+
 diff -uNr 13_integrated_testing/src/_arch/aarch64/exception/asynchronous.rs 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/exception/asynchronous.rs
 --- 13_integrated_testing/src/_arch/aarch64/exception/asynchronous.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/exception/asynchronous.rs
@@ -856,19 +890,6 @@ diff -uNr 13_integrated_testing/src/_arch/aarch64/exception.rs 14_exceptions_par
  }
 
  #[no_mangle]
-
-diff -uNr 13_integrated_testing/src/_arch/aarch64/memory/mmu.rs 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs
---- 13_integrated_testing/src/_arch/aarch64/memory/mmu.rs
-+++ 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs
-@@ -149,7 +149,7 @@
-         barrier::isb(barrier::SY);
-
-         // Enable the MMU and turn on data and instruction caching.
--        SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
-+        SCTLR_EL1.modify(SCTLR_EL1::M::Enable);
-
-         // Force MMU init to complete before next instruction.
-         barrier::isb(barrier::SY);
 
 diff -uNr 13_integrated_testing/src/bsp/device_driver/arm/gicv2/gicc.rs 14_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gicc.rs
 --- 13_integrated_testing/src/bsp/device_driver/arm/gicv2/gicc.rs
@@ -2136,6 +2157,38 @@ diff -uNr 13_integrated_testing/src/bsp/raspberrypi.rs 14_exceptions_part2_perip
  //--------------------------------------------------------------------------------------------------
  // Public Code
 
+diff -uNr 13_integrated_testing/src/cpu/smp.rs 14_exceptions_part2_peripheral_IRQs/src/cpu/smp.rs
+--- 13_integrated_testing/src/cpu/smp.rs
++++ 14_exceptions_part2_peripheral_IRQs/src/cpu/smp.rs
+@@ -0,0 +1,14 @@
++// SPDX-License-Identifier: MIT OR Apache-2.0
++//
++// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
++
++//! Symmetric multiprocessing.
++
++#[cfg(target_arch = "aarch64")]
++#[path = "../_arch/aarch64/cpu/smp.rs"]
++mod arch_smp;
++
++//--------------------------------------------------------------------------------------------------
++// Architectural Public Reexports
++//--------------------------------------------------------------------------------------------------
++pub use arch_smp::core_id;
+
+diff -uNr 13_integrated_testing/src/cpu.rs 14_exceptions_part2_peripheral_IRQs/src/cpu.rs
+--- 13_integrated_testing/src/cpu.rs
++++ 14_exceptions_part2_peripheral_IRQs/src/cpu.rs
+@@ -10,6 +10,8 @@
+
+ mod boot;
+
++pub mod smp;
++
+ //--------------------------------------------------------------------------------------------------
+ // Architectural Public Reexports
+ //--------------------------------------------------------------------------------------------------
+
 diff -uNr 13_integrated_testing/src/driver.rs 14_exceptions_part2_peripheral_IRQs/src/driver.rs
 --- 13_integrated_testing/src/driver.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/driver.rs
@@ -2309,7 +2362,7 @@ diff -uNr 13_integrated_testing/src/exception/asynchronous.rs 14_exceptions_part
 diff -uNr 13_integrated_testing/src/lib.rs 14_exceptions_part2_peripheral_IRQs/src/lib.rs
 --- 13_integrated_testing/src/lib.rs
 +++ 14_exceptions_part2_peripheral_IRQs/src/lib.rs
-@@ -111,6 +111,7 @@
+@@ -110,6 +110,7 @@
 
  #![allow(clippy::clippy::upper_case_acronyms)]
  #![allow(incomplete_features)]
@@ -2317,7 +2370,7 @@ diff -uNr 13_integrated_testing/src/lib.rs 14_exceptions_part2_peripheral_IRQs/s
  #![feature(const_fn_fn_ptr_basics)]
  #![feature(const_generics)]
  #![feature(const_panic)]
-@@ -138,6 +139,7 @@
+@@ -137,6 +138,7 @@
  pub mod exception;
  pub mod memory;
  pub mod print;

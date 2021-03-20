@@ -11,31 +11,23 @@
 //!
 //! crate::cpu::boot::arch_boot
 
-use crate::{bsp, cpu};
-use cortex_a::regs::*;
+use crate::runtime_init;
+
+// Assembly counterpart to this file.
+global_asm!(include_str!("boot.s"));
 
 //--------------------------------------------------------------------------------------------------
 // Public Code
 //--------------------------------------------------------------------------------------------------
 
-/// The entry of the `kernel` binary.
+/// The Rust entry of the `kernel` binary.
 ///
-/// The function must be named `_start`, because the linker is looking for this exact name.
+/// The function is called from the assembly `_start` function.
 ///
 /// # Safety
 ///
-/// - Linker script must ensure to place this function where it is expected by the target machine.
-/// - We have to hope that the compiler omits any stack pointer usage before the stack pointer is
-///   actually set (`SP.set()`).
+/// - The `bss` section is not initialized yet. The code must not use or reference it in any way.
 #[no_mangle]
-pub unsafe fn _start() -> ! {
-    use crate::runtime_init;
-
-    if bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id() {
-        SP.set(bsp::memory::boot_core_stack_end() as u64);
-        runtime_init::runtime_init()
-    } else {
-        // If not core0, infinitely wait for events.
-        cpu::wait_forever()
-    }
+pub unsafe fn _start_rust() -> ! {
+    runtime_init::runtime_init()
 }

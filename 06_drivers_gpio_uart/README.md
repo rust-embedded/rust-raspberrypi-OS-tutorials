@@ -18,7 +18,8 @@
 - A `driver::interface::DeviceDriver` trait is added for abstracting `BSP` driver implementations
   from kernel code.
 - Drivers are stored in `src/bsp/device_driver`, and can be reused between `BSP`s.
-    - We introduce the `GPIO` driver, which pinmuxes the RPi's PL011 UART.
+    - We introduce the `GPIO` driver, which pinmuxes (that is, routing signals from inside the `SoC`
+      to actual HW pins) the RPi's PL011 UART.
       - Note how this driver differentiates between **RPi 3** and **RPi4**. Their HW is different,
         so we have to account for it in SW.
     - Most importantly, the `PL011Uart` driver: It implements the `console::interface::*` traits and
@@ -1110,7 +1111,7 @@ diff -uNr 05_safe_globals/src/bsp/raspberrypi/driver.rs 06_drivers_gpio_uart/src
 diff -uNr 05_safe_globals/src/bsp/raspberrypi/memory.rs 06_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs
 --- 05_safe_globals/src/bsp/raspberrypi/memory.rs
 +++ 06_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs
-@@ -19,6 +19,38 @@
+@@ -17,6 +17,38 @@
  }
 
  //--------------------------------------------------------------------------------------------------
@@ -1146,7 +1147,7 @@ diff -uNr 05_safe_globals/src/bsp/raspberrypi/memory.rs 06_drivers_gpio_uart/src
 +}
 +
 +//--------------------------------------------------------------------------------------------------
- // Private Code
+ // Public Code
  //--------------------------------------------------------------------------------------------------
 
 
@@ -1249,7 +1250,7 @@ diff -uNr 05_safe_globals/src/console.rs 06_drivers_gpio_uart/src/console.rs
 diff -uNr 05_safe_globals/src/cpu.rs 06_drivers_gpio_uart/src/cpu.rs
 --- 05_safe_globals/src/cpu.rs
 +++ 06_drivers_gpio_uart/src/cpu.rs
-@@ -15,4 +15,7 @@
+@@ -13,4 +13,7 @@
  //--------------------------------------------------------------------------------------------------
  // Architectural Public Reexports
  //--------------------------------------------------------------------------------------------------
@@ -1311,15 +1312,15 @@ diff -uNr 05_safe_globals/src/driver.rs 06_drivers_gpio_uart/src/driver.rs
 diff -uNr 05_safe_globals/src/main.rs 06_drivers_gpio_uart/src/main.rs
 --- 05_safe_globals/src/main.rs
 +++ 06_drivers_gpio_uart/src/main.rs
-@@ -107,6 +107,8 @@
- //! [`cpu::boot::arch_boot::_start()`]: cpu/boot/arch_boot/fn._start.html
+@@ -106,6 +106,8 @@
+ //!
  //! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
 
 +#![allow(clippy::clippy::upper_case_acronyms)]
 +#![feature(const_fn_fn_ptr_basics)]
  #![feature(format_args_nl)]
+ #![feature(global_asm)]
  #![feature(panic_info_message)]
- #![feature(trait_alias)]
 @@ -116,6 +118,7 @@
  mod bsp;
  mod console;

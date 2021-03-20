@@ -1157,7 +1157,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs 13_in
 diff -uNr 12_exceptions_part1_groundwork/src/cpu.rs 13_integrated_testing/src/cpu.rs
 --- 12_exceptions_part1_groundwork/src/cpu.rs
 +++ 13_integrated_testing/src/cpu.rs
-@@ -16,3 +16,6 @@
+@@ -14,3 +14,6 @@
  // Architectural Public Reexports
  //--------------------------------------------------------------------------------------------------
  pub use arch_cpu::{nop, wait_forever};
@@ -1194,7 +1194,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/exception.rs 13_integrated_testing/
 diff -uNr 12_exceptions_part1_groundwork/src/lib.rs 13_integrated_testing/src/lib.rs
 --- 12_exceptions_part1_groundwork/src/lib.rs
 +++ 13_integrated_testing/src/lib.rs
-@@ -0,0 +1,172 @@
+@@ -0,0 +1,171 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -1299,11 +1299,10 @@ diff -uNr 12_exceptions_part1_groundwork/src/lib.rs 13_integrated_testing/src/li
 +//!
 +//! # Boot flow
 +//!
-+//! 1. The kernel's entry point is the function [`cpu::boot::arch_boot::_start()`].
-+//!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.rs`.
++//! 1. The kernel's entry point is the function `cpu::boot::arch_boot::_start()`.
++//!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.s`.
 +//! 2. Once finished with architectural setup, the arch code calls [`runtime_init::runtime_init()`].
 +//!
-+//! [`cpu::boot::arch_boot::_start()`]: cpu/boot/arch_boot/fn._start.html
 +//! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
 +
 +#![allow(clippy::clippy::upper_case_acronyms)]
@@ -1371,7 +1370,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/lib.rs 13_integrated_testing/src/li
 diff -uNr 12_exceptions_part1_groundwork/src/main.rs 13_integrated_testing/src/main.rs
 --- 12_exceptions_part1_groundwork/src/main.rs
 +++ 13_integrated_testing/src/main.rs
-@@ -6,131 +6,12 @@
+@@ -6,130 +6,12 @@
  #![doc(html_logo_url = "https://git.io/JeGIp")]
 
  //! The `kernel` binary.
@@ -1469,11 +1468,10 @@ diff -uNr 12_exceptions_part1_groundwork/src/main.rs 13_integrated_testing/src/m
 -//!
 -//! # Boot flow
 -//!
--//! 1. The kernel's entry point is the function [`cpu::boot::arch_boot::_start()`].
--//!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.rs`.
+-//! 1. The kernel's entry point is the function `cpu::boot::arch_boot::_start()`.
+-//!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.s`.
 -//! 2. Once finished with architectural setup, the arch code calls [`runtime_init::runtime_init()`].
 -//!
--//! [`cpu::boot::arch_boot::_start()`]: cpu/boot/arch_boot/fn._start.html
 -//! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
 -
 -#![allow(clippy::clippy::upper_case_acronyms)]
@@ -1505,7 +1503,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/main.rs 13_integrated_testing/src/m
 
  /// Early init code.
  ///
-@@ -141,6 +22,7 @@
+@@ -140,6 +22,7 @@
  ///     - MMU + Data caching must be activated at the earliest. Without it, any atomic operations,
  ///       e.g. the yet-to-be-introduced spinlocks in the device drivers (which currently employ
  ///       NullLocks instead of spinlocks), will fail to work (properly) on the RPi SoCs.
@@ -1513,7 +1511,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/main.rs 13_integrated_testing/src/m
  unsafe fn kernel_init() -> ! {
      use driver::interface::DriverManager;
      use memory::mmu::interface::MMU;
-@@ -167,9 +49,7 @@
+@@ -166,9 +49,7 @@
  fn kernel_main() -> ! {
      use bsp::console::console;
      use console::interface::All;
@@ -1523,7 +1521,7 @@ diff -uNr 12_exceptions_part1_groundwork/src/main.rs 13_integrated_testing/src/m
 
      info!("Booting on: {}", bsp::board_name());
 
-@@ -196,31 +76,6 @@
+@@ -195,31 +76,6 @@
          info!("      {}. {}", i + 1, driver.compatible());
      }
 
@@ -1797,7 +1795,7 @@ diff -uNr 12_exceptions_part1_groundwork/tests/00_console_sanity.rs 13_integrate
 +#![no_main]
 +#![no_std]
 +
-+use libkernel::{bsp, console, exception, print};
++use libkernel::{bsp, console, cpu, exception, print};
 +
 +#[no_mangle]
 +unsafe fn kernel_init() -> ! {
@@ -1820,7 +1818,7 @@ diff -uNr 12_exceptions_part1_groundwork/tests/00_console_sanity.rs 13_integrate
 +    print!("{}", console().chars_read());
 +
 +    // The QEMU process running this test will be closed by the I/O test harness.
-+    loop {}
++    cpu::wait_forever()
 +}
 
 diff -uNr 12_exceptions_part1_groundwork/tests/01_timer_sanity.rs 13_integrated_testing/tests/01_timer_sanity.rs

@@ -9,4 +9,6 @@
 //--------------------------------------------------------------------------------------------------
 
 /// Used by `arch` code to find the early boot core.
-pub const BOOT_CORE_ID: u64 = 0;
+#[no_mangle]
+#[link_section = ".text._start_arguments"]
+pub static BOOT_CORE_ID: u64 = 0;

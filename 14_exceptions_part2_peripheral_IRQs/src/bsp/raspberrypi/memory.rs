@@ -101,12 +101,6 @@ fn rx_end_exclusive() -> usize {
 // Public Code
 //--------------------------------------------------------------------------------------------------
 
-/// Exclusive end address of the boot core's stack.
-#[inline(always)]
-pub fn boot_core_stack_end() -> usize {
-    rx_start()
-}
-
 /// Return the inclusive range spanning the .bss section.
 ///
 /// # Safety

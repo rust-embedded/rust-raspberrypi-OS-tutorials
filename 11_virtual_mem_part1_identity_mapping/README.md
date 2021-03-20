@@ -813,7 +813,15 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_mem_part
 diff -uNr 10_privilege_level/src/bsp/raspberrypi/link.ld 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/link.ld
 --- 10_privilege_level/src/bsp/raspberrypi/link.ld
 +++ 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/link.ld
-@@ -31,6 +31,9 @@
+@@ -26,6 +26,7 @@
+     /***********************************************************************************************
+     * Code + RO Data + Global Offset Table
+     ***********************************************************************************************/
++    __rx_start = .;
+     .text :
+     {
+         KEEP(*(.text._start))
+@@ -44,6 +45,9 @@
      .rodata : ALIGN(8) { *(.rodata*) } :segment_rx
      .got    : ALIGN(8) { *(.got)     } :segment_rx
 
@@ -927,15 +935,17 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory.rs 11_virtual_mem_part1_
  use core::{cell::UnsafeCell, ops::RangeInclusive};
 
  //--------------------------------------------------------------------------------------------------
-@@ -13,6 +15,7 @@
+@@ -12,6 +14,9 @@
+
  // Symbols from the linker script.
  extern "Rust" {
-     static __rx_start: UnsafeCell<()>;
++    static __rx_start: UnsafeCell<()>;
 +    static __rx_end_exclusive: UnsafeCell<()>;
-
++
      static __bss_start: UnsafeCell<u64>;
      static __bss_end_inclusive: UnsafeCell<u64>;
-@@ -25,6 +28,20 @@
+ }
+@@ -23,6 +28,20 @@
  /// The board's physical memory map.
  #[rustfmt::skip]
  pub(super) mod map {
@@ -956,7 +966,7 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory.rs 11_virtual_mem_part1_
 
      pub const GPIO_OFFSET:         usize = 0x0020_0000;
      pub const UART_OFFSET:         usize = 0x0020_1000;
-@@ -37,6 +54,7 @@
+@@ -35,6 +54,7 @@
          pub const START:            usize =         0x3F00_0000;
          pub const GPIO_START:       usize = START + GPIO_OFFSET;
          pub const PL011_UART_START: usize = START + UART_OFFSET;
@@ -964,7 +974,7 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory.rs 11_virtual_mem_part1_
      }
 
      /// Physical devices.
-@@ -47,6 +65,7 @@
+@@ -45,10 +65,35 @@
          pub const START:            usize =         0xFE00_0000;
          pub const GPIO_START:       usize = START + GPIO_OFFSET;
          pub const PL011_UART_START: usize = START + UART_OFFSET;
@@ -972,10 +982,20 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory.rs 11_virtual_mem_part1_
      }
  }
 
-@@ -64,6 +83,16 @@
-     unsafe { __rx_start.get() as usize }
- }
-
+ //--------------------------------------------------------------------------------------------------
++// Private Code
++//--------------------------------------------------------------------------------------------------
++
++/// Start address of the Read+Execute (RX) range.
++///
++/// # Safety
++///
++/// - Value is provided by the linker script and must be trusted as-is.
++#[inline(always)]
++fn rx_start() -> usize {
++    unsafe { __rx_start.get() as usize }
++}
++
 +/// Exclusive end address of the Read+Execute (RX) range.
 +///
 +/// # Safety
@@ -986,9 +1006,10 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory.rs 11_virtual_mem_part1_
 +    unsafe { __rx_end_exclusive.get() as usize }
 +}
 +
- //--------------------------------------------------------------------------------------------------
++//--------------------------------------------------------------------------------------------------
  // Public Code
  //--------------------------------------------------------------------------------------------------
+
 
 diff -uNr 10_privilege_level/src/bsp.rs 11_virtual_mem_part1_identity_mapping/src/bsp.rs
 --- 10_privilege_level/src/bsp.rs
@@ -1006,7 +1027,7 @@ diff -uNr 10_privilege_level/src/bsp.rs 11_virtual_mem_part1_identity_mapping/sr
 diff -uNr 10_privilege_level/src/main.rs 11_virtual_mem_part1_identity_mapping/src/main.rs
 --- 10_privilege_level/src/main.rs
 +++ 11_virtual_mem_part1_identity_mapping/src/main.rs
-@@ -108,7 +108,11 @@
+@@ -107,7 +107,11 @@
  //! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
 
  #![allow(clippy::clippy::upper_case_acronyms)]
@@ -1016,8 +1037,8 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_mem_part1_identity_mapping/s
 +#![feature(const_panic)]
 +#![feature(core_intrinsics)]
  #![feature(format_args_nl)]
+ #![feature(global_asm)]
  #![feature(panic_info_message)]
- #![feature(trait_alias)]
 @@ -132,9 +136,17 @@
  /// # Safety
  ///

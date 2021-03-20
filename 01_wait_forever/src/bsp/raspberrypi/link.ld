@@ -23,6 +23,5 @@ SECTIONS
     .text :
     {
         KEEP(*(.text._start))
-        *(.text*)
     } :segment_rx
 }

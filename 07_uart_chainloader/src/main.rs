@@ -100,20 +100,17 @@
 //!
 //! # Boot flow
 //!
-//! 1. The kernel's entry point is the function [`cpu::boot::arch_boot::_start()`].
-//!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.rs`.
-//! 2. Once finished with architectural setup, the arch code calls [`relocate::relocate_self()`].
-//! 3. Finally, [`runtime_init::runtime_init()`] is called.
+//! 1. The kernel's entry point is the function `cpu::boot::arch_boot::_start()`.
+//!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.s`.
+//! 2. Once finished with architectural setup, the arch code calls [`runtime_init::runtime_init()`].
 //!
-//! [`cpu::boot::arch_boot::_start()`]: cpu/boot/arch_boot/fn._start.html
-//! [`relocate::relocate_self()`]: relocate/fn.relocate_self.html
 //! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
 
 #![allow(clippy::clippy::upper_case_acronyms)]
 #![feature(asm)]
 #![feature(const_fn_fn_ptr_basics)]
-#![feature(core_intrinsics)]
 #![feature(format_args_nl)]
+#![feature(global_asm)]
 #![feature(panic_info_message)]
 #![feature(trait_alias)]
 #![no_main]
@@ -126,7 +123,6 @@ mod driver;
 mod memory;
 mod panic_wait;
 mod print;
-mod relocate;
 mod runtime_init;
 mod synchronization;
 

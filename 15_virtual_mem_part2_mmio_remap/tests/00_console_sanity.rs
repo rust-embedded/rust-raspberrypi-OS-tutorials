@@ -8,7 +8,7 @@
 #![no_main]
 #![no_std]
 
-use libkernel::{bsp, console, exception, print};
+use libkernel::{bsp, console, cpu, exception, print};
 
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
@@ -31,5 +31,5 @@ unsafe fn kernel_init() -> ! {
     print!("{}", console().chars_read());
 
     // The QEMU process running this test will be closed by the I/O test harness.
-    loop {}
+    cpu::wait_forever()
 }

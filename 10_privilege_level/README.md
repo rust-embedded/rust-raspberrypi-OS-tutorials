@@ -12,7 +12,6 @@
 - [Checking for EL2 in the entrypoint](#checking-for-el2-in-the-entrypoint)
 - [Transition preparation](#transition-preparation)
 - [Returning from an exception that never happened](#returning-from-an-exception-that-never-happened)
-- [Are we stackless?](#are-we-stackless)
 - [Test it](#test-it)
 - [Diff to previous](#diff-to-previous)
 
@@ -39,31 +38,34 @@ ARMv8-A] before you continue. It gives a concise overview about the topic.
 
 ## Scope of this tutorial
 
-By default, the Rpi will always start executing in `EL2`. Since we are writing a traditional
+By default, the Raspberry will always start executing in `EL2`. Since we are writing a traditional
 `Kernel`, we have to transition into the more appropriate `EL1`.
 
 ## Checking for EL2 in the entrypoint
 
 First of all, we need to ensure that we actually execute in `EL2` before we can call respective code
-to transition to `EL1`:
+to transition to `EL1`. Therefore, we add a new checkt to the top of `boot.s`, which parks the CPU
+core should it not be in `EL2`.
+
+```
+// Only proceed if the core executes in EL2. Park it otherwise.
+mrs	x0, CurrentEL
+cmp	x0, _EL2
+b.ne	1f
+```
+
+Afterwards, we continue with preparing the `EL2` -> `EL1` transition by calling
+`prepare_el2_to_el1_transition()` in `boot.rs`:
 
 ```rust
 #[no_mangle]
-pub unsafe fn _start() -> ! {
-    // Expect the boot core to start in EL2.
-    if (bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id())
-        && (CurrentEL.get() == CurrentEL::EL::EL2.value)
-    {
-        el2_to_el1_transition()
-    } else {
-        // If not core0, infinitely wait for events.
-        cpu::wait_forever()
-    }
+pub unsafe extern "C" fn _start_rust(phys_boot_core_stack_end_exclusive_addr: u64) -> ! {
+    prepare_el2_to_el1_transition(phys_boot_core_stack_end_exclusive_addr);
+
+    // Use `eret` to "return" to EL1. This results in execution of runtime_init() in EL1.
+    asm::eret()
 }
 ```
-
-If this is the case, we continue with preparing the `EL2` -> `EL1` transition in
-`el2_to_el1_transition()`.
 
 ## Transition preparation
 
@@ -104,8 +106,8 @@ This instruction will copy the contents of the [Saved Program Status Register - 
 Program Status Register - EL1` and jump to the instruction address that is stored in the [Exception
 Link Register - EL2].
 
-This is basically the reverse of what is happening when an exception is taken. You'll learn about it
-in an upcoming tutorial.
+This is basically the reverse of what is happening when an exception is taken. You'll learn about
+that in an upcoming tutorial.
 
 [Saved Program Status Register - EL2]: https://docs.rs/cortex-a/5.1.2/src/cortex_a/regs/spsr_el2.rs.html
 [Exception Link Register - EL2]: https://docs.rs/cortex-a/5.1.2/src/cortex_a/regs/elr_el2.rs.html
@@ -125,65 +127,39 @@ SPSR_EL2.write(
 
 // Second, let the link register point to runtime_init().
 ELR_EL2.set(runtime_init::runtime_init as *const () as u64);
+
+// Set up SP_EL1 (stack pointer), which will be used by EL1 once we "return" to it. Since there
+// are no plans to ever return to EL2, just re-use the same stack.
+SP_EL1.set(phys_boot_core_stack_end_exclusive_addr);
 ```
 
 As you can see, we are populating `ELR_EL2` with the address of the [runtime_init()] function that
-we earlier used to call directly from the entrypoint.
-
-Finally, we set the stack pointer for `SP_EL1` and call `ERET`:
+we earlier used to call directly from the entrypoint. Finally, we set the stack pointer for
+`SP_EL1`.
 
 [runtime_init()]: src/runtime_init.rs
 
+You might have noticed that the stack's address was supplied as a function argument. As you might
+remember, in  `_start()` in `boot.s`, we are already setting up the stack for `EL2`. Since there
+are no plans to ever return to `EL2`, we can just re-use the same stack for `EL1`, so its address is
+forwarded using function arguments.
+
+Lastly, back in `_start_rust()` a call to `ERET` is made:
+
 ```rust
-// Set up SP_EL1 (stack pointer), which will be used by EL1 once we "return" to it.
-SP_EL1.set(bsp::memory::boot_core_stack_end() as u64);
+#[no_mangle]
+pub unsafe extern "C" fn _start_rust(phys_boot_core_stack_end_exclusive_addr: u64) -> ! {
+    prepare_el2_to_el1_transition(phys_boot_core_stack_end_exclusive_addr);
 
-// Use `eret` to "return" to EL1. This results in execution of runtime_init() in EL1.
-asm::eret()
+    // Use `eret` to "return" to EL1. This results in execution of runtime_init() in EL1.
+    asm::eret()
+}
 ```
-
-## Are we stackless?
-
-We just wrote a big inline rust function, `el2_to_el1_transition()`, that is executed in a context
-where we do not have a stack yet. We should double-check the generated machine code:
-
-```console
-$ make objdump
-[...]
-Disassembly of section .text:
-
-0000000000080000 <_start>:
-   80000:       d53800a8        mrs     x8, mpidr_el1
-   80004:       f240051f        tst     x8, #0x3
-   80008:       54000081        b.ne    80018 <_start+0x18>  // b.any
-   8000c:       d5384248        mrs     x8, currentel
-   80010:       f100211f        cmp     x8, #0x8
-   80014:       54000060        b.eq    80020 <_start+0x20>  // b.none
-   80018:       d503205f        wfe
-   8001c:       17ffffff        b       80018 <_start+0x18>
-   80020:       aa1f03e8        mov     x8, xzr
-   80024:       52800069        mov     w9, #0x3                        // #3
-   80028:       d51ce109        msr     cnthctl_el2, x9
-   8002c:       d51ce068        msr     cntvoff_el2, x8
-   80030:       d0000008        adrp    x8, 82000 <kernel::kernel_main+0x6b4>
-   80034:       52b0000a        mov     w10, #0x80000000                // #-2147483648
-   80038:       528078ab        mov     w11, #0x3c5                     // #965
-   8003c:       52a0010c        mov     w12, #0x80000                   // #524288
-   80040:       d51c110a        msr     hcr_el2, x10
-   80044:       d51c400b        msr     spsr_el2, x11
-   80048:       9114c108        add     x8, x8, #0x530
-   8004c:       d51c4028        msr     elr_el2, x8
-   80050:       d51c410c        msr     sp_el1, x12
-   80054:       d69f03e0        eret
-```
-
-Looks good! Thanks zero-overhead abstractions in the [cortex-a] crate! :heart_eyes:
-
-[cortex-a]: https://github.com/rust-embedded/cortex-a
 
 ## Test it
 
-In `main.rs`, we additionally inspect if the mask bits in `SPSR_EL2` made it to `EL1` as well:
+In `main.rs`, we print the `current privilege level` and additionally inspect if the mask bits in
+`SPSR_EL2` made it to `EL1` as well:
 
 ```console
 $ make chainboot
@@ -225,30 +201,27 @@ Minipush 1.0
 diff -uNr 09_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.rs 10_privilege_level/src/_arch/aarch64/cpu/boot.rs
 --- 09_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.rs
 +++ 10_privilege_level/src/_arch/aarch64/cpu/boot.rs
-@@ -12,7 +12,55 @@
+@@ -12,11 +12,53 @@
  //! crate::cpu::boot::arch_boot
 
- use crate::{bsp, cpu};
--use cortex_a::regs::*;
+ use crate::runtime_init;
 +use cortex_a::{asm, regs::*};
-+
-+//--------------------------------------------------------------------------------------------------
+
+ // Assembly counterpart to this file.
+ global_asm!(include_str!("boot.s"));
+
+ //--------------------------------------------------------------------------------------------------
 +// Private Code
 +//--------------------------------------------------------------------------------------------------
 +
-+/// Transition from EL2 to EL1.
++/// Prepares the transition from EL2 to EL1.
 +///
 +/// # Safety
 +///
++/// - The `bss` section is not initialized yet. The code must not use or reference it in any way.
 +/// - The HW state of EL1 must be prepared in a sound way.
-+/// - Exception return from EL2 must must continue execution in EL1 with
-+///   `runtime_init::runtime_init()`.
-+/// - We have to hope that the compiler omits any stack pointer usage, because we are not setting up
-+///   a stack for EL2.
 +#[inline(always)]
-+unsafe fn el2_to_el1_transition() -> ! {
-+    use crate::runtime_init;
-+
++unsafe fn prepare_el2_to_el1_transition(phys_boot_core_stack_end_exclusive_addr: u64) {
 +    // Enable timer counter registers for EL1.
 +    CNTHCTL_EL2.write(CNTHCTL_EL2::EL1PCEN::SET + CNTHCTL_EL2::EL1PCTEN::SET);
 +
@@ -273,38 +246,67 @@ diff -uNr 09_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.rs 10_privilege_level/src/
 +    // Second, let the link register point to runtime_init().
 +    ELR_EL2.set(runtime_init::runtime_init as *const () as u64);
 +
-+    // Set up SP_EL1 (stack pointer), which will be used by EL1 once we "return" to it.
-+    SP_EL1.set(bsp::memory::boot_core_stack_end() as u64);
++    // Set up SP_EL1 (stack pointer), which will be used by EL1 once we "return" to it. Since there
++    // are no plans to ever return to EL2, just re-use the same stack.
++    SP_EL1.set(phys_boot_core_stack_end_exclusive_addr);
++}
++
++//--------------------------------------------------------------------------------------------------
+ // Public Code
+ //--------------------------------------------------------------------------------------------------
+
+@@ -27,7 +69,11 @@
+ /// # Safety
+ ///
+ /// - The `bss` section is not initialized yet. The code must not use or reference it in any way.
++/// - Exception return from EL2 must must continue execution in EL1 with `runtime_init()`.
+ #[no_mangle]
+-pub unsafe fn _start_rust() -> ! {
+-    runtime_init::runtime_init()
++pub unsafe extern "C" fn _start_rust(phys_boot_core_stack_end_exclusive_addr: u64) -> ! {
++    prepare_el2_to_el1_transition(phys_boot_core_stack_end_exclusive_addr);
 +
 +    // Use `eret` to "return" to EL1. This results in execution of runtime_init() in EL1.
 +    asm::eret()
-+}
+ }
+
+diff -uNr 09_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.s 10_privilege_level/src/_arch/aarch64/cpu/boot.s
+--- 09_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.s
++++ 10_privilege_level/src/_arch/aarch64/cpu/boot.s
+@@ -6,6 +6,7 @@
+ // Definitions
+ //--------------------------------------------------------------------------------------------------
+
++.equ _EL2, 0x8
+ .equ _core_id_mask, 0b11
 
  //--------------------------------------------------------------------------------------------------
- // Public Code
-@@ -25,15 +73,15 @@
- /// # Safety
- ///
- /// - Linker script must ensure to place this function where it is expected by the target machine.
--/// - We have to hope that the compiler omits any stack pointer usage before the stack pointer is
--///   actually set (`SP.set()`).
-+/// - We have to hope that the compiler omits any stack pointer usage, because we are not setting up
-+///   a stack for EL2.
- #[no_mangle]
- pub unsafe fn _start() -> ! {
--    use crate::runtime_init;
--
--    if bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id() {
--        SP.set(bsp::memory::boot_core_stack_end() as u64);
--        runtime_init::runtime_init()
-+    // Expect the boot core to start in EL2.
-+    if (bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id())
-+        && (CurrentEL.get() == CurrentEL::EL::EL2.value)
-+    {
-+        el2_to_el1_transition()
-     } else {
-         // If not core0, infinitely wait for events.
-         cpu::wait_forever()
+@@ -17,6 +18,11 @@
+ // fn _start()
+ //------------------------------------------------------------------------------
+ _start:
++	// Only proceed if the core executes in EL2. Park it otherwise.
++	mrs	x0, CurrentEL
++	cmp	x0, _EL2
++	b.ne	1f
++
+ 	// Only proceed on the boot core. Park it otherwise.
+ 	mrs	x1, MPIDR_EL1
+ 	and	x1, x1, _core_id_mask
+@@ -26,11 +32,11 @@
+
+ 	// If execution reaches here, it is the boot core. Now, prepare the jump to Rust code.
+
+-	// Set the stack pointer.
++	// Set the stack pointer. This ensures that any code in EL2 that needs the stack will work.
+ 	ldr	x0, =__boot_core_stack_end_exclusive
+ 	mov	sp, x0
+
+-	// Jump to Rust code.
++	// Jump to Rust code. x0 holds the function argument provided to _start_rust().
+ 	b	_start_rust
+
+ 	// Infinitely wait for events (aka "park the core").
 
 diff -uNr 09_hw_debug_JTAG/src/_arch/aarch64/exception/asynchronous.rs 10_privilege_level/src/_arch/aarch64/exception/asynchronous.rs
 --- 09_hw_debug_JTAG/src/_arch/aarch64/exception/asynchronous.rs

@@ -23,8 +23,9 @@ indent_size = 4
 [*.rs]
 indent_size = 4
 
-[*.S]
-indent_size = 4
+[*.s]
+indent_style = tab
+indent_size = 8
 
 [*.sh]
 indent_size = 4

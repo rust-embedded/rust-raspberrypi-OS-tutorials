@@ -54,6 +54,7 @@ infrastructure for JTAG debugging around it.
 We need to add another line to the `config.txt` file from the SD Card:
 
 ```toml
+arm_64bit=1
 init_uart_clock=48000000
 enable_jtag_gpio=1
 ```
@@ -234,15 +235,16 @@ $ make gdb
 [...]
 >>> target remote :3333                          # Connect to OpenOCD, core0
 >>> load                                         # Load the kernel into the RPi's DRAM over JTAG.
-Loading section .text, size 0x2340 lma 0x80000
-Loading section .rodata, size 0xc2d lma 0x82340
-Loading section .data, size 0x20 lma 0x82f70
-Start address 0x80000, load size 12173
-Transfer rate: 65 KB/sec, 4057 bytes/write.
+Loading section .text, size 0x2454 lma 0x80000
+Loading section .rodata, size 0xa1d lma 0x82460
+Loading section .got, size 0x10 lma 0x82e80
+Loading section .data, size 0x20 lma 0x82e90
+Start address 0x0000000000080000, load size 11937
+Transfer rate: 63 KB/sec, 2984 bytes/write.
 >>> set $pc = 0x80000                            # Set RPI's program counter to the start of the
                                                  # kernel binary.
->>> break main.rs:70
-Breakpoint 1 at 0x80108: file src/main.rs, line 153.
+>>> break main.rs:158
+Breakpoint 1 at 0x8025c: file src/main.rs, line 158.
 >>> cont
 >>> step                                         # Single-step through the kernel
 >>> step

@@ -23,7 +23,7 @@
     - Only `.text` section.
 - `main.rs`: Important [inner attributes]:
     - `#![no_std]`, `#![no_main]`
-- `boot.S`: Assembly `_start()` function that executes `wfe` (Wait For Event), halting all cores
+- `boot.s`: Assembly `_start()` function that executes `wfe` (Wait For Event), halting all cores
   that are executing `_start()`.
 - We (have to) define a `#[panic_handler]` function to make the compiler happy.
     - Make it `unimplemented!()` because it will be stripped out since it is not used.

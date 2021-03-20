@@ -4,8 +4,8 @@
 
 - Introducing global `print!()` macros to enable "printf debugging" at the earliest.
 - To keep tutorial length reasonable, printing functions for now "abuse" a QEMU property that lets
-  us use the RPi's `UART` without setting it up properly.
-- Using  the real hardware `UART` is enabled step-by-step in following tutorials.
+  us use the Raspberry's `UART` without setting it up properly.
+- Using the real hardware `UART` is enabled step-by-step in following tutorials.
 
 ## Notable additions
 
@@ -27,6 +27,15 @@ Kernel panic: Stopping here.
 
 ## Diff to previous
 ```diff
+
+diff -uNr 02_runtime_init/Cargo.toml 03_hacky_hello_world/Cargo.toml
+--- 02_runtime_init/Cargo.toml
++++ 03_hacky_hello_world/Cargo.toml
+@@ -21,3 +21,4 @@
+ # Platform specific dependencies
+ [target.'cfg(target_arch = "aarch64")'.dependencies]
+ cortex-a = { version = "5.x.x" }
++
 
 diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
 --- 02_runtime_init/Makefile
@@ -105,11 +114,12 @@ diff -uNr 02_runtime_init/src/bsp/raspberrypi/console.rs 03_hacky_hello_world/sr
 diff -uNr 02_runtime_init/src/bsp/raspberrypi.rs 03_hacky_hello_world/src/bsp/raspberrypi.rs
 --- 02_runtime_init/src/bsp/raspberrypi.rs
 +++ 03_hacky_hello_world/src/bsp/raspberrypi.rs
-@@ -4,4 +4,5 @@
+@@ -4,5 +4,6 @@
 
  //! Top-level BSP file for the Raspberry Pi 3 and 4.
 
 +pub mod console;
+ pub mod cpu;
  pub mod memory;
 
 diff -uNr 02_runtime_init/src/console.rs 03_hacky_hello_world/src/console.rs
@@ -139,19 +149,10 @@ diff -uNr 02_runtime_init/src/console.rs 03_hacky_hello_world/src/console.rs
 diff -uNr 02_runtime_init/src/main.rs 03_hacky_hello_world/src/main.rs
 --- 02_runtime_init/src/main.rs
 +++ 03_hacky_hello_world/src/main.rs
-@@ -101,21 +101,25 @@
- //! # Boot flow
+@@ -106,14 +106,18 @@
  //!
- //! 1. The kernel's entry point is the function [`cpu::boot::arch_boot::_start()`].
--//!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.S`.
-+//!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.rs`.
- //! 2. Once finished with architectural setup, the arch code calls [`runtime_init::runtime_init()`].
- //!
--//! [`cpu::boot::arch_boot::_start()`]: ../src/kernel/cpu/up/_arch/aarch64/cpu/boot.rs.html
-+//! [`cpu::boot::arch_boot::_start()`]: cpu/boot/arch_boot/fn._start.html
  //! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
 
- #![feature(asm)]
 +#![feature(format_args_nl)]
  #![feature(global_asm)]
 +#![feature(panic_info_message)]
@@ -167,7 +168,7 @@ diff -uNr 02_runtime_init/src/main.rs 03_hacky_hello_world/src/main.rs
  mod runtime_init;
 
  /// Early init code.
-@@ -124,5 +128,7 @@
+@@ -122,5 +126,7 @@
  ///
  /// - Only a single core must be active and running this function.
  unsafe fn kernel_init() -> ! {

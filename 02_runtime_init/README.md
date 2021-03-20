@@ -2,22 +2,28 @@
 
 ## tl;dr
 
-- We extend `boot.S` to call into Rust code for the first time. There, we zero the [bss] section
+- We extend `boot.s` to call into Rust code for the first time. There, we zero the [bss] section
   before execution is halted with a call to `panic()`.
 - Check out `make qemu` again to see the additional code run.
 
 ## Notable additions
 
-- More sections in linker script:
-     - `.rodata`, `.got`, `.data`, `.bss`
-- `_start()`:
-     - Halt core if core != `core0`.
-     - `core0` jumps to the `runtime_init()` Rust function.
-- `runtime_init()` in `runtime_init.rs`
+- More additions to the linker script:
+     - New sections: `.rodata`, `.got`, `.data`, `.bss`.
+     - A dedicated place for linking boot-time arguments that need to be read by `_start()`.
+- `_start()` in `_arch/__arch_name__/cpu/boot.s`:
+     1. Halt core if core != core0.
+     1. Set up the `stack pointer`.
+     1. Jump to the `_start_rust()` function, defined in `arch/__arch_name__/cpu/boot.rs`.
+- `runtime_init()` in `runtime_init.rs`:
      - Zeros the `.bss` section.
-     - Calls `kernel_init()`, which calls `panic!()`, which eventually halts `core0` as well.
+     - Calls `kernel_init()`, which calls `panic!()`, which eventually halts core0 as well.
+- The library now uses the [cortex-a] crate, which provides zero-overhead abstractions and wraps
+  `unsafe` parts when dealing with the CPU's resources.
+    - See it in action in `_arch/__arch_name__/cpu.rs`.
 
 [bss]: https://en.wikipedia.org/wiki/.bss
+[cortex-a]: https://github.com/rust-embedded/cortex-a
 
 ## Diff to previous
 ```diff
@@ -25,16 +31,14 @@
 diff -uNr 01_wait_forever/Cargo.toml 02_runtime_init/Cargo.toml
 --- 01_wait_forever/Cargo.toml
 +++ 02_runtime_init/Cargo.toml
-@@ -4,6 +4,9 @@
- authors = ["Andre Richter <andre.o.richter@gmail.com>"]
- edition = "2018"
+@@ -17,3 +17,7 @@
+ ##--------------------------------------------------------------------------------------------------
 
-+[profile.release]
-+lto = true
+ [dependencies]
 +
- [features]
- default = []
- bsp_rpi3 = []
++# Platform specific dependencies
++[target.'cfg(target_arch = "aarch64")'.dependencies]
++cortex-a = { version = "5.x.x" }
 
 diff -uNr 01_wait_forever/Makefile 02_runtime_init/Makefile
 --- 01_wait_forever/Makefile
@@ -49,32 +53,78 @@ diff -uNr 01_wait_forever/Makefile 02_runtime_init/Makefile
 
  nm: $(KERNEL_ELF)
 
-diff -uNr 01_wait_forever/src/_arch/aarch64/cpu/boot.S 02_runtime_init/src/_arch/aarch64/cpu/boot.S
---- 01_wait_forever/src/_arch/aarch64/cpu/boot.S
-+++ 02_runtime_init/src/_arch/aarch64/cpu/boot.S
-@@ -7,5 +7,15 @@
- .global _start
+diff -uNr 01_wait_forever/src/_arch/aarch64/cpu/boot.rs 02_runtime_init/src/_arch/aarch64/cpu/boot.rs
+--- 01_wait_forever/src/_arch/aarch64/cpu/boot.rs
++++ 02_runtime_init/src/_arch/aarch64/cpu/boot.rs
+@@ -11,5 +11,23 @@
+ //!
+ //! crate::cpu::boot::arch_boot
 
++use crate::runtime_init;
++
+ // Assembly counterpart to this file.
+ global_asm!(include_str!("boot.s"));
++
++//--------------------------------------------------------------------------------------------------
++// Public Code
++//--------------------------------------------------------------------------------------------------
++
++/// The Rust entry of the `kernel` binary.
++///
++/// The function is called from the assembly `_start` function.
++///
++/// # Safety
++///
++/// - The `bss` section is not initialized yet. The code must not use or reference it in any way.
++#[no_mangle]
++pub unsafe fn _start_rust() -> ! {
++    runtime_init::runtime_init()
++}
+
+diff -uNr 01_wait_forever/src/_arch/aarch64/cpu/boot.s 02_runtime_init/src/_arch/aarch64/cpu/boot.s
+--- 01_wait_forever/src/_arch/aarch64/cpu/boot.s
++++ 02_runtime_init/src/_arch/aarch64/cpu/boot.s
+@@ -3,6 +3,12 @@
+ // Copyright (c) 2021 Andre Richter <andre.o.richter@gmail.com>
+
+ //--------------------------------------------------------------------------------------------------
++// Definitions
++//--------------------------------------------------------------------------------------------------
++
++.equ _core_id_mask, 0b11
++
++//--------------------------------------------------------------------------------------------------
+ // Public Code
+ //--------------------------------------------------------------------------------------------------
+ .section .text._start
+@@ -11,6 +17,22 @@
+ // fn _start()
+ //------------------------------------------------------------------------------
  _start:
--1:  wfe         // Wait for event
--    b       1b  // In case an event happened, jump back to 1
-+    mrs     x1, mpidr_el1   // Read Multiprocessor Affinity Register
-+    and     x1, x1, #3      // Clear all bits except [1:0], which hold core id
-+    cbz     x1, 2f          // Jump to label 2 if we are core 0
-+1:  wfe                     // Wait for event
-+    b       1b              // In case an event happened, jump back to 1
-+2:                          // If we are here, we are core0
-+    ldr     x1, =_start     // Load address of function "_start()"
-+    mov     sp, x1          // Set start of stack to before our code, aka first
-+                            // address before "_start()"
-+    bl      runtime_init    // Jump to the "runtime_init()" kernel function
-+    b       1b              // We should never reach here. But just in case,
-+                            // park this core aswell
++	// Only proceed on the boot core. Park it otherwise.
++	mrs	x1, MPIDR_EL1
++	and	x1, x1, _core_id_mask
++	ldr	x2, BOOT_CORE_ID      // provided by bsp/__board_name__/cpu.rs
++	cmp	x1, x2
++	b.ne	1f
++
++	// If execution reaches here, it is the boot core. Now, prepare the jump to Rust code.
++
++	// Set the stack pointer.
++	ldr	x0, =__boot_core_stack_end_exclusive
++	mov	sp, x0
++
++	// Jump to Rust code.
++	b	_start_rust
++
+ 	// Infinitely wait for events (aka "park the core").
+ 1:	wfe
+ 	b	1b
 
 diff -uNr 01_wait_forever/src/_arch/aarch64/cpu.rs 02_runtime_init/src/_arch/aarch64/cpu.rs
 --- 01_wait_forever/src/_arch/aarch64/cpu.rs
 +++ 02_runtime_init/src/_arch/aarch64/cpu.rs
-@@ -0,0 +1,30 @@
+@@ -0,0 +1,26 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -88,6 +138,8 @@ diff -uNr 01_wait_forever/src/_arch/aarch64/cpu.rs 02_runtime_init/src/_arch/aar
 +//!
 +//! crate::cpu::arch_cpu
 +
++use cortex_a::asm;
++
 +//--------------------------------------------------------------------------------------------------
 +// Public Code
 +//--------------------------------------------------------------------------------------------------
@@ -95,21 +147,34 @@ diff -uNr 01_wait_forever/src/_arch/aarch64/cpu.rs 02_runtime_init/src/_arch/aar
 +/// Pause execution on the core.
 +#[inline(always)]
 +pub fn wait_forever() -> ! {
-+    unsafe {
-+        loop {
-+            #[rustfmt::skip]
-+            asm!(
-+                "wfe",
-+                options(nomem, nostack, preserves_flags)
-+            );
-+        }
++    loop {
++        asm::wfe()
 +    }
 +}
+
+diff -uNr 01_wait_forever/src/bsp/raspberrypi/cpu.rs 02_runtime_init/src/bsp/raspberrypi/cpu.rs
+--- 01_wait_forever/src/bsp/raspberrypi/cpu.rs
++++ 02_runtime_init/src/bsp/raspberrypi/cpu.rs
+@@ -0,0 +1,14 @@
++// SPDX-License-Identifier: MIT OR Apache-2.0
++//
++// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
++
++//! BSP Processor code.
++
++//--------------------------------------------------------------------------------------------------
++// Public Definitions
++//--------------------------------------------------------------------------------------------------
++
++/// Used by `arch` code to find the early boot core.
++#[no_mangle]
++#[link_section = ".text._start_arguments"]
++pub static BOOT_CORE_ID: u64 = 0;
 
 diff -uNr 01_wait_forever/src/bsp/raspberrypi/link.ld 02_runtime_init/src/bsp/raspberrypi/link.ld
 --- 01_wait_forever/src/bsp/raspberrypi/link.ld
 +++ 02_runtime_init/src/bsp/raspberrypi/link.ld
-@@ -11,6 +11,7 @@
+@@ -11,17 +11,52 @@
  PHDRS
  {
      segment_rx PT_LOAD FLAGS(5); /* 5 == RX */
@@ -117,8 +182,13 @@ diff -uNr 01_wait_forever/src/bsp/raspberrypi/link.ld 02_runtime_init/src/bsp/ra
  }
 
  SECTIONS
-@@ -18,11 +19,30 @@
+ {
      . =  __rpi_load_addr;
++                                        /*   ^             */
++                                        /*   | stack       */
++                                        /*   | growth      */
++                                        /*   | direction   */
++   __boot_core_stack_end_exclusive = .; /*   |             */
 
      /***********************************************************************************************
 -    * Code
@@ -127,7 +197,16 @@ diff -uNr 01_wait_forever/src/bsp/raspberrypi/link.ld 02_runtime_init/src/bsp/ra
      .text :
      {
          KEEP(*(.text._start))
-         *(.text*)
++
++        /* Special constants (or statics in Rust speak) needed by _start().
++         *
++         * They are placed in close proximity to _start() from where they will be read. This ensures
++         * that position-independent, PC-relative loads can be emitted.
++         */
++        *(.text._start_arguments)
++
++        *(.text._start_rust) /* The Rust entry point */
++        *(.text*)            /* Everything else */
      } :segment_rx
 +
 +    .rodata : ALIGN(8) { *(.rodata*) } :segment_rx
@@ -195,11 +274,12 @@ diff -uNr 01_wait_forever/src/bsp/raspberrypi/memory.rs 02_runtime_init/src/bsp/
 diff -uNr 01_wait_forever/src/bsp/raspberrypi.rs 02_runtime_init/src/bsp/raspberrypi.rs
 --- 01_wait_forever/src/bsp/raspberrypi.rs
 +++ 02_runtime_init/src/bsp/raspberrypi.rs
-@@ -4,4 +4,4 @@
+@@ -4,4 +4,5 @@
 
  //! Top-level BSP file for the Raspberry Pi 3 and 4.
 
 -// Coming soon.
++pub mod cpu;
 +pub mod memory;
 
 diff -uNr 01_wait_forever/src/cpu.rs 02_runtime_init/src/cpu.rs
@@ -223,18 +303,18 @@ diff -uNr 01_wait_forever/src/cpu.rs 02_runtime_init/src/cpu.rs
 diff -uNr 01_wait_forever/src/main.rs 02_runtime_init/src/main.rs
 --- 01_wait_forever/src/main.rs
 +++ 02_runtime_init/src/main.rs
-@@ -102,8 +102,10 @@
+@@ -102,14 +102,25 @@
  //!
- //! 1. The kernel's entry point is the function [`cpu::boot::arch_boot::_start()`].
- //!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.S`.
+ //! 1. The kernel's entry point is the function `cpu::boot::arch_boot::_start()`.
+ //!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.s`.
 +//! 2. Once finished with architectural setup, the arch code calls [`runtime_init::runtime_init()`].
- //!
- //! [`cpu::boot::arch_boot::_start()`]: ../src/kernel/cpu/up/_arch/aarch64/cpu/boot.rs.html
++//!
 +//! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
 
- #![feature(asm)]
+-#![feature(asm)]
  #![feature(global_asm)]
-@@ -112,6 +114,15 @@
+ #![no_main]
+ #![no_std]
 
  mod bsp;
  mod cpu;
@@ -306,7 +386,7 @@ diff -uNr 01_wait_forever/src/panic_wait.rs 02_runtime_init/src/panic_wait.rs
 diff -uNr 01_wait_forever/src/runtime_init.rs 02_runtime_init/src/runtime_init.rs
 --- 01_wait_forever/src/runtime_init.rs
 +++ 02_runtime_init/src/runtime_init.rs
-@@ -0,0 +1,38 @@
+@@ -0,0 +1,37 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -339,7 +419,6 @@ diff -uNr 01_wait_forever/src/runtime_init.rs 02_runtime_init/src/runtime_init.r
 +/// # Safety
 +///
 +/// - Only a single core must be active and running this function.
-+#[no_mangle]
 +pub unsafe fn runtime_init() -> ! {
 +    zero_bss();
 +

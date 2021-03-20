@@ -18,15 +18,29 @@ SECTIONS
 {
     /* Set the link address to 32 MiB */
     . = 0x2000000;
+                                        /*   ^             */
+                                        /*   | stack       */
+                                        /*   | growth      */
+                                        /*   | direction   */
+   __boot_core_stack_end_exclusive = .; /*   |             */
 
     /***********************************************************************************************
     * Code + RO Data + Global Offset Table
     ***********************************************************************************************/
-    __binary_start = .;
+    __binary_nonzero_start = .;
     .text :
     {
         KEEP(*(.text._start))
-        *(.text*)
+
+        /* Special constants (or statics in Rust speak) needed by _start().
+         *
+         * They are placed in close proximity to _start() from where they will be read. This ensures
+         * that position-independent, PC-relative loads can be emitted.
+         */
+        *(.text._start_arguments)
+
+        *(.text._start_rust) /* The Rust entry point */
+        *(.text*)            /* Everything else */
     } :segment_rx
 
     .rodata : ALIGN(8) { *(.rodata*) } :segment_rx
@@ -37,8 +51,12 @@ SECTIONS
     ***********************************************************************************************/
     .data : { *(.data*) } :segment_rw
 
+    /* Fill up to 8 byte, b/c relocating the binary is done in u64 chunks */
+    . = ALIGN(8);
+    __binary_nonzero_end_exclusive = .;
+
     /* Section is zeroed in u64 chunks, align start and end to 8 bytes */
-    .bss : ALIGN(8)
+    .bss :
     {
         __bss_start = .;
         *(.bss*);
@@ -47,10 +65,4 @@ SECTIONS
         . += 8; /* Fill for the bss == 0 case, so that __bss_start <= __bss_end_inclusive holds */
         __bss_end_inclusive = . - 8;
     } :NONE
-
-    /* Fill up to 8 byte, b/c relocating the binary is done in u64 chunks */
-    . = ALIGN(8);
-    __binary_end_inclusive = . - 8;
-
-    __runtime_init_reloc = runtime_init;
 }

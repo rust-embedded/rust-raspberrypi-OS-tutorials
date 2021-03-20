@@ -1,7 +1,0 @@
-{
-  "editor.formatOnSave": true,
-  "editor.rulers": [100],
-  "rust-analyzer.checkOnSave.overrideCommand": ["make", "check"],
-  "rust-analyzer.cargo.target": "aarch64-unknown-none-softfloat",
-  "rust-analyzer.cargo.features": ["bsp_rpi3"]
-}

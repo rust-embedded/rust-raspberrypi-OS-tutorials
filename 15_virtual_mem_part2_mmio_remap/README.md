@@ -369,19 +369,6 @@ Minipush 1.0
 ## Diff to previous
 ```diff
 
-diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/cpu/boot.rs 15_virtual_mem_part2_mmio_remap/src/_arch/aarch64/cpu/boot.rs
---- 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/cpu/boot.rs
-+++ 15_virtual_mem_part2_mmio_remap/src/_arch/aarch64/cpu/boot.rs
-@@ -56,7 +56,7 @@
-     ELR_EL2.set(runtime_init::runtime_init as *const () as u64);
-
-     // Set up SP_EL1 (stack pointer), which will be used by EL1 once we "return" to it.
--    SP_EL1.set(bsp::memory::boot_core_stack_end() as u64);
-+    SP_EL1.set(bsp::memory::phys_boot_core_stack_end().into_usize() as u64);
-
-     // Use `eret` to "return" to EL1. This results in execution of runtime_init() in EL1.
-     asm::eret()
-
 diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/exception.rs 15_virtual_mem_part2_mmio_remap/src/_arch/aarch64/exception.rs
 --- 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/exception.rs
 +++ 15_virtual_mem_part2_mmio_remap/src/_arch/aarch64/exception.rs
@@ -805,15 +792,6 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 15
 
          self.configure_translation_control();
 
-@@ -149,7 +140,7 @@
-         barrier::isb(barrier::SY);
-
-         // Enable the MMU and turn on data and instruction caching.
--        SCTLR_EL1.modify(SCTLR_EL1::M::Enable);
-+        SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
-
-         // Force MMU init to complete before next instruction.
-         barrier::isb(barrier::SY);
 @@ -162,22 +153,3 @@
          SCTLR_EL1.matches_all(SCTLR_EL1::M::Enable)
      }
@@ -1478,7 +1456,19 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/driver.rs 15_v
 diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/link.ld 15_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/link.ld
 --- 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/link.ld
 +++ 15_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/link.ld
-@@ -37,6 +37,7 @@
+@@ -17,11 +17,6 @@
+ SECTIONS
+ {
+     . =  __rpi_load_addr;
+-                                        /*   ^             */
+-                                        /*   | stack       */
+-                                        /*   | growth      */
+-                                        /*   | direction   */
+-   __boot_core_stack_end_exclusive = .; /*   |             */
+
+     /***********************************************************************************************
+     * Code + RO Data + Global Offset Table
+@@ -51,6 +46,7 @@
      /***********************************************************************************************
      * Data + BSS
      ***********************************************************************************************/
@@ -1486,7 +1476,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/link.ld 15_vir
      .data : { *(.data*) } :segment_rw
 
      /* Section is zeroed in u64 chunks, align start and end to 8 bytes */
-@@ -49,4 +50,21 @@
+@@ -63,4 +59,23 @@
          . += 8; /* Fill for the bss == 0 case, so that __bss_start <= __bss_end_inclusive holds */
          __bss_end_inclusive = . - 8;
      } :NONE
@@ -1504,9 +1494,11 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/link.ld 15_vir
 +    /***********************************************************************************************
 +    * Boot Core Stack
 +    ***********************************************************************************************/
-+     __boot_core_stack_start = .;
-+     . += 512K;
-+     __boot_core_stack_end_exclusive = .;
++    __boot_core_stack_start = .;         /*   ^             */
++                                         /*   | stack       */
++    . += 512K;                           /*   | growth      */
++                                         /*   | direction   */
++    __boot_core_stack_end_exclusive = .; /*   |             */
  }
 
 diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 15_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs
@@ -2002,19 +1994,6 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs 15_v
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -103,8 +193,10 @@
-
- /// Exclusive end address of the boot core's stack.
- #[inline(always)]
--pub fn boot_core_stack_end() -> usize {
--    rx_start()
-+pub fn phys_boot_core_stack_end() -> Address<Physical> {
-+    // The binary is still identity mapped, so we don't need to convert here.
-+    let end = virt_boot_core_stack_start().into_usize() + boot_core_stack_size();
-+    Address::new(end)
- }
-
- /// Return the inclusive range spanning the .bss section.
 
 diff -uNr 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi.rs 15_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi.rs
 --- 14_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi.rs
@@ -2138,7 +2117,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/driver.rs 15_virtual_mem_part2
 diff -uNr 14_exceptions_part2_peripheral_IRQs/src/lib.rs 15_virtual_mem_part2_mmio_remap/src/lib.rs
 --- 14_exceptions_part2_peripheral_IRQs/src/lib.rs
 +++ 15_virtual_mem_part2_mmio_remap/src/lib.rs
-@@ -112,6 +112,8 @@
+@@ -111,6 +111,8 @@
  #![allow(clippy::clippy::upper_case_acronyms)]
  #![allow(incomplete_features)]
  #![feature(asm)]
@@ -2147,7 +2126,7 @@ diff -uNr 14_exceptions_part2_peripheral_IRQs/src/lib.rs 15_virtual_mem_part2_mm
  #![feature(const_fn_fn_ptr_basics)]
  #![feature(const_generics)]
  #![feature(const_panic)]
-@@ -133,6 +135,7 @@
+@@ -132,6 +134,7 @@
  mod synchronization;
 
  pub mod bsp;

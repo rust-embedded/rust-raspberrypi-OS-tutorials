@@ -11,5 +11,5 @@
 //!
 //! crate::cpu::boot::arch_boot
 
-// Assembly counterpart to this file. Includes function _start().
-global_asm!(include_str!("boot.S"));
+// Assembly counterpart to this file.
+global_asm!(include_str!("boot.s"));

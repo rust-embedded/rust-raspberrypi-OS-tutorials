@@ -35,19 +35,3 @@ pub fn wait_forever() -> ! {
         asm::wfe()
     }
 }
-
-/// Branch to a raw integer value.
-///
-/// # Safety
-///
-/// - This is highly unsafe. Use with care.
-#[inline(always)]
-pub unsafe fn branch_to_raw_addr(addr: usize) -> ! {
-    asm!(
-        "blr {destination:x}",
-        destination = in(reg) addr,
-        options(nomem, nostack)
-    );
-
-    core::intrinsics::unreachable()
-}

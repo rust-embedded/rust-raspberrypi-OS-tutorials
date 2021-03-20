@@ -11,26 +11,24 @@
 //!
 //! crate::cpu::boot::arch_boot
 
-use crate::{bsp, cpu};
+use crate::runtime_init;
 use cortex_a::{asm, regs::*};
+
+// Assembly counterpart to this file.
+global_asm!(include_str!("boot.s"));
 
 //--------------------------------------------------------------------------------------------------
 // Private Code
 //--------------------------------------------------------------------------------------------------
 
-/// Transition from EL2 to EL1.
+/// Prepares the transition from EL2 to EL1.
 ///
 /// # Safety
 ///
+/// - The `bss` section is not initialized yet. The code must not use or reference it in any way.
 /// - The HW state of EL1 must be prepared in a sound way.
-/// - Exception return from EL2 must must continue execution in EL1 with
-///   `runtime_init::runtime_init()`.
-/// - We have to hope that the compiler omits any stack pointer usage, because we are not setting up
-///   a stack for EL2.
 #[inline(always)]
-unsafe fn el2_to_el1_transition() -> ! {
-    use crate::runtime_init;
-
+unsafe fn prepare_el2_to_el1_transition(phys_boot_core_stack_end_exclusive_addr: u64) {
     // Enable timer counter registers for EL1.
     CNTHCTL_EL2.write(CNTHCTL_EL2::EL1PCEN::SET + CNTHCTL_EL2::EL1PCTEN::SET);
 
@@ -55,35 +53,27 @@ unsafe fn el2_to_el1_transition() -> ! {
     // Second, let the link register point to runtime_init().
     ELR_EL2.set(runtime_init::runtime_init as *const () as u64);
 
-    // Set up SP_EL1 (stack pointer), which will be used by EL1 once we "return" to it.
-    SP_EL1.set(bsp::memory::boot_core_stack_end() as u64);
-
-    // Use `eret` to "return" to EL1. This results in execution of runtime_init() in EL1.
-    asm::eret()
+    // Set up SP_EL1 (stack pointer), which will be used by EL1 once we "return" to it. Since there
+    // are no plans to ever return to EL2, just re-use the same stack.
+    SP_EL1.set(phys_boot_core_stack_end_exclusive_addr);
 }
 
 //--------------------------------------------------------------------------------------------------
 // Public Code
 //--------------------------------------------------------------------------------------------------
 
-/// The entry of the `kernel` binary.
+/// The Rust entry of the `kernel` binary.
 ///
-/// The function must be named `_start`, because the linker is looking for this exact name.
+/// The function is called from the assembly `_start` function.
 ///
 /// # Safety
 ///
-/// - Linker script must ensure to place this function where it is expected by the target machine.
-/// - We have to hope that the compiler omits any stack pointer usage, because we are not setting up
-///   a stack for EL2.
+/// - The `bss` section is not initialized yet. The code must not use or reference it in any way.
+/// - Exception return from EL2 must must continue execution in EL1 with `runtime_init()`.
 #[no_mangle]
-pub unsafe fn _start() -> ! {
-    // Expect the boot core to start in EL2.
-    if (bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id())
-        && (CurrentEL.get() == CurrentEL::EL::EL2.value)
-    {
-        el2_to_el1_transition()
-    } else {
-        // If not core0, infinitely wait for events.
-        cpu::wait_forever()
-    }
+pub unsafe extern "C" fn _start_rust(phys_boot_core_stack_end_exclusive_addr: u64) -> ! {
+    prepare_el2_to_el1_transition(phys_boot_core_stack_end_exclusive_addr);
+
+    // Use `eret` to "return" to EL1. This results in execution of runtime_init() in EL1.
+    asm::eret()
 }

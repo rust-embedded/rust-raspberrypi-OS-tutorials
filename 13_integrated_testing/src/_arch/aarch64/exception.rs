@@ -16,7 +16,7 @@ use cortex_a::{barrier, regs::*};
 use register::InMemoryRegister;
 
 // Assembly counterpart to this file.
-global_asm!(include_str!("exception.S"));
+global_asm!(include_str!("exception.s"));
 
 //--------------------------------------------------------------------------------------------------
 // Private Definitions

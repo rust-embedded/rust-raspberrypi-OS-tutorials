@@ -24,7 +24,7 @@ ifeq ($(BSP),rpi3)
     NM_BINARY         = aarch64-none-elf-nm
     READELF_BINARY    = aarch64-none-elf-readelf
     LINKER_FILE       = src/bsp/raspberrypi/link.ld
-    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53 -C relocation-model=pic
+    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
     CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi3.img
 else ifeq ($(BSP),rpi4)
     TARGET            = aarch64-unknown-none-softfloat
@@ -36,7 +36,7 @@ else ifeq ($(BSP),rpi4)
     NM_BINARY         = aarch64-none-elf-nm
     READELF_BINARY    = aarch64-none-elf-readelf
     LINKER_FILE       = src/bsp/raspberrypi/link.ld
-    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72 -C relocation-model=pic
+    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
     CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi4.img
 endif
 

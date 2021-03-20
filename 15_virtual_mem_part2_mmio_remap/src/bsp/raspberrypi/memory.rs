@@ -191,14 +191,6 @@ fn phys_addr_space_end() -> Address<Physical> {
 // Public Code
 //--------------------------------------------------------------------------------------------------
 
-/// Exclusive end address of the boot core's stack.
-#[inline(always)]
-pub fn phys_boot_core_stack_end() -> Address<Physical> {
-    // The binary is still identity mapped, so we don't need to convert here.
-    let end = virt_boot_core_stack_start().into_usize() + boot_core_stack_size();
-    Address::new(end)
-}
-
 /// Return the inclusive range spanning the .bss section.
 ///
 /// # Safety
