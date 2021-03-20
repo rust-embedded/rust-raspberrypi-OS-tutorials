@@ -1,4 +1,4 @@
-# Tutorial 12 - Exceptions Part 1: Groundwork
+# Tutorial 11 - Exceptions Part 1: Groundwork
 
 ## tl;dr
 
@@ -476,9 +476,9 @@ General purpose register:
 ## Diff to previous
 ```diff
 
-diff -uNr 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 12_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs
---- 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs
-+++ 12_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs
+diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 11_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs
+--- 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs
++++ 11_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs
 @@ -11,7 +11,224 @@
  //!
  //! crate::exception::arch_exception
@@ -730,9 +730,9 @@ diff -uNr 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
 +    barrier::isb(barrier::SY);
 +}
 
-diff -uNr 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.s 12_exceptions_part1_groundwork/src/_arch/aarch64/exception.s
---- 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.s
-+++ 12_exceptions_part1_groundwork/src/_arch/aarch64/exception.s
+diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.s 11_exceptions_part1_groundwork/src/_arch/aarch64/exception.s
+--- 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.s
++++ 11_exceptions_part1_groundwork/src/_arch/aarch64/exception.s
 @@ -0,0 +1,148 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -883,9 +883,9 @@ diff -uNr 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.s 12
 +.size	__exception_restore_context, . - __exception_restore_context
 +.type	__exception_restore_context, function
 
-diff -uNr 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory/mmu.rs 12_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs
---- 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory/mmu.rs
-+++ 12_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs
+diff -uNr 10_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory/mmu.rs 11_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs
+--- 10_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory/mmu.rs
++++ 11_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs
 @@ -15,7 +15,7 @@
  /// The kernel's address space defined by this BSP.
  pub type KernelAddrSpace = AddressSpace<{ memory_map::END_INCLUSIVE + 1 }>;
@@ -925,9 +925,9 @@ diff -uNr 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory/mmu.r
      RangeInclusive::new(memory_map::mmio::START, memory_map::mmio::END_INCLUSIVE)
  }
 
-diff -uNr 11_virtual_mem_part1_identity_mapping/src/bsp.rs 12_exceptions_part1_groundwork/src/bsp.rs
---- 11_virtual_mem_part1_identity_mapping/src/bsp.rs
-+++ 12_exceptions_part1_groundwork/src/bsp.rs
+diff -uNr 10_virtual_mem_part1_identity_mapping/src/bsp.rs 11_exceptions_part1_groundwork/src/bsp.rs
+--- 10_virtual_mem_part1_identity_mapping/src/bsp.rs
++++ 11_exceptions_part1_groundwork/src/bsp.rs
 @@ -4,7 +4,7 @@
 
  //! Conditional reexporting of Board Support Packages.
@@ -938,9 +938,9 @@ diff -uNr 11_virtual_mem_part1_identity_mapping/src/bsp.rs 12_exceptions_part1_g
  #[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
  mod raspberrypi;
 
-diff -uNr 11_virtual_mem_part1_identity_mapping/src/exception.rs 12_exceptions_part1_groundwork/src/exception.rs
---- 11_virtual_mem_part1_identity_mapping/src/exception.rs
-+++ 12_exceptions_part1_groundwork/src/exception.rs
+diff -uNr 10_virtual_mem_part1_identity_mapping/src/exception.rs 11_exceptions_part1_groundwork/src/exception.rs
+--- 10_virtual_mem_part1_identity_mapping/src/exception.rs
++++ 11_exceptions_part1_groundwork/src/exception.rs
 @@ -13,7 +13,7 @@
  //--------------------------------------------------------------------------------------------------
  // Architectural Public Reexports
@@ -951,9 +951,9 @@ diff -uNr 11_virtual_mem_part1_identity_mapping/src/exception.rs 12_exceptions_p
  //--------------------------------------------------------------------------------------------------
  // Public Definitions
 
-diff -uNr 11_virtual_mem_part1_identity_mapping/src/main.rs 12_exceptions_part1_groundwork/src/main.rs
---- 11_virtual_mem_part1_identity_mapping/src/main.rs
-+++ 12_exceptions_part1_groundwork/src/main.rs
+diff -uNr 10_virtual_mem_part1_identity_mapping/src/main.rs 11_exceptions_part1_groundwork/src/main.rs
+--- 10_virtual_mem_part1_identity_mapping/src/main.rs
++++ 11_exceptions_part1_groundwork/src/main.rs
 @@ -144,6 +144,8 @@
      use driver::interface::DriverManager;
      use memory::mmu::interface::MMU;

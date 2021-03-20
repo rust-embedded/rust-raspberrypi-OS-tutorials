@@ -1,4 +1,4 @@
-# Tutorial 10 - Privilege Level
+# Tutorial 09 - Privilege Level
 
 ## tl;dr
 
@@ -71,7 +71,7 @@ pub unsafe extern "C" fn _start_rust(phys_boot_core_stack_end_exclusive_addr: u6
 
 Since `EL2` is more privileged than `EL1`, it has control over various processor features and can
 allow or disallow `EL1` code to use them. One such example is access to timer and counter registers.
-We are already using them since [tutorial 08](../08_timestamps/), so of course we want to keep them.
+We are already using them since [tutorial 07](../07_timestamps/), so of course we want to keep them.
 Therefore we set the respective flags in the [Counter-timer Hypervisor Control register] and
 additionally set the virtual offset to zero so that we get the real physical value everytime:
 
@@ -198,9 +198,9 @@ Minipush 1.0
 ## Diff to previous
 ```diff
 
-diff -uNr 09_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.rs 10_privilege_level/src/_arch/aarch64/cpu/boot.rs
---- 09_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.rs
-+++ 10_privilege_level/src/_arch/aarch64/cpu/boot.rs
+diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.rs 09_privilege_level/src/_arch/aarch64/cpu/boot.rs
+--- 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.rs
++++ 09_privilege_level/src/_arch/aarch64/cpu/boot.rs
 @@ -12,11 +12,53 @@
  //! crate::cpu::boot::arch_boot
 
@@ -270,9 +270,9 @@ diff -uNr 09_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.rs 10_privilege_level/src/
 +    asm::eret()
  }
 
-diff -uNr 09_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.s 10_privilege_level/src/_arch/aarch64/cpu/boot.s
---- 09_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.s
-+++ 10_privilege_level/src/_arch/aarch64/cpu/boot.s
+diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.s 09_privilege_level/src/_arch/aarch64/cpu/boot.s
+--- 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.s
++++ 09_privilege_level/src/_arch/aarch64/cpu/boot.s
 @@ -6,6 +6,7 @@
  // Definitions
  //--------------------------------------------------------------------------------------------------
@@ -308,9 +308,9 @@ diff -uNr 09_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.s 10_privilege_level/src/_
 
  	// Infinitely wait for events (aka "park the core").
 
-diff -uNr 09_hw_debug_JTAG/src/_arch/aarch64/exception/asynchronous.rs 10_privilege_level/src/_arch/aarch64/exception/asynchronous.rs
---- 09_hw_debug_JTAG/src/_arch/aarch64/exception/asynchronous.rs
-+++ 10_privilege_level/src/_arch/aarch64/exception/asynchronous.rs
+diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/exception/asynchronous.rs 09_privilege_level/src/_arch/aarch64/exception/asynchronous.rs
+--- 08_hw_debug_JTAG/src/_arch/aarch64/exception/asynchronous.rs
++++ 09_privilege_level/src/_arch/aarch64/exception/asynchronous.rs
 @@ -0,0 +1,81 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -394,9 +394,9 @@ diff -uNr 09_hw_debug_JTAG/src/_arch/aarch64/exception/asynchronous.rs 10_privil
 +    info!("      FIQ:    {}", to_mask_str(is_masked::<FIQ>()));
 +}
 
-diff -uNr 09_hw_debug_JTAG/src/_arch/aarch64/exception.rs 10_privilege_level/src/_arch/aarch64/exception.rs
---- 09_hw_debug_JTAG/src/_arch/aarch64/exception.rs
-+++ 10_privilege_level/src/_arch/aarch64/exception.rs
+diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/exception.rs 09_privilege_level/src/_arch/aarch64/exception.rs
+--- 08_hw_debug_JTAG/src/_arch/aarch64/exception.rs
++++ 09_privilege_level/src/_arch/aarch64/exception.rs
 @@ -0,0 +1,30 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -429,9 +429,9 @@ diff -uNr 09_hw_debug_JTAG/src/_arch/aarch64/exception.rs 10_privilege_level/src
 +    }
 +}
 
-diff -uNr 09_hw_debug_JTAG/src/exception/asynchronous.rs 10_privilege_level/src/exception/asynchronous.rs
---- 09_hw_debug_JTAG/src/exception/asynchronous.rs
-+++ 10_privilege_level/src/exception/asynchronous.rs
+diff -uNr 08_hw_debug_JTAG/src/exception/asynchronous.rs 09_privilege_level/src/exception/asynchronous.rs
+--- 08_hw_debug_JTAG/src/exception/asynchronous.rs
++++ 09_privilege_level/src/exception/asynchronous.rs
 @@ -0,0 +1,14 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -448,9 +448,9 @@ diff -uNr 09_hw_debug_JTAG/src/exception/asynchronous.rs 10_privilege_level/src/
 +//--------------------------------------------------------------------------------------------------
 +pub use arch_asynchronous::print_state;
 
-diff -uNr 09_hw_debug_JTAG/src/exception.rs 10_privilege_level/src/exception.rs
---- 09_hw_debug_JTAG/src/exception.rs
-+++ 10_privilege_level/src/exception.rs
+diff -uNr 08_hw_debug_JTAG/src/exception.rs 09_privilege_level/src/exception.rs
+--- 08_hw_debug_JTAG/src/exception.rs
++++ 09_privilege_level/src/exception.rs
 @@ -0,0 +1,30 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -483,9 +483,9 @@ diff -uNr 09_hw_debug_JTAG/src/exception.rs 10_privilege_level/src/exception.rs
 +    Unknown,
 +}
 
-diff -uNr 09_hw_debug_JTAG/src/main.rs 10_privilege_level/src/main.rs
---- 09_hw_debug_JTAG/src/main.rs
-+++ 10_privilege_level/src/main.rs
+diff -uNr 08_hw_debug_JTAG/src/main.rs 09_privilege_level/src/main.rs
+--- 08_hw_debug_JTAG/src/main.rs
++++ 09_privilege_level/src/main.rs
 @@ -119,6 +119,7 @@
  mod console;
  mod cpu;

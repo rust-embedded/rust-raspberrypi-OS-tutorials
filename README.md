@@ -18,8 +18,9 @@ Have fun!
 
 _Best regards,<br>Andre ([@andre-richter])_
 
-P.S.: In the future, Chinese :cn: versions of the tutorials will be maintained as
-[`README.CN.md`](README.CN.md) by [@colachg] and [@readlnh].
+P.S.: Chinese :cn: versions of the tutorials were started by [@colachg] and [@readlnh]. You can find
+them as [`README.CN.md`](README.CN.md) in the respective folders. They are a bit out-of-date at the
+moment though.
 
 [ARMv8-A architecture]: https://developer.arm.com/products/architecture/cpu-architecture/a-profile/docs
 [monolithic]: https://en.wikipedia.org/wiki/Monolithic_kernel
@@ -40,7 +41,7 @@ P.S.: In the future, Chinese :cn: versions of the tutorials will be maintained a
 - The code written in these tutorials supports and runs on the **Raspberry Pi 3** and the
   **Raspberry Pi 4**.
   - Tutorials 1 till 5 are groundwork code which only makes sense to run in `QEMU`.
-  - Starting with [tutorial 6](06_drivers_gpio_uart), you can load and run the kernel on the real
+  - Starting with [tutorial 5](05_drivers_gpio_uart), you can load and run the kernel on the real
     Raspberrys and observe output over `UART`.
 - Although the Raspberry Pi 3 and 4 are the main target boards, the code is written in a modular
   fashion which allows for easy porting to other CPU architectures and/or boards.
@@ -125,9 +126,9 @@ get a USB serial cable to get the full experience.
 - You can find USB-to-serial cables that should work right away at [\[1\]] [\[2\]], but many others
   will work too. Ideally, your cable is based on the `CP2102` chip.
 - You connect it to `GND` and GPIO pins `14/15` as shown below.
-- [Tutorial 6](06_drivers_gpio_uart) is the first where you can use it. Check it out for
+- [Tutorial 5](05_drivers_gpio_uart) is the first where you can use it. Check it out for
   instructions on how to prepare the SD card to boot your self-made kernel from it.
-- Starting with [tutorial 7](07_uart_chainloader), booting kernels on your Raspberry is getting
+- Starting with [tutorial 6](06_uart_chainloader), booting kernels on your Raspberry is getting
   _really_ comfortable. In this tutorial, a so-called `chainloader` is developed, which will be the
   last file you need to manually copy on the SD card for a while. It will enable you to load the
   tutorial kernels during boot on demand over `UART`.

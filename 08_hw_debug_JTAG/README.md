@@ -1,4 +1,4 @@
-# Tutorial 09 - Hardware Debugging using JTAG
+# Tutorial 08 - Hardware Debugging using JTAG
 
 ## tl;dr
 
@@ -305,9 +305,9 @@ Thanks to [@naotaco](https://github.com/naotaco) for laying the groundwork for t
 ## Diff to previous
 ```diff
 
-diff -uNr 08_timestamps/Makefile 09_hw_debug_JTAG/Makefile
---- 08_timestamps/Makefile
-+++ 09_hw_debug_JTAG/Makefile
+diff -uNr 07_timestamps/Makefile 08_hw_debug_JTAG/Makefile
+--- 07_timestamps/Makefile
++++ 08_hw_debug_JTAG/Makefile
 @@ -23,6 +23,8 @@
      OBJDUMP_BINARY    = aarch64-none-elf-objdump
      NM_BINARY         = aarch64-none-elf-nm

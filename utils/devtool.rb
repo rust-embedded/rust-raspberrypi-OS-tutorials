@@ -147,7 +147,7 @@ class DevTool
         return if @user_has_supplied_crates
 
         puts 'Make Xtra stuff'.light_blue
-        system('cd 07_uart_chainloader && bash update.sh')
+        system('cd *_uart_chainloader && bash update.sh')
         system('cd X1_JTAG_boot && bash update.sh')
     end
 

@@ -1,4 +1,4 @@
-# Tutorial 05 - Safe Globals
+# Tutorial 04 - Safe Globals
 
 ## tl;dr
 
@@ -54,9 +54,9 @@ $ make qemu
 ## Diff to previous
 ```diff
 
-diff -uNr 04_zero_overhead_abstraction/src/bsp/raspberrypi/console.rs 05_safe_globals/src/bsp/raspberrypi/console.rs
---- 04_zero_overhead_abstraction/src/bsp/raspberrypi/console.rs
-+++ 05_safe_globals/src/bsp/raspberrypi/console.rs
+diff -uNr 03_hacky_hello_world/src/bsp/raspberrypi/console.rs 04_safe_globals/src/bsp/raspberrypi/console.rs
+--- 03_hacky_hello_world/src/bsp/raspberrypi/console.rs
++++ 04_safe_globals/src/bsp/raspberrypi/console.rs
 @@ -4,7 +4,7 @@
 
  //! BSP console facilities.
@@ -176,9 +176,9 @@ diff -uNr 04_zero_overhead_abstraction/src/bsp/raspberrypi/console.rs 05_safe_gl
 +    }
  }
 
-diff -uNr 04_zero_overhead_abstraction/src/console.rs 05_safe_globals/src/console.rs
---- 04_zero_overhead_abstraction/src/console.rs
-+++ 05_safe_globals/src/console.rs
+diff -uNr 03_hacky_hello_world/src/console.rs 04_safe_globals/src/console.rs
+--- 03_hacky_hello_world/src/console.rs
++++ 04_safe_globals/src/console.rs
 @@ -10,10 +10,22 @@
 
  /// Console interfaces.
@@ -208,12 +208,12 @@ diff -uNr 04_zero_overhead_abstraction/src/console.rs 05_safe_globals/src/consol
 +    pub trait All = Write + Statistics;
  }
 
-diff -uNr 04_zero_overhead_abstraction/src/main.rs 05_safe_globals/src/main.rs
---- 04_zero_overhead_abstraction/src/main.rs
-+++ 05_safe_globals/src/main.rs
+diff -uNr 03_hacky_hello_world/src/main.rs 04_safe_globals/src/main.rs
+--- 03_hacky_hello_world/src/main.rs
++++ 04_safe_globals/src/main.rs
 @@ -109,6 +109,7 @@
-
  #![feature(format_args_nl)]
+ #![feature(global_asm)]
  #![feature(panic_info_message)]
 +#![feature(trait_alias)]
  #![no_main]
@@ -227,27 +227,28 @@ diff -uNr 04_zero_overhead_abstraction/src/main.rs 05_safe_globals/src/main.rs
 
  /// Early init code.
  ///
-@@ -126,8 +128,15 @@
+@@ -126,7 +128,15 @@
  ///
  /// - Only a single core must be active and running this function.
  unsafe fn kernel_init() -> ! {
+-    println!("[0] Hello from Rust!");
 +    use console::interface::Statistics;
-+
-     println!("[0] Hello from pure Rust!");
 
--    println!("[1] Stopping here.");
+-    panic!("Stopping here.")
++    println!("[0] Hello from pure Rust!");
++
 +    println!(
 +        "[1] Chars written: {}",
 +        bsp::console::console().chars_written()
 +    );
 +
 +    println!("[2] Stopping here.");
-     cpu::wait_forever()
++    cpu::wait_forever()
  }
 
-diff -uNr 04_zero_overhead_abstraction/src/synchronization.rs 05_safe_globals/src/synchronization.rs
---- 04_zero_overhead_abstraction/src/synchronization.rs
-+++ 05_safe_globals/src/synchronization.rs
+diff -uNr 03_hacky_hello_world/src/synchronization.rs 04_safe_globals/src/synchronization.rs
+--- 03_hacky_hello_world/src/synchronization.rs
++++ 04_safe_globals/src/synchronization.rs
 @@ -0,0 +1,77 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//

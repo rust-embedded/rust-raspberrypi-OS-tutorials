@@ -1,4 +1,4 @@
-# Tutorial 06 - Drivers: GPIO and UART
+# Tutorial 05 - Drivers: GPIO and UART
 
 ## tl;dr
 
@@ -108,9 +108,9 @@ Miniterm 1.0
 ## Diff to previous
 ```diff
 
-diff -uNr 05_safe_globals/Cargo.toml 06_drivers_gpio_uart/Cargo.toml
---- 05_safe_globals/Cargo.toml
-+++ 06_drivers_gpio_uart/Cargo.toml
+diff -uNr 04_safe_globals/Cargo.toml 05_drivers_gpio_uart/Cargo.toml
+--- 04_safe_globals/Cargo.toml
++++ 05_drivers_gpio_uart/Cargo.toml
 @@ -9,8 +9,8 @@
 
  [features]
@@ -133,9 +133,9 @@ diff -uNr 05_safe_globals/Cargo.toml 06_drivers_gpio_uart/Cargo.toml
  [target.'cfg(target_arch = "aarch64")'.dependencies]
  cortex-a = { version = "5.x.x" }
 
-diff -uNr 05_safe_globals/Makefile 06_drivers_gpio_uart/Makefile
---- 05_safe_globals/Makefile
-+++ 06_drivers_gpio_uart/Makefile
+diff -uNr 04_safe_globals/Makefile 05_drivers_gpio_uart/Makefile
+--- 04_safe_globals/Makefile
++++ 05_drivers_gpio_uart/Makefile
 @@ -7,6 +7,12 @@
  # Default to the RPi3
  BSP ?= rpi3
@@ -186,9 +186,9 @@ diff -uNr 05_safe_globals/Makefile 06_drivers_gpio_uart/Makefile
  	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD)
 
 
-diff -uNr 05_safe_globals/src/_arch/aarch64/cpu.rs 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs
---- 05_safe_globals/src/_arch/aarch64/cpu.rs
-+++ 06_drivers_gpio_uart/src/_arch/aarch64/cpu.rs
+diff -uNr 04_safe_globals/src/_arch/aarch64/cpu.rs 05_drivers_gpio_uart/src/_arch/aarch64/cpu.rs
+--- 04_safe_globals/src/_arch/aarch64/cpu.rs
++++ 05_drivers_gpio_uart/src/_arch/aarch64/cpu.rs
 @@ -17,6 +17,17 @@
  // Public Code
  //--------------------------------------------------------------------------------------------------
@@ -208,9 +208,9 @@ diff -uNr 05_safe_globals/src/_arch/aarch64/cpu.rs 06_drivers_gpio_uart/src/_arc
  #[inline(always)]
  pub fn wait_forever() -> ! {
 
-diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
---- 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
-+++ 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
+diff -uNr 04_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
+--- 04_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
++++ 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
 @@ -0,0 +1,221 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -434,9 +434,9 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 06_drivers_g
 +    }
 +}
 
-diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
---- 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-+++ 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
+diff -uNr 04_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
+--- 04_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
++++ 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 @@ -0,0 +1,403 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -842,9 +842,9 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 06_dri
 +    }
 +}
 
-diff -uNr 05_safe_globals/src/bsp/device_driver/bcm.rs 06_drivers_gpio_uart/src/bsp/device_driver/bcm.rs
---- 05_safe_globals/src/bsp/device_driver/bcm.rs
-+++ 06_drivers_gpio_uart/src/bsp/device_driver/bcm.rs
+diff -uNr 04_safe_globals/src/bsp/device_driver/bcm.rs 05_drivers_gpio_uart/src/bsp/device_driver/bcm.rs
+--- 04_safe_globals/src/bsp/device_driver/bcm.rs
++++ 05_drivers_gpio_uart/src/bsp/device_driver/bcm.rs
 @@ -0,0 +1,11 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -858,9 +858,9 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/bcm.rs 06_drivers_gpio_uart/src/
 +pub use bcm2xxx_gpio::*;
 +pub use bcm2xxx_pl011_uart::*;
 
-diff -uNr 05_safe_globals/src/bsp/device_driver/common.rs 06_drivers_gpio_uart/src/bsp/device_driver/common.rs
---- 05_safe_globals/src/bsp/device_driver/common.rs
-+++ 06_drivers_gpio_uart/src/bsp/device_driver/common.rs
+diff -uNr 04_safe_globals/src/bsp/device_driver/common.rs 05_drivers_gpio_uart/src/bsp/device_driver/common.rs
+--- 04_safe_globals/src/bsp/device_driver/common.rs
++++ 05_drivers_gpio_uart/src/bsp/device_driver/common.rs
 @@ -0,0 +1,38 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -901,9 +901,9 @@ diff -uNr 05_safe_globals/src/bsp/device_driver/common.rs 06_drivers_gpio_uart/s
 +    }
 +}
 
-diff -uNr 05_safe_globals/src/bsp/device_driver.rs 06_drivers_gpio_uart/src/bsp/device_driver.rs
---- 05_safe_globals/src/bsp/device_driver.rs
-+++ 06_drivers_gpio_uart/src/bsp/device_driver.rs
+diff -uNr 04_safe_globals/src/bsp/device_driver.rs 05_drivers_gpio_uart/src/bsp/device_driver.rs
+--- 04_safe_globals/src/bsp/device_driver.rs
++++ 05_drivers_gpio_uart/src/bsp/device_driver.rs
 @@ -0,0 +1,12 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -918,9 +918,9 @@ diff -uNr 05_safe_globals/src/bsp/device_driver.rs 06_drivers_gpio_uart/src/bsp/
 +#[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
 +pub use bcm::*;
 
-diff -uNr 05_safe_globals/src/bsp/raspberrypi/console.rs 06_drivers_gpio_uart/src/bsp/raspberrypi/console.rs
---- 05_safe_globals/src/bsp/raspberrypi/console.rs
-+++ 06_drivers_gpio_uart/src/bsp/raspberrypi/console.rs
+diff -uNr 04_safe_globals/src/bsp/raspberrypi/console.rs 05_drivers_gpio_uart/src/bsp/raspberrypi/console.rs
+--- 04_safe_globals/src/bsp/raspberrypi/console.rs
++++ 05_drivers_gpio_uart/src/bsp/raspberrypi/console.rs
 @@ -4,113 +4,34 @@
 
  //! BSP console facilities.
@@ -1054,9 +1054,9 @@ diff -uNr 05_safe_globals/src/bsp/raspberrypi/console.rs 06_drivers_gpio_uart/sr
 +    &super::PL011_UART
  }
 
-diff -uNr 05_safe_globals/src/bsp/raspberrypi/driver.rs 06_drivers_gpio_uart/src/bsp/raspberrypi/driver.rs
---- 05_safe_globals/src/bsp/raspberrypi/driver.rs
-+++ 06_drivers_gpio_uart/src/bsp/raspberrypi/driver.rs
+diff -uNr 04_safe_globals/src/bsp/raspberrypi/driver.rs 05_drivers_gpio_uart/src/bsp/raspberrypi/driver.rs
+--- 04_safe_globals/src/bsp/raspberrypi/driver.rs
++++ 05_drivers_gpio_uart/src/bsp/raspberrypi/driver.rs
 @@ -0,0 +1,49 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -1108,9 +1108,9 @@ diff -uNr 05_safe_globals/src/bsp/raspberrypi/driver.rs 06_drivers_gpio_uart/src
 +    }
 +}
 
-diff -uNr 05_safe_globals/src/bsp/raspberrypi/memory.rs 06_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs
---- 05_safe_globals/src/bsp/raspberrypi/memory.rs
-+++ 06_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs
+diff -uNr 04_safe_globals/src/bsp/raspberrypi/memory.rs 05_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs
+--- 04_safe_globals/src/bsp/raspberrypi/memory.rs
++++ 05_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs
 @@ -17,6 +17,38 @@
  }
 
@@ -1151,9 +1151,9 @@ diff -uNr 05_safe_globals/src/bsp/raspberrypi/memory.rs 06_drivers_gpio_uart/src
  //--------------------------------------------------------------------------------------------------
 
 
-diff -uNr 05_safe_globals/src/bsp/raspberrypi.rs 06_drivers_gpio_uart/src/bsp/raspberrypi.rs
---- 05_safe_globals/src/bsp/raspberrypi.rs
-+++ 06_drivers_gpio_uart/src/bsp/raspberrypi.rs
+diff -uNr 04_safe_globals/src/bsp/raspberrypi.rs 05_drivers_gpio_uart/src/bsp/raspberrypi.rs
+--- 04_safe_globals/src/bsp/raspberrypi.rs
++++ 05_drivers_gpio_uart/src/bsp/raspberrypi.rs
 @@ -6,4 +6,33 @@
 
  pub mod console;
@@ -1189,9 +1189,9 @@ diff -uNr 05_safe_globals/src/bsp/raspberrypi.rs 06_drivers_gpio_uart/src/bsp/ra
 +    }
 +}
 
-diff -uNr 05_safe_globals/src/bsp.rs 06_drivers_gpio_uart/src/bsp.rs
---- 05_safe_globals/src/bsp.rs
-+++ 06_drivers_gpio_uart/src/bsp.rs
+diff -uNr 04_safe_globals/src/bsp.rs 05_drivers_gpio_uart/src/bsp.rs
+--- 04_safe_globals/src/bsp.rs
++++ 05_drivers_gpio_uart/src/bsp.rs
 @@ -4,6 +4,8 @@
 
  //! Conditional reexporting of Board Support Packages.
@@ -1202,9 +1202,9 @@ diff -uNr 05_safe_globals/src/bsp.rs 06_drivers_gpio_uart/src/bsp.rs
  mod raspberrypi;
 
 
-diff -uNr 05_safe_globals/src/console.rs 06_drivers_gpio_uart/src/console.rs
---- 05_safe_globals/src/console.rs
-+++ 06_drivers_gpio_uart/src/console.rs
+diff -uNr 04_safe_globals/src/console.rs 05_drivers_gpio_uart/src/console.rs
+--- 04_safe_globals/src/console.rs
++++ 05_drivers_gpio_uart/src/console.rs
 @@ -14,8 +14,25 @@
 
      /// Console write functions.
@@ -1247,9 +1247,9 @@ diff -uNr 05_safe_globals/src/console.rs 06_drivers_gpio_uart/src/console.rs
 +    pub trait All = Write + Read + Statistics;
  }
 
-diff -uNr 05_safe_globals/src/cpu.rs 06_drivers_gpio_uart/src/cpu.rs
---- 05_safe_globals/src/cpu.rs
-+++ 06_drivers_gpio_uart/src/cpu.rs
+diff -uNr 04_safe_globals/src/cpu.rs 05_drivers_gpio_uart/src/cpu.rs
+--- 04_safe_globals/src/cpu.rs
++++ 05_drivers_gpio_uart/src/cpu.rs
 @@ -13,4 +13,7 @@
  //--------------------------------------------------------------------------------------------------
  // Architectural Public Reexports
@@ -1260,9 +1260,9 @@ diff -uNr 05_safe_globals/src/cpu.rs 06_drivers_gpio_uart/src/cpu.rs
 +#[cfg(feature = "bsp_rpi3")]
 +pub use arch_cpu::spin_for_cycles;
 
-diff -uNr 05_safe_globals/src/driver.rs 06_drivers_gpio_uart/src/driver.rs
---- 05_safe_globals/src/driver.rs
-+++ 06_drivers_gpio_uart/src/driver.rs
+diff -uNr 04_safe_globals/src/driver.rs 05_drivers_gpio_uart/src/driver.rs
+--- 04_safe_globals/src/driver.rs
++++ 05_drivers_gpio_uart/src/driver.rs
 @@ -0,0 +1,44 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -1309,9 +1309,9 @@ diff -uNr 05_safe_globals/src/driver.rs 06_drivers_gpio_uart/src/driver.rs
 +    }
 +}
 
-diff -uNr 05_safe_globals/src/main.rs 06_drivers_gpio_uart/src/main.rs
---- 05_safe_globals/src/main.rs
-+++ 06_drivers_gpio_uart/src/main.rs
+diff -uNr 04_safe_globals/src/main.rs 05_drivers_gpio_uart/src/main.rs
+--- 04_safe_globals/src/main.rs
++++ 05_drivers_gpio_uart/src/main.rs
 @@ -106,6 +106,8 @@
  //!
  //! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
@@ -1385,9 +1385,9 @@ diff -uNr 05_safe_globals/src/main.rs 06_drivers_gpio_uart/src/main.rs
 +    }
  }
 
-diff -uNr 05_safe_globals/src/panic_wait.rs 06_drivers_gpio_uart/src/panic_wait.rs
---- 05_safe_globals/src/panic_wait.rs
-+++ 06_drivers_gpio_uart/src/panic_wait.rs
+diff -uNr 04_safe_globals/src/panic_wait.rs 05_drivers_gpio_uart/src/panic_wait.rs
+--- 04_safe_globals/src/panic_wait.rs
++++ 05_drivers_gpio_uart/src/panic_wait.rs
 @@ -4,15 +4,35 @@
 
  //! A panic handler that infinitely waits.

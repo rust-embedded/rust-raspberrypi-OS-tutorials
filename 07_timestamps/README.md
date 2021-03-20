@@ -1,4 +1,4 @@
-# Tutorial 08 - Timestamps
+# Tutorial 07 - Timestamps
 
 ## tl;dr
 
@@ -43,12 +43,12 @@ Minipush 1.0
 
 ## Diff to previous
 ```diff
-Binary files 07_uart_chainloader/demo_payload_rpi3.img and 08_timestamps/demo_payload_rpi3.img differ
-Binary files 07_uart_chainloader/demo_payload_rpi4.img and 08_timestamps/demo_payload_rpi4.img differ
+Binary files 06_uart_chainloader/demo_payload_rpi3.img and 07_timestamps/demo_payload_rpi3.img differ
+Binary files 06_uart_chainloader/demo_payload_rpi4.img and 07_timestamps/demo_payload_rpi4.img differ
 
-diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
---- 07_uart_chainloader/Makefile
-+++ 08_timestamps/Makefile
+diff -uNr 06_uart_chainloader/Makefile 07_timestamps/Makefile
+--- 06_uart_chainloader/Makefile
++++ 07_timestamps/Makefile
 @@ -25,7 +25,6 @@
      READELF_BINARY    = aarch64-none-elf-readelf
      LINKER_FILE       = src/bsp/raspberrypi/link.ld
@@ -93,9 +93,9 @@ diff -uNr 07_uart_chainloader/Makefile 08_timestamps/Makefile
  clippy:
  	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD)
 
-diff -uNr 07_uart_chainloader/src/_arch/aarch64/cpu/boot.s 08_timestamps/src/_arch/aarch64/cpu/boot.s
---- 07_uart_chainloader/src/_arch/aarch64/cpu/boot.s
-+++ 08_timestamps/src/_arch/aarch64/cpu/boot.s
+diff -uNr 06_uart_chainloader/src/_arch/aarch64/cpu/boot.s 07_timestamps/src/_arch/aarch64/cpu/boot.s
+--- 06_uart_chainloader/src/_arch/aarch64/cpu/boot.s
++++ 07_timestamps/src/_arch/aarch64/cpu/boot.s
 @@ -22,31 +22,20 @@
  	and	x1, x1, _core_id_mask
  	ldr	x2, BOOT_CORE_ID      // provided by bsp/__board_name__/cpu.rs
@@ -135,9 +135,9 @@ diff -uNr 07_uart_chainloader/src/_arch/aarch64/cpu/boot.s 08_timestamps/src/_ar
  .size	_start, . - _start
  .type	_start, function
 
-diff -uNr 07_uart_chainloader/src/_arch/aarch64/cpu.rs 08_timestamps/src/_arch/aarch64/cpu.rs
---- 07_uart_chainloader/src/_arch/aarch64/cpu.rs
-+++ 08_timestamps/src/_arch/aarch64/cpu.rs
+diff -uNr 06_uart_chainloader/src/_arch/aarch64/cpu.rs 07_timestamps/src/_arch/aarch64/cpu.rs
+--- 06_uart_chainloader/src/_arch/aarch64/cpu.rs
++++ 07_timestamps/src/_arch/aarch64/cpu.rs
 @@ -19,15 +19,6 @@
 
  pub use asm::nop;
@@ -155,9 +155,9 @@ diff -uNr 07_uart_chainloader/src/_arch/aarch64/cpu.rs 08_timestamps/src/_arch/a
  #[inline(always)]
  pub fn wait_forever() -> ! {
 
-diff -uNr 07_uart_chainloader/src/_arch/aarch64/time.rs 08_timestamps/src/_arch/aarch64/time.rs
---- 07_uart_chainloader/src/_arch/aarch64/time.rs
-+++ 08_timestamps/src/_arch/aarch64/time.rs
+diff -uNr 06_uart_chainloader/src/_arch/aarch64/time.rs 07_timestamps/src/_arch/aarch64/time.rs
+--- 06_uart_chainloader/src/_arch/aarch64/time.rs
++++ 07_timestamps/src/_arch/aarch64/time.rs
 @@ -0,0 +1,118 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -278,9 +278,9 @@ diff -uNr 07_uart_chainloader/src/_arch/aarch64/time.rs 08_timestamps/src/_arch/
 +    }
 +}
 
-diff -uNr 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 08_timestamps/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
---- 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
-+++ 08_timestamps/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
+diff -uNr 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 07_timestamps/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
+--- 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
++++ 07_timestamps/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
 @@ -139,25 +139,19 @@
      /// Disable pull-up/down on pins 14 and 15.
      #[cfg(feature = "bsp_rpi3")]
@@ -314,9 +314,9 @@ diff -uNr 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 08_times
          self.registers.GPPUD.write(GPPUD::PUD::Off);
          self.registers.GPPUDCLK0.set(0);
 
-diff -uNr 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 08_timestamps/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
---- 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-+++ 08_timestamps/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
+diff -uNr 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 07_timestamps/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
+--- 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
++++ 07_timestamps/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 @@ -279,7 +279,7 @@
      }
 
@@ -358,9 +358,9 @@ diff -uNr 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 08
          {}
      }
 
-diff -uNr 07_uart_chainloader/src/bsp/raspberrypi/link.ld 08_timestamps/src/bsp/raspberrypi/link.ld
---- 07_uart_chainloader/src/bsp/raspberrypi/link.ld
-+++ 08_timestamps/src/bsp/raspberrypi/link.ld
+diff -uNr 06_uart_chainloader/src/bsp/raspberrypi/link.ld 07_timestamps/src/bsp/raspberrypi/link.ld
+--- 06_uart_chainloader/src/bsp/raspberrypi/link.ld
++++ 07_timestamps/src/bsp/raspberrypi/link.ld
 @@ -16,8 +16,7 @@
 
  SECTIONS
@@ -394,9 +394,9 @@ diff -uNr 07_uart_chainloader/src/bsp/raspberrypi/link.ld 08_timestamps/src/bsp/
          __bss_start = .;
          *(.bss*);
 
-diff -uNr 07_uart_chainloader/src/bsp/raspberrypi/memory.rs 08_timestamps/src/bsp/raspberrypi/memory.rs
---- 07_uart_chainloader/src/bsp/raspberrypi/memory.rs
-+++ 08_timestamps/src/bsp/raspberrypi/memory.rs
+diff -uNr 06_uart_chainloader/src/bsp/raspberrypi/memory.rs 07_timestamps/src/bsp/raspberrypi/memory.rs
+--- 06_uart_chainloader/src/bsp/raspberrypi/memory.rs
++++ 07_timestamps/src/bsp/raspberrypi/memory.rs
 @@ -23,10 +23,9 @@
  /// The board's physical memory map.
  #[rustfmt::skip]
@@ -426,9 +426,9 @@ diff -uNr 07_uart_chainloader/src/bsp/raspberrypi/memory.rs 08_timestamps/src/bs
  /// # Safety
  ///
 
-diff -uNr 07_uart_chainloader/src/cpu.rs 08_timestamps/src/cpu.rs
---- 07_uart_chainloader/src/cpu.rs
-+++ 08_timestamps/src/cpu.rs
+diff -uNr 06_uart_chainloader/src/cpu.rs 07_timestamps/src/cpu.rs
+--- 06_uart_chainloader/src/cpu.rs
++++ 07_timestamps/src/cpu.rs
 @@ -14,6 +14,3 @@
  // Architectural Public Reexports
  //--------------------------------------------------------------------------------------------------
@@ -437,9 +437,9 @@ diff -uNr 07_uart_chainloader/src/cpu.rs 08_timestamps/src/cpu.rs
 -#[cfg(feature = "bsp_rpi3")]
 -pub use arch_cpu::spin_for_cycles;
 
-diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
---- 07_uart_chainloader/src/main.rs
-+++ 08_timestamps/src/main.rs
+diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
+--- 06_uart_chainloader/src/main.rs
++++ 07_timestamps/src/main.rs
 @@ -107,7 +107,6 @@
  //! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
 
@@ -531,9 +531,9 @@ diff -uNr 07_uart_chainloader/src/main.rs 08_timestamps/src/main.rs
 +    }
  }
 
-diff -uNr 07_uart_chainloader/src/print.rs 08_timestamps/src/print.rs
---- 07_uart_chainloader/src/print.rs
-+++ 08_timestamps/src/print.rs
+diff -uNr 06_uart_chainloader/src/print.rs 07_timestamps/src/print.rs
+--- 06_uart_chainloader/src/print.rs
++++ 07_timestamps/src/print.rs
 @@ -36,3 +36,71 @@
          $crate::print::_print(format_args_nl!($($arg)*));
      })
@@ -607,9 +607,9 @@ diff -uNr 07_uart_chainloader/src/print.rs 08_timestamps/src/print.rs
 +    })
 +}
 
-diff -uNr 07_uart_chainloader/src/time.rs 08_timestamps/src/time.rs
---- 07_uart_chainloader/src/time.rs
-+++ 08_timestamps/src/time.rs
+diff -uNr 06_uart_chainloader/src/time.rs 07_timestamps/src/time.rs
+--- 06_uart_chainloader/src/time.rs
++++ 07_timestamps/src/time.rs
 @@ -0,0 +1,37 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -649,17 +649,17 @@ diff -uNr 07_uart_chainloader/src/time.rs 08_timestamps/src/time.rs
 +    }
 +}
 
-diff -uNr 07_uart_chainloader/update.sh 08_timestamps/update.sh
---- 07_uart_chainloader/update.sh
-+++ 08_timestamps/update.sh
+diff -uNr 06_uart_chainloader/update.sh 07_timestamps/update.sh
+--- 06_uart_chainloader/update.sh
++++ 07_timestamps/update.sh
 @@ -1,8 +0,0 @@
 -#!/usr/bin/env bash
 -
--cd ../06_drivers_gpio_uart
+-cd ../05_drivers_gpio_uart
 -BSP=rpi4 make
--cp kernel8.img ../07_uart_chainloader/demo_payload_rpi4.img
+-cp kernel8.img ../06_uart_chainloader/demo_payload_rpi4.img
 -make
--cp kernel8.img ../07_uart_chainloader/demo_payload_rpi3.img
+-cp kernel8.img ../06_uart_chainloader/demo_payload_rpi3.img
 -rm kernel8.img
 
 ```

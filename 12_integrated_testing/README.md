@@ -1,4 +1,4 @@
-# Tutorial 13 - Integrated Testing
+# Tutorial 12 - Integrated Testing
 
 ## tl;dr
 
@@ -404,7 +404,7 @@ provided to it by `cargo`, and finally compiles a `docker` command to execute th
 reference, here it is fully resolved for an `RPi3 BSP`:
 
 ```bash
-docker run -i --rm -v /opt/rust-raspberrypi-OS-tutorials/13_integrated_testing:/work/tutorial -w /work/tutorial rustembedded/osdev-utils ruby tests/runner.rb qemu-system-aarch64 -M raspi3 -serial stdio -display none -semihosting -kernel $TEST_BINARY
+docker run -i --rm -v /opt/rust-raspberrypi-OS-tutorials/12_integrated_testing:/work/tutorial -w /work/tutorial rustembedded/osdev-utils ruby tests/runner.rb qemu-system-aarch64 -M raspi3 -serial stdio -display none -semihosting -kernel $TEST_BINARY
 ```
 
 We're still not done with all the redirections. Spotted the `ruby tests/runner.rb` part that gets
@@ -809,16 +809,16 @@ RUSTFLAGS="-C link-arg=-Tsrc/bsp/raspberrypi/link.ld -C target-cpu=cortex-a53 -D
 ## Diff to previous
 ```diff
 
-diff -uNr 12_exceptions_part1_groundwork/.cargo/config.toml 13_integrated_testing/.cargo/config.toml
---- 12_exceptions_part1_groundwork/.cargo/config.toml
-+++ 13_integrated_testing/.cargo/config.toml
+diff -uNr 11_exceptions_part1_groundwork/.cargo/config.toml 12_integrated_testing/.cargo/config.toml
+--- 11_exceptions_part1_groundwork/.cargo/config.toml
++++ 12_integrated_testing/.cargo/config.toml
 @@ -0,0 +1,2 @@
 +[target.'cfg(target_os = "none")']
 +runner = "target/kernel_test_runner.sh"
 
-diff -uNr 12_exceptions_part1_groundwork/Cargo.toml 13_integrated_testing/Cargo.toml
---- 12_exceptions_part1_groundwork/Cargo.toml
-+++ 13_integrated_testing/Cargo.toml
+diff -uNr 11_exceptions_part1_groundwork/Cargo.toml 12_integrated_testing/Cargo.toml
+--- 11_exceptions_part1_groundwork/Cargo.toml
++++ 12_integrated_testing/Cargo.toml
 @@ -11,17 +11,45 @@
  default = []
  bsp_rpi3 = ["register"]
@@ -867,9 +867,9 @@ diff -uNr 12_exceptions_part1_groundwork/Cargo.toml 13_integrated_testing/Cargo.
 +name = "02_exception_sync_page_fault"
 +harness = false
 
-diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
---- 12_exceptions_part1_groundwork/Makefile
-+++ 13_integrated_testing/Makefile
+diff -uNr 11_exceptions_part1_groundwork/Makefile 12_integrated_testing/Makefile
+--- 11_exceptions_part1_groundwork/Makefile
++++ 12_integrated_testing/Makefile
 @@ -20,6 +20,7 @@
      QEMU_BINARY       = qemu-system-aarch64
      QEMU_MACHINE_TYPE = raspi3
@@ -963,9 +963,9 @@ diff -uNr 12_exceptions_part1_groundwork/Makefile 13_integrated_testing/Makefile
 
  chainboot: $(KERNEL_BIN)
 
-diff -uNr 12_exceptions_part1_groundwork/src/_arch/aarch64/cpu.rs 13_integrated_testing/src/_arch/aarch64/cpu.rs
---- 12_exceptions_part1_groundwork/src/_arch/aarch64/cpu.rs
-+++ 13_integrated_testing/src/_arch/aarch64/cpu.rs
+diff -uNr 11_exceptions_part1_groundwork/src/_arch/aarch64/cpu.rs 12_integrated_testing/src/_arch/aarch64/cpu.rs
+--- 11_exceptions_part1_groundwork/src/_arch/aarch64/cpu.rs
++++ 12_integrated_testing/src/_arch/aarch64/cpu.rs
 @@ -26,3 +26,24 @@
          asm::wfe()
      }
@@ -992,9 +992,9 @@ diff -uNr 12_exceptions_part1_groundwork/src/_arch/aarch64/cpu.rs 13_integrated_
 +    QEMU_EXIT_HANDLE.exit_success()
 +}
 
-diff -uNr 12_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs 13_integrated_testing/src/_arch/aarch64/exception.rs
---- 12_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs
-+++ 13_integrated_testing/src/_arch/aarch64/exception.rs
+diff -uNr 11_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs 12_integrated_testing/src/_arch/aarch64/exception.rs
+--- 11_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs
++++ 12_integrated_testing/src/_arch/aarch64/exception.rs
 @@ -12,7 +12,7 @@
  //! crate::exception::arch_exception
 
@@ -1022,9 +1022,9 @@ diff -uNr 12_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs 13_integ
  }
 
 
-diff -uNr 12_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu/translation_table.rs 13_integrated_testing/src/_arch/aarch64/memory/mmu/translation_table.rs
---- 12_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu/translation_table.rs
-+++ 13_integrated_testing/src/_arch/aarch64/memory/mmu/translation_table.rs
+diff -uNr 11_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu/translation_table.rs 12_integrated_testing/src/_arch/aarch64/memory/mmu/translation_table.rs
+--- 11_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu/translation_table.rs
++++ 12_integrated_testing/src/_arch/aarch64/memory/mmu/translation_table.rs
 @@ -286,3 +286,31 @@
          self.lvl2.phys_start_addr_u64()
      }
@@ -1058,9 +1058,9 @@ diff -uNr 12_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu/translatio
 +    }
 +}
 
-diff -uNr 12_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu.rs 13_integrated_testing/src/_arch/aarch64/memory/mmu.rs
---- 12_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu.rs
-+++ 13_integrated_testing/src/_arch/aarch64/memory/mmu.rs
+diff -uNr 11_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu.rs 12_integrated_testing/src/_arch/aarch64/memory/mmu.rs
+--- 11_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu.rs
++++ 12_integrated_testing/src/_arch/aarch64/memory/mmu.rs
 @@ -162,3 +162,22 @@
          SCTLR_EL1.matches_all(SCTLR_EL1::M::Enable)
      }
@@ -1085,9 +1085,9 @@ diff -uNr 12_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu.rs 13_inte
 +    }
 +}
 
-diff -uNr 12_exceptions_part1_groundwork/src/bsp/raspberrypi/console.rs 13_integrated_testing/src/bsp/raspberrypi/console.rs
---- 12_exceptions_part1_groundwork/src/bsp/raspberrypi/console.rs
-+++ 13_integrated_testing/src/bsp/raspberrypi/console.rs
+diff -uNr 11_exceptions_part1_groundwork/src/bsp/raspberrypi/console.rs 12_integrated_testing/src/bsp/raspberrypi/console.rs
+--- 11_exceptions_part1_groundwork/src/bsp/raspberrypi/console.rs
++++ 12_integrated_testing/src/bsp/raspberrypi/console.rs
 @@ -35,3 +35,13 @@
  pub fn console() -> &'static impl console::interface::All {
      &super::PL011_UART
@@ -1103,9 +1103,9 @@ diff -uNr 12_exceptions_part1_groundwork/src/bsp/raspberrypi/console.rs 13_integ
 +/// For the RPi, nothing needs to be done.
 +pub fn qemu_bring_up_console() {}
 
-diff -uNr 12_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs 13_integrated_testing/src/bsp/raspberrypi/memory/mmu.rs
---- 12_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs
-+++ 13_integrated_testing/src/bsp/raspberrypi/memory/mmu.rs
+diff -uNr 11_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs 12_integrated_testing/src/bsp/raspberrypi/memory/mmu.rs
+--- 11_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs
++++ 12_integrated_testing/src/bsp/raspberrypi/memory/mmu.rs
 @@ -69,3 +69,46 @@
  pub fn virt_mem_layout() -> &'static KernelVirtualLayout<NUM_MEM_RANGES> {
      &LAYOUT
@@ -1154,9 +1154,9 @@ diff -uNr 12_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs 13_in
 +    }
 +}
 
-diff -uNr 12_exceptions_part1_groundwork/src/cpu.rs 13_integrated_testing/src/cpu.rs
---- 12_exceptions_part1_groundwork/src/cpu.rs
-+++ 13_integrated_testing/src/cpu.rs
+diff -uNr 11_exceptions_part1_groundwork/src/cpu.rs 12_integrated_testing/src/cpu.rs
+--- 11_exceptions_part1_groundwork/src/cpu.rs
++++ 12_integrated_testing/src/cpu.rs
 @@ -14,3 +14,6 @@
  // Architectural Public Reexports
  //--------------------------------------------------------------------------------------------------
@@ -1165,9 +1165,9 @@ diff -uNr 12_exceptions_part1_groundwork/src/cpu.rs 13_integrated_testing/src/cp
 +#[cfg(feature = "test_build")]
 +pub use arch_cpu::{qemu_exit_failure, qemu_exit_success};
 
-diff -uNr 12_exceptions_part1_groundwork/src/exception.rs 13_integrated_testing/src/exception.rs
---- 12_exceptions_part1_groundwork/src/exception.rs
-+++ 13_integrated_testing/src/exception.rs
+diff -uNr 11_exceptions_part1_groundwork/src/exception.rs 12_integrated_testing/src/exception.rs
+--- 11_exceptions_part1_groundwork/src/exception.rs
++++ 12_integrated_testing/src/exception.rs
 @@ -28,3 +28,21 @@
      Hypervisor,
      Unknown,
@@ -1191,9 +1191,9 @@ diff -uNr 12_exceptions_part1_groundwork/src/exception.rs 13_integrated_testing/
 +    }
 +}
 
-diff -uNr 12_exceptions_part1_groundwork/src/lib.rs 13_integrated_testing/src/lib.rs
---- 12_exceptions_part1_groundwork/src/lib.rs
-+++ 13_integrated_testing/src/lib.rs
+diff -uNr 11_exceptions_part1_groundwork/src/lib.rs 12_integrated_testing/src/lib.rs
+--- 11_exceptions_part1_groundwork/src/lib.rs
++++ 12_integrated_testing/src/lib.rs
 @@ -0,0 +1,171 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -1367,9 +1367,9 @@ diff -uNr 12_exceptions_part1_groundwork/src/lib.rs 13_integrated_testing/src/li
 +    cpu::qemu_exit_success()
 +}
 
-diff -uNr 12_exceptions_part1_groundwork/src/main.rs 13_integrated_testing/src/main.rs
---- 12_exceptions_part1_groundwork/src/main.rs
-+++ 13_integrated_testing/src/main.rs
+diff -uNr 11_exceptions_part1_groundwork/src/main.rs 12_integrated_testing/src/main.rs
+--- 11_exceptions_part1_groundwork/src/main.rs
++++ 12_integrated_testing/src/main.rs
 @@ -6,130 +6,12 @@
  #![doc(html_logo_url = "https://git.io/JeGIp")]
 
@@ -1554,9 +1554,9 @@ diff -uNr 12_exceptions_part1_groundwork/src/main.rs 13_integrated_testing/src/m
 
      // Discard any spurious received characters before going into echo mode.
 
-diff -uNr 12_exceptions_part1_groundwork/src/memory/mmu.rs 13_integrated_testing/src/memory/mmu.rs
---- 12_exceptions_part1_groundwork/src/memory/mmu.rs
-+++ 13_integrated_testing/src/memory/mmu.rs
+diff -uNr 11_exceptions_part1_groundwork/src/memory/mmu.rs 12_integrated_testing/src/memory/mmu.rs
+--- 11_exceptions_part1_groundwork/src/memory/mmu.rs
++++ 12_integrated_testing/src/memory/mmu.rs
 @@ -66,7 +66,6 @@
 
  /// Architecture agnostic translation types.
@@ -1576,9 +1576,9 @@ diff -uNr 12_exceptions_part1_groundwork/src/memory/mmu.rs 13_integrated_testing
 +    }
  }
 
-diff -uNr 12_exceptions_part1_groundwork/src/memory.rs 13_integrated_testing/src/memory.rs
---- 12_exceptions_part1_groundwork/src/memory.rs
-+++ 13_integrated_testing/src/memory.rs
+diff -uNr 11_exceptions_part1_groundwork/src/memory.rs 12_integrated_testing/src/memory.rs
+--- 11_exceptions_part1_groundwork/src/memory.rs
++++ 12_integrated_testing/src/memory.rs
 @@ -30,3 +30,40 @@
          ptr = ptr.offset(1);
      }
@@ -1621,9 +1621,9 @@ diff -uNr 12_exceptions_part1_groundwork/src/memory.rs 13_integrated_testing/src
 +    }
 +}
 
-diff -uNr 12_exceptions_part1_groundwork/src/panic_wait.rs 13_integrated_testing/src/panic_wait.rs
---- 12_exceptions_part1_groundwork/src/panic_wait.rs
-+++ 13_integrated_testing/src/panic_wait.rs
+diff -uNr 11_exceptions_part1_groundwork/src/panic_wait.rs 12_integrated_testing/src/panic_wait.rs
+--- 11_exceptions_part1_groundwork/src/panic_wait.rs
++++ 12_integrated_testing/src/panic_wait.rs
 @@ -17,6 +17,23 @@
      unsafe { bsp::console::panic_console_out().write_fmt(args).unwrap() };
  }
@@ -1656,9 +1656,9 @@ diff -uNr 12_exceptions_part1_groundwork/src/panic_wait.rs 13_integrated_testing
 +    _panic_exit()
  }
 
-diff -uNr 12_exceptions_part1_groundwork/src/runtime_init.rs 13_integrated_testing/src/runtime_init.rs
---- 12_exceptions_part1_groundwork/src/runtime_init.rs
-+++ 13_integrated_testing/src/runtime_init.rs
+diff -uNr 11_exceptions_part1_groundwork/src/runtime_init.rs 12_integrated_testing/src/runtime_init.rs
+--- 11_exceptions_part1_groundwork/src/runtime_init.rs
++++ 12_integrated_testing/src/runtime_init.rs
 @@ -31,7 +31,10 @@
  ///
  /// - Only a single core must be active and running this function.
@@ -1673,9 +1673,9 @@ diff -uNr 12_exceptions_part1_groundwork/src/runtime_init.rs 13_integrated_testi
 +    kernel_init()
  }
 
-diff -uNr 12_exceptions_part1_groundwork/test-macros/Cargo.toml 13_integrated_testing/test-macros/Cargo.toml
---- 12_exceptions_part1_groundwork/test-macros/Cargo.toml
-+++ 13_integrated_testing/test-macros/Cargo.toml
+diff -uNr 11_exceptions_part1_groundwork/test-macros/Cargo.toml 12_integrated_testing/test-macros/Cargo.toml
+--- 11_exceptions_part1_groundwork/test-macros/Cargo.toml
++++ 12_integrated_testing/test-macros/Cargo.toml
 @@ -0,0 +1,14 @@
 +[package]
 +name = "test-macros"
@@ -1692,9 +1692,9 @@ diff -uNr 12_exceptions_part1_groundwork/test-macros/Cargo.toml 13_integrated_te
 +syn = { version = "1.x", features = ["full"] }
 +test-types = { path = "../test-types" }
 
-diff -uNr 12_exceptions_part1_groundwork/test-macros/src/lib.rs 13_integrated_testing/test-macros/src/lib.rs
---- 12_exceptions_part1_groundwork/test-macros/src/lib.rs
-+++ 13_integrated_testing/test-macros/src/lib.rs
+diff -uNr 11_exceptions_part1_groundwork/test-macros/src/lib.rs 12_integrated_testing/test-macros/src/lib.rs
+--- 11_exceptions_part1_groundwork/test-macros/src/lib.rs
++++ 12_integrated_testing/test-macros/src/lib.rs
 @@ -0,0 +1,29 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -1726,9 +1726,9 @@ diff -uNr 12_exceptions_part1_groundwork/test-macros/src/lib.rs 13_integrated_te
 +    .into()
 +}
 
-diff -uNr 12_exceptions_part1_groundwork/tests/00_console_sanity.rb 13_integrated_testing/tests/00_console_sanity.rb
---- 12_exceptions_part1_groundwork/tests/00_console_sanity.rb
-+++ 13_integrated_testing/tests/00_console_sanity.rb
+diff -uNr 11_exceptions_part1_groundwork/tests/00_console_sanity.rb 12_integrated_testing/tests/00_console_sanity.rb
+--- 11_exceptions_part1_groundwork/tests/00_console_sanity.rb
++++ 12_integrated_testing/tests/00_console_sanity.rb
 @@ -0,0 +1,50 @@
 +# frozen_string_literal: true
 +
@@ -1781,9 +1781,9 @@ diff -uNr 12_exceptions_part1_groundwork/tests/00_console_sanity.rb 13_integrate
 +    [TxRxHandshake.new, TxStatistics.new, RxStatistics.new]
 +end
 
-diff -uNr 12_exceptions_part1_groundwork/tests/00_console_sanity.rs 13_integrated_testing/tests/00_console_sanity.rs
---- 12_exceptions_part1_groundwork/tests/00_console_sanity.rs
-+++ 13_integrated_testing/tests/00_console_sanity.rs
+diff -uNr 11_exceptions_part1_groundwork/tests/00_console_sanity.rs 12_integrated_testing/tests/00_console_sanity.rs
+--- 11_exceptions_part1_groundwork/tests/00_console_sanity.rs
++++ 12_integrated_testing/tests/00_console_sanity.rs
 @@ -0,0 +1,35 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -1821,9 +1821,9 @@ diff -uNr 12_exceptions_part1_groundwork/tests/00_console_sanity.rs 13_integrate
 +    cpu::wait_forever()
 +}
 
-diff -uNr 12_exceptions_part1_groundwork/tests/01_timer_sanity.rs 13_integrated_testing/tests/01_timer_sanity.rs
---- 12_exceptions_part1_groundwork/tests/01_timer_sanity.rs
-+++ 13_integrated_testing/tests/01_timer_sanity.rs
+diff -uNr 11_exceptions_part1_groundwork/tests/01_timer_sanity.rs 12_integrated_testing/tests/01_timer_sanity.rs
+--- 11_exceptions_part1_groundwork/tests/01_timer_sanity.rs
++++ 12_integrated_testing/tests/01_timer_sanity.rs
 @@ -0,0 +1,49 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -1875,9 +1875,9 @@ diff -uNr 12_exceptions_part1_groundwork/tests/01_timer_sanity.rs 13_integrated_
 +    assert_eq!((t2 - t1).as_secs(), 1)
 +}
 
-diff -uNr 12_exceptions_part1_groundwork/tests/02_exception_sync_page_fault.rs 13_integrated_testing/tests/02_exception_sync_page_fault.rs
---- 12_exceptions_part1_groundwork/tests/02_exception_sync_page_fault.rs
-+++ 13_integrated_testing/tests/02_exception_sync_page_fault.rs
+diff -uNr 11_exceptions_part1_groundwork/tests/02_exception_sync_page_fault.rs 12_integrated_testing/tests/02_exception_sync_page_fault.rs
+--- 11_exceptions_part1_groundwork/tests/02_exception_sync_page_fault.rs
++++ 12_integrated_testing/tests/02_exception_sync_page_fault.rs
 @@ -0,0 +1,43 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -1923,9 +1923,9 @@ diff -uNr 12_exceptions_part1_groundwork/tests/02_exception_sync_page_fault.rs 1
 +    cpu::qemu_exit_failure()
 +}
 
-diff -uNr 12_exceptions_part1_groundwork/tests/panic_exit_success/mod.rs 13_integrated_testing/tests/panic_exit_success/mod.rs
---- 12_exceptions_part1_groundwork/tests/panic_exit_success/mod.rs
-+++ 13_integrated_testing/tests/panic_exit_success/mod.rs
+diff -uNr 11_exceptions_part1_groundwork/tests/panic_exit_success/mod.rs 12_integrated_testing/tests/panic_exit_success/mod.rs
+--- 11_exceptions_part1_groundwork/tests/panic_exit_success/mod.rs
++++ 12_integrated_testing/tests/panic_exit_success/mod.rs
 @@ -0,0 +1,9 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -1937,9 +1937,9 @@ diff -uNr 12_exceptions_part1_groundwork/tests/panic_exit_success/mod.rs 13_inte
 +    libkernel::cpu::qemu_exit_success()
 +}
 
-diff -uNr 12_exceptions_part1_groundwork/tests/runner.rb 13_integrated_testing/tests/runner.rb
---- 12_exceptions_part1_groundwork/tests/runner.rb
-+++ 13_integrated_testing/tests/runner.rb
+diff -uNr 11_exceptions_part1_groundwork/tests/runner.rb 12_integrated_testing/tests/runner.rb
+--- 11_exceptions_part1_groundwork/tests/runner.rb
++++ 12_integrated_testing/tests/runner.rb
 @@ -0,0 +1,143 @@
 +#!/usr/bin/env ruby
 +# frozen_string_literal: true
@@ -2085,9 +2085,9 @@ diff -uNr 12_exceptions_part1_groundwork/tests/runner.rb 13_integrated_testing/t
 +
 +test_runner.exec
 
-diff -uNr 12_exceptions_part1_groundwork/test-types/Cargo.toml 13_integrated_testing/test-types/Cargo.toml
---- 12_exceptions_part1_groundwork/test-types/Cargo.toml
-+++ 13_integrated_testing/test-types/Cargo.toml
+diff -uNr 11_exceptions_part1_groundwork/test-types/Cargo.toml 12_integrated_testing/test-types/Cargo.toml
+--- 11_exceptions_part1_groundwork/test-types/Cargo.toml
++++ 12_integrated_testing/test-types/Cargo.toml
 @@ -0,0 +1,5 @@
 +[package]
 +name = "test-types"
@@ -2095,9 +2095,9 @@ diff -uNr 12_exceptions_part1_groundwork/test-types/Cargo.toml 13_integrated_tes
 +authors = ["Andre Richter <andre.o.richter@gmail.com>"]
 +edition = "2018"
 
-diff -uNr 12_exceptions_part1_groundwork/test-types/src/lib.rs 13_integrated_testing/test-types/src/lib.rs
---- 12_exceptions_part1_groundwork/test-types/src/lib.rs
-+++ 13_integrated_testing/test-types/src/lib.rs
+diff -uNr 11_exceptions_part1_groundwork/test-types/src/lib.rs 12_integrated_testing/test-types/src/lib.rs
+--- 11_exceptions_part1_groundwork/test-types/src/lib.rs
++++ 12_integrated_testing/test-types/src/lib.rs
 @@ -0,0 +1,16 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//

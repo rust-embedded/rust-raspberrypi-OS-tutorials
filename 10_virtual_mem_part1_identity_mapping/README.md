@@ -1,4 +1,4 @@
-# Tutorial 11 - Virtual Memory Part 1: Identity Map All The Things!
+# Tutorial 10 - Virtual Memory Part 1: Identity Map All The Things!
 
 ## tl;dr
 
@@ -348,9 +348,9 @@ Minipush 1.0
 ## Diff to previous
 ```diff
 
-diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu/translation_table.rs 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/memory/mmu/translation_table.rs
---- 10_privilege_level/src/_arch/aarch64/memory/mmu/translation_table.rs
-+++ 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/memory/mmu/translation_table.rs
+diff -uNr 09_privilege_level/src/_arch/aarch64/memory/mmu/translation_table.rs 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/memory/mmu/translation_table.rs
+--- 09_privilege_level/src/_arch/aarch64/memory/mmu/translation_table.rs
++++ 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/memory/mmu/translation_table.rs
 @@ -0,0 +1,288 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -641,9 +641,9 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu/translation_table.rs 1
 +    }
 +}
 
-diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/memory/mmu.rs
---- 10_privilege_level/src/_arch/aarch64/memory/mmu.rs
-+++ 11_virtual_mem_part1_identity_mapping/src/_arch/aarch64/memory/mmu.rs
+diff -uNr 09_privilege_level/src/_arch/aarch64/memory/mmu.rs 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/memory/mmu.rs
+--- 09_privilege_level/src/_arch/aarch64/memory/mmu.rs
++++ 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/memory/mmu.rs
 @@ -0,0 +1,164 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -810,9 +810,9 @@ diff -uNr 10_privilege_level/src/_arch/aarch64/memory/mmu.rs 11_virtual_mem_part
 +    }
 +}
 
-diff -uNr 10_privilege_level/src/bsp/raspberrypi/link.ld 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/link.ld
---- 10_privilege_level/src/bsp/raspberrypi/link.ld
-+++ 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/link.ld
+diff -uNr 09_privilege_level/src/bsp/raspberrypi/link.ld 10_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/link.ld
+--- 09_privilege_level/src/bsp/raspberrypi/link.ld
++++ 10_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/link.ld
 @@ -26,6 +26,7 @@
      /***********************************************************************************************
      * Code + RO Data + Global Offset Table
@@ -832,9 +832,9 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/link.ld 11_virtual_mem_part1_id
      * Data + BSS
      ***********************************************************************************************/
 
-diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory/mmu.rs 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory/mmu.rs
---- 10_privilege_level/src/bsp/raspberrypi/memory/mmu.rs
-+++ 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory/mmu.rs
+diff -uNr 09_privilege_level/src/bsp/raspberrypi/memory/mmu.rs 10_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory/mmu.rs
+--- 09_privilege_level/src/bsp/raspberrypi/memory/mmu.rs
++++ 10_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory/mmu.rs
 @@ -0,0 +1,86 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -923,9 +923,9 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory/mmu.rs 11_virtual_mem_pa
 +    &LAYOUT
 +}
 
-diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory.rs 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory.rs
---- 10_privilege_level/src/bsp/raspberrypi/memory.rs
-+++ 11_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory.rs
+diff -uNr 09_privilege_level/src/bsp/raspberrypi/memory.rs 10_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory.rs
+--- 09_privilege_level/src/bsp/raspberrypi/memory.rs
++++ 10_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory.rs
 @@ -4,6 +4,8 @@
 
  //! BSP Memory Management.
@@ -1011,9 +1011,9 @@ diff -uNr 10_privilege_level/src/bsp/raspberrypi/memory.rs 11_virtual_mem_part1_
  //--------------------------------------------------------------------------------------------------
 
 
-diff -uNr 10_privilege_level/src/bsp.rs 11_virtual_mem_part1_identity_mapping/src/bsp.rs
---- 10_privilege_level/src/bsp.rs
-+++ 11_virtual_mem_part1_identity_mapping/src/bsp.rs
+diff -uNr 09_privilege_level/src/bsp.rs 10_virtual_mem_part1_identity_mapping/src/bsp.rs
+--- 09_privilege_level/src/bsp.rs
++++ 10_virtual_mem_part1_identity_mapping/src/bsp.rs
 @@ -4,7 +4,7 @@
 
  //! Conditional reexporting of Board Support Packages.
@@ -1024,9 +1024,9 @@ diff -uNr 10_privilege_level/src/bsp.rs 11_virtual_mem_part1_identity_mapping/sr
  #[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
  mod raspberrypi;
 
-diff -uNr 10_privilege_level/src/main.rs 11_virtual_mem_part1_identity_mapping/src/main.rs
---- 10_privilege_level/src/main.rs
-+++ 11_virtual_mem_part1_identity_mapping/src/main.rs
+diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/src/main.rs
+--- 09_privilege_level/src/main.rs
++++ 10_virtual_mem_part1_identity_mapping/src/main.rs
 @@ -107,7 +107,11 @@
  //! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
 
@@ -1083,9 +1083,9 @@ diff -uNr 10_privilege_level/src/main.rs 11_virtual_mem_part1_identity_mapping/s
 
      // Discard any spurious received characters before going into echo mode.
 
-diff -uNr 10_privilege_level/src/memory/mmu/translation_table.rs 11_virtual_mem_part1_identity_mapping/src/memory/mmu/translation_table.rs
---- 10_privilege_level/src/memory/mmu/translation_table.rs
-+++ 11_virtual_mem_part1_identity_mapping/src/memory/mmu/translation_table.rs
+diff -uNr 09_privilege_level/src/memory/mmu/translation_table.rs 10_virtual_mem_part1_identity_mapping/src/memory/mmu/translation_table.rs
+--- 09_privilege_level/src/memory/mmu/translation_table.rs
++++ 10_virtual_mem_part1_identity_mapping/src/memory/mmu/translation_table.rs
 @@ -0,0 +1,14 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -1102,9 +1102,9 @@ diff -uNr 10_privilege_level/src/memory/mmu/translation_table.rs 11_virtual_mem_
 +//--------------------------------------------------------------------------------------------------
 +pub use arch_translation_table::KernelTranslationTable;
 
-diff -uNr 10_privilege_level/src/memory/mmu.rs 11_virtual_mem_part1_identity_mapping/src/memory/mmu.rs
---- 10_privilege_level/src/memory/mmu.rs
-+++ 11_virtual_mem_part1_identity_mapping/src/memory/mmu.rs
+diff -uNr 09_privilege_level/src/memory/mmu.rs 10_virtual_mem_part1_identity_mapping/src/memory/mmu.rs
+--- 09_privilege_level/src/memory/mmu.rs
++++ 10_virtual_mem_part1_identity_mapping/src/memory/mmu.rs
 @@ -0,0 +1,264 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -1371,9 +1371,9 @@ diff -uNr 10_privilege_level/src/memory/mmu.rs 11_virtual_mem_part1_identity_map
 +    }
 +}
 
-diff -uNr 10_privilege_level/src/memory.rs 11_virtual_mem_part1_identity_mapping/src/memory.rs
---- 10_privilege_level/src/memory.rs
-+++ 11_virtual_mem_part1_identity_mapping/src/memory.rs
+diff -uNr 09_privilege_level/src/memory.rs 10_virtual_mem_part1_identity_mapping/src/memory.rs
+--- 09_privilege_level/src/memory.rs
++++ 10_virtual_mem_part1_identity_mapping/src/memory.rs
 @@ -4,6 +4,8 @@
 
  //! Memory Management.

@@ -1,4 +1,4 @@
-# Tutorial 07 - UART Chainloader
+# Tutorial 06 - UART Chainloader
 
 ## tl;dr
 
@@ -118,12 +118,12 @@ IN:
 
 ## Diff to previous
 ```diff
-Binary files 06_drivers_gpio_uart/demo_payload_rpi3.img and 07_uart_chainloader/demo_payload_rpi3.img differ
-Binary files 06_drivers_gpio_uart/demo_payload_rpi4.img and 07_uart_chainloader/demo_payload_rpi4.img differ
+Binary files 05_drivers_gpio_uart/demo_payload_rpi3.img and 06_uart_chainloader/demo_payload_rpi3.img differ
+Binary files 05_drivers_gpio_uart/demo_payload_rpi4.img and 06_uart_chainloader/demo_payload_rpi4.img differ
 
-diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
---- 06_drivers_gpio_uart/Makefile
-+++ 07_uart_chainloader/Makefile
+diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
+--- 05_drivers_gpio_uart/Makefile
++++ 06_uart_chainloader/Makefile
 @@ -25,6 +25,7 @@
      READELF_BINARY    = aarch64-none-elf-readelf
      LINKER_FILE       = src/bsp/raspberrypi/link.ld
@@ -176,9 +176,9 @@ diff -uNr 06_drivers_gpio_uart/Makefile 07_uart_chainloader/Makefile
  clippy:
  	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD)
 
-diff -uNr 06_drivers_gpio_uart/src/_arch/aarch64/cpu/boot.s 07_uart_chainloader/src/_arch/aarch64/cpu/boot.s
---- 06_drivers_gpio_uart/src/_arch/aarch64/cpu/boot.s
-+++ 07_uart_chainloader/src/_arch/aarch64/cpu/boot.s
+diff -uNr 05_drivers_gpio_uart/src/_arch/aarch64/cpu/boot.s 06_uart_chainloader/src/_arch/aarch64/cpu/boot.s
+--- 05_drivers_gpio_uart/src/_arch/aarch64/cpu/boot.s
++++ 06_uart_chainloader/src/_arch/aarch64/cpu/boot.s
 @@ -22,20 +22,31 @@
  	and	x1, x1, _core_id_mask
  	ldr	x2, BOOT_CORE_ID      // provided by bsp/__board_name__/cpu.rs
@@ -218,9 +218,9 @@ diff -uNr 06_drivers_gpio_uart/src/_arch/aarch64/cpu/boot.s 07_uart_chainloader/
  .size	_start, . - _start
  .type	_start, function
 
-diff -uNr 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
---- 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
-+++ 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
+diff -uNr 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
+--- 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
++++ 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
 @@ -144,7 +144,7 @@
          // Make an educated guess for a good delay value (Sequence described in the BCM2837
          // peripherals PDF).
@@ -231,9 +231,9 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 07_uart
          //
          // So lets try to be on the safe side and default to 2000 cycles, which would equal 1 µs
 
-diff -uNr 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
---- 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-+++ 07_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
+diff -uNr 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
+--- 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
++++ 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 @@ -279,7 +279,7 @@
      }
 
@@ -275,9 +275,9 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 0
          {}
      }
 
-diff -uNr 06_drivers_gpio_uart/src/bsp/raspberrypi/link.ld 07_uart_chainloader/src/bsp/raspberrypi/link.ld
---- 06_drivers_gpio_uart/src/bsp/raspberrypi/link.ld
-+++ 07_uart_chainloader/src/bsp/raspberrypi/link.ld
+diff -uNr 05_drivers_gpio_uart/src/bsp/raspberrypi/link.ld 06_uart_chainloader/src/bsp/raspberrypi/link.ld
+--- 05_drivers_gpio_uart/src/bsp/raspberrypi/link.ld
++++ 06_uart_chainloader/src/bsp/raspberrypi/link.ld
 @@ -16,7 +16,8 @@
 
  SECTIONS
@@ -311,9 +311,9 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/raspberrypi/link.ld 07_uart_chainloader/s
          __bss_start = .;
          *(.bss*);
 
-diff -uNr 06_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs 07_uart_chainloader/src/bsp/raspberrypi/memory.rs
---- 06_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs
-+++ 07_uart_chainloader/src/bsp/raspberrypi/memory.rs
+diff -uNr 05_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs 06_uart_chainloader/src/bsp/raspberrypi/memory.rs
+--- 05_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs
++++ 06_uart_chainloader/src/bsp/raspberrypi/memory.rs
 @@ -23,9 +23,10 @@
  /// The board's physical memory map.
  #[rustfmt::skip]
@@ -343,9 +343,9 @@ diff -uNr 06_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs 07_uart_chainloader
  /// # Safety
  ///
 
-diff -uNr 06_drivers_gpio_uart/src/main.rs 07_uart_chainloader/src/main.rs
---- 06_drivers_gpio_uart/src/main.rs
-+++ 07_uart_chainloader/src/main.rs
+diff -uNr 05_drivers_gpio_uart/src/main.rs 06_uart_chainloader/src/main.rs
+--- 05_drivers_gpio_uart/src/main.rs
++++ 06_uart_chainloader/src/main.rs
 @@ -107,6 +107,7 @@
  //! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
 
@@ -425,17 +425,17 @@ diff -uNr 06_drivers_gpio_uart/src/main.rs 07_uart_chainloader/src/main.rs
 +    kernel()
  }
 
-diff -uNr 06_drivers_gpio_uart/update.sh 07_uart_chainloader/update.sh
---- 06_drivers_gpio_uart/update.sh
-+++ 07_uart_chainloader/update.sh
+diff -uNr 05_drivers_gpio_uart/update.sh 06_uart_chainloader/update.sh
+--- 05_drivers_gpio_uart/update.sh
++++ 06_uart_chainloader/update.sh
 @@ -0,0 +1,8 @@
 +#!/usr/bin/env bash
 +
-+cd ../06_drivers_gpio_uart
++cd ../05_drivers_gpio_uart
 +BSP=rpi4 make
-+cp kernel8.img ../07_uart_chainloader/demo_payload_rpi4.img
++cp kernel8.img ../06_uart_chainloader/demo_payload_rpi4.img
 +make
-+cp kernel8.img ../07_uart_chainloader/demo_payload_rpi3.img
++cp kernel8.img ../06_uart_chainloader/demo_payload_rpi3.img
 +rm kernel8.img
 
 ```
