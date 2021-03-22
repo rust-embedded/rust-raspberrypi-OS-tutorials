@@ -273,15 +273,15 @@ diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.rs 09_privilege_level/src/
 diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.s 09_privilege_level/src/_arch/aarch64/cpu/boot.s
 --- 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.s
 +++ 09_privilege_level/src/_arch/aarch64/cpu/boot.s
-@@ -6,6 +6,7 @@
- // Definitions
- //--------------------------------------------------------------------------------------------------
+@@ -18,6 +18,7 @@
+ 	add	\register, \register, #:lo12:\symbol
+ .endm
 
 +.equ _EL2, 0x8
  .equ _core_id_mask, 0b11
 
  //--------------------------------------------------------------------------------------------------
-@@ -17,6 +18,11 @@
+@@ -29,6 +30,11 @@
  // fn _start()
  //------------------------------------------------------------------------------
  _start:
@@ -293,13 +293,13 @@ diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.s 09_privilege_level/src/_
  	// Only proceed on the boot core. Park it otherwise.
  	mrs	x1, MPIDR_EL1
  	and	x1, x1, _core_id_mask
-@@ -26,11 +32,11 @@
+@@ -38,11 +44,11 @@
 
  	// If execution reaches here, it is the boot core. Now, prepare the jump to Rust code.
 
 -	// Set the stack pointer.
 +	// Set the stack pointer. This ensures that any code in EL2 that needs the stack will work.
- 	ldr	x0, =__boot_core_stack_end_exclusive
+ 	ADR_REL	x0, __boot_core_stack_end_exclusive
  	mov	sp, x0
 
 -	// Jump to Rust code.

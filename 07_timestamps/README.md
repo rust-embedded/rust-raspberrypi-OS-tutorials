@@ -96,19 +96,37 @@ diff -uNr 06_uart_chainloader/Makefile 07_timestamps/Makefile
 diff -uNr 06_uart_chainloader/src/_arch/aarch64/cpu/boot.s 07_timestamps/src/_arch/aarch64/cpu/boot.s
 --- 06_uart_chainloader/src/_arch/aarch64/cpu/boot.s
 +++ 07_timestamps/src/_arch/aarch64/cpu/boot.s
-@@ -22,31 +22,20 @@
+@@ -18,17 +18,6 @@
+ 	add	\register, \register, #:lo12:\symbol
+ .endm
+
+-// Load the address of a symbol into a register, absolute.
+-//
+-// # Resources
+-//
+-// - https://sourceware.org/binutils/docs-2.36/as/AArch64_002dRelocations.html
+-.macro ADR_ABS register, symbol
+-	movz	\register, #:abs_g2:\symbol
+-	movk	\register, #:abs_g1_nc:\symbol
+-	movk	\register, #:abs_g0_nc:\symbol
+-.endm
+-
+ .equ _core_id_mask, 0b11
+
+ //--------------------------------------------------------------------------------------------------
+@@ -45,31 +34,20 @@
  	and	x1, x1, _core_id_mask
  	ldr	x2, BOOT_CORE_ID      // provided by bsp/__board_name__/cpu.rs
  	cmp	x1, x2
 -	b.ne	2f
+-
+-	// If execution reaches here, it is the boot core.
 +	b.ne	1f
 
--	// If execution reaches here, it is the boot core.
--
 -	// Next, relocate the binary.
--	adr	x0, __binary_nonzero_start          // The address the binary got loaded to.
--	ldr	x1, =__binary_nonzero_start         // The address the binary was linked to.
--	ldr	x2, =__binary_nonzero_end_exclusive
+-	ADR_REL	x0, __binary_nonzero_start         // The address the binary got loaded to.
+-	ADR_ABS	x1, __binary_nonzero_start         // The address the binary was linked to.
+-	ADR_ABS	x2, __binary_nonzero_end_exclusive
 -
 -1:	ldr	x3, [x0], #8
 -	str	x3, [x1], #8
@@ -117,11 +135,12 @@ diff -uNr 06_uart_chainloader/src/_arch/aarch64/cpu/boot.s 07_timestamps/src/_ar
 +	// If execution reaches here, it is the boot core. Now, prepare the jump to Rust code.
 
  	// Set the stack pointer.
- 	ldr	x0, =__boot_core_stack_end_exclusive
+-	ADR_ABS	x0, __boot_core_stack_end_exclusive
++	ADR_REL	x0, __boot_core_stack_end_exclusive
  	mov	sp, x0
 
 -	// Jump to the relocated Rust code.
--	ldr	x1, =_start_rust
+-	ADR_ABS	x1, _start_rust
 -	br	x1
 +	// Jump to Rust code.
 +	b	_start_rust

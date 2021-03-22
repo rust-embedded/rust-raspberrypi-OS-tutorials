@@ -84,12 +84,24 @@ diff -uNr 01_wait_forever/src/_arch/aarch64/cpu/boot.rs 02_runtime_init/src/_arc
 diff -uNr 01_wait_forever/src/_arch/aarch64/cpu/boot.s 02_runtime_init/src/_arch/aarch64/cpu/boot.s
 --- 01_wait_forever/src/_arch/aarch64/cpu/boot.s
 +++ 02_runtime_init/src/_arch/aarch64/cpu/boot.s
-@@ -3,6 +3,12 @@
+@@ -3,6 +3,24 @@
  // Copyright (c) 2021 Andre Richter <andre.o.richter@gmail.com>
 
  //--------------------------------------------------------------------------------------------------
 +// Definitions
 +//--------------------------------------------------------------------------------------------------
++
++// Load the address of a symbol into a register, PC-relative.
++//
++// The symbol must lie within +/- 4 GiB of the Program Counter.
++//
++// # Resources
++//
++// - https://sourceware.org/binutils/docs-2.36/as/AArch64_002dRelocations.html
++.macro ADR_REL register, symbol
++	adrp	\register, \symbol
++	add	\register, \register, #:lo12:\symbol
++.endm
 +
 +.equ _core_id_mask, 0b11
 +
@@ -97,7 +109,7 @@ diff -uNr 01_wait_forever/src/_arch/aarch64/cpu/boot.s 02_runtime_init/src/_arch
  // Public Code
  //--------------------------------------------------------------------------------------------------
  .section .text._start
-@@ -11,6 +17,22 @@
+@@ -11,6 +29,22 @@
  // fn _start()
  //------------------------------------------------------------------------------
  _start:
@@ -111,7 +123,7 @@ diff -uNr 01_wait_forever/src/_arch/aarch64/cpu/boot.s 02_runtime_init/src/_arch
 +	// If execution reaches here, it is the boot core. Now, prepare the jump to Rust code.
 +
 +	// Set the stack pointer.
-+	ldr	x0, =__boot_core_stack_end_exclusive
++	ADR_REL	x0, __boot_core_stack_end_exclusive
 +	mov	sp, x0
 +
 +	// Jump to Rust code.

@@ -6,6 +6,18 @@
 // Definitions
 //--------------------------------------------------------------------------------------------------
 
+// Load the address of a symbol into a register, PC-relative.
+//
+// The symbol must lie within +/- 4 GiB of the Program Counter.
+//
+// # Resources
+//
+// - https://sourceware.org/binutils/docs-2.36/as/AArch64_002dRelocations.html
+.macro ADR_REL register, symbol
+	adrp	\register, \symbol
+	add	\register, \register, #:lo12:\symbol
+.endm
+
 .equ _core_id_mask, 0b11
 
 //--------------------------------------------------------------------------------------------------
@@ -27,7 +39,7 @@ _start:
 	// If execution reaches here, it is the boot core. Now, prepare the jump to Rust code.
 
 	// Set the stack pointer.
-	ldr	x0, =__boot_core_stack_end_exclusive
+	ADR_REL	x0, __boot_core_stack_end_exclusive
 	mov	sp, x0
 
 	// Jump to Rust code.
