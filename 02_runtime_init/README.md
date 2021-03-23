@@ -186,7 +186,7 @@ diff -uNr 01_wait_forever/src/bsp/raspberrypi/cpu.rs 02_runtime_init/src/bsp/ras
 diff -uNr 01_wait_forever/src/bsp/raspberrypi/link.ld 02_runtime_init/src/bsp/raspberrypi/link.ld
 --- 01_wait_forever/src/bsp/raspberrypi/link.ld
 +++ 02_runtime_init/src/bsp/raspberrypi/link.ld
-@@ -11,17 +11,52 @@
+@@ -11,17 +11,45 @@
  PHDRS
  {
      segment_rx PT_LOAD FLAGS(5); /* 5 == RX */
@@ -209,16 +209,9 @@ diff -uNr 01_wait_forever/src/bsp/raspberrypi/link.ld 02_runtime_init/src/bsp/ra
      .text :
      {
          KEEP(*(.text._start))
-+
-+        /* Special constants (or statics in Rust speak) needed by _start().
-+         *
-+         * They are placed in close proximity to _start() from where they will be read. This ensures
-+         * that position-independent, PC-relative loads can be emitted.
-+         */
-+        *(.text._start_arguments)
-+
-+        *(.text._start_rust) /* The Rust entry point */
-+        *(.text*)            /* Everything else */
++        *(.text._start_arguments) /* Constants (or statics in Rust speak) read by _start(). */
++        *(.text._start_rust)      /* The Rust entry point */
++        *(.text*)                 /* Everything else */
      } :segment_rx
 +
 +    .rodata : ALIGN(8) { *(.rodata*) } :segment_rx

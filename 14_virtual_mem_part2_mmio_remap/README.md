@@ -1468,7 +1468,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/link.ld 14_vir
 
      /***********************************************************************************************
      * Code + RO Data + Global Offset Table
-@@ -51,6 +46,7 @@
+@@ -44,6 +39,7 @@
      /***********************************************************************************************
      * Data + BSS
      ***********************************************************************************************/
@@ -1476,7 +1476,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/link.ld 14_vir
      .data : { *(.data*) } :segment_rw
 
      /* Section is zeroed in u64 chunks, align start and end to 8 bytes */
-@@ -63,4 +59,23 @@
+@@ -56,4 +52,23 @@
          . += 8; /* Fill for the bss == 0 case, so that __bss_start <= __bss_end_inclusive holds */
          __bss_end_inclusive = . - 8;
      } :NONE

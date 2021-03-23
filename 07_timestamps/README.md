@@ -398,7 +398,7 @@ diff -uNr 06_uart_chainloader/src/bsp/raspberrypi/link.ld 07_timestamps/src/bsp/
      .text :
      {
          KEEP(*(.text._start))
-@@ -51,12 +49,8 @@
+@@ -44,12 +42,8 @@
      ***********************************************************************************************/
      .data : { *(.data*) } :segment_rw
 

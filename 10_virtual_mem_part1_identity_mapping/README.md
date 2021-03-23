@@ -821,7 +821,7 @@ diff -uNr 09_privilege_level/src/bsp/raspberrypi/link.ld 10_virtual_mem_part1_id
      .text :
      {
          KEEP(*(.text._start))
-@@ -44,6 +45,9 @@
+@@ -37,6 +38,9 @@
      .rodata : ALIGN(8) { *(.rodata*) } :segment_rx
      .got    : ALIGN(8) { *(.got)     } :segment_rx
 

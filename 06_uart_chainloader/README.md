@@ -315,7 +315,7 @@ diff -uNr 05_drivers_gpio_uart/src/bsp/raspberrypi/link.ld 06_uart_chainloader/s
      .text :
      {
          KEEP(*(.text._start))
-@@ -49,8 +51,12 @@
+@@ -42,8 +44,12 @@
      ***********************************************************************************************/
      .data : { *(.data*) } :segment_rw
 
