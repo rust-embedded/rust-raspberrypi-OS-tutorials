@@ -42,10 +42,6 @@ class TutorialCrate
     end
 
     def fmt_cargo_rust(args)
-        print 'Rust cargo fmt '.light_blue
-        print "#{args} ".light_blue unless args.nil?
-        puts @folder
-
         Dir.chdir(@folder) { exit(1) unless system("cargo fmt #{args}") }
     end
 
@@ -216,7 +212,14 @@ class DevTool
     def fmt_cargo_rust(check: false)
         args = '-- --check' if check
 
-        @crates.each { |c| c.fmt_cargo_rust(args) }
+        @crates.each do |c|
+            print 'Rust cargo fmt '.light_blue
+            print "#{args} ".light_blue unless args.nil?
+            puts c.folder
+
+            Process.fork { c.fmt_cargo_rust(args) }
+        end
+        Process.waitall
     end
 
     def fmt_prettier(check: false)
