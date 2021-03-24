@@ -4,8 +4,10 @@ version = "0.1.0"
 authors = ["Andre Richter <andre.o.richter@gmail.com>"]
 edition = "2018"
 
+# TODO: Fixme
+# LTO seems to kill the console integration test (empty text section). Disable until a fix is found.
 [profile.release]
-lto = true
+lto = false
 
 [features]
 default = []
