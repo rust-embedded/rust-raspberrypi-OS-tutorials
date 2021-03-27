@@ -37,7 +37,7 @@ Our chainloader is called `MiniLoad` and is inspired by [raspbootin].
 
 You can try it with this tutorial already:
 1. Depending on your target hardware, run:`make` or `BSP=rpi4 make`.
-1. Copy `kernel8.img` to the SD card.
+1. Copy `kernel8.img` to the SD card and put the SD card back into your RPi.
 1. Run `make chainboot` or `BSP=rpi4 make chainboot`.
 1. Connect the USB serial to your host PC.
     - Wiring diagram at [top-level README](../README.md#-usb-serial-output).
