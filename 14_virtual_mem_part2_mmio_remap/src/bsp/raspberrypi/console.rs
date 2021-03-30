@@ -58,4 +58,5 @@ pub fn console() -> &'static impl console::interface::All {
 /// than on real hardware due to QEMU's abstractions.
 ///
 /// For the RPi, nothing needs to be done.
+#[cfg(feature = "test_build")]
 pub fn qemu_bring_up_console() {}

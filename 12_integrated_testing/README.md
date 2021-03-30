@@ -1098,7 +1098,7 @@ diff -uNr 11_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu.rs 12_inte
 diff -uNr 11_exceptions_part1_groundwork/src/bsp/raspberrypi/console.rs 12_integrated_testing/src/bsp/raspberrypi/console.rs
 --- 11_exceptions_part1_groundwork/src/bsp/raspberrypi/console.rs
 +++ 12_integrated_testing/src/bsp/raspberrypi/console.rs
-@@ -35,3 +35,13 @@
+@@ -35,3 +35,14 @@
  pub fn console() -> &'static impl console::interface::All {
      &super::PL011_UART
  }
@@ -1111,6 +1111,7 @@ diff -uNr 11_exceptions_part1_groundwork/src/bsp/raspberrypi/console.rs 12_integ
 +/// than on real hardware due to QEMU's abstractions.
 +///
 +/// For the RPi, nothing needs to be done.
++#[cfg(feature = "test_build")]
 +pub fn qemu_bring_up_console() {}
 
 diff -uNr 11_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs 12_integrated_testing/src/bsp/raspberrypi/memory/mmu.rs

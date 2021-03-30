@@ -1024,14 +1024,14 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/console.rs 15_virt
  /// Return a reference to the console.
  pub fn console() -> &'static impl console::interface::All {
      &super::PL011_UART
-@@ -56,6 +74,15 @@
+@@ -56,7 +74,15 @@
 
  /// Minimal code needed to bring up the console in QEMU (for testing only). This is often less steps
  /// than on real hardware due to QEMU's abstractions.
 -///
 -/// For the RPi, nothing needs to be done.
+ #[cfg(feature = "test_build")]
 -pub fn qemu_bring_up_console() {}
-+#[cfg(feature = "test_build")]
 +pub fn qemu_bring_up_console() {
 +    use driver::interface::DeviceDriver;
 +
