@@ -433,7 +433,7 @@ attractive either, because writing larger pieces of assembly is an error-prone a
 Fortunately, there is a third way. We are writing an embedded kernel, and therefore the execution
 environment is way more static and deterministic as compared to a general-purpose kernel that can be
 deployed on a wide variety of targets. Specifically, for the Raspberrypi, we exactly know the **load
-address** of the kernel in advance, and we know about the capabilites of the `MMU`. So there is
+address** of the kernel in advance, and we know about the capabilities of the `MMU`. So there is
 nothing stopping us from precomputing the kernel's translation tables ahead of time.
 
 A disadvantage of this approach is an increased binary size, but this is not a deal breaker in our
