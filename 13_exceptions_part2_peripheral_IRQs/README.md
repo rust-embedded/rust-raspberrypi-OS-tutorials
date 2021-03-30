@@ -744,6 +744,22 @@ Minipush 1.0
 ## Diff to previous
 ```diff
 
+diff -uNr 12_integrated_testing/Cargo.toml 13_exceptions_part2_peripheral_IRQs/Cargo.toml
+--- 12_integrated_testing/Cargo.toml
++++ 13_exceptions_part2_peripheral_IRQs/Cargo.toml
+@@ -4,10 +4,8 @@
+ authors = ["Andre Richter <andre.o.richter@gmail.com>"]
+ edition = "2018"
+
+-# TODO: Fixme
+-# LTO seems to kill the console integration test (empty text section). Disable until a fix is found.
+ [profile.release]
+-lto = false
++lto = true
+
+ [features]
+ default = []
+
 diff -uNr 12_integrated_testing/src/_arch/aarch64/cpu/smp.rs 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/cpu/smp.rs
 --- 12_integrated_testing/src/_arch/aarch64/cpu/smp.rs
 +++ 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/cpu/smp.rs

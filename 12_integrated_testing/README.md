@@ -819,7 +819,17 @@ diff -uNr 11_exceptions_part1_groundwork/.cargo/config.toml 12_integrated_testin
 diff -uNr 11_exceptions_part1_groundwork/Cargo.toml 12_integrated_testing/Cargo.toml
 --- 11_exceptions_part1_groundwork/Cargo.toml
 +++ 12_integrated_testing/Cargo.toml
-@@ -11,17 +11,45 @@
+@@ -4,24 +4,54 @@
+ authors = ["Andre Richter <andre.o.richter@gmail.com>"]
+ edition = "2018"
+
++# TODO: Fixme
++# LTO seems to kill the console integration test (empty text section). Disable until a fix is found.
+ [profile.release]
+-lto = true
++lto = false
+
+ [features]
  default = []
  bsp_rpi3 = ["register"]
  bsp_rpi4 = ["register"]
