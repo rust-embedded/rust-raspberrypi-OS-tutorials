@@ -11,6 +11,7 @@
 
 Layout/IndentationWidth:
   Width: 4
+  IgnoredPatterns: ['^\s*module']
 
 Layout/LineLength:
   Max: 100
