@@ -17,7 +17,7 @@
 - [Implementation](#implementation)
   - [A New Mapping API in `src/memory/mmu.rs`](#a-new-mapping-api-in-srcmemorymmutranslationtablers)
   - [The new APIs in action](#the-new-apis-in-action)
-  - [Additional Changes](#additional-changes)
+  - [Supporting Changes](#supporting-changes)
 - [Test it](#test-it)
 - [Diff to previous](#diff-to-previous)
 
