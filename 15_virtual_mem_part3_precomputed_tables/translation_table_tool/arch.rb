@@ -52,9 +52,6 @@ end
 # Arch::
 #---------------------------------------------------------------------------------------------------
 module Arch
-FALSE = 0b0
-TRUE = 0b1
-
 #---------------------------------------------------------------------------------------------------
 # Arch::ARMv8
 #---------------------------------------------------------------------------------------------------
@@ -77,6 +74,9 @@ class Stage1TableDescriptor < BitField
     module Valid
         OFFSET = 0
         NUMBITS = 1
+
+        FALSE = 0
+        TRUE = 1
     end
 
     attr_bitfield(:__next_level_table_addr, NextLevelTableAddr::OFFSET, NextLevelTableAddr::NUMBITS)
@@ -97,11 +97,17 @@ class Stage1PageDescriptor < BitField
     module UXN
         OFFSET = 54
         NUMBITS = 1
+
+        FALSE = 0
+        TRUE = 1
     end
 
     module PXN
         OFFSET = 53
         NUMBITS = 1
+
+        FALSE = 0
+        TRUE = 1
     end
 
     module OutputAddr
@@ -112,6 +118,9 @@ class Stage1PageDescriptor < BitField
     module AF
         OFFSET = 10
         NUMBITS = 1
+
+        FALSE = 0
+        TRUE = 1
     end
 
     module SH
@@ -145,6 +154,9 @@ class Stage1PageDescriptor < BitField
     module Valid
         OFFSET = 0
         NUMBITS = 1
+
+        FALSE = 0
+        TRUE = 1
     end
 
     attr_bitfield(:uxn, UXN::OFFSET, UXN::NUMBITS)
@@ -256,7 +268,7 @@ class TranslationTable
         @lvl2.each_with_index do |descriptor, i|
             descriptor.next_level_table_addr = @lvl3[i].phys_start_addr
             descriptor.type = Stage1TableDescriptor::Type::TABLE
-            descriptor.valid = TRUE
+            descriptor.valid = Stage1TableDescriptor::Valid::TRUE
         end
     end
 
@@ -299,22 +311,22 @@ class TranslationTable
 
         desc.pxn = case attributes.execute_never
                    when :XN
-                       TRUE
+                       Stage1PageDescriptor::PXN::TRUE
                    when :X
-                       FALSE
+                       Stage1PageDescriptor::PXN::FALSE
                    else
                        raise 'Invalid input'
                    end
 
-        desc.uxn = TRUE
+        desc.uxn = Stage1PageDescriptor::UXN::TRUE
     end
     # rubocop:enable Metrics/MethodLength
 
     def set_lvl3_entry(desc, output_addr, attributes)
         desc.output_addr = output_addr
-        desc.af = TRUE
+        desc.af = Stage1PageDescriptor::AF::TRUE
         desc.type = Stage1PageDescriptor::Type::PAGE
-        desc.valid = TRUE
+        desc.valid = Stage1PageDescriptor::Valid::TRUE
 
         set_attributes(desc, attributes)
     end

@@ -16,9 +16,6 @@ Layout/IndentationWidth:
 Layout/LineLength:
   Max: 100
 
-Lint/DeprecatedConstants:
-  Enabled: false
-
 Metrics/ClassLength:
   Enabled: false
 

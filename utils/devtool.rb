@@ -166,6 +166,8 @@ class DevTool
 
     def rubocop
         puts 'Rubocop'.light_blue
+        system('which bundle')
+        system('bundle --version')
         exit(1) unless system('bundle exec rubocop')
     end
 
@@ -180,8 +182,6 @@ class DevTool
         diff
 
         clean
-        make('rpi4')
-        make('rpi3')
         make_xtra
         test_unit
         test_integration
