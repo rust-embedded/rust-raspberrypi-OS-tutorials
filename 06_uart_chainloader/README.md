@@ -373,18 +373,25 @@ diff -uNr 05_drivers_gpio_uart/src/main.rs 06_uart_chainloader/src/main.rs
  #![feature(const_fn_fn_ptr_basics)]
  #![feature(format_args_nl)]
  #![feature(global_asm)]
-@@ -150,29 +151,49 @@
+@@ -146,33 +147,56 @@
+     kernel_main()
+ }
+
++const MINILOAD_LOGO: &str = r#"
++ __  __ _      _ _                 _
++|  \/  (_)_ _ (_) |   ___  __ _ __| |
++| |\/| | | ' \| | |__/ _ \/ _` / _` |
++|_|  |_|_|_||_|_|____\___/\__,_\__,_|
++"#;
++
+ /// The main function running after the early init.
  fn kernel_main() -> ! {
      use bsp::console::console;
      use console::interface::All;
 -    use driver::interface::DriverManager;
 
 -    println!("[0] Booting on: {}", bsp::board_name());
-+    println!(" __  __ _      _ _                 _ ");
-+    println!("|  \\/  (_)_ _ (_) |   ___  __ _ __| |");
-+    println!("| |\\/| | | ' \\| | |__/ _ \\/ _` / _` |");
-+    println!("|_|  |_|_|_||_|_|____\\___/\\__,_\\__,_|");
-+    println!();
++    println!("{}", MINILOAD_LOGO);
 +    println!("{:^37}", bsp::board_name());
 +    println!();
 +    println!("[ML] Requesting binary");

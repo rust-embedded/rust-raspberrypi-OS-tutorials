@@ -475,8 +475,17 @@ diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
 
  /// Early init code.
  ///
-@@ -149,51 +149,31 @@
+@@ -147,56 +147,33 @@
+     kernel_main()
+ }
 
+-const MINILOAD_LOGO: &str = r#"
+- __  __ _      _ _                 _
+-|  \/  (_)_ _ (_) |   ___  __ _ __| |
+-| |\/| | | ' \| | |__/ _ \/ _` / _` |
+-|_|  |_|_|_||_|_|____\___/\__,_\__,_|
+-"#;
+-
  /// The main function running after the early init.
  fn kernel_main() -> ! {
 -    use bsp::console::console;
@@ -485,11 +494,7 @@ diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
 +    use driver::interface::DriverManager;
 +    use time::interface::TimeManager;
 
--    println!(" __  __ _      _ _                 _ ");
--    println!("|  \\/  (_)_ _ (_) |   ___  __ _ __| |");
--    println!("| |\\/| | | ' \\| | |__/ _ \\/ _` / _` |");
--    println!("|_|  |_|_|_||_|_|____\\___/\\__,_\\__,_|");
--    println!();
+-    println!("{}", MINILOAD_LOGO);
 -    println!("{:^37}", bsp::board_name());
 -    println!();
 -    println!("[ML] Requesting binary");
@@ -536,12 +541,12 @@ diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
 
 -    println!("[ML] Loaded! Executing the payload now\n");
 -    console().flush();
+-
+-    // Use black magic to create a function pointer.
+-    let kernel: fn() -> ! = unsafe { core::mem::transmute(kernel_addr) };
 +    // Test a failing timer case.
 +    time::time_manager().spin_for(Duration::from_nanos(1));
 
--    // Use black magic to create a function pointer.
--    let kernel: fn() -> ! = unsafe { core::mem::transmute(kernel_addr) };
--
 -    // Jump to loaded kernel!
 -    kernel()
 +    loop {

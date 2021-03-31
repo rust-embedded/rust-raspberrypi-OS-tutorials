@@ -147,16 +147,19 @@ unsafe fn kernel_init() -> ! {
     kernel_main()
 }
 
+const MINILOAD_LOGO: &str = r#"
+ __  __ _      _ _                 _
+|  \/  (_)_ _ (_) |   ___  __ _ __| |
+| |\/| | | ' \| | |__/ _ \/ _` / _` |
+|_|  |_|_|_||_|_|____\___/\__,_\__,_|
+"#;
+
 /// The main function running after the early init.
 fn kernel_main() -> ! {
     use bsp::console::console;
     use console::interface::All;
 
-    println!(" __  __ _      _ _                 _ ");
-    println!("|  \\/  (_)_ _ (_) |   ___  __ _ __| |");
-    println!("| |\\/| | | ' \\| | |__/ _ \\/ _` / _` |");
-    println!("|_|  |_|_|_||_|_|____\\___/\\__,_\\__,_|");
-    println!();
+    println!("{}", MINILOAD_LOGO);
     println!("{:^37}", bsp::board_name());
     println!();
     println!("[ML] Requesting binary");
