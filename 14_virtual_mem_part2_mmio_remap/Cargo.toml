@@ -1,6 +1,6 @@
 [package]
-name = "kernel"
-version = "0.1.0"
+name = "mingo"
+version = "0.14.0"
 authors = ["Andre Richter <andre.o.richter@gmail.com>"]
 edition = "2018"
 
@@ -43,6 +43,7 @@ test = true
 # Disable unit tests for the kernel binary.
 [[bin]]
 name = "kernel"
+path = "src/main.rs"
 test = false
 
 # List of tests without harness.

@@ -95,12 +95,13 @@ Miniterm 1.0
 
 [MT] ⏳ Waiting for /dev/ttyUSB0
 [MT] ✅ Serial connected
-[0] Booting on: Raspberry Pi 3
-[1] Drivers loaded:
+[0] mingo version 0.5.0
+[1] Booting on: Raspberry Pi 3
+[2] Drivers loaded:
       1. BCM GPIO
       2. BCM PL011 UART
-[2] Chars written: 93
-[3] Echoing input now
+[3] Chars written: 117
+[4] Echoing input now
 ```
 
 8. Exit by pressing <kbd>ctrl-c</kbd>.
@@ -111,6 +112,14 @@ Miniterm 1.0
 diff -uNr 04_safe_globals/Cargo.toml 05_drivers_gpio_uart/Cargo.toml
 --- 04_safe_globals/Cargo.toml
 +++ 05_drivers_gpio_uart/Cargo.toml
+@@ -1,6 +1,6 @@
+ [package]
+ name = "mingo"
+-version = "0.4.0"
++version = "0.5.0"
+ authors = ["Andre Richter <andre.o.richter@gmail.com>"]
+ edition = "2018"
+
 @@ -9,8 +9,8 @@
 
  [features]
@@ -120,9 +129,9 @@ diff -uNr 04_safe_globals/Cargo.toml 05_drivers_gpio_uart/Cargo.toml
 +bsp_rpi3 = ["register"]
 +bsp_rpi4 = ["register"]
 
- ##--------------------------------------------------------------------------------------------------
- ## Dependencies
-@@ -18,6 +18,9 @@
+ [[bin]]
+ name = "kernel"
+@@ -22,6 +22,9 @@
 
  [dependencies]
 
@@ -1329,7 +1338,7 @@ diff -uNr 04_safe_globals/src/main.rs 05_drivers_gpio_uart/src/main.rs
  mod memory;
  mod panic_wait;
  mod print;
-@@ -127,16 +130,49 @@
+@@ -127,16 +130,54 @@
  /// # Safety
  ///
  /// - Only a single core must be active and running this function.
@@ -1338,7 +1347,7 @@ diff -uNr 04_safe_globals/src/main.rs 05_drivers_gpio_uart/src/main.rs
 -    use console::interface::Statistics;
 +    use driver::interface::DriverManager;
 
--    println!("[0] Hello from pure Rust!");
+-    println!("[0] Hello from Rust!");
 +    for i in bsp::driver::driver_manager().all_device_drivers().iter() {
 +        if let Err(x) = i.init() {
 +            panic!("Error loading driver: {}: {}", i.compatible(), x);
@@ -1357,9 +1366,14 @@ diff -uNr 04_safe_globals/src/main.rs 05_drivers_gpio_uart/src/main.rs
 +    use console::interface::All;
 +    use driver::interface::DriverManager;
 +
-+    println!("[0] Booting on: {}", bsp::board_name());
++    println!(
++        "[0] {} version {}",
++        env!("CARGO_PKG_NAME"),
++        env!("CARGO_PKG_VERSION")
++    );
++    println!("[1] Booting on: {}", bsp::board_name());
 +
-+    println!("[1] Drivers loaded:");
++    println!("[2] Drivers loaded:");
 +    for (i, driver) in bsp::driver::driver_manager()
 +        .all_device_drivers()
 +        .iter()
@@ -1370,10 +1384,10 @@ diff -uNr 04_safe_globals/src/main.rs 05_drivers_gpio_uart/src/main.rs
 
      println!(
 -        "[1] Chars written: {}",
-+        "[2] Chars written: {}",
++        "[3] Chars written: {}",
          bsp::console::console().chars_written()
      );
-+    println!("[3] Echoing input now");
++    println!("[4] Echoing input now");
 
 -    println!("[2] Stopping here.");
 -    cpu::wait_forever()

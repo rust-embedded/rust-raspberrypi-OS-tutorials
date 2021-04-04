@@ -1,6 +1,6 @@
 [package]
-name = "kernel"
-version = "0.1.0"
+name = "mingo"
+version = "0.2.0"
 authors = ["Andre Richter <andre.o.richter@gmail.com>"]
 edition = "2018"
 
@@ -12,6 +12,10 @@ default = []
 bsp_rpi3 = []
 bsp_rpi4 = []
 
+[[bin]]
+name = "kernel"
+path = "src/main.rs"
+
 ##--------------------------------------------------------------------------------------------------
 ## Dependencies
 ##--------------------------------------------------------------------------------------------------
@@ -21,3 +25,4 @@ bsp_rpi4 = []
 # Platform specific dependencies
 [target.'cfg(target_arch = "aarch64")'.dependencies]
 cortex-a = { version = "5.x.x" }
+

@@ -152,9 +152,14 @@ fn kernel_main() -> ! {
     use console::interface::All;
     use driver::interface::DriverManager;
 
-    println!("[0] Booting on: {}", bsp::board_name());
+    println!(
+        "[0] {} version {}",
+        env!("CARGO_PKG_NAME"),
+        env!("CARGO_PKG_VERSION")
+    );
+    println!("[1] Booting on: {}", bsp::board_name());
 
-    println!("[1] Drivers loaded:");
+    println!("[2] Drivers loaded:");
     for (i, driver) in bsp::driver::driver_manager()
         .all_device_drivers()
         .iter()
@@ -164,10 +169,10 @@ fn kernel_main() -> ! {
     }
 
     println!(
-        "[2] Chars written: {}",
+        "[3] Chars written: {}",
         bsp::console::console().chars_written()
     );
-    println!("[3] Echoing input now");
+    println!("[4] Echoing input now");
 
     // Discard any spurious received characters before going into echo mode.
     console().clear_rx();

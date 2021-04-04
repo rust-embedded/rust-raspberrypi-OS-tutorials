@@ -31,11 +31,14 @@ Kernel panic: Stopping here.
 diff -uNr 02_runtime_init/Cargo.toml 03_hacky_hello_world/Cargo.toml
 --- 02_runtime_init/Cargo.toml
 +++ 03_hacky_hello_world/Cargo.toml
-@@ -21,3 +21,4 @@
- # Platform specific dependencies
- [target.'cfg(target_arch = "aarch64")'.dependencies]
- cortex-a = { version = "5.x.x" }
-+
+@@ -1,6 +1,6 @@
+ [package]
+ name = "mingo"
+-version = "0.2.0"
++version = "0.3.0"
+ authors = ["Andre Richter <andre.o.richter@gmail.com>"]
+ edition = "2018"
+
 
 diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
 --- 02_runtime_init/Makefile

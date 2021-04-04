@@ -738,9 +738,8 @@ Believe it or not, that is all. There are three ways you can run tests:
 ```console
 $ make test
 [...]
-RUSTFLAGS="-C link-arg=-Tsrc/bsp/raspberrypi/link.ld -C target-cpu=cortex-a53 -D warnings -D missing_docs" cargo test --target=aarch64-unknown-none-softfloat --features bsp_rpi3 --release
-    Finished release [optimized] target(s) in 0.01s
-     Running target/aarch64-unknown-none-softfloat/release/deps/libkernel-4cc6412ddf631982
+
+     Running unittests (target/aarch64-unknown-none-softfloat/release/deps/libkernel-836110ac5dd535ba)
          -------------------------------------------------------------------
          🦀 Running 8 tests
          -------------------------------------------------------------------
@@ -748,9 +747,9 @@ RUSTFLAGS="-C link-arg=-Tsrc/bsp/raspberrypi/link.ld -C target-cpu=cortex-a53 -D
            1. virt_mem_layout_sections_are_64KiB_aligned................[ok]
            2. virt_mem_layout_has_no_overlaps...........................[ok]
            3. test_runner_executes_in_kernel_mode.......................[ok]
-           4. size_of_tabledescriptor_equals_64_bit.....................[ok]
-           5. size_of_pagedescriptor_equals_64_bit......................[ok]
-           6. kernel_tables_in_bss......................................[ok]
+           4. kernel_tables_in_bss......................................[ok]
+           5. size_of_tabledescriptor_equals_64_bit.....................[ok]
+           6. size_of_pagedescriptor_equals_64_bit......................[ok]
            7. zero_volatile_works.......................................[ok]
            8. bss_section_is_sane.......................................[ok]
 
@@ -759,7 +758,7 @@ RUSTFLAGS="-C link-arg=-Tsrc/bsp/raspberrypi/link.ld -C target-cpu=cortex-a53 -D
          -------------------------------------------------------------------
 
 
-     Running target/aarch64-unknown-none-softfloat/release/deps/00_console_sanity-557819b436f15a18
+     Running tests/00_console_sanity.rs (target/aarch64-unknown-none-softfloat/release/deps/00_console_sanity-78c12c5472d40df7)
          -------------------------------------------------------------------
          🦀 Running 3 console-based tests
          -------------------------------------------------------------------
@@ -773,7 +772,7 @@ RUSTFLAGS="-C link-arg=-Tsrc/bsp/raspberrypi/link.ld -C target-cpu=cortex-a53 -D
          -------------------------------------------------------------------
 
 
-     Running target/aarch64-unknown-none-softfloat/release/deps/01_timer_sanity-1e25e7d559a9009f
+     Running tests/01_timer_sanity.rs (target/aarch64-unknown-none-softfloat/release/deps/01_timer_sanity-4866734b14c83c9b)
          -------------------------------------------------------------------
          🦀 Running 3 tests
          -------------------------------------------------------------------
@@ -787,7 +786,7 @@ RUSTFLAGS="-C link-arg=-Tsrc/bsp/raspberrypi/link.ld -C target-cpu=cortex-a53 -D
          -------------------------------------------------------------------
 
 
-     Running target/aarch64-unknown-none-softfloat/release/deps/02_exception_sync_page_fault-14172ce39b3fae1c
+     Running tests/02_exception_sync_page_fault.rs (target/aarch64-unknown-none-softfloat/release/deps/02_exception_sync_page_fault-f2d0885cada1105b)
          -------------------------------------------------------------------
          🦀 Testing synchronous exception handling by causing a page fault
          -------------------------------------------------------------------
@@ -819,7 +818,11 @@ diff -uNr 11_exceptions_part1_groundwork/.cargo/config.toml 12_integrated_testin
 diff -uNr 11_exceptions_part1_groundwork/Cargo.toml 12_integrated_testing/Cargo.toml
 --- 11_exceptions_part1_groundwork/Cargo.toml
 +++ 12_integrated_testing/Cargo.toml
-@@ -4,24 +4,54 @@
+@@ -1,31 +1,58 @@
+ [package]
+ name = "mingo"
+-version = "0.11.0"
++version = "0.12.0"
  authors = ["Andre Richter <andre.o.richter@gmail.com>"]
  edition = "2018"
 
@@ -833,6 +836,10 @@ diff -uNr 11_exceptions_part1_groundwork/Cargo.toml 12_integrated_testing/Cargo.
  default = []
  bsp_rpi3 = ["register"]
  bsp_rpi4 = ["register"]
+-
+-[[bin]]
+-name = "kernel"
+-path = "src/main.rs"
 +test_build = ["qemu-exit"]
 
  ##--------------------------------------------------------------------------------------------------
@@ -866,6 +873,7 @@ diff -uNr 11_exceptions_part1_groundwork/Cargo.toml 12_integrated_testing/Cargo.
 +# Disable unit tests for the kernel binary.
 +[[bin]]
 +name = "kernel"
++path = "src/main.rs"
 +test = false
 +
 +# List of tests without harness.
@@ -1205,7 +1213,7 @@ diff -uNr 11_exceptions_part1_groundwork/src/exception.rs 12_integrated_testing/
 diff -uNr 11_exceptions_part1_groundwork/src/lib.rs 12_integrated_testing/src/lib.rs
 --- 11_exceptions_part1_groundwork/src/lib.rs
 +++ 12_integrated_testing/src/lib.rs
-@@ -0,0 +1,171 @@
+@@ -0,0 +1,184 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -1346,6 +1354,19 @@ diff -uNr 11_exceptions_part1_groundwork/src/lib.rs 12_integrated_testing/src/li
 +pub mod memory;
 +pub mod print;
 +pub mod time;
++
++//--------------------------------------------------------------------------------------------------
++// Public Code
++//--------------------------------------------------------------------------------------------------
++
++/// Version string.
++pub fn version() -> &'static str {
++    concat!(
++        env!("CARGO_PKG_NAME"),
++        " version ",
++        env!("CARGO_PKG_VERSION")
++    )
++}
 +
 +//--------------------------------------------------------------------------------------------------
 +// Testing
@@ -1522,7 +1543,7 @@ diff -uNr 11_exceptions_part1_groundwork/src/main.rs 12_integrated_testing/src/m
  unsafe fn kernel_init() -> ! {
      use driver::interface::DriverManager;
      use memory::mmu::interface::MMU;
-@@ -166,9 +49,7 @@
+@@ -166,15 +49,9 @@
  fn kernel_main() -> ! {
      use bsp::console::console;
      use console::interface::All;
@@ -1530,9 +1551,16 @@ diff -uNr 11_exceptions_part1_groundwork/src/main.rs 12_integrated_testing/src/m
      use driver::interface::DriverManager;
 -    use time::interface::TimeManager;
 
+-    info!(
+-        "{} version {}",
+-        env!("CARGO_PKG_NAME"),
+-        env!("CARGO_PKG_VERSION")
+-    );
++    info!("{}", libkernel::version());
      info!("Booting on: {}", bsp::board_name());
 
-@@ -195,31 +76,6 @@
+     info!("MMU online. Special regions:");
+@@ -200,31 +77,6 @@
          info!("      {}. {}", i + 1, driver.compatible());
      }
 

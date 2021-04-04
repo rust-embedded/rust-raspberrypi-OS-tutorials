@@ -1,5 +1,5 @@
 [package]
-name = "kernel"
+name = "mingo"
 version = "0.1.0"
 authors = ["Andre Richter <andre.o.richter@gmail.com>"]
 edition = "2018"
@@ -11,6 +11,10 @@ lto = true
 default = []
 bsp_rpi3 = []
 bsp_rpi4 = []
+
+[[bin]]
+name = "kernel"
+path = "src/main.rs"
 
 ##--------------------------------------------------------------------------------------------------
 ## Dependencies

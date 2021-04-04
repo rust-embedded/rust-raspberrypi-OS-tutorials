@@ -156,6 +156,11 @@ fn kernel_main() -> ! {
     use driver::interface::DriverManager;
     use time::interface::TimeManager;
 
+    info!(
+        "{} version {}",
+        env!("CARGO_PKG_NAME"),
+        env!("CARGO_PKG_VERSION")
+    );
     info!("Booting on: {}", bsp::board_name());
 
     let (_, privilege_level) = exception::current_privilege_level();

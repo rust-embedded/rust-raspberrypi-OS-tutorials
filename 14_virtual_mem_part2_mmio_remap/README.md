@@ -316,18 +316,19 @@ Minipush 1.0
 [MP] ⏩ Pushing 67 KiB =========================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
-[    0.789721] Booting on: Raspberry Pi 3
-[    0.789994] MMU online:
-[    0.790286]       -------------------------------------------------------------------------------------------------------------------------------------------
-[    0.792030]                         Virtual                                   Physical               Size       Attr                    Entity
-[    0.793774]       -------------------------------------------------------------------------------------------------------------------------------------------
-[    0.795520]       0x0000_0000_0008_0000..0x0000_0000_0008_ffff --> 0x00_0008_0000..0x00_0008_ffff |  64 KiB | C   RO X  | Kernel code and RO data
-[    0.797134]       0x0000_0000_0009_0000..0x0000_0000_001b_ffff --> 0x00_0009_0000..0x00_001b_ffff |   1 MiB | C   RW XN | Kernel data and bss
-[    0.798704]       0x0000_0000_001d_0000..0x0000_0000_0024_ffff --> 0x00_001d_0000..0x00_0024_ffff | 512 KiB | C   RW XN | Kernel boot-core stack
-[    0.800307]       0x0000_0001_f000_0000..0x0000_0001_f000_ffff --> 0x00_3f20_0000..0x00_3f20_ffff |  64 KiB | Dev RW XN | BCM GPIO
-[    0.801759]                                                                                                             | BCM PL011 UART
-[    0.803276]       0x0000_0001_f001_0000..0x0000_0001_f001_ffff --> 0x00_3f00_0000..0x00_3f00_ffff |  64 KiB | Dev RW XN | BCM Peripheral Interrupt Controller
-[    0.805020]       -------------------------------------------------------------------------------------------------------------------------------------------
+[    0.785711] mingo version 0.14.0
+[    0.785919] Booting on: Raspberry Pi 3
+[    0.786374] MMU online:
+[    0.786666]       -------------------------------------------------------------------------------------------------------------------------------------------
+[    0.788410]                         Virtual                                   Physical               Size       Attr                    Entity
+[    0.790154]       -------------------------------------------------------------------------------------------------------------------------------------------
+[    0.791902]       0x0000_0000_0008_0000..0x0000_0000_0008_ffff --> 0x00_0008_0000..0x00_0008_ffff |  64 KiB | C   RO X  | Kernel code and RO data
+[    0.793515]       0x0000_0000_0009_0000..0x0000_0000_001b_ffff --> 0x00_0009_0000..0x00_001b_ffff |   1 MiB | C   RW XN | Kernel data and bss
+[    0.795085]       0x0000_0000_001d_0000..0x0000_0000_0024_ffff --> 0x00_001d_0000..0x00_0024_ffff | 512 KiB | C   RW XN | Kernel boot-core stack
+[    0.796688]       0x0000_0001_f000_0000..0x0000_0001_f000_ffff --> 0x00_3f20_0000..0x00_3f20_ffff |  64 KiB | Dev RW XN | BCM GPIO
+[    0.798139]                                                                                                             | BCM PL011 UART
+[    0.799657]       0x0000_0001_f001_0000..0x0000_0001_f001_ffff --> 0x00_3f00_0000..0x00_3f00_ffff |  64 KiB | Dev RW XN | BCM Peripheral Interrupt Controller
+[    0.801400]       -------------------------------------------------------------------------------------------------------------------------------------------
 ```
 
 Raspberry Pi 4:
@@ -351,23 +352,36 @@ Minipush 1.0
 [MP] ⏩ Pushing 74 KiB =========================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
-[    0.870371] Booting on: Raspberry Pi 4
-[    0.870470] MMU online:
-[    0.870763]       -------------------------------------------------------------------------------------------------------------------------------------------
-[    0.872507]                         Virtual                                   Physical               Size       Attr                    Entity
-[    0.874251]       -------------------------------------------------------------------------------------------------------------------------------------------
-[    0.875996]       0x0000_0000_0008_0000..0x0000_0000_0008_ffff --> 0x00_0008_0000..0x00_0008_ffff |  64 KiB | C   RO X  | Kernel code and RO data
-[    0.877611]       0x0000_0000_0009_0000..0x0000_0000_001b_ffff --> 0x00_0009_0000..0x00_001b_ffff |   1 MiB | C   RW XN | Kernel data and bss
-[    0.879181]       0x0000_0000_001d_0000..0x0000_0000_0024_ffff --> 0x00_001d_0000..0x00_0024_ffff | 512 KiB | C   RW XN | Kernel boot-core stack
-[    0.880784]       0x0000_0001_f000_0000..0x0000_0001_f000_ffff --> 0x00_fe20_0000..0x00_fe20_ffff |  64 KiB | Dev RW XN | BCM GPIO
-[    0.882235]                                                                                                             | BCM PL011 UART
-[    0.883752]       0x0000_0001_f001_0000..0x0000_0001_f001_ffff --> 0x00_ff84_0000..0x00_ff84_ffff |  64 KiB | Dev RW XN | GICD
-[    0.885160]                                                                                                             | GICC
-[    0.886569]       -------------------------------------------------------------------------------------------------------------------------------------------
+[    0.869392] mingo version 0.14.0
+[    0.869425] Booting on: Raspberry Pi 4
+[    0.869880] MMU online:
+[    0.870173]       -------------------------------------------------------------------------------------------------------------------------------------------
+[    0.871917]                         Virtual                                   Physical               Size       Attr                    Entity
+[    0.873661]       -------------------------------------------------------------------------------------------------------------------------------------------
+[    0.875407]       0x0000_0000_0008_0000..0x0000_0000_0008_ffff --> 0x00_0008_0000..0x00_0008_ffff |  64 KiB | C   RO X  | Kernel code and RO data
+[    0.877021]       0x0000_0000_0009_0000..0x0000_0000_001b_ffff --> 0x00_0009_0000..0x00_001b_ffff |   1 MiB | C   RW XN | Kernel data and bss
+[    0.878591]       0x0000_0000_001d_0000..0x0000_0000_0024_ffff --> 0x00_001d_0000..0x00_0024_ffff | 512 KiB | C   RW XN | Kernel boot-core stack
+[    0.880195]       0x0000_0001_f000_0000..0x0000_0001_f000_ffff --> 0x00_fe20_0000..0x00_fe20_ffff |  64 KiB | Dev RW XN | BCM GPIO
+[    0.881645]                                                                                                             | BCM PL011 UART
+[    0.883163]       0x0000_0001_f001_0000..0x0000_0001_f001_ffff --> 0x00_ff84_0000..0x00_ff84_ffff |  64 KiB | Dev RW XN | GICD
+[    0.884570]                                                                                                             | GICC
+[    0.885979]       -------------------------------------------------------------------------------------------------------------------------------------------
 ```
 
 ## Diff to previous
 ```diff
+
+diff -uNr 13_exceptions_part2_peripheral_IRQs/Cargo.toml 14_virtual_mem_part2_mmio_remap/Cargo.toml
+--- 13_exceptions_part2_peripheral_IRQs/Cargo.toml
++++ 14_virtual_mem_part2_mmio_remap/Cargo.toml
+@@ -1,6 +1,6 @@
+ [package]
+ name = "mingo"
+-version = "0.13.0"
++version = "0.14.0"
+ authors = ["Andre Richter <andre.o.richter@gmail.com>"]
+ edition = "2018"
+
 
 diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/exception.rs 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/exception.rs
 --- 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/exception.rs
@@ -2184,8 +2198,8 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/main.rs 14_virtual_mem_part2_m
 
      // Let device drivers register and enable their handlers with the interrupt controller.
      for i in bsp::driver::driver_manager().all_device_drivers() {
-@@ -65,8 +83,8 @@
-
+@@ -66,8 +84,8 @@
+     info!("{}", libkernel::version());
      info!("Booting on: {}", bsp::board_name());
 
 -    info!("MMU online. Special regions:");

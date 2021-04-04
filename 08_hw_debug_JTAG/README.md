@@ -305,6 +305,18 @@ Thanks to [@naotaco](https://github.com/naotaco) for laying the groundwork for t
 ## Diff to previous
 ```diff
 
+diff -uNr 07_timestamps/Cargo.toml 08_hw_debug_JTAG/Cargo.toml
+--- 07_timestamps/Cargo.toml
++++ 08_hw_debug_JTAG/Cargo.toml
+@@ -1,6 +1,6 @@
+ [package]
+ name = "mingo"
+-version = "0.7.0"
++version = "0.8.0"
+ authors = ["Andre Richter <andre.o.richter@gmail.com>"]
+ edition = "2018"
+
+
 diff -uNr 07_timestamps/Makefile 08_hw_debug_JTAG/Makefile
 --- 07_timestamps/Makefile
 +++ 08_hw_debug_JTAG/Makefile

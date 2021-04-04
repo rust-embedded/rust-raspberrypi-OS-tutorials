@@ -46,13 +46,26 @@ implemntations in the [spin crate] or the [parking lot crate].
 ```console
 $ make qemu
 [...]
-[0] Hello from pure Rust!
-[1] Chars written: 27
+
+[0] Hello from Rust!
+[1] Chars written: 22
 [2] Stopping here.
 ```
 
 ## Diff to previous
 ```diff
+
+diff -uNr 03_hacky_hello_world/Cargo.toml 04_safe_globals/Cargo.toml
+--- 03_hacky_hello_world/Cargo.toml
++++ 04_safe_globals/Cargo.toml
+@@ -1,6 +1,6 @@
+ [package]
+ name = "mingo"
+-version = "0.3.0"
++version = "0.4.0"
+ authors = ["Andre Richter <andre.o.richter@gmail.com>"]
+ edition = "2018"
+
 
 diff -uNr 03_hacky_hello_world/src/bsp/raspberrypi/console.rs 04_safe_globals/src/bsp/raspberrypi/console.rs
 --- 03_hacky_hello_world/src/bsp/raspberrypi/console.rs
@@ -231,12 +244,11 @@ diff -uNr 03_hacky_hello_world/src/main.rs 04_safe_globals/src/main.rs
  ///
  /// - Only a single core must be active and running this function.
  unsafe fn kernel_init() -> ! {
--    println!("[0] Hello from Rust!");
 +    use console::interface::Statistics;
++
+     println!("[0] Hello from Rust!");
 
 -    panic!("Stopping here.")
-+    println!("[0] Hello from pure Rust!");
-+
 +    println!(
 +        "[1] Chars written: {}",
 +        bsp::console::console().chars_written()

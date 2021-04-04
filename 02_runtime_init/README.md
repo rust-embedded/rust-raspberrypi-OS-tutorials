@@ -31,7 +31,15 @@
 diff -uNr 01_wait_forever/Cargo.toml 02_runtime_init/Cargo.toml
 --- 01_wait_forever/Cargo.toml
 +++ 02_runtime_init/Cargo.toml
-@@ -17,3 +17,7 @@
+@@ -1,6 +1,6 @@
+ [package]
+ name = "mingo"
+-version = "0.1.0"
++version = "0.2.0"
+ authors = ["Andre Richter <andre.o.richter@gmail.com>"]
+ edition = "2018"
+
+@@ -21,3 +21,8 @@
  ##--------------------------------------------------------------------------------------------------
 
  [dependencies]
@@ -39,6 +47,7 @@ diff -uNr 01_wait_forever/Cargo.toml 02_runtime_init/Cargo.toml
 +# Platform specific dependencies
 +[target.'cfg(target_arch = "aarch64")'.dependencies]
 +cortex-a = { version = "5.x.x" }
++
 
 diff -uNr 01_wait_forever/Makefile 02_runtime_init/Makefile
 --- 01_wait_forever/Makefile

@@ -322,31 +322,44 @@ Minipush 1.0
            Raspberry Pi 3
 
 [ML] Requesting binary
-[MP] ⏩ Pushing 64 KiB ========================================🦀 100% 32 KiB/s Time: 00:00:02
+[MP] ⏩ Pushing 64 KiB =========================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
-[    3.175017] Booting on: Raspberry Pi 3
-[    3.176100] MMU online. Special regions:
-[    3.178009]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
-[    3.182088]       0x1fff0000 - 0x1fffffff |  64 KiB | Dev RW PXN | Remapped Device MMIO
-[    3.186036]       0x3f000000 - 0x4000ffff |  16 MiB | Dev RW PXN | Device MMIO
-[    3.189594] Current privilege level: EL1
-[    3.191502] Exception handling state:
-[    3.193281]       Debug:  Masked
-[    3.194843]       SError: Masked
-[    3.196405]       IRQ:    Masked
-[    3.197967]       FIQ:    Masked
-[    3.199529] Architectural timer resolution: 52 ns
-[    3.201828] Drivers loaded:
-[    3.203173]       1. BCM GPIO
-[    3.204605]       2. BCM PL011 UART
-[    3.206297] Timer test, spinning for 1 second
+[    1.034062] mingo version 0.10.0
+[    1.034270] Booting on: Raspberry Pi 3
+[    1.034725] MMU online. Special regions:
+[    1.035201]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
+[    1.036220]       0x1fff0000 - 0x1fffffff |  64 KiB | Dev RW PXN | Remapped Device MMIO
+[    1.037205]       0x3f000000 - 0x4000ffff |  16 MiB | Dev RW PXN | Device MMIO
+[    1.038094] Current privilege level: EL1
+[    1.038570] Exception handling state:
+[    1.039015]       Debug:  Masked
+[    1.039405]       SError: Masked
+[    1.039794]       IRQ:    Masked
+[    1.040184]       FIQ:    Masked
+[    1.040575] Architectural timer resolution: 52 ns
+[    1.041148] Drivers loaded:
+[    1.041484]       1. BCM GPIO
+[    1.041842]       2. BCM PL011 UART
+[    1.042264] Timer test, spinning for 1 second
 [     !!!    ] Writing through the remapped UART at 0x1FFF_1000
-[    4.210458] Echoing input now
+[    2.043305] Echoing input now
 ```
 
 ## Diff to previous
 ```diff
+
+diff -uNr 09_privilege_level/Cargo.toml 10_virtual_mem_part1_identity_mapping/Cargo.toml
+--- 09_privilege_level/Cargo.toml
++++ 10_virtual_mem_part1_identity_mapping/Cargo.toml
+@@ -1,6 +1,6 @@
+ [package]
+ name = "mingo"
+-version = "0.9.0"
++version = "0.10.0"
+ authors = ["Andre Richter <andre.o.richter@gmail.com>"]
+ edition = "2018"
+
 
 diff -uNr 09_privilege_level/src/_arch/aarch64/memory/mmu/translation_table.rs 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/memory/mmu/translation_table.rs
 --- 09_privilege_level/src/_arch/aarch64/memory/mmu/translation_table.rs
@@ -1058,8 +1071,8 @@ diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/s
 
      for i in bsp::driver::driver_manager().all_device_drivers().iter() {
          if let Err(x) = i.init() {
-@@ -158,6 +170,9 @@
-
+@@ -163,6 +175,9 @@
+     );
      info!("Booting on: {}", bsp::board_name());
 
 +    info!("MMU online. Special regions:");
@@ -1068,7 +1081,7 @@ diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/s
      let (_, privilege_level) = exception::current_privilege_level();
      info!("Current privilege level: {}", privilege_level);
 
-@@ -181,6 +196,13 @@
+@@ -186,6 +201,13 @@
      info!("Timer test, spinning for 1 second");
      time::time_manager().spin_for(Duration::from_secs(1));
 

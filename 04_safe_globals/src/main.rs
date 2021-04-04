@@ -130,7 +130,7 @@ mod synchronization;
 unsafe fn kernel_init() -> ! {
     use console::interface::Statistics;
 
-    println!("[0] Hello from pure Rust!");
+    println!("[0] Hello from Rust!");
 
     println!(
         "[1] Chars written: {}",

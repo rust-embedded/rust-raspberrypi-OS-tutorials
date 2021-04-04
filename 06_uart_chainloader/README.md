@@ -75,12 +75,13 @@ Minipush 1.0
 [MP] ⏩ Pushing 6 KiB ==========================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
-[0] Booting on: Raspberry Pi 3
-[1] Drivers loaded:
+[0] mingo version 0.5.0
+[1] Booting on: Raspberry Pi 3
+[2] Drivers loaded:
       1. BCM GPIO
       2. BCM PL011 UART
-[2] Chars written: 93
-[3] Echoing input now
+[3] Chars written: 117
+[4] Echoing input now
 ```
 
 In this tutorial, a version of the kernel from the previous tutorial is loaded for demo purposes. In
@@ -118,6 +119,18 @@ IN:
 
 ## Diff to previous
 ```diff
+
+diff -uNr 05_drivers_gpio_uart/Cargo.toml 06_uart_chainloader/Cargo.toml
+--- 05_drivers_gpio_uart/Cargo.toml
++++ 06_uart_chainloader/Cargo.toml
+@@ -1,6 +1,6 @@
+ [package]
+ name = "mingo"
+-version = "0.5.0"
++version = "0.6.0"
+ authors = ["Andre Richter <andre.o.richter@gmail.com>"]
+ edition = "2018"
+
 Binary files 05_drivers_gpio_uart/demo_payload_rpi3.img and 06_uart_chainloader/demo_payload_rpi3.img differ
 Binary files 05_drivers_gpio_uart/demo_payload_rpi4.img and 06_uart_chainloader/demo_payload_rpi4.img differ
 
@@ -373,7 +386,7 @@ diff -uNr 05_drivers_gpio_uart/src/main.rs 06_uart_chainloader/src/main.rs
  #![feature(const_fn_fn_ptr_basics)]
  #![feature(format_args_nl)]
  #![feature(global_asm)]
-@@ -146,33 +147,56 @@
+@@ -146,38 +147,56 @@
      kernel_main()
  }
 
@@ -389,15 +402,15 @@ diff -uNr 05_drivers_gpio_uart/src/main.rs 06_uart_chainloader/src/main.rs
      use bsp::console::console;
      use console::interface::All;
 -    use driver::interface::DriverManager;
-
--    println!("[0] Booting on: {}", bsp::board_name());
-+    println!("{}", MINILOAD_LOGO);
-+    println!("{:^37}", bsp::board_name());
-+    println!();
-+    println!("[ML] Requesting binary");
-+    console().flush();
-
--    println!("[1] Drivers loaded:");
+-
+-    println!(
+-        "[0] {} version {}",
+-        env!("CARGO_PKG_NAME"),
+-        env!("CARGO_PKG_VERSION")
+-    );
+-    println!("[1] Booting on: {}", bsp::board_name());
+-
+-    println!("[2] Drivers loaded:");
 -    for (i, driver) in bsp::driver::driver_manager()
 -        .all_device_drivers()
 -        .iter()
@@ -405,24 +418,30 @@ diff -uNr 05_drivers_gpio_uart/src/main.rs 06_uart_chainloader/src/main.rs
 -    {
 -        println!("      {}. {}", i + 1, driver.compatible());
 -    }
-+    // Discard any spurious received characters before starting with the loader protocol.
-+    console().clear_rx();
 
 -    println!(
--        "[2] Chars written: {}",
+-        "[3] Chars written: {}",
 -        bsp::console::console().chars_written()
 -    );
--    println!("[3] Echoing input now");
-+    // Notify `Minipush` to send the binary.
-+    for _ in 0..3 {
-+        console().write_char(3 as char);
-+    }
+-    println!("[4] Echoing input now");
++    println!("{}", MINILOAD_LOGO);
++    println!("{:^37}", bsp::board_name());
++    println!();
++    println!("[ML] Requesting binary");
++    console().flush();
 
 -    // Discard any spurious received characters before going into echo mode.
--    console().clear_rx();
++    // Discard any spurious received characters before starting with the loader protocol.
+     console().clear_rx();
 -    loop {
 -        let c = bsp::console::console().read_char();
 -        bsp::console::console().write_char(c);
++
++    // Notify `Minipush` to send the binary.
++    for _ in 0..3 {
++        console().write_char(3 as char);
+     }
++
 +    // Read the binary's size.
 +    let mut size: u32 = u32::from(console().read_char() as u8);
 +    size |= u32::from(console().read_char() as u8) << 8;
@@ -439,7 +458,7 @@ diff -uNr 05_drivers_gpio_uart/src/main.rs 06_uart_chainloader/src/main.rs
 +        for i in 0..size {
 +            core::ptr::write_volatile(kernel_addr.offset(i as isize), console().read_char() as u8)
 +        }
-     }
++    }
 +
 +    println!("[ML] Loaded! Executing the payload now\n");
 +    console().flush();

@@ -406,32 +406,33 @@ Minipush 1.0
            Raspberry Pi 3
 
 [ML] Requesting binary
-[MP] ⏩ Pushing 64 KiB ========================================🦀 100% 32 KiB/s Time: 00:00:02
+[MP] ⏩ Pushing 64 KiB =========================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
-[    3.091032] Booting on: Raspberry Pi 3
-[    3.092116] MMU online. Special regions:
-[    3.094025]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
-[    3.098103]       0x3f000000 - 0x4000ffff |  16 MiB | Dev RW PXN | Device MMIO
-[    3.101661] Current privilege level: EL1
-[    3.103570] Exception handling state:
-[    3.105348]       Debug:  Masked
-[    3.106910]       SError: Masked
-[    3.108472]       IRQ:    Masked
-[    3.110034]       FIQ:    Masked
-[    3.111596] Architectural timer resolution: 52 ns
-[    3.113895] Drivers loaded:
-[    3.115240]       1. BCM GPIO
-[    3.116672]       2. BCM PL011 UART
-[    3.118364] Timer test, spinning for 1 second
-[    4.120490]
-[    4.120494] Trying to read from address 8 GiB...
-[    4.122700] ************************************************
-[    4.125476] Whoa! We recovered from a synchronous exception!
-[    4.128253] ************************************************
-[    4.131030]
-[    4.131724] Let's try again
-[    4.133069] Trying to read from address 9 GiB...
+[    0.980247] mingo version 0.11.0
+[    0.980454] Booting on: Raspberry Pi 3
+[    0.980909] MMU online. Special regions:
+[    0.981386]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
+[    0.982404]       0x3f000000 - 0x4000ffff |  16 MiB | Dev RW PXN | Device MMIO
+[    0.983293] Current privilege level: EL1
+[    0.983769] Exception handling state:
+[    0.984213]       Debug:  Masked
+[    0.984604]       SError: Masked
+[    0.984993]       IRQ:    Masked
+[    0.985383]       FIQ:    Masked
+[    0.985773] Architectural timer resolution: 52 ns
+[    0.986347] Drivers loaded:
+[    0.986684]       1. BCM GPIO
+[    0.987041]       2. BCM PL011 UART
+[    0.987463] Timer test, spinning for 1 second
+[    1.987994]
+[    1.987998] Trying to read from address 8 GiB...
+[    1.988547] ************************************************
+[    1.989240] Whoa! We recovered from a synchronous exception!
+[    1.989933] ************************************************
+[    1.990627]
+[    1.990800] Let's try again
+[    1.991136] Trying to read from address 9 GiB...
 
 Kernel panic:
 
@@ -440,7 +441,7 @@ FAR_EL1: 0x0000000240000000
 ESR_EL1: 0x96000004
       Exception Class         (EC) : 0x25 - Data Abort, current EL
       Instr Specific Syndrome (ISS): 0x4
-ELR_EL1: 0x0000000000081458
+ELR_EL1: 0x0000000000082578
 SPSR_EL1: 0x600003c5
       Flags:
             Negative (N): Not set
@@ -455,26 +456,38 @@ SPSR_EL1: 0x600003c5
       Illegal Execution State (IL): Not set
 
 General purpose register:
-      x0 : 0x0000000000000000         x1 : 0x0000000000085727
-      x2 : 0x0000000000000027         x3 : 0x0000000000000000
-      x4 : 0x0000000000000002         x5 : 0x3f27329c00000000
-      x6 : 0x0000000000000000         x7 : 0xdbd1b90800000000
+      x0 : 0x0000000000000000         x1 : 0x00000000000858c7
+      x2 : 0x0000000000000027         x3 : 0x0000000000084cc4
+      x4 : 0x0000000000000003         x5 : 0x3f27329400000000
+      x6 : 0x0000000000000000         x7 : 0xd3d0b80800000000
       x8 : 0x0000000240000000         x9 : 0x000000003f201000
-      x10: 0x0000000000000019         x11: 0x00000000000819d0
-      x12: 0x0000000000000000         x13: 0x0000000000000033
+      x10: 0x0000000000000019         x11: 0x0000000000000000
+      x12: 0x0000000000000001         x13: 0x0000000000000036
       x14: 0x000000000007fc2d         x15: 0x0000000000000000
-      x16: 0x0000000000000040         x17: 0xfd7f702255f847d0
-      x18: 0x0000000000000003         x19: 0x0000000000090008
-      x20: 0x0000000000085510         x21: 0x000000003b9aca00
-      x22: 0x00000000000003e8         x23: 0x0000000000081610
-      x24: 0x0000000000082268         x25: 0x00000000000f4240
-      x26: 0xffffffffc4653600         x27: 0x00000000000855f0
-      x28: 0x0000000000083f80         x29: 0x0000000000086810
-      lr : 0x000000000008144c
+      x16: 0x0000000000000040         x17: 0xfd39702255e846c0
+      x18: 0x9cd47880832f1200         x19: 0x0000000000090008
+      x20: 0x00000000000856b0         x21: 0x000000003b9aca00
+      x22: 0x000000000008274c         x23: 0x00000000000833d8
+      x24: 0x00000000000003e8         x25: 0xffffffffc4653600
+      x26: 0x00000000000f4240         x27: 0x0000000000085790
+      x28: 0x0000000000086a50         x29: 0x00000000000867ed
+      lr : 0x000000000008256c
 ```
 
 ## Diff to previous
 ```diff
+
+diff -uNr 10_virtual_mem_part1_identity_mapping/Cargo.toml 11_exceptions_part1_groundwork/Cargo.toml
+--- 10_virtual_mem_part1_identity_mapping/Cargo.toml
++++ 11_exceptions_part1_groundwork/Cargo.toml
+@@ -1,6 +1,6 @@
+ [package]
+ name = "mingo"
+-version = "0.10.0"
++version = "0.11.0"
+ authors = ["Andre Richter <andre.o.richter@gmail.com>"]
+ edition = "2018"
+
 
 diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 11_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs
 --- 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs
@@ -963,7 +976,7 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/main.rs 11_exceptions_part1_
      if let Err(string) = memory::mmu::mmu().enable_mmu_and_caching() {
          panic!("MMU: {}", string);
      }
-@@ -196,13 +198,28 @@
+@@ -201,13 +203,28 @@
      info!("Timer test, spinning for 1 second");
      time::time_manager().spin_for(Duration::from_secs(1));
 

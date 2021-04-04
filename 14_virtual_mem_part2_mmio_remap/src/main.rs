@@ -81,6 +81,7 @@ fn kernel_main() -> ! {
     use driver::interface::DriverManager;
     use exception::asynchronous::interface::IRQManager;
 
+    info!("{}", libkernel::version());
     info!("Booting on: {}", bsp::board_name());
 
     info!("MMU online:");

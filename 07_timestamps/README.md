@@ -27,22 +27,35 @@ Minipush 1.0
            Raspberry Pi 3
 
 [ML] Requesting binary
-[MP] ⏩ Pushing 11 KiB =========================================🦀 100% 0 KiB/s Time: 00:00:00
+[MP] ⏩ Pushing 12 KiB =========================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
-[    0.543941] Booting on: Raspberry Pi 3
-[    0.545059] Architectural timer resolution: 52 ns
-[    0.547358] Drivers loaded:
-[    0.548703]       1. BCM GPIO
-[    0.550135]       2. BCM PL011 UART
-[W   0.551828] Spin duration smaller than architecturally supported, skipping
-[    0.555212] Spinning for 1 second
-[    1.556818] Spinning for 1 second
-[    2.557690] Spinning for 1 second
+[    0.140431] mingo version 0.7.0
+[    0.140630] Booting on: Raspberry Pi 3
+[    0.141085] Architectural timer resolution: 52 ns
+[    0.141660] Drivers loaded:
+[    0.141995]       1. BCM GPIO
+[    0.142353]       2. BCM PL011 UART
+[W   0.142777] Spin duration smaller than architecturally supported, skipping
+[    0.143621] Spinning for 1 second
+[    1.144023] Spinning for 1 second
+[    2.144245] Spinning for 1 second
 ```
 
 ## Diff to previous
 ```diff
+
+diff -uNr 06_uart_chainloader/Cargo.toml 07_timestamps/Cargo.toml
+--- 06_uart_chainloader/Cargo.toml
++++ 07_timestamps/Cargo.toml
+@@ -1,6 +1,6 @@
+ [package]
+ name = "mingo"
+-version = "0.6.0"
++version = "0.7.0"
+ authors = ["Andre Richter <andre.o.richter@gmail.com>"]
+ edition = "2018"
+
 Binary files 06_uart_chainloader/demo_payload_rpi3.img and 07_timestamps/demo_payload_rpi3.img differ
 Binary files 06_uart_chainloader/demo_payload_rpi4.img and 07_timestamps/demo_payload_rpi4.img differ
 
@@ -475,7 +488,7 @@ diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
 
  /// Early init code.
  ///
-@@ -147,56 +147,33 @@
+@@ -147,56 +147,38 @@
      kernel_main()
  }
 
@@ -506,8 +519,26 @@ diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
 -    // Notify `Minipush` to send the binary.
 -    for _ in 0..3 {
 -        console().write_char(3 as char);
--    }
++    info!(
++        "{} version {}",
++        env!("CARGO_PKG_NAME"),
++        env!("CARGO_PKG_VERSION")
++    );
 +    info!("Booting on: {}", bsp::board_name());
++
++    info!(
++        "Architectural timer resolution: {} ns",
++        time::time_manager().resolution().as_nanos()
++    );
++
++    info!("Drivers loaded:");
++    for (i, driver) in bsp::driver::driver_manager()
++        .all_device_drivers()
++        .iter()
++        .enumerate()
++    {
++        info!("      {}. {}", i + 1, driver.compatible());
+     }
 
 -    // Read the binary's size.
 -    let mut size: u32 = u32::from(console().read_char() as u8);
@@ -525,28 +556,16 @@ diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
 -        for i in 0..size {
 -            core::ptr::write_volatile(kernel_addr.offset(i as isize), console().read_char() as u8)
 -        }
-+    info!(
-+        "Architectural timer resolution: {} ns",
-+        time::time_manager().resolution().as_nanos()
-+    );
-+
-+    info!("Drivers loaded:");
-+    for (i, driver) in bsp::driver::driver_manager()
-+        .all_device_drivers()
-+        .iter()
-+        .enumerate()
-+    {
-+        info!("      {}. {}", i + 1, driver.compatible());
-     }
+-    }
++    // Test a failing timer case.
++    time::time_manager().spin_for(Duration::from_nanos(1));
 
 -    println!("[ML] Loaded! Executing the payload now\n");
 -    console().flush();
 -
 -    // Use black magic to create a function pointer.
 -    let kernel: fn() -> ! = unsafe { core::mem::transmute(kernel_addr) };
-+    // Test a failing timer case.
-+    time::time_manager().spin_for(Duration::from_nanos(1));
-
+-
 -    // Jump to loaded kernel!
 -    kernel()
 +    loop {

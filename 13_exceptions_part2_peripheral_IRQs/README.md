@@ -675,28 +675,29 @@ Minipush 1.0
            Raspberry Pi 3
 
 [ML] Requesting binary
-[MP] ⏩ Pushing 66 KiB ========================================🦀 100% 33 KiB/s Time: 00:00:02
+[MP] ⏩ Pushing 66 KiB =========================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
-[    3.203172] Booting on: Raspberry Pi 3
-[    3.204255] MMU online. Special regions:
-[    3.206164]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
-[    3.210242]       0x3f000000 - 0x4000ffff |  16 MiB | Dev RW PXN | Device MMIO
-[    3.213800] Current privilege level: EL1
-[    3.215709] Exception handling state:
-[    3.217487]       Debug:  Masked
-[    3.219049]       SError: Masked
-[    3.220611]       IRQ:    Unmasked
-[    3.222260]       FIQ:    Masked
-[    3.223822] Architectural timer resolution: 52 ns
-[    3.226121] Drivers loaded:
-[    3.227466]       1. BCM GPIO
-[    3.228898]       2. BCM PL011 UART
-[    3.230590]       3. BCM Interrupt Controller
-[    3.232716] Registered IRQ handlers:
-[    3.234451]       Peripheral handler:
-[    3.236232]              57. BCM PL011 UART
-[    3.238269] Echoing input now
+[    1.010579] mingo version 0.13.0
+[    1.010787] Booting on: Raspberry Pi 3
+[    1.011242] MMU online. Special regions:
+[    1.011718]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
+[    1.012737]       0x3f000000 - 0x4000ffff |  16 MiB | Dev RW PXN | Device MMIO
+[    1.013625] Current privilege level: EL1
+[    1.014102] Exception handling state:
+[    1.014546]       Debug:  Masked
+[    1.014936]       SError: Masked
+[    1.015326]       IRQ:    Unmasked
+[    1.015738]       FIQ:    Masked
+[    1.016127] Architectural timer resolution: 52 ns
+[    1.016702] Drivers loaded:
+[    1.017038]       1. BCM GPIO
+[    1.017395]       2. BCM PL011 UART
+[    1.017817]       3. BCM Interrupt Controller
+[    1.018348] Registered IRQ handlers:
+[    1.018782]       Peripheral handler:
+[    1.019228]              57. BCM PL011 UART
+[    1.019735] Echoing input now
 ```
 
 Raspberry Pi 4:
@@ -717,28 +718,29 @@ Minipush 1.0
            Raspberry Pi 4
 
 [ML] Requesting binary
-[MP] ⏩ Pushing 73 KiB ========================================🦀 100% 24 KiB/s Time: 00:00:03
+[MP] ⏩ Pushing 73 KiB =========================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
-[    3.486234] Booting on: Raspberry Pi 4
-[    3.486623] MMU online. Special regions:
-[    3.488532]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
-[    3.492610]       0xfe000000 - 0xff84ffff |  24 MiB | Dev RW PXN | Device MMIO
-[    3.496167] Current privilege level: EL1
-[    3.498076] Exception handling state:
-[    3.499855]       Debug:  Masked
-[    3.501417]       SError: Masked
-[    3.502979]       IRQ:    Unmasked
-[    3.504628]       FIQ:    Masked
-[    3.506189] Architectural timer resolution: 18 ns
-[    3.508489] Drivers loaded:
-[    3.509834]       1. BCM GPIO
-[    3.511266]       2. BCM PL011 UART
-[    3.512958]       3. GICv2 (ARM Generic Interrupt Controller v2)
-[    3.515908] Registered IRQ handlers:
-[    3.517643]       Peripheral handler:
-[    3.519425]             153. BCM PL011 UART
-[    3.521463] Echoing input now
+[    1.030536] mingo version 0.13.0
+[    1.030569] Booting on: Raspberry Pi 4
+[    1.031024] MMU online. Special regions:
+[    1.031501]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
+[    1.032519]       0xfe000000 - 0xff84ffff |  24 MiB | Dev RW PXN | Device MMIO
+[    1.033408] Current privilege level: EL1
+[    1.033884] Exception handling state:
+[    1.034328]       Debug:  Masked
+[    1.034718]       SError: Masked
+[    1.035108]       IRQ:    Unmasked
+[    1.035520]       FIQ:    Masked
+[    1.035910] Architectural timer resolution: 18 ns
+[    1.036484] Drivers loaded:
+[    1.036820]       1. BCM GPIO
+[    1.037178]       2. BCM PL011 UART
+[    1.037600]       3. GICv2 (ARM Generic Interrupt Controller v2)
+[    1.038337] Registered IRQ handlers:
+[    1.038770]       Peripheral handler:
+[    1.039217]             153. BCM PL011 UART
+[    1.039725] Echoing input now
 ```
 
 ## Diff to previous
@@ -747,7 +749,11 @@ Minipush 1.0
 diff -uNr 12_integrated_testing/Cargo.toml 13_exceptions_part2_peripheral_IRQs/Cargo.toml
 --- 12_integrated_testing/Cargo.toml
 +++ 13_exceptions_part2_peripheral_IRQs/Cargo.toml
-@@ -4,10 +4,8 @@
+@@ -1,13 +1,11 @@
+ [package]
+ name = "mingo"
+-version = "0.12.0"
++version = "0.13.0"
  authors = ["Andre Richter <andre.o.richter@gmail.com>"]
  edition = "2018"
 
@@ -2444,9 +2450,9 @@ diff -uNr 12_integrated_testing/src/main.rs 13_exceptions_part2_peripheral_IRQs/
      use driver::interface::DriverManager;
 +    use exception::asynchronous::interface::IRQManager;
 
+     info!("{}", libkernel::version());
      info!("Booting on: {}", bsp::board_name());
-
-@@ -76,12 +88,9 @@
+@@ -77,12 +89,9 @@
          info!("      {}. {}", i + 1, driver.compatible());
      }
 

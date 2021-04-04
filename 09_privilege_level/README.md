@@ -177,26 +177,39 @@ Minipush 1.0
            Raspberry Pi 3
 
 [ML] Requesting binary
-[MP] ⏩ Pushing 13 KiB =========================================🦀 100% 0 KiB/s Time: 00:00:00
+[MP] ⏩ Pushing 14 KiB =========================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
-[    0.637617] Booting on: Raspberry Pi 3
-[    0.638737] Current privilege level: EL1
-[    0.640645] Exception handling state:
-[    0.642424]       Debug:  Masked
-[    0.643986]       SError: Masked
-[    0.645548]       IRQ:    Masked
-[    0.647110]       FIQ:    Masked
-[    0.648672] Architectural timer resolution: 52 ns
-[    0.650971] Drivers loaded:
-[    0.652316]       1. BCM GPIO
-[    0.653748]       2. BCM PL011 UART
-[    0.655440] Timer test, spinning for 1 second
-[    1.657567] Echoing input now
+[    0.165757] mingo version 0.9.0
+[    0.165957] Booting on: Raspberry Pi 3
+[    0.166412] Current privilege level: EL1
+[    0.166888] Exception handling state:
+[    0.167333]       Debug:  Masked
+[    0.167723]       SError: Masked
+[    0.168112]       IRQ:    Masked
+[    0.168502]       FIQ:    Masked
+[    0.168893] Architectural timer resolution: 52 ns
+[    0.169467] Drivers loaded:
+[    0.169803]       1. BCM GPIO
+[    0.170160]       2. BCM PL011 UART
+[    0.170583] Timer test, spinning for 1 second
+[    1.171115] Echoing input now
 ```
 
 ## Diff to previous
 ```diff
+
+diff -uNr 08_hw_debug_JTAG/Cargo.toml 09_privilege_level/Cargo.toml
+--- 08_hw_debug_JTAG/Cargo.toml
++++ 09_privilege_level/Cargo.toml
+@@ -1,6 +1,6 @@
+ [package]
+ name = "mingo"
+-version = "0.8.0"
++version = "0.9.0"
+ authors = ["Andre Richter <andre.o.richter@gmail.com>"]
+ edition = "2018"
+
 
 diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.rs 09_privilege_level/src/_arch/aarch64/cpu/boot.rs
 --- 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.rs
@@ -494,7 +507,7 @@ diff -uNr 08_hw_debug_JTAG/src/main.rs 09_privilege_level/src/main.rs
  mod memory;
  mod panic_wait;
  mod print;
-@@ -149,12 +150,20 @@
+@@ -149,6 +150,8 @@
 
  /// The main function running after the early init.
  fn kernel_main() -> ! {
@@ -503,7 +516,8 @@ diff -uNr 08_hw_debug_JTAG/src/main.rs 09_privilege_level/src/main.rs
      use core::time::Duration;
      use driver::interface::DriverManager;
      use time::interface::TimeManager;
-
+@@ -160,6 +163,12 @@
+     );
      info!("Booting on: {}", bsp::board_name());
 
 +    let (_, privilege_level) = exception::current_privilege_level();
@@ -515,7 +529,7 @@ diff -uNr 08_hw_debug_JTAG/src/main.rs 09_privilege_level/src/main.rs
      info!(
          "Architectural timer resolution: {} ns",
          time::time_manager().resolution().as_nanos()
-@@ -169,11 +178,15 @@
+@@ -174,11 +183,15 @@
          info!("      {}. {}", i + 1, driver.compatible());
      }
 
