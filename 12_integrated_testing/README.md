@@ -818,7 +818,7 @@ diff -uNr 11_exceptions_part1_groundwork/.cargo/config.toml 12_integrated_testin
 diff -uNr 11_exceptions_part1_groundwork/Cargo.toml 12_integrated_testing/Cargo.toml
 --- 11_exceptions_part1_groundwork/Cargo.toml
 +++ 12_integrated_testing/Cargo.toml
-@@ -1,31 +1,58 @@
+@@ -1,30 +1,58 @@
  [package]
  name = "mingo"
 -version = "0.11.0"
@@ -826,7 +826,7 @@ diff -uNr 11_exceptions_part1_groundwork/Cargo.toml 12_integrated_testing/Cargo.
  authors = ["Andre Richter <andre.o.richter@gmail.com>"]
  edition = "2018"
 
-+# TODO: Fixme
++# TODO: FIXME
 +# LTO seems to kill the console integration test (empty text section). Disable until a fix is found.
  [profile.release]
 -lto = true
@@ -857,7 +857,7 @@ diff -uNr 11_exceptions_part1_groundwork/Cargo.toml 12_integrated_testing/Cargo.
  # Platform specific dependencies
  [target.'cfg(target_arch = "aarch64")'.dependencies]
  cortex-a = { version = "5.x.x" }
-
++
 +##--------------------------------------------------------------------------------------------------
 +## Testing
 +##--------------------------------------------------------------------------------------------------

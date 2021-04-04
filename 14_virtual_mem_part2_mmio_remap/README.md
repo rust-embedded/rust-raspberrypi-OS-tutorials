@@ -2,7 +2,7 @@
 
 ## tl;dr
 
-- We introduce a first set of changes which we eventually need for separating `kernel` and `user`
+- We introduce a first set of changes which is eventually needed for separating `kernel` and `user`
   address spaces.
 - The memory mapping strategy gets more sophisticated as we do away with `identity mapping` the
   whole of the board's address space.

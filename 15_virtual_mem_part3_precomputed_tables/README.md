@@ -1274,7 +1274,12 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs 15_v
 diff -uNr 14_virtual_mem_part2_mmio_remap/src/main.rs 15_virtual_mem_part3_precomputed_tables/src/main.rs
 --- 14_virtual_mem_part2_mmio_remap/src/main.rs
 +++ 15_virtual_mem_part3_precomputed_tables/src/main.rs
-@@ -18,25 +18,16 @@
+@@ -15,28 +15,21 @@
+
+ /// Early init code.
+ ///
++/// When this code runs, virtual memory is already enabled.
++///
  /// # Safety
  ///
  /// - Only a single core must be active and running this function.
@@ -1304,7 +1309,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/main.rs 15_virtual_mem_part3_preco
 
      // Bring up the drivers needed for printing first.
      for i in bsp::driver::driver_manager()
-@@ -47,7 +38,7 @@
+@@ -47,7 +40,7 @@
          i.init().unwrap_or_else(|_| cpu::wait_forever());
      }
      bsp::driver::driver_manager().post_early_print_device_driver_init();

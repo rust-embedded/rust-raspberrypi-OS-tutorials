@@ -18,7 +18,7 @@
 
 ## Code to look at
 
-- Custom `link.ld` linker script.
+- `BSP`-specific `link.ld` linker script.
     - Load address at `0x8_0000`
     - Only `.text` section.
 - `main.rs`: Important [inner attributes]:

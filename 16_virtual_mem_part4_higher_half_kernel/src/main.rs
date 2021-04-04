@@ -15,6 +15,8 @@ use libkernel::{bsp, cpu, driver, exception, info, memory, state, time, warn};
 
 /// Early init code.
 ///
+/// When this code runs, virtual memory is already enabled.
+///
 /// # Safety
 ///
 /// - Only a single core must be active and running this function.

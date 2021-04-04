@@ -28,4 +28,3 @@ register = { version = "1.x.x", optional = true }
 # Platform specific dependencies
 [target.'cfg(target_arch = "aarch64")'.dependencies]
 cortex-a = { version = "5.x.x" }
-

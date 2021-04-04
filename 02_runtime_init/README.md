@@ -39,7 +39,7 @@ diff -uNr 01_wait_forever/Cargo.toml 02_runtime_init/Cargo.toml
  authors = ["Andre Richter <andre.o.richter@gmail.com>"]
  edition = "2018"
 
-@@ -21,3 +21,8 @@
+@@ -21,3 +21,7 @@
  ##--------------------------------------------------------------------------------------------------
 
  [dependencies]
@@ -47,7 +47,6 @@ diff -uNr 01_wait_forever/Cargo.toml 02_runtime_init/Cargo.toml
 +# Platform specific dependencies
 +[target.'cfg(target_arch = "aarch64")'.dependencies]
 +cortex-a = { version = "5.x.x" }
-+
 
 diff -uNr 01_wait_forever/Makefile 02_runtime_init/Makefile
 --- 01_wait_forever/Makefile

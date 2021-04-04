@@ -2,8 +2,8 @@
 
 ## tl;dr
 
-- We write `device drivers` for the two interrupt controllers on the **Raspberry Pi 3** (Broadcom
-  custom controller) and **Pi 4** (ARM Generic Interrupt Controller v2, `GICv2`).
+- We write `device drivers` for the two interrupt controllers on the **Raspberry Pi 3** (`Broadcom`
+  custom controller) and **Pi 4** (`ARM` Generic Interrupt Controller v2, `GICv2`).
 - Modularity is ensured by interfacing everything through a trait named `IRQManager`.
 - Handling for our first peripheral IRQs is implemented: The `UART`'s receive IRQs.
 
@@ -757,7 +757,7 @@ diff -uNr 12_integrated_testing/Cargo.toml 13_exceptions_part2_peripheral_IRQs/C
  authors = ["Andre Richter <andre.o.richter@gmail.com>"]
  edition = "2018"
 
--# TODO: Fixme
+-# TODO: FIXME
 -# LTO seems to kill the console integration test (empty text section). Disable until a fix is found.
  [profile.release]
 -lto = false
