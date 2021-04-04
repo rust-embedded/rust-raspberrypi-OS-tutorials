@@ -144,9 +144,9 @@ executing from.
 
 Without going in too much detail, what the instruction basically does is: It retrieves the `4 KiB`
 page address that belongs to the program counter's (PC) current position (PC is at `0x8_0010`, so
-the page address is `0x8_0000`), and adds adds `0x1_0000`. So after the `ADRP` instruction, register
-`x0` holds the value `0x9_0000`. To this value, `8` is added in the next instruction, resulting in
-the overall address of `0x9_0008`, which is exactly where `global_data_word` is located. This works,
+the page address is `0x8_0000`), and adds `0x1_0000`. So after the `ADRP` instruction, register `x0`
+holds the value `0x9_0000`. To this value, `8` is added in the next instruction, resulting in the
+overall address of `0x9_0008`, which is exactly where `global_data_word` is located. This works,
 because after linking a `static executable binary` like we do since `tutorial 01`, relative
 positions of code and data are fixed, and not supposed to change during runtime.
 
@@ -154,9 +154,6 @@ positions of code and data are fixed, and not supposed to change during runtime.
 
 If the Raspberry's firmware now loads this binary at address `0x8_0000`, as always, we can be sure
 that our function returns the correct address of our global data word.
-
-> So far, all looks good, doesn't it? However, this was a lot to digest already, and we're far from
-> finished. So take a minute or two and clear your mind before we continue. 🧘
 
 Now lets link this to the most significant area of memory:
 
@@ -287,6 +284,9 @@ and enable the `MMU`.
 What we need is called [position-independent code].
 
 [position-independent code]: https://en.wikipedia.org/wiki/Position-independent_code
+
+> Much low-level stuff in this tutorial, isn't it? This was a lot to digest already, but we're far
+> from finished. So take a minute or two and clear your mind before we continue. 🧘
 
 ## Position-Independent Code (PIC)
 
