@@ -33,8 +33,8 @@ unsafe fn kernel_init() -> ! {
     // The QEMU process running this test will be closed by the I/O test harness.
     // cpu::wait_forever();
 
-    // For some reason, in this test in this tutorial, rustc or the linker produces an empty binary
-    // when wait_forever() is used. Calling qemu_exit_success() fixes this behavior. So for the time
+    // For some reason, in this test, rustc or the linker produces an empty binary when
+    // wait_forever() is used. Calling qemu_exit_success() fixes this behavior. So for the time
     // being, the following lines are just a workaround to fix this compiler/linker weirdness.
     use libkernel::time::interface::TimeManager;
     libkernel::time::time_manager().spin_for(core::time::Duration::from_secs(3600));

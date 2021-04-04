@@ -2716,24 +2716,6 @@ diff -uNr 12_integrated_testing/src/synchronization.rs 13_exceptions_part2_perip
 +    }
  }
 
-diff -uNr 12_integrated_testing/tests/00_console_sanity.rs 13_exceptions_part2_peripheral_IRQs/tests/00_console_sanity.rs
---- 12_integrated_testing/tests/00_console_sanity.rs
-+++ 13_exceptions_part2_peripheral_IRQs/tests/00_console_sanity.rs
-@@ -31,12 +31,5 @@
-     print!("{}", console().chars_read());
-
-     // The QEMU process running this test will be closed by the I/O test harness.
--    // cpu::wait_forever();
--
--    // For some reason, in this test in this tutorial, rustc or the linker produces an empty binary
--    // when wait_forever() is used. Calling qemu_exit_success() fixes this behavior. So for the time
--    // being, the following lines are just a workaround to fix this compiler/linker weirdness.
--    use libkernel::time::interface::TimeManager;
--    libkernel::time::time_manager().spin_for(core::time::Duration::from_secs(3600));
--    cpu::qemu_exit_success()
-+    cpu::wait_forever()
- }
-
 diff -uNr 12_integrated_testing/tests/03_exception_irq_sanity.rs 13_exceptions_part2_peripheral_IRQs/tests/03_exception_irq_sanity.rs
 --- 12_integrated_testing/tests/03_exception_irq_sanity.rs
 +++ 13_exceptions_part2_peripheral_IRQs/tests/03_exception_irq_sanity.rs
