@@ -749,7 +749,7 @@ Minipush 1.0
 diff -uNr 12_integrated_testing/Cargo.toml 13_exceptions_part2_peripheral_IRQs/Cargo.toml
 --- 12_integrated_testing/Cargo.toml
 +++ 13_exceptions_part2_peripheral_IRQs/Cargo.toml
-@@ -1,13 +1,11 @@
+@@ -1,6 +1,6 @@
  [package]
  name = "mingo"
 -version = "0.12.0"
@@ -757,14 +757,6 @@ diff -uNr 12_integrated_testing/Cargo.toml 13_exceptions_part2_peripheral_IRQs/C
  authors = ["Andre Richter <andre.o.richter@gmail.com>"]
  edition = "2018"
 
--# TODO: FIXME
--# LTO seems to kill the console integration test (empty text section). Disable until a fix is found.
- [profile.release]
--lto = false
-+lto = true
-
- [features]
- default = []
 
 diff -uNr 12_integrated_testing/src/_arch/aarch64/cpu/smp.rs 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/cpu/smp.rs
 --- 12_integrated_testing/src/_arch/aarch64/cpu/smp.rs
@@ -2722,6 +2714,24 @@ diff -uNr 12_integrated_testing/src/synchronization.rs 13_exceptions_part2_perip
 +
 +        assert_eq!(size_of::<InitStateLock<u64>>(), size_of::<u64>());
 +    }
+ }
+
+diff -uNr 12_integrated_testing/tests/00_console_sanity.rs 13_exceptions_part2_peripheral_IRQs/tests/00_console_sanity.rs
+--- 12_integrated_testing/tests/00_console_sanity.rs
++++ 13_exceptions_part2_peripheral_IRQs/tests/00_console_sanity.rs
+@@ -31,12 +31,5 @@
+     print!("{}", console().chars_read());
+
+     // The QEMU process running this test will be closed by the I/O test harness.
+-    // cpu::wait_forever();
+-
+-    // For some reason, in this test in this tutorial, rustc or the linker produces an empty binary
+-    // when wait_forever() is used. Calling qemu_exit_success() fixes this behavior. So for the time
+-    // being, the following lines are just a workaround to fix this compiler/linker weirdness.
+-    use libkernel::time::interface::TimeManager;
+-    libkernel::time::time_manager().spin_for(core::time::Duration::from_secs(3600));
+-    cpu::qemu_exit_success()
++    cpu::wait_forever()
  }
 
 diff -uNr 12_integrated_testing/tests/03_exception_irq_sanity.rs 13_exceptions_part2_peripheral_IRQs/tests/03_exception_irq_sanity.rs

@@ -190,6 +190,7 @@ class DevTool
 
     def ready_for_publish_no_rust
         clean
+        fmt
         misspell
         rubocop
         copyright

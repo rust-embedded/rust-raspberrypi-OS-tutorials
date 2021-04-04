@@ -818,7 +818,7 @@ diff -uNr 11_exceptions_part1_groundwork/.cargo/config.toml 12_integrated_testin
 diff -uNr 11_exceptions_part1_groundwork/Cargo.toml 12_integrated_testing/Cargo.toml
 --- 11_exceptions_part1_groundwork/Cargo.toml
 +++ 12_integrated_testing/Cargo.toml
-@@ -1,30 +1,58 @@
+@@ -1,6 +1,6 @@
  [package]
  name = "mingo"
 -version = "0.11.0"
@@ -826,13 +826,7 @@ diff -uNr 11_exceptions_part1_groundwork/Cargo.toml 12_integrated_testing/Cargo.
  authors = ["Andre Richter <andre.o.richter@gmail.com>"]
  edition = "2018"
 
-+# TODO: FIXME
-+# LTO seems to kill the console integration test (empty text section). Disable until a fix is found.
- [profile.release]
--lto = true
-+lto = false
-
- [features]
+@@ -11,20 +11,46 @@
  default = []
  bsp_rpi3 = ["register"]
  bsp_rpi4 = ["register"]
@@ -1823,7 +1817,7 @@ diff -uNr 11_exceptions_part1_groundwork/tests/00_console_sanity.rb 12_integrate
 diff -uNr 11_exceptions_part1_groundwork/tests/00_console_sanity.rs 12_integrated_testing/tests/00_console_sanity.rs
 --- 11_exceptions_part1_groundwork/tests/00_console_sanity.rs
 +++ 12_integrated_testing/tests/00_console_sanity.rs
-@@ -0,0 +1,35 @@
+@@ -0,0 +1,42 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2019-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -1857,7 +1851,14 @@ diff -uNr 11_exceptions_part1_groundwork/tests/00_console_sanity.rs 12_integrate
 +    print!("{}", console().chars_read());
 +
 +    // The QEMU process running this test will be closed by the I/O test harness.
-+    cpu::wait_forever()
++    // cpu::wait_forever();
++
++    // For some reason, in this test in this tutorial, rustc or the linker produces an empty binary
++    // when wait_forever() is used. Calling qemu_exit_success() fixes this behavior. So for the time
++    // being, the following lines are just a workaround to fix this compiler/linker weirdness.
++    use libkernel::time::interface::TimeManager;
++    libkernel::time::time_manager().spin_for(core::time::Duration::from_secs(3600));
++    cpu::qemu_exit_success()
 +}
 
 diff -uNr 11_exceptions_part1_groundwork/tests/01_timer_sanity.rs 12_integrated_testing/tests/01_timer_sanity.rs
