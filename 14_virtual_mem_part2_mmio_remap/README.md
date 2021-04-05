@@ -2862,7 +2862,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu.rs 14_virtual_mem_p
 +pub trait AssociatedTranslationTable {
 +    /// A translation table whose address range is:
 +    ///
-+    /// [0, AS_SIZE - 1]
++    /// [AS_SIZE - 1, 0]
 +    type TableStartFromBottom;
  }
 

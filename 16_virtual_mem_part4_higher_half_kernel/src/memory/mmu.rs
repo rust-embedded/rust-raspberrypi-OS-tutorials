@@ -85,7 +85,7 @@ pub trait AssociatedTranslationTable {
 
     /// A translation table whose address range is:
     ///
-    /// [0, AS_SIZE - 1]
+    /// [AS_SIZE - 1, 0]
     type TableStartFromBottom;
 }
 

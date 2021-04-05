@@ -37,7 +37,7 @@ pub trait AssociatedTranslationTable {
 
     /// A translation table whose address range is:
     ///
-    /// [0, AS_SIZE - 1]
+    /// [AS_SIZE - 1, 0]
     type TableStartFromBottom;
 }
 ```
@@ -602,7 +602,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/memory/mmu.rs 16_virtual_m
 +
 +    /// A translation table whose address range is:
 +    ///
-     /// [0, AS_SIZE - 1]
+     /// [AS_SIZE - 1, 0]
      type TableStartFromBottom;
  }
 
