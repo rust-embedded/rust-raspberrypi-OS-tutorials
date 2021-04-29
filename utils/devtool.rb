@@ -52,7 +52,7 @@ class TutorialCrate
     end
 
     def test_unit
-        return unless testable?
+        return unless kernel_tests?
 
         puts "Unit Tests #{@folder}".light_blue
 
@@ -60,7 +60,7 @@ class TutorialCrate
     end
 
     def test_integration
-        return unless testable?
+        return unless kernel_tests?
 
         puts "Integration Tests #{@folder}".light_blue
 
@@ -74,8 +74,8 @@ class TutorialCrate
 
     private
 
-    def testable?
-        Dir.exist?("#{@folder}/tests")
+    def kernel_tests?
+        File.exist?("#{@folder}/tests/runner.rb")
     end
 end
 
@@ -147,6 +147,13 @@ class DevTool
         system('cd X1_JTAG_boot && bash update.sh')
     end
 
+    def test_xtra
+        return if @user_has_supplied_crates
+
+        puts 'Test Xtra stuff'.light_blue
+        exit(1) unless system('cd *_uart_chainloader && make test')
+    end
+
     def test_unit
         @crates.each(&:test_unit)
     end
@@ -166,8 +173,6 @@ class DevTool
 
     def rubocop
         puts 'Rubocop'.light_blue
-        system('which bundle')
-        system('bundle --version')
         exit(1) unless system('bundle exec rubocop')
     end
 

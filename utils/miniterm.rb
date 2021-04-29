@@ -94,7 +94,7 @@ class MiniTerm
     end
 
     # When the serial lost power or was removed during R/W operation.
-    def handle_reconnect
+    def handle_reconnect(_error)
         connetion_reset
 
         puts
@@ -113,8 +113,8 @@ class MiniTerm
     def run
         open_serial
         terminal
-    rescue ConnectionError, EOFError, Errno::EIO
-        handle_reconnect
+    rescue ConnectionError, EOFError, Errno::EIO => e
+        handle_reconnect(e)
         retry
     rescue StandardError => e
         handle_unexpected(e)
@@ -125,6 +125,9 @@ class MiniTerm
     end
 end
 
+##--------------------------------------------------------------------------------------------------
+## Execution starts here
+##--------------------------------------------------------------------------------------------------
 if __FILE__ == $PROGRAM_NAME
     puts
     puts 'Miniterm 1.0'.cyan

@@ -80,7 +80,7 @@ class MiniPush < MiniTerm
     end
 
     # override
-    def handle_reconnect
+    def handle_reconnect(_error)
         connetion_reset
 
         puts
@@ -100,8 +100,8 @@ class MiniPush < MiniTerm
         send_size
         send_binary
         terminal
-    rescue ConnectionError, EOFError, Errno::EIO, ProtocolError, Timeout::Error
-        handle_reconnect
+    rescue ConnectionError, EOFError, Errno::EIO, ProtocolError, Timeout::Error => e
+        handle_reconnect(e)
         retry
     rescue StandardError => e
         handle_unexpected(e)
@@ -112,14 +112,19 @@ class MiniPush < MiniTerm
     end
 end
 
-puts
-puts 'Minipush 1.0'.cyan
-puts
+##--------------------------------------------------------------------------------------------------
+## Execution starts here
+##--------------------------------------------------------------------------------------------------
+if __FILE__ == $PROGRAM_NAME
+    puts
+    puts 'Minipush 1.0'.cyan
+    puts
 
-# CTRL + C handler. Only here to suppress Ruby's default exception print.
-trap('INT') do
-    # The `ensure` block from `MiniPush::run` will run after exit, restoring console state.
-    exit
+    # CTRL + C handler. Only here to suppress Ruby's default exception print.
+    trap('INT') do
+        # The `ensure` block from `MiniPush::run` will run after exit, restoring console state.
+        exit
+    end
+
+    MiniPush.new(ARGV[0], ARGV[1]).run
 end
-
-MiniPush.new(ARGV[0], ARGV[1]).run

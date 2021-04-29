@@ -70,6 +70,7 @@ DOCKER_ARG_DIR_UTILS = -v $(shell pwd)/../utils:/work/utils
 DOCKER_ARG_DEV       = --privileged -v /dev:/dev
 
 DOCKER_QEMU  = $(DOCKER_CMD_INTERACT) $(DOCKER_IMAGE)
+DOCKER_TEST  = $(DOCKER_CMD_INTERACT) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_IMAGE)
 DOCKER_TOOLS = $(DOCKER_CMD) $(DOCKER_IMAGE)
 
 # Dockerize commands that require USB device passthrough only on Linux
@@ -79,8 +80,9 @@ ifeq ($(UNAME_S),Linux)
     DOCKER_CHAINBOOT = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_IMAGE)
 endif
 
-EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
-EXEC_MINIPUSH = ruby ../utils/minipush.rb
+EXEC_QEMU          = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
+EXEC_MINIPUSH      = ruby ../utils/minipush.rb
+EXEC_QEMU_MINIPUSH = ruby tests/qemu_minipush.rb
 
 .PHONY: all $(KERNEL_ELF) $(KERNEL_BIN) doc qemu qemuasm chainboot clippy clean readelf objdump nm \
     check
@@ -99,7 +101,7 @@ doc:
 	@$(DOC_CMD) --document-private-items --open
 
 ifeq ($(QEMU_MACHINE_TYPE),)
-qemu:
+qemu test:
 	$(call colorecho, "\n$(QEMU_MISSING_STRING)")
 else
 qemu: $(KERNEL_BIN)
@@ -109,6 +111,12 @@ qemu: $(KERNEL_BIN)
 qemuasm: $(KERNEL_BIN)
 	$(call colorecho, "\nLaunching QEMU with ASM output")
 	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN) -d in_asm
+
+test: $(KERNEL_BIN)
+	$(call colorecho, "\nTesting chainloading - $(BSP)")
+	@$(DOCKER_TEST) $(EXEC_QEMU_MINIPUSH) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) \
+                -kernel $(KERNEL_BIN) $(CHAINBOOT_DEMO_PAYLOAD)
+
 endif
 
 chainboot:
