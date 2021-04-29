@@ -722,7 +722,7 @@ diff -uNr 06_uart_chainloader/src/time.rs 07_timestamps/src/time.rs
 diff -uNr 06_uart_chainloader/tests/qemu_minipush.rb 07_timestamps/tests/qemu_minipush.rb
 --- 06_uart_chainloader/tests/qemu_minipush.rb
 +++ 07_timestamps/tests/qemu_minipush.rb
-@@ -1,82 +0,0 @@
+@@ -1,80 +0,0 @@
 -# frozen_string_literal: true
 -
 -# SPDX-License-Identifier: MIT OR Apache-2.0
@@ -776,8 +776,6 @@ diff -uNr 06_uart_chainloader/tests/qemu_minipush.rb 07_timestamps/tests/qemu_mi
 -
 -        quit_qemu_graceful
 -    end
--
--    public
 -
 -    # override
 -    def connetion_reset; end

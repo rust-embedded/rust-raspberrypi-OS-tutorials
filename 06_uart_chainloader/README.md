@@ -495,7 +495,7 @@ diff -uNr 05_drivers_gpio_uart/src/main.rs 06_uart_chainloader/src/main.rs
 diff -uNr 05_drivers_gpio_uart/tests/qemu_minipush.rb 06_uart_chainloader/tests/qemu_minipush.rb
 --- 05_drivers_gpio_uart/tests/qemu_minipush.rb
 +++ 06_uart_chainloader/tests/qemu_minipush.rb
-@@ -0,0 +1,82 @@
+@@ -0,0 +1,80 @@
 +# frozen_string_literal: true
 +
 +# SPDX-License-Identifier: MIT OR Apache-2.0
@@ -549,8 +549,6 @@ diff -uNr 05_drivers_gpio_uart/tests/qemu_minipush.rb 06_uart_chainloader/tests/
 +
 +        quit_qemu_graceful
 +    end
-+
-+    public
 +
 +    # override
 +    def connetion_reset; end

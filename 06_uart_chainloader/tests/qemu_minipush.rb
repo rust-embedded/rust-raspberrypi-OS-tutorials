@@ -52,8 +52,6 @@ class QEMUMiniPush < MiniPush
         quit_qemu_graceful
     end
 
-    public
-
     # override
     def connetion_reset; end
 
