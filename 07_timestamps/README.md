@@ -82,7 +82,7 @@ diff -uNr 06_uart_chainloader/Makefile 07_timestamps/Makefile
  DOCKER_ARG_DEV       = --privileged -v /dev:/dev
 
  DOCKER_QEMU  = $(DOCKER_CMD_INTERACT) $(DOCKER_IMAGE)
--DOCKER_TEST  = $(DOCKER_CMD_INTERACT) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_IMAGE)
+-DOCKER_TEST  = $(DOCKER_CMD) -t $(DOCKER_ARG_DIR_UTILS) $(DOCKER_IMAGE)
  DOCKER_TOOLS = $(DOCKER_CMD) $(DOCKER_IMAGE)
 
  # Dockerize commands that require USB device passthrough only on Linux
