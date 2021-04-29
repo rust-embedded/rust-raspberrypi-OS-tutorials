@@ -188,6 +188,7 @@ class DevTool
 
         clean
         make_xtra
+        test_xtra
         test_unit
         test_integration
         clean
