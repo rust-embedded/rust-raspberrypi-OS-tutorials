@@ -602,7 +602,7 @@ diff -uNr 09_privilege_level/src/_arch/aarch64/memory/mmu/translation_table.rs 1
 +                + STAGE1_PAGE_DESCRIPTOR::AF::True
 +                + STAGE1_PAGE_DESCRIPTOR::TYPE::Page
 +                + STAGE1_PAGE_DESCRIPTOR::VALID::True
-+                + attribute_fields.clone().into(),
++                + (*attribute_fields).into(),
 +        );
 +
 +        Self { value: val.get() }

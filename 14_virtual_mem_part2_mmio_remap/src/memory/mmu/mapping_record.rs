@@ -118,12 +118,7 @@ impl MappingRecord {
         );
         info!("      -------------------------------------------------------------------------------------------------------------------------------------------");
 
-        for i in self
-            .inner
-            .iter()
-            .filter(|x| x.is_some())
-            .map(|x| x.unwrap())
-        {
+        for i in self.inner.iter().flatten() {
             let virt_start = i.virt_start_addr;
             let virt_end_inclusive = virt_start + i.phys_pages.size() - 1;
             let phys_start = i.phys_pages.start_addr();
@@ -202,7 +197,7 @@ pub fn kernel_find_and_insert_mmio_duplicate(
     mmio_descriptor: &MMIODescriptor,
     new_user: &'static str,
 ) -> Option<Address<Virtual>> {
-    let phys_pages: PageSliceDescriptor<Physical> = mmio_descriptor.clone().into();
+    let phys_pages: PageSliceDescriptor<Physical> = (*mmio_descriptor).into();
 
     KERNEL_MAPPING_RECORD.write(|mr| {
         let dup = mr.find_duplicate(&phys_pages)?;

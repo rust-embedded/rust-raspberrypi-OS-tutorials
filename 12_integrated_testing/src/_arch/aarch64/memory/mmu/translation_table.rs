@@ -235,7 +235,7 @@ impl PageDescriptor {
                 + STAGE1_PAGE_DESCRIPTOR::AF::True
                 + STAGE1_PAGE_DESCRIPTOR::TYPE::Page
                 + STAGE1_PAGE_DESCRIPTOR::VALID::True
-                + attribute_fields.clone().into(),
+                + (*attribute_fields).into(),
         );
 
         Self { value: val.get() }

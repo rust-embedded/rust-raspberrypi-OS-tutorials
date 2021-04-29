@@ -659,7 +659,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu/trans
 +        phys_pages: &PageSliceDescriptor<Physical>,
 +        attr: &AttributeFields,
 +    ) -> Result<(), &'static str> {
-+        assert_eq!(self.initialized, true, "Translation tables not initialized");
++        assert!(self.initialized, "Translation tables not initialized");
 +
 +        let p = phys_pages.as_slice();
 +        let v = virt_pages.as_slice();
@@ -700,7 +700,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu/trans
 +        &mut self,
 +        num_pages: usize,
 +    ) -> Result<PageSliceDescriptor<Virtual>, &'static str> {
-+        assert_eq!(self.initialized, true, "Translation tables not initialized");
++        assert!(self.initialized, "Translation tables not initialized");
 +
 +        if num_pages == 0 {
 +            return Err("num_pages == 0");
@@ -2213,7 +2213,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/main.rs 14_virtual_mem_part2_m
 diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/mapping_record.rs 14_virtual_mem_part2_mmio_remap/src/memory/mmu/mapping_record.rs
 --- 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/mapping_record.rs
 +++ 14_virtual_mem_part2_mmio_remap/src/memory/mmu/mapping_record.rs
-@@ -0,0 +1,221 @@
+@@ -0,0 +1,216 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -2334,12 +2334,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/mapping_record.rs 1
 +        );
 +        info!("      -------------------------------------------------------------------------------------------------------------------------------------------");
 +
-+        for i in self
-+            .inner
-+            .iter()
-+            .filter(|x| x.is_some())
-+            .map(|x| x.unwrap())
-+        {
++        for i in self.inner.iter().flatten() {
 +            let virt_start = i.virt_start_addr;
 +            let virt_end_inclusive = virt_start + i.phys_pages.size() - 1;
 +            let phys_start = i.phys_pages.start_addr();
@@ -2418,7 +2413,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/mapping_record.rs 1
 +    mmio_descriptor: &MMIODescriptor,
 +    new_user: &'static str,
 +) -> Option<Address<Virtual>> {
-+    let phys_pages: PageSliceDescriptor<Physical> = mmio_descriptor.clone().into();
++    let phys_pages: PageSliceDescriptor<Physical> = (*mmio_descriptor).into();
 +
 +    KERNEL_MAPPING_RECORD.write(|mr| {
 +        let dup = mr.find_duplicate(&phys_pages)?;
@@ -3068,7 +3063,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu.rs 14_virtual_mem_p
 +    name: &'static str,
 +    mmio_descriptor: &MMIODescriptor,
 +) -> Result<Address<Virtual>, &'static str> {
-+    let phys_pages: PageSliceDescriptor<Physical> = mmio_descriptor.clone().into();
++    let phys_pages: PageSliceDescriptor<Physical> = (*mmio_descriptor).into();
 +    let offset_into_start_page =
 +        mmio_descriptor.start_addr().into_usize() & bsp::memory::mmu::KernelGranule::MASK;
 +

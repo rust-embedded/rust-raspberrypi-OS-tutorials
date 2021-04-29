@@ -208,7 +208,7 @@ pub unsafe fn kernel_map_mmio(
     name: &'static str,
     mmio_descriptor: &MMIODescriptor,
 ) -> Result<Address<Virtual>, &'static str> {
-    let phys_pages: PageSliceDescriptor<Physical> = mmio_descriptor.clone().into();
+    let phys_pages: PageSliceDescriptor<Physical> = (*mmio_descriptor).into();
     let offset_into_start_page =
         mmio_descriptor.start_addr().into_usize() & bsp::memory::mmu::KernelGranule::MASK;
 

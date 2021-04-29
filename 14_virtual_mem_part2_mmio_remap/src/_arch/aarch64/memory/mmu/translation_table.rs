@@ -237,7 +237,7 @@ impl PageDescriptor {
                 + STAGE1_PAGE_DESCRIPTOR::AF::True
                 + STAGE1_PAGE_DESCRIPTOR::TYPE::Page
                 + STAGE1_PAGE_DESCRIPTOR::VALID::True
-                + attribute_fields.clone().into(),
+                + (*attribute_fields).into(),
         );
 
         Self { value: val.get() }
@@ -364,7 +364,7 @@ impl<const NUM_TABLES: usize> memory::mmu::translation_table::interface::Transla
         phys_pages: &PageSliceDescriptor<Physical>,
         attr: &AttributeFields,
     ) -> Result<(), &'static str> {
-        assert_eq!(self.initialized, true, "Translation tables not initialized");
+        assert!(self.initialized, "Translation tables not initialized");
 
         let p = phys_pages.as_slice();
         let v = virt_pages.as_slice();
@@ -399,7 +399,7 @@ impl<const NUM_TABLES: usize> memory::mmu::translation_table::interface::Transla
         &mut self,
         num_pages: usize,
     ) -> Result<PageSliceDescriptor<Virtual>, &'static str> {
-        assert_eq!(self.initialized, true, "Translation tables not initialized");
+        assert!(self.initialized, "Translation tables not initialized");
 
         if num_pages == 0 {
             return Err("num_pages == 0");
