@@ -2132,7 +2132,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/lib.rs 14_virtual_mem_part2_mm
 --- 13_exceptions_part2_peripheral_IRQs/src/lib.rs
 +++ 14_virtual_mem_part2_mmio_remap/src/lib.rs
 @@ -111,6 +111,8 @@
- #![allow(clippy::clippy::upper_case_acronyms)]
+ #![allow(clippy::upper_case_acronyms)]
  #![allow(incomplete_features)]
  #![feature(asm)]
 +#![feature(const_evaluatable_checked)]

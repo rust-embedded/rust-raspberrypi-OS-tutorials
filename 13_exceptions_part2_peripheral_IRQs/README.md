@@ -2378,7 +2378,7 @@ diff -uNr 12_integrated_testing/src/lib.rs 13_exceptions_part2_peripheral_IRQs/s
 +++ 13_exceptions_part2_peripheral_IRQs/src/lib.rs
 @@ -110,6 +110,7 @@
 
- #![allow(clippy::clippy::upper_case_acronyms)]
+ #![allow(clippy::upper_case_acronyms)]
  #![allow(incomplete_features)]
 +#![feature(asm)]
  #![feature(const_fn_fn_ptr_basics)]

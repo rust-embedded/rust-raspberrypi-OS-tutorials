@@ -1325,7 +1325,7 @@ diff -uNr 04_safe_globals/src/main.rs 05_drivers_gpio_uart/src/main.rs
  //!
  //! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
 
-+#![allow(clippy::clippy::upper_case_acronyms)]
++#![allow(clippy::upper_case_acronyms)]
 +#![feature(const_fn_fn_ptr_basics)]
  #![feature(format_args_nl)]
  #![feature(global_asm)]

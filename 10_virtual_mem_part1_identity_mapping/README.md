@@ -1043,7 +1043,7 @@ diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/s
 @@ -107,7 +107,11 @@
  //! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
 
- #![allow(clippy::clippy::upper_case_acronyms)]
+ #![allow(clippy::upper_case_acronyms)]
 +#![allow(incomplete_features)]
  #![feature(const_fn_fn_ptr_basics)]
 +#![feature(const_generics)]

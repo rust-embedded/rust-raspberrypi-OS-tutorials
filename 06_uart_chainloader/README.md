@@ -403,7 +403,7 @@ diff -uNr 05_drivers_gpio_uart/src/main.rs 06_uart_chainloader/src/main.rs
 @@ -107,6 +107,7 @@
  //! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
 
- #![allow(clippy::clippy::upper_case_acronyms)]
+ #![allow(clippy::upper_case_acronyms)]
 +#![feature(asm)]
  #![feature(const_fn_fn_ptr_basics)]
  #![feature(format_args_nl)]

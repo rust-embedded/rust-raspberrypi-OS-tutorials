@@ -106,7 +106,7 @@
 //!
 //! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
 
-#![allow(clippy::clippy::upper_case_acronyms)]
+#![allow(clippy::upper_case_acronyms)]
 #![allow(incomplete_features)]
 #![feature(const_fn_fn_ptr_basics)]
 #![feature(const_generics)]

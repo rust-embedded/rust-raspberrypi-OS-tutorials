@@ -502,7 +502,7 @@ diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
 @@ -107,7 +107,6 @@
  //! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
 
- #![allow(clippy::clippy::upper_case_acronyms)]
+ #![allow(clippy::upper_case_acronyms)]
 -#![feature(asm)]
  #![feature(const_fn_fn_ptr_basics)]
  #![feature(format_args_nl)]
