@@ -23,6 +23,9 @@ jobs:
         uses: actions/setup-ruby@v1
         with:
           ruby-version: "2.7"
+      - name: Set up Rust nightly
+        run: |
+          rustup component add clippy
       - name: Set up Bundler
         run: |
           gem install bundler
