@@ -31,11 +31,6 @@ jobs:
           ruby-version: "2.7"
       - name: Set up Rust nightly
         run: |
-          rm rust-toolchain
-          rustup self update
-          rustup toolchain install nightly --component llvm-tools-preview
-          rustup default nightly
-          rustup target add aarch64-unknown-none-softfloat
           cargo install cargo-binutils
       - name: Set up Ruby
         run: |
