@@ -44,7 +44,7 @@ RUN set -ex;                                      \
     gem install bundler;                            \
     bundle install --retry 3 --without development; \
     # QEMU
-    git clone git://git.qemu.org/qemu.git;                     \
+    git clone https://git.qemu.org/git/qemu.git;               \
     cd qemu;                                                   \
     git checkout tags/v5.2.0;                                  \
     ./configure --target-list=aarch64-softmmu --enable-modules \
