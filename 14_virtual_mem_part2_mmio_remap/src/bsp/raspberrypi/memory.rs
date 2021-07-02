@@ -37,7 +37,7 @@
 pub mod mmu;
 
 use crate::memory::{Address, Physical, Virtual};
-use core::{cell::UnsafeCell, ops::RangeInclusive};
+use core::cell::UnsafeCell;
 
 //--------------------------------------------------------------------------------------------------
 // Private Definitions
@@ -49,8 +49,6 @@ extern "Rust" {
     static __rx_end_exclusive: UnsafeCell<()>;
 
     static __rw_start: UnsafeCell<()>;
-    static __bss_start: UnsafeCell<u64>;
-    static __bss_end_inclusive: UnsafeCell<u64>;
     static __rw_end_exclusive: UnsafeCell<()>;
 
     static __boot_core_stack_start: UnsafeCell<()>;
@@ -185,24 +183,4 @@ fn boot_core_stack_guard_page_size() -> usize {
 #[inline(always)]
 fn phys_addr_space_end() -> Address<Physical> {
     map::END
-}
-
-//--------------------------------------------------------------------------------------------------
-// Public Code
-//--------------------------------------------------------------------------------------------------
-
-/// Return the inclusive range spanning the .bss section.
-///
-/// # Safety
-///
-/// - Values are provided by the linker script and must be trusted as-is.
-/// - The linker-provided addresses must be u64 aligned.
-pub fn bss_range_inclusive() -> RangeInclusive<*mut u64> {
-    let range;
-    unsafe {
-        range = RangeInclusive::new(__bss_start.get(), __bss_end_inclusive.get());
-    }
-    assert!(!range.is_empty());
-
-    range
 }

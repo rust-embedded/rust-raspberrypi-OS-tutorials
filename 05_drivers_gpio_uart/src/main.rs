@@ -102,9 +102,7 @@
 //!
 //! 1. The kernel's entry point is the function `cpu::boot::arch_boot::_start()`.
 //!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.s`.
-//! 2. Once finished with architectural setup, the arch code calls [`runtime_init::runtime_init()`].
-//!
-//! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
+//! 2. Once finished with architectural setup, the arch code calls `kernel_init()`.
 
 #![allow(clippy::upper_case_acronyms)]
 #![feature(const_fn_fn_ptr_basics)]
@@ -119,10 +117,8 @@ mod bsp;
 mod console;
 mod cpu;
 mod driver;
-mod memory;
 mod panic_wait;
 mod print;
-mod runtime_init;
 mod synchronization;
 
 /// Early init code.

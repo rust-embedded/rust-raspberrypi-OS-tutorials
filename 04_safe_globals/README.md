@@ -224,7 +224,7 @@ diff -uNr 03_hacky_hello_world/src/console.rs 04_safe_globals/src/console.rs
 diff -uNr 03_hacky_hello_world/src/main.rs 04_safe_globals/src/main.rs
 --- 03_hacky_hello_world/src/main.rs
 +++ 04_safe_globals/src/main.rs
-@@ -109,6 +109,7 @@
+@@ -107,6 +107,7 @@
  #![feature(format_args_nl)]
  #![feature(global_asm)]
  #![feature(panic_info_message)]
@@ -232,15 +232,15 @@ diff -uNr 03_hacky_hello_world/src/main.rs 04_safe_globals/src/main.rs
  #![no_main]
  #![no_std]
 
-@@ -119,6 +120,7 @@
+@@ -115,6 +116,7 @@
+ mod cpu;
  mod panic_wait;
  mod print;
- mod runtime_init;
 +mod synchronization;
 
  /// Early init code.
  ///
-@@ -126,7 +128,15 @@
+@@ -122,7 +124,15 @@
  ///
  /// - Only a single core must be active and running this function.
  unsafe fn kernel_init() -> ! {

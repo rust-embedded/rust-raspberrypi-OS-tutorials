@@ -154,26 +154,36 @@ diff -uNr 06_uart_chainloader/src/_arch/aarch64/cpu/boot.s 07_timestamps/src/_ar
  .equ _core_id_mask, 0b11
 
  //--------------------------------------------------------------------------------------------------
-@@ -45,31 +34,20 @@
- 	and	x1, x1, _core_id_mask
- 	ldr	x2, BOOT_CORE_ID      // provided by bsp/__board_name__/cpu.rs
- 	cmp	x1, x2
--	b.ne	2f
--
--	// If execution reaches here, it is the boot core.
-+	b.ne	1f
+@@ -50,35 +39,23 @@
+ 	// If execution reaches here, it is the boot core.
+
+ 	// Initialize DRAM.
+-	ADR_ABS	x0, __bss_start
+-	ADR_ABS x1, __bss_end_exclusive
++	ADR_REL	x0, __bss_start
++	ADR_REL x1, __bss_end_exclusive
+
+ bss_init_loop:
+ 	cmp	x0, x1
+-	b.eq	relocate_binary
++	b.eq	prepare_rust
+ 	stp	xzr, xzr, [x0], #16
+ 	b	bss_init_loop
 
 -	// Next, relocate the binary.
+-relocate_binary:
 -	ADR_REL	x0, __binary_nonzero_start         // The address the binary got loaded to.
 -	ADR_ABS	x1, __binary_nonzero_start         // The address the binary was linked to.
 -	ADR_ABS	x2, __binary_nonzero_end_exclusive
 -
--1:	ldr	x3, [x0], #8
+-copy_loop:
+-	ldr	x3, [x0], #8
 -	str	x3, [x1], #8
 -	cmp	x1, x2
--	b.lo	1b
-+	// If execution reaches here, it is the boot core. Now, prepare the jump to Rust code.
-
+-	b.lo	copy_loop
+-
+ 	// Prepare the jump to Rust code.
++prepare_rust:
  	// Set the stack pointer.
 -	ADR_ABS	x0, __boot_core_stack_end_exclusive
 +	ADR_REL	x0, __boot_core_stack_end_exclusive
@@ -186,13 +196,7 @@ diff -uNr 06_uart_chainloader/src/_arch/aarch64/cpu/boot.s 07_timestamps/src/_ar
 +	b	_start_rust
 
  	// Infinitely wait for events (aka "park the core").
--2:	wfe
--	b	2b
-+1:	wfe
-+	b	1b
-
- .size	_start, . - _start
- .type	_start, function
+ parking_loop:
 
 diff -uNr 06_uart_chainloader/src/_arch/aarch64/cpu.rs 07_timestamps/src/_arch/aarch64/cpu.rs
 --- 06_uart_chainloader/src/_arch/aarch64/cpu.rs
@@ -438,7 +442,7 @@ diff -uNr 06_uart_chainloader/src/bsp/raspberrypi/link.ld 07_timestamps/src/bsp/
      .text :
      {
          KEEP(*(.text._start))
-@@ -44,12 +42,8 @@
+@@ -44,10 +42,6 @@
      ***********************************************************************************************/
      .data : { *(.data*) } :segment_rw
 
@@ -446,17 +450,14 @@ diff -uNr 06_uart_chainloader/src/bsp/raspberrypi/link.ld 07_timestamps/src/bsp/
 -    . = ALIGN(8);
 -    __binary_nonzero_end_exclusive = .;
 -
-     /* Section is zeroed in u64 chunks, align start and end to 8 bytes */
--    .bss :
-+    .bss : ALIGN(8)
+     /* Section is zeroed in pairs of u64. Align start and end to 16 bytes */
+     .bss : ALIGN(16)
      {
-         __bss_start = .;
-         *(.bss*);
 
 diff -uNr 06_uart_chainloader/src/bsp/raspberrypi/memory.rs 07_timestamps/src/bsp/raspberrypi/memory.rs
 --- 06_uart_chainloader/src/bsp/raspberrypi/memory.rs
 +++ 07_timestamps/src/bsp/raspberrypi/memory.rs
-@@ -23,10 +23,9 @@
+@@ -11,10 +11,9 @@
  /// The board's physical memory map.
  #[rustfmt::skip]
  pub(super) mod map {
@@ -469,21 +470,20 @@ diff -uNr 06_uart_chainloader/src/bsp/raspberrypi/memory.rs 07_timestamps/src/bs
 
      /// Physical devices.
      #[cfg(feature = "bsp_rpi3")]
-@@ -53,13 +52,7 @@
- // Public Code
- //--------------------------------------------------------------------------------------------------
-
+@@ -36,13 +35,3 @@
+         pub const PL011_UART_START: usize = START + UART_OFFSET;
+     }
+ }
+-
+-//--------------------------------------------------------------------------------------------------
+-// Public Code
+-//--------------------------------------------------------------------------------------------------
+-
 -/// The address on which the Raspberry firmware loads every binary by default.
 -#[inline(always)]
 -pub fn board_default_load_addr() -> *const u64 {
 -    map::BOARD_DEFAULT_LOAD_ADDRESS as _
 -}
--
--/// Return the inclusive range spanning the relocated .bss section.
-+/// Return the inclusive range spanning the .bss section.
- ///
- /// # Safety
- ///
 
 diff -uNr 06_uart_chainloader/src/cpu.rs 07_timestamps/src/cpu.rs
 --- 06_uart_chainloader/src/cpu.rs
@@ -499,23 +499,23 @@ diff -uNr 06_uart_chainloader/src/cpu.rs 07_timestamps/src/cpu.rs
 diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
 --- 06_uart_chainloader/src/main.rs
 +++ 07_timestamps/src/main.rs
-@@ -107,7 +107,6 @@
- //! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
+@@ -105,7 +105,6 @@
+ //! 2. Once finished with architectural setup, the arch code calls `kernel_init()`.
 
  #![allow(clippy::upper_case_acronyms)]
 -#![feature(asm)]
  #![feature(const_fn_fn_ptr_basics)]
  #![feature(format_args_nl)]
  #![feature(global_asm)]
-@@ -125,6 +124,7 @@
+@@ -121,6 +120,7 @@
+ mod panic_wait;
  mod print;
- mod runtime_init;
  mod synchronization;
 +mod time;
 
  /// Early init code.
  ///
-@@ -147,56 +147,38 @@
+@@ -143,56 +143,38 @@
      kernel_main()
  }
 

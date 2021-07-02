@@ -2104,7 +2104,7 @@ diff -uNr 12_integrated_testing/src/bsp/raspberrypi/exception.rs 13_exceptions_p
 diff -uNr 12_integrated_testing/src/bsp/raspberrypi/memory.rs 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs
 --- 12_integrated_testing/src/bsp/raspberrypi/memory.rs
 +++ 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs
-@@ -51,10 +51,12 @@
+@@ -48,10 +48,12 @@
      pub mod mmio {
          use super::*;
 
@@ -2121,7 +2121,7 @@ diff -uNr 12_integrated_testing/src/bsp/raspberrypi/memory.rs 13_exceptions_part
      }
 
      /// Physical devices.
-@@ -65,6 +67,8 @@
+@@ -62,6 +64,8 @@
          pub const START:            usize =         0xFE00_0000;
          pub const GPIO_START:       usize = START + GPIO_OFFSET;
          pub const PL011_UART_START: usize = START + UART_OFFSET;
@@ -2376,7 +2376,7 @@ diff -uNr 12_integrated_testing/src/exception/asynchronous.rs 13_exceptions_part
 diff -uNr 12_integrated_testing/src/lib.rs 13_exceptions_part2_peripheral_IRQs/src/lib.rs
 --- 12_integrated_testing/src/lib.rs
 +++ 13_exceptions_part2_peripheral_IRQs/src/lib.rs
-@@ -110,6 +110,7 @@
+@@ -108,6 +108,7 @@
 
  #![allow(clippy::upper_case_acronyms)]
  #![allow(incomplete_features)]
@@ -2384,7 +2384,7 @@ diff -uNr 12_integrated_testing/src/lib.rs 13_exceptions_part2_peripheral_IRQs/s
  #![feature(const_fn_fn_ptr_basics)]
  #![feature(const_generics)]
  #![feature(const_panic)]
-@@ -137,6 +138,7 @@
+@@ -134,6 +135,7 @@
  pub mod exception;
  pub mod memory;
  pub mod print;

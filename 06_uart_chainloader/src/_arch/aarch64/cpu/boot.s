@@ -45,20 +45,33 @@ _start:
 	and	x1, x1, _core_id_mask
 	ldr	x2, BOOT_CORE_ID      // provided by bsp/__board_name__/cpu.rs
 	cmp	x1, x2
-	b.ne	2f
+	b.ne	parking_loop
 
 	// If execution reaches here, it is the boot core.
 
+	// Initialize DRAM.
+	ADR_ABS	x0, __bss_start
+	ADR_ABS x1, __bss_end_exclusive
+
+bss_init_loop:
+	cmp	x0, x1
+	b.eq	relocate_binary
+	stp	xzr, xzr, [x0], #16
+	b	bss_init_loop
+
 	// Next, relocate the binary.
+relocate_binary:
 	ADR_REL	x0, __binary_nonzero_start         // The address the binary got loaded to.
 	ADR_ABS	x1, __binary_nonzero_start         // The address the binary was linked to.
 	ADR_ABS	x2, __binary_nonzero_end_exclusive
 
-1:	ldr	x3, [x0], #8
+copy_loop:
+	ldr	x3, [x0], #8
 	str	x3, [x1], #8
 	cmp	x1, x2
-	b.lo	1b
+	b.lo	copy_loop
 
+	// Prepare the jump to Rust code.
 	// Set the stack pointer.
 	ADR_ABS	x0, __boot_core_stack_end_exclusive
 	mov	sp, x0
@@ -68,8 +81,9 @@ _start:
 	br	x1
 
 	// Infinitely wait for events (aka "park the core").
-2:	wfe
-	b	2b
+parking_loop:
+	wfe
+	b	parking_loop
 
 .size	_start, . - _start
 .type	_start, function

@@ -104,9 +104,7 @@
 //!
 //! 1. The kernel's entry point is the function `cpu::boot::arch_boot::_start()`.
 //!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.s`.
-//! 2. Once finished with architectural setup, the arch code calls [`runtime_init::runtime_init()`].
-//!
-//! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
+//! 2. Once finished with architectural setup, the arch code calls `kernel_init()`.
 
 #![allow(clippy::upper_case_acronyms)]
 #![allow(incomplete_features)]
@@ -127,7 +125,6 @@
 #![test_runner(crate::test_runner)]
 
 mod panic_wait;
-mod runtime_init;
 mod synchronization;
 
 pub mod bsp;
@@ -152,6 +149,11 @@ pub fn version() -> &'static str {
     )
 }
 
+#[cfg(not(test))]
+extern "Rust" {
+    fn kernel_init() -> !;
+}
+
 //--------------------------------------------------------------------------------------------------
 // Testing
 //--------------------------------------------------------------------------------------------------
@@ -171,7 +173,7 @@ pub fn test_runner(tests: &[&test_types::UnitTest]) {
     }
 }
 
-/// The `kernel_init()` for unit tests. Called from `runtime_init()`.
+/// The `kernel_init()` for unit tests.
 #[cfg(test)]
 #[no_mangle]
 unsafe fn kernel_init() -> ! {

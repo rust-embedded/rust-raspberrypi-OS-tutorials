@@ -6,7 +6,7 @@
 
 pub mod mmu;
 
-use core::{cell::UnsafeCell, ops::RangeInclusive};
+use core::cell::UnsafeCell;
 
 //--------------------------------------------------------------------------------------------------
 // Private Definitions
@@ -16,9 +16,6 @@ use core::{cell::UnsafeCell, ops::RangeInclusive};
 extern "Rust" {
     static __rx_start: UnsafeCell<()>;
     static __rx_end_exclusive: UnsafeCell<()>;
-
-    static __bss_start: UnsafeCell<u64>;
-    static __bss_end_inclusive: UnsafeCell<u64>;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -91,24 +88,4 @@ fn rx_start() -> usize {
 #[inline(always)]
 fn rx_end_exclusive() -> usize {
     unsafe { __rx_end_exclusive.get() as usize }
-}
-
-//--------------------------------------------------------------------------------------------------
-// Public Code
-//--------------------------------------------------------------------------------------------------
-
-/// Return the inclusive range spanning the .bss section.
-///
-/// # Safety
-///
-/// - Values are provided by the linker script and must be trusted as-is.
-/// - The linker-provided addresses must be u64 aligned.
-pub fn bss_range_inclusive() -> RangeInclusive<*mut u64> {
-    let range;
-    unsafe {
-        range = RangeInclusive::new(__bss_start.get(), __bss_end_inclusive.get());
-    }
-    assert!(!range.is_empty());
-
-    range
 }

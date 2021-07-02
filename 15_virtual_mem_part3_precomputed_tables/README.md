@@ -530,7 +530,7 @@ pub unsafe extern "C" fn _start_rust(
         cpu::wait_forever();
     }
 
-    // Use `eret` to "return" to EL1. This results in execution of runtime_init() in EL1.
+    // Use `eret` to "return" to EL1. This results in execution of kernel_init() in EL1.
     asm::eret()
 }
 ```
@@ -796,19 +796,18 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/Makefile 15_virtual_mem_part3_precompu
 diff -uNr 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/cpu/boot.rs 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.rs
 --- 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/cpu/boot.rs
 +++ 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.rs
-@@ -11,7 +11,8 @@
+@@ -11,6 +11,8 @@
  //!
  //! crate::cpu::boot::arch_boot
 
--use crate::runtime_init;
-+use crate::{cpu, memory, memory::Address, runtime_init};
++use crate::{cpu, memory, memory::Address};
 +use core::intrinsics::unlikely;
  use cortex_a::{asm, regs::*};
 
  // Assembly counterpart to this file.
-@@ -71,9 +72,18 @@
- /// - The `bss` section is not initialized yet. The code must not use or reference it in any way.
- /// - Exception return from EL2 must must continue execution in EL1 with `runtime_init()`.
+@@ -69,9 +71,18 @@
+ ///
+ /// - Exception return from EL2 must must continue execution in EL1 with `kernel_init()`.
  #[no_mangle]
 -pub unsafe extern "C" fn _start_rust(phys_boot_core_stack_end_exclusive_addr: u64) -> ! {
 +pub unsafe extern "C" fn _start_rust(
@@ -823,17 +822,17 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/cpu/boot.rs 15_virtu
 +        cpu::wait_forever();
 +    }
 +
-     // Use `eret` to "return" to EL1. This results in execution of runtime_init() in EL1.
+     // Use `eret` to "return" to EL1. This results in execution of kernel_init() in EL1.
      asm::eret()
  }
 
 diff -uNr 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/cpu/boot.s 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.s
 --- 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/cpu/boot.s
 +++ 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.s
-@@ -44,11 +44,14 @@
+@@ -56,11 +56,14 @@
 
- 	// If execution reaches here, it is the boot core. Now, prepare the jump to Rust code.
-
+ 	// Prepare the jump to Rust code.
+ prepare_rust:
 +	// Load the base address of the kernel's translation tables.
 +	ldr	x0, PHYS_KERNEL_TABLES_BASE_ADDR // provided by bsp/__board_name__/memory/mmu.rs
 +
@@ -1204,7 +1203,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs 15_v
          "Kernel boot-core stack",
          &virt_boot_core_stack_page_desc(),
          &phys_boot_core_stack_page_desc(),
-@@ -159,64 +183,5 @@
+@@ -159,75 +183,5 @@
              acc_perms: AccessPermissions::ReadWrite,
              execute_never: true,
          },
@@ -1220,6 +1219,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs 15_v
 -#[cfg(test)]
 -mod tests {
 -    use super::*;
+-    use core::{cell::UnsafeCell, ops::Range};
 -    use test_macros::kernel_test;
 -
 -    /// Check alignment of the kernel's virtual memory layout sections.
@@ -1263,7 +1263,17 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs 15_v
 -    /// Check if KERNEL_TABLES is in .bss.
 -    #[kernel_test]
 -    fn kernel_tables_in_bss() {
--        let bss_range = super::super::bss_range_inclusive();
+-        extern "Rust" {
+-            static __bss_start: UnsafeCell<u64>;
+-            static __bss_end_exclusive: UnsafeCell<u64>;
+-        }
+-
+-        let bss_range = unsafe {
+-            Range {
+-                start: __bss_start.get(),
+-                end: __bss_end_exclusive.get(),
+-            }
+-        };
 -        let kernel_tables_addr = &KERNEL_TABLES as *const _ as usize as *mut u64;
 -
 -        assert!(bss_range.contains(&kernel_tables_addr));
@@ -1511,7 +1521,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/memory.rs 15_virtual_mem_part3_pre
 +    convert::TryFrom,
      fmt,
      marker::PhantomData,
-     ops::{AddAssign, RangeInclusive, SubAssign},
+     ops::{AddAssign, SubAssign},
 @@ -67,6 +68,14 @@
      }
  }

@@ -31,7 +31,7 @@ global_asm!(include_str!("boot.s"));
 #[inline(always)]
 unsafe fn prepare_el2_to_el1_transition(
     virt_boot_core_stack_end_exclusive_addr: u64,
-    virt_runtime_init_addr: u64,
+    virt_kernel_init_addr: u64,
 ) {
     // Enable timer counter registers for EL1.
     CNTHCTL_EL2.write(CNTHCTL_EL2::EL1PCEN::SET + CNTHCTL_EL2::EL1PCTEN::SET);
@@ -54,8 +54,8 @@ unsafe fn prepare_el2_to_el1_transition(
             + SPSR_EL2::M::EL1h,
     );
 
-    // Second, let the link register point to runtime_init().
-    ELR_EL2.set(virt_runtime_init_addr);
+    // Second, let the link register point to kernel_init().
+    ELR_EL2.set(virt_kernel_init_addr);
 
     // Set up SP_EL1 (stack pointer), which will be used by EL1 once we "return" to it. Since there
     // are no plans to ever return to EL2, just re-use the same stack.
@@ -72,17 +72,16 @@ unsafe fn prepare_el2_to_el1_transition(
 ///
 /// # Safety
 ///
-/// - The `bss` section is not initialized yet. The code must not use or reference it in any way.
-/// - Exception return from EL2 must must continue execution in EL1 with `runtime_init()`.
+/// - Exception return from EL2 must must continue execution in EL1 with `kernel_init()`.
 #[no_mangle]
 pub unsafe extern "C" fn _start_rust(
     phys_kernel_tables_base_addr: u64,
     virt_boot_core_stack_end_exclusive_addr: u64,
-    virt_runtime_init_addr: u64,
+    virt_kernel_init_addr: u64,
 ) -> ! {
     prepare_el2_to_el1_transition(
         virt_boot_core_stack_end_exclusive_addr,
-        virt_runtime_init_addr,
+        virt_kernel_init_addr,
     );
 
     // Turn on the MMU for EL1.
@@ -92,6 +91,6 @@ pub unsafe extern "C" fn _start_rust(
     }
 
     // Use `eret` to "return" to EL1. Since virtual memory will already be enabled, this results in
-    // execution of runtime_init() in EL1 from its _virtual address_.
+    // execution of kernel_init() in EL1 from its _virtual address_.
     asm::eret()
 }

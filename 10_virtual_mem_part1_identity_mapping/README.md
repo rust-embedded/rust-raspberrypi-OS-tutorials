@@ -939,26 +939,28 @@ diff -uNr 09_privilege_level/src/bsp/raspberrypi/memory/mmu.rs 10_virtual_mem_pa
 diff -uNr 09_privilege_level/src/bsp/raspberrypi/memory.rs 10_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory.rs
 --- 09_privilege_level/src/bsp/raspberrypi/memory.rs
 +++ 10_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory.rs
-@@ -4,6 +4,8 @@
+@@ -4,6 +4,20 @@
 
  //! BSP Memory Management.
 
 +pub mod mmu;
 +
- use core::{cell::UnsafeCell, ops::RangeInclusive};
-
- //--------------------------------------------------------------------------------------------------
-@@ -12,6 +14,9 @@
-
- // Symbols from the linker script.
- extern "Rust" {
++use core::cell::UnsafeCell;
++
++//--------------------------------------------------------------------------------------------------
++// Private Definitions
++//--------------------------------------------------------------------------------------------------
++
++// Symbols from the linker script.
++extern "Rust" {
 +    static __rx_start: UnsafeCell<()>;
 +    static __rx_end_exclusive: UnsafeCell<()>;
++}
 +
-     static __bss_start: UnsafeCell<u64>;
-     static __bss_end_inclusive: UnsafeCell<u64>;
- }
-@@ -23,6 +28,20 @@
+ //--------------------------------------------------------------------------------------------------
+ // Public Definitions
+ //--------------------------------------------------------------------------------------------------
+@@ -11,6 +25,20 @@
  /// The board's physical memory map.
  #[rustfmt::skip]
  pub(super) mod map {
@@ -979,7 +981,7 @@ diff -uNr 09_privilege_level/src/bsp/raspberrypi/memory.rs 10_virtual_mem_part1_
 
      pub const GPIO_OFFSET:         usize = 0x0020_0000;
      pub const UART_OFFSET:         usize = 0x0020_1000;
-@@ -35,6 +54,7 @@
+@@ -23,6 +51,7 @@
          pub const START:            usize =         0x3F00_0000;
          pub const GPIO_START:       usize = START + GPIO_OFFSET;
          pub const PL011_UART_START: usize = START + UART_OFFSET;
@@ -987,15 +989,15 @@ diff -uNr 09_privilege_level/src/bsp/raspberrypi/memory.rs 10_virtual_mem_part1_
      }
 
      /// Physical devices.
-@@ -45,10 +65,35 @@
+@@ -33,5 +62,30 @@
          pub const START:            usize =         0xFE00_0000;
          pub const GPIO_START:       usize = START + GPIO_OFFSET;
          pub const PL011_UART_START: usize = START + UART_OFFSET;
 +        pub const END_INCLUSIVE:    usize =         0xFF84_FFFF;
      }
  }
-
- //--------------------------------------------------------------------------------------------------
++
++//--------------------------------------------------------------------------------------------------
 +// Private Code
 +//--------------------------------------------------------------------------------------------------
 +
@@ -1018,11 +1020,6 @@ diff -uNr 09_privilege_level/src/bsp/raspberrypi/memory.rs 10_virtual_mem_part1_
 +fn rx_end_exclusive() -> usize {
 +    unsafe { __rx_end_exclusive.get() as usize }
 +}
-+
-+//--------------------------------------------------------------------------------------------------
- // Public Code
- //--------------------------------------------------------------------------------------------------
-
 
 diff -uNr 09_privilege_level/src/bsp.rs 10_virtual_mem_part1_identity_mapping/src/bsp.rs
 --- 09_privilege_level/src/bsp.rs
@@ -1040,8 +1037,8 @@ diff -uNr 09_privilege_level/src/bsp.rs 10_virtual_mem_part1_identity_mapping/sr
 diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/src/main.rs
 --- 09_privilege_level/src/main.rs
 +++ 10_virtual_mem_part1_identity_mapping/src/main.rs
-@@ -107,7 +107,11 @@
- //! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
+@@ -105,7 +105,11 @@
+ //! 2. Once finished with architectural setup, the arch code calls `kernel_init()`.
 
  #![allow(clippy::upper_case_acronyms)]
 +#![allow(incomplete_features)]
@@ -1052,7 +1049,15 @@ diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/s
  #![feature(format_args_nl)]
  #![feature(global_asm)]
  #![feature(panic_info_message)]
-@@ -132,9 +136,17 @@
+@@ -118,6 +122,7 @@
+ mod cpu;
+ mod driver;
+ mod exception;
++mod memory;
+ mod panic_wait;
+ mod print;
+ mod synchronization;
+@@ -128,9 +133,17 @@
  /// # Safety
  ///
  /// - Only a single core must be active and running this function.
@@ -1071,7 +1076,7 @@ diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/s
 
      for i in bsp::driver::driver_manager().all_device_drivers().iter() {
          if let Err(x) = i.init() {
-@@ -163,6 +175,9 @@
+@@ -159,6 +172,9 @@
      );
      info!("Booting on: {}", bsp::board_name());
 
@@ -1081,7 +1086,7 @@ diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/s
      let (_, privilege_level) = exception::current_privilege_level();
      info!("Current privilege level: {}", privilege_level);
 
-@@ -186,6 +201,13 @@
+@@ -182,6 +198,13 @@
      info!("Timer test, spinning for 1 second");
      time::time_manager().spin_for(Duration::from_secs(1));
 
@@ -1387,14 +1392,13 @@ diff -uNr 09_privilege_level/src/memory/mmu.rs 10_virtual_mem_part1_identity_map
 diff -uNr 09_privilege_level/src/memory.rs 10_virtual_mem_part1_identity_mapping/src/memory.rs
 --- 09_privilege_level/src/memory.rs
 +++ 10_virtual_mem_part1_identity_mapping/src/memory.rs
-@@ -4,6 +4,8 @@
-
- //! Memory Management.
-
-+pub mod mmu;
+@@ -0,0 +1,7 @@
++// SPDX-License-Identifier: MIT OR Apache-2.0
++//
++// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
 +
- use core::ops::RangeInclusive;
-
- //--------------------------------------------------------------------------------------------------
++//! Memory Management.
++
++pub mod mmu;
 
 ```

@@ -171,6 +171,7 @@ pub unsafe fn kernel_map_binary() -> Result<(), &'static str> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use core::{cell::UnsafeCell, ops::Range};
     use test_macros::kernel_test;
 
     /// Check alignment of the kernel's virtual memory layout sections.
@@ -214,7 +215,17 @@ mod tests {
     /// Check if KERNEL_TABLES is in .bss.
     #[kernel_test]
     fn kernel_tables_in_bss() {
-        let bss_range = super::super::bss_range_inclusive();
+        extern "Rust" {
+            static __bss_start: UnsafeCell<u64>;
+            static __bss_end_exclusive: UnsafeCell<u64>;
+        }
+
+        let bss_range = unsafe {
+            Range {
+                start: __bss_start.get(),
+                end: __bss_end_exclusive.get(),
+            }
+        };
         let kernel_tables_addr = &KERNEL_TABLES as *const _ as usize as *mut u64;
 
         assert!(bss_range.contains(&kernel_tables_addr));

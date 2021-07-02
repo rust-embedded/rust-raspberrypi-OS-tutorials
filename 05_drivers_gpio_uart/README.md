@@ -1120,10 +1120,14 @@ diff -uNr 04_safe_globals/src/bsp/raspberrypi/driver.rs 05_drivers_gpio_uart/src
 diff -uNr 04_safe_globals/src/bsp/raspberrypi/memory.rs 05_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs
 --- 04_safe_globals/src/bsp/raspberrypi/memory.rs
 +++ 05_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs
-@@ -17,6 +17,38 @@
- }
-
- //--------------------------------------------------------------------------------------------------
+@@ -0,0 +1,37 @@
++// SPDX-License-Identifier: MIT OR Apache-2.0
++//
++// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
++
++//! BSP Memory Management.
++
++//--------------------------------------------------------------------------------------------------
 +// Public Definitions
 +//--------------------------------------------------------------------------------------------------
 +
@@ -1154,21 +1158,16 @@ diff -uNr 04_safe_globals/src/bsp/raspberrypi/memory.rs 05_drivers_gpio_uart/src
 +        pub const PL011_UART_START: usize = START + UART_OFFSET;
 +    }
 +}
-+
-+//--------------------------------------------------------------------------------------------------
- // Public Code
- //--------------------------------------------------------------------------------------------------
-
 
 diff -uNr 04_safe_globals/src/bsp/raspberrypi.rs 05_drivers_gpio_uart/src/bsp/raspberrypi.rs
 --- 04_safe_globals/src/bsp/raspberrypi.rs
 +++ 05_drivers_gpio_uart/src/bsp/raspberrypi.rs
-@@ -6,4 +6,33 @@
+@@ -6,3 +6,33 @@
 
  pub mod console;
  pub mod cpu;
 +pub mod driver;
- pub mod memory;
++pub mod memory;
 +
 +//--------------------------------------------------------------------------------------------------
 +// Global instances
@@ -1321,24 +1320,24 @@ diff -uNr 04_safe_globals/src/driver.rs 05_drivers_gpio_uart/src/driver.rs
 diff -uNr 04_safe_globals/src/main.rs 05_drivers_gpio_uart/src/main.rs
 --- 04_safe_globals/src/main.rs
 +++ 05_drivers_gpio_uart/src/main.rs
-@@ -106,6 +106,8 @@
- //!
- //! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
+@@ -104,6 +104,8 @@
+ //!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.s`.
+ //! 2. Once finished with architectural setup, the arch code calls `kernel_init()`.
 
 +#![allow(clippy::upper_case_acronyms)]
 +#![feature(const_fn_fn_ptr_basics)]
  #![feature(format_args_nl)]
  #![feature(global_asm)]
  #![feature(panic_info_message)]
-@@ -116,6 +118,7 @@
+@@ -114,6 +116,7 @@
  mod bsp;
  mod console;
  mod cpu;
 +mod driver;
- mod memory;
  mod panic_wait;
  mod print;
-@@ -127,16 +130,54 @@
+ mod synchronization;
+@@ -123,16 +126,54 @@
  /// # Safety
  ///
  /// - Only a single core must be active and running this function.

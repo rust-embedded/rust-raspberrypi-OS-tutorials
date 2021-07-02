@@ -117,13 +117,12 @@ diff -uNr 02_runtime_init/src/bsp/raspberrypi/console.rs 03_hacky_hello_world/sr
 diff -uNr 02_runtime_init/src/bsp/raspberrypi.rs 03_hacky_hello_world/src/bsp/raspberrypi.rs
 --- 02_runtime_init/src/bsp/raspberrypi.rs
 +++ 03_hacky_hello_world/src/bsp/raspberrypi.rs
-@@ -4,5 +4,6 @@
+@@ -4,4 +4,5 @@
 
  //! Top-level BSP file for the Raspberry Pi 3 and 4.
 
 +pub mod console;
  pub mod cpu;
- pub mod memory;
 
 diff -uNr 02_runtime_init/src/console.rs 03_hacky_hello_world/src/console.rs
 --- 02_runtime_init/src/console.rs
@@ -152,9 +151,9 @@ diff -uNr 02_runtime_init/src/console.rs 03_hacky_hello_world/src/console.rs
 diff -uNr 02_runtime_init/src/main.rs 03_hacky_hello_world/src/main.rs
 --- 02_runtime_init/src/main.rs
 +++ 03_hacky_hello_world/src/main.rs
-@@ -106,14 +106,18 @@
- //!
- //! [`runtime_init::runtime_init()`]: runtime_init/fn.runtime_init.html
+@@ -104,13 +104,17 @@
+ //!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.s`.
+ //! 2. Once finished with architectural setup, the arch code calls `kernel_init()`.
 
 +#![feature(format_args_nl)]
  #![feature(global_asm)]
@@ -165,13 +164,12 @@ diff -uNr 02_runtime_init/src/main.rs 03_hacky_hello_world/src/main.rs
  mod bsp;
 +mod console;
  mod cpu;
- mod memory;
  mod panic_wait;
 +mod print;
- mod runtime_init;
 
  /// Early init code.
-@@ -122,5 +126,7 @@
+ ///
+@@ -118,5 +122,7 @@
  ///
  /// - Only a single core must be active and running this function.
  unsafe fn kernel_init() -> ! {

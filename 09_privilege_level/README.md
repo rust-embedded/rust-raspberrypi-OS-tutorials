@@ -62,7 +62,7 @@ Afterwards, we continue with preparing the `EL2` -> `EL1` transition by calling
 pub unsafe extern "C" fn _start_rust(phys_boot_core_stack_end_exclusive_addr: u64) -> ! {
     prepare_el2_to_el1_transition(phys_boot_core_stack_end_exclusive_addr);
 
-    // Use `eret` to "return" to EL1. This results in execution of runtime_init() in EL1.
+    // Use `eret` to "return" to EL1. This results in execution of kernel_init() in EL1.
     asm::eret()
 }
 ```
@@ -125,19 +125,16 @@ SPSR_EL2.write(
         + SPSR_EL2::M::EL1h,
 );
 
-// Second, let the link register point to runtime_init().
-ELR_EL2.set(runtime_init::runtime_init as *const () as u64);
+// Second, let the link register point to kernel_init().
+ELR_EL2.set(crate::kernel_init as *const () as u64);
 
 // Set up SP_EL1 (stack pointer), which will be used by EL1 once we "return" to it. Since there
 // are no plans to ever return to EL2, just re-use the same stack.
 SP_EL1.set(phys_boot_core_stack_end_exclusive_addr);
 ```
 
-As you can see, we are populating `ELR_EL2` with the address of the [runtime_init()] function that
-we earlier used to call directly from the entrypoint. Finally, we set the stack pointer for
-`SP_EL1`.
-
-[runtime_init()]: src/runtime_init.rs
+As you can see, we are populating `ELR_EL2` with the address of the `kernel_init()` function that we
+earlier used to call directly from the entrypoint. Finally, we set the stack pointer for `SP_EL1`.
 
 You might have noticed that the stack's address was supplied as a function argument. As you might
 remember, in  `_start()` in `boot.s`, we are already setting up the stack for `EL2`. Since there
@@ -151,7 +148,7 @@ Lastly, back in `_start_rust()` a call to `ERET` is made:
 pub unsafe extern "C" fn _start_rust(phys_boot_core_stack_end_exclusive_addr: u64) -> ! {
     prepare_el2_to_el1_transition(phys_boot_core_stack_end_exclusive_addr);
 
-    // Use `eret` to "return" to EL1. This results in execution of runtime_init() in EL1.
+    // Use `eret` to "return" to EL1. This results in execution of kernel_init() in EL1.
     asm::eret()
 }
 ```
@@ -214,12 +211,12 @@ diff -uNr 08_hw_debug_JTAG/Cargo.toml 09_privilege_level/Cargo.toml
 diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.rs 09_privilege_level/src/_arch/aarch64/cpu/boot.rs
 --- 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.rs
 +++ 09_privilege_level/src/_arch/aarch64/cpu/boot.rs
-@@ -12,11 +12,53 @@
+@@ -11,17 +11,67 @@
+ //!
  //! crate::cpu::boot::arch_boot
 
- use crate::runtime_init;
 +use cortex_a::{asm, regs::*};
-
++
  // Assembly counterpart to this file.
  global_asm!(include_str!("boot.s"));
 
@@ -256,8 +253,8 @@ diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.rs 09_privilege_level/src/
 +            + SPSR_EL2::M::EL1h,
 +    );
 +
-+    // Second, let the link register point to runtime_init().
-+    ELR_EL2.set(runtime_init::runtime_init as *const () as u64);
++    // Second, let the link register point to kernel_init().
++    ELR_EL2.set(crate::kernel_init as *const () as u64);
 +
 +    // Set up SP_EL1 (stack pointer), which will be used by EL1 once we "return" to it. Since there
 +    // are no plans to ever return to EL2, just re-use the same stack.
@@ -268,18 +265,20 @@ diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.rs 09_privilege_level/src/
  // Public Code
  //--------------------------------------------------------------------------------------------------
 
-@@ -27,7 +69,11 @@
- /// # Safety
+ /// The Rust entry of the `kernel` binary.
  ///
- /// - The `bss` section is not initialized yet. The code must not use or reference it in any way.
-+/// - Exception return from EL2 must must continue execution in EL1 with `runtime_init()`.
+ /// The function is called from the assembly `_start` function.
++///
++/// # Safety
++///
++/// - Exception return from EL2 must must continue execution in EL1 with `kernel_init()`.
  #[no_mangle]
 -pub unsafe fn _start_rust() -> ! {
--    runtime_init::runtime_init()
+-    crate::kernel_init()
 +pub unsafe extern "C" fn _start_rust(phys_boot_core_stack_end_exclusive_addr: u64) -> ! {
 +    prepare_el2_to_el1_transition(phys_boot_core_stack_end_exclusive_addr);
 +
-+    // Use `eret` to "return" to EL1. This results in execution of runtime_init() in EL1.
++    // Use `eret` to "return" to EL1. This results in execution of kernel_init() in EL1.
 +    asm::eret()
  }
 
@@ -301,15 +300,15 @@ diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.s 09_privilege_level/src/_
 +	// Only proceed if the core executes in EL2. Park it otherwise.
 +	mrs	x0, CurrentEL
 +	cmp	x0, _EL2
-+	b.ne	1f
++	b.ne	parking_loop
 +
  	// Only proceed on the boot core. Park it otherwise.
  	mrs	x1, MPIDR_EL1
  	and	x1, x1, _core_id_mask
-@@ -38,11 +44,11 @@
+@@ -50,11 +56,11 @@
 
- 	// If execution reaches here, it is the boot core. Now, prepare the jump to Rust code.
-
+ 	// Prepare the jump to Rust code.
+ prepare_rust:
 -	// Set the stack pointer.
 +	// Set the stack pointer. This ensures that any code in EL2 that needs the stack will work.
  	ADR_REL	x0, __boot_core_stack_end_exclusive
@@ -499,15 +498,15 @@ diff -uNr 08_hw_debug_JTAG/src/exception.rs 09_privilege_level/src/exception.rs
 diff -uNr 08_hw_debug_JTAG/src/main.rs 09_privilege_level/src/main.rs
 --- 08_hw_debug_JTAG/src/main.rs
 +++ 09_privilege_level/src/main.rs
-@@ -119,6 +119,7 @@
+@@ -117,6 +117,7 @@
  mod console;
  mod cpu;
  mod driver;
 +mod exception;
- mod memory;
  mod panic_wait;
  mod print;
-@@ -149,6 +150,8 @@
+ mod synchronization;
+@@ -145,6 +146,8 @@
 
  /// The main function running after the early init.
  fn kernel_main() -> ! {
@@ -516,7 +515,7 @@ diff -uNr 08_hw_debug_JTAG/src/main.rs 09_privilege_level/src/main.rs
      use core::time::Duration;
      use driver::interface::DriverManager;
      use time::interface::TimeManager;
-@@ -160,6 +163,12 @@
+@@ -156,6 +159,12 @@
      );
      info!("Booting on: {}", bsp::board_name());
 
@@ -529,7 +528,7 @@ diff -uNr 08_hw_debug_JTAG/src/main.rs 09_privilege_level/src/main.rs
      info!(
          "Architectural timer resolution: {} ns",
          time::time_manager().resolution().as_nanos()
-@@ -174,11 +183,15 @@
+@@ -170,11 +179,15 @@
          info!("      {}. {}", i + 1, driver.compatible());
      }
 

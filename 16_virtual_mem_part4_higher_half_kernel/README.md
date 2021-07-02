@@ -99,7 +99,7 @@ by the time the CPU enters `EL1`, virtual memory will be active, and the CPU mus
 new higher-half `virtual addresses` for everything it does.
 
 Specifically, this means the address from which the CPU should execute upon entering `EL1` (function
-`runtime_init()`) must be a valid _virtual address_, same as the stack pointer's address. Both of
+`kernel_init()`) must be a valid _virtual address_, same as the stack pointer's address. Both of
 them are programmed in function `fn prepare_el2_to_el1_transition(...)`, so we must ensure now that
 _link-time_ addresses are used here. For this reason, retrieval of these addresses happens in
 `assembly` in `boot.s`, where we can explicitly enforce generation of **absolute** addresses:
@@ -108,7 +108,7 @@ _link-time_ addresses are used here. For this reason, retrieval of these address
 // Load the _absolute_ addresses of the following symbols. Since the kernel is linked at
 // the top of the 64 bit address space, these are effectively virtual addresses.
 ADR_ABS	x1, __boot_core_stack_end_exclusive
-ADR_ABS	x2, runtime_init
+ADR_ABS	x2, kernel_init
 ```
 
 Both values are forwarded to the Rust entry point function `_start_rust()`, which in turn forwards
@@ -246,15 +246,6 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/Cargo.toml 16_virtual_mem_part
 diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.rs 16_virtual_mem_part4_higher_half_kernel/src/_arch/aarch64/cpu/boot.rs
 --- 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.rs
 +++ 16_virtual_mem_part4_higher_half_kernel/src/_arch/aarch64/cpu/boot.rs
-@@ -11,7 +11,7 @@
- //!
- //! crate::cpu::boot::arch_boot
-
--use crate::{cpu, memory, memory::Address, runtime_init};
-+use crate::{cpu, memory, memory::Address};
- use core::intrinsics::unlikely;
- use cortex_a::{asm, regs::*};
-
 @@ -29,7 +29,10 @@
  /// - The `bss` section is not initialized yet. The code must not use or reference it in any way.
  /// - The HW state of EL1 must be prepared in a sound way.
@@ -262,7 +253,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.rs 
 -unsafe fn prepare_el2_to_el1_transition(phys_boot_core_stack_end_exclusive_addr: u64) {
 +unsafe fn prepare_el2_to_el1_transition(
 +    virt_boot_core_stack_end_exclusive_addr: u64,
-+    virt_runtime_init_addr: u64,
++    virt_kernel_init_addr: u64,
 +) {
      // Enable timer counter registers for EL1.
      CNTHCTL_EL2.write(CNTHCTL_EL2::EL1PCEN::SET + CNTHCTL_EL2::EL1PCTEN::SET);
@@ -270,9 +261,9 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.rs 
 @@ -52,11 +55,11 @@
      );
 
-     // Second, let the link register point to runtime_init().
--    ELR_EL2.set(runtime_init::runtime_init as *const () as u64);
-+    ELR_EL2.set(virt_runtime_init_addr);
+     // Second, let the link register point to kernel_init().
+-    ELR_EL2.set(crate::kernel_init as *const () as u64);
++    ELR_EL2.set(virt_kernel_init_addr);
 
      // Set up SP_EL1 (stack pointer), which will be used by EL1 once we "return" to it. Since there
      // are no plans to ever return to EL2, just re-use the same stack.
@@ -281,29 +272,29 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.rs 
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -74,9 +77,13 @@
+@@ -73,9 +76,13 @@
  #[no_mangle]
  pub unsafe extern "C" fn _start_rust(
      phys_kernel_tables_base_addr: u64,
 -    phys_boot_core_stack_end_exclusive_addr: u64,
 +    virt_boot_core_stack_end_exclusive_addr: u64,
-+    virt_runtime_init_addr: u64,
++    virt_kernel_init_addr: u64,
  ) -> ! {
 -    prepare_el2_to_el1_transition(phys_boot_core_stack_end_exclusive_addr);
 +    prepare_el2_to_el1_transition(
 +        virt_boot_core_stack_end_exclusive_addr,
-+        virt_runtime_init_addr,
++        virt_kernel_init_addr,
 +    );
 
      // Turn on the MMU for EL1.
      let addr = Address::new(phys_kernel_tables_base_addr as usize);
-@@ -84,6 +91,7 @@
+@@ -83,6 +90,7 @@
          cpu::wait_forever();
      }
 
--    // Use `eret` to "return" to EL1. This results in execution of runtime_init() in EL1.
+-    // Use `eret` to "return" to EL1. This results in execution of kernel_init() in EL1.
 +    // Use `eret` to "return" to EL1. Since virtual memory will already be enabled, this results in
-+    // execution of runtime_init() in EL1 from its _virtual address_.
++    // execution of kernel_init() in EL1 from its _virtual address_.
      asm::eret()
  }
 
@@ -329,7 +320,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.s 1
  .equ _EL2, 0x8
  .equ _core_id_mask, 0b11
 
-@@ -47,11 +59,23 @@
+@@ -59,11 +71,23 @@
  	// Load the base address of the kernel's translation tables.
  	ldr	x0, PHYS_KERNEL_TABLES_BASE_ADDR // provided by bsp/__board_name__/memory/mmu.rs
 
@@ -339,7 +330,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.s 1
 +	// Load the _absolute_ addresses of the following symbols. Since the kernel is linked at
 +	// the top of the 64 bit address space, these are effectively virtual addresses.
 +	ADR_ABS	x1, __boot_core_stack_end_exclusive
-+	ADR_ABS	x2, runtime_init
++	ADR_ABS	x2, kernel_init
 +
 +	// Load the PC-relative address of the stack and set the stack pointer.
 +	//
@@ -590,6 +581,22 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/memory/mmu
  //--------------------------------------------------------------------------------------------------
  // Public Definitions
 
+diff -uNr 15_virtual_mem_part3_precomputed_tables/src/lib.rs 16_virtual_mem_part4_higher_half_kernel/src/lib.rs
+--- 15_virtual_mem_part3_precomputed_tables/src/lib.rs
++++ 16_virtual_mem_part4_higher_half_kernel/src/lib.rs
+@@ -154,11 +154,6 @@
+     )
+ }
+
+-#[cfg(not(test))]
+-extern "Rust" {
+-    fn kernel_init() -> !;
+-}
+-
+ //--------------------------------------------------------------------------------------------------
+ // Testing
+ //--------------------------------------------------------------------------------------------------
+
 diff -uNr 15_virtual_mem_part3_precomputed_tables/src/memory/mmu.rs 16_virtual_mem_part4_higher_half_kernel/src/memory/mmu.rs
 --- 15_virtual_mem_part3_precomputed_tables/src/memory/mmu.rs
 +++ 16_virtual_mem_part4_higher_half_kernel/src/memory/mmu.rs
@@ -605,18 +612,6 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/memory/mmu.rs 16_virtual_m
      /// [AS_SIZE - 1, 0]
      type TableStartFromBottom;
  }
-
-diff -uNr 15_virtual_mem_part3_precomputed_tables/src/runtime_init.rs 16_virtual_mem_part4_higher_half_kernel/src/runtime_init.rs
---- 15_virtual_mem_part3_precomputed_tables/src/runtime_init.rs
-+++ 16_virtual_mem_part4_higher_half_kernel/src/runtime_init.rs
-@@ -30,6 +30,7 @@
- /// # Safety
- ///
- /// - Only a single core must be active and running this function.
-+#[no_mangle]
- pub unsafe fn runtime_init() -> ! {
-     extern "Rust" {
-         fn kernel_init() -> !;
 
 diff -uNr 15_virtual_mem_part3_precomputed_tables/tests/02_exception_sync_page_fault.rs 16_virtual_mem_part4_higher_half_kernel/tests/02_exception_sync_page_fault.rs
 --- 15_virtual_mem_part3_precomputed_tables/tests/02_exception_sync_page_fault.rs

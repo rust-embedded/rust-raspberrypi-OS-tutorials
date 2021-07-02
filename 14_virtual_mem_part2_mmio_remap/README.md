@@ -806,7 +806,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 14
 
          self.configure_translation_control();
 
-@@ -162,22 +153,3 @@
+@@ -162,33 +153,3 @@
          SCTLR_EL1.matches_all(SCTLR_EL1::M::Enable)
      }
  }
@@ -818,12 +818,23 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 14
 -#[cfg(test)]
 -mod tests {
 -    use super::*;
+-    use core::{cell::UnsafeCell, ops::Range};
 -    use test_macros::kernel_test;
 -
 -    /// Check if KERNEL_TABLES is in .bss.
 -    #[kernel_test]
 -    fn kernel_tables_in_bss() {
--        let bss_range = bsp::memory::bss_range_inclusive();
+-        extern "Rust" {
+-            static __bss_start: UnsafeCell<u64>;
+-            static __bss_end_exclusive: UnsafeCell<u64>;
+-        }
+-
+-        let bss_range = unsafe {
+-            Range {
+-                start: __bss_start.get(),
+-                end: __bss_end_exclusive.get(),
+-            }
+-        };
 -        let kernel_tables_addr = unsafe { &KERNEL_TABLES as *const _ as usize as *mut u64 };
 -
 -        assert!(bss_range.contains(&kernel_tables_addr));
@@ -1489,10 +1500,10 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/link.ld 14_vir
 +    __rw_start = .;
      .data : { *(.data*) } :segment_rw
 
-     /* Section is zeroed in u64 chunks, align start and end to 8 bytes */
-@@ -56,4 +52,23 @@
-         . += 8; /* Fill for the bss == 0 case, so that __bss_start <= __bss_end_inclusive holds */
-         __bss_end_inclusive = . - 8;
+     /* Section is zeroed in pairs of u64. Align start and end to 16 bytes */
+@@ -54,4 +50,23 @@
+         . = ALIGN(16);
+         __bss_end_exclusive = .;
      } :NONE
 +
 +    . = ALIGN(64K); /* Align to page boundary */
@@ -1554,16 +1565,16 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
 +/// The translation granule chosen by this BSP. This will be used everywhere else in the kernel to
 +/// derive respective data structures and their sizes. For example, the `crate::memory::mmu::Page`.
 +pub type KernelGranule = TranslationGranule<{ 64 * 1024 }>;
-+
+
+-const NUM_MEM_RANGES: usize = 2;
 +/// The kernel's virtual address space defined by this BSP.
 +pub type KernelVirtAddrSpace = AddressSpace<{ 8 * 1024 * 1024 * 1024 }>;
 
--const NUM_MEM_RANGES: usize = 2;
+-/// The virtual memory layout.
 +//--------------------------------------------------------------------------------------------------
 +// Global instances
 +//--------------------------------------------------------------------------------------------------
-
--/// The virtual memory layout.
++
 +/// The kernel translation tables.
  ///
 -/// The layout must contain only special ranges, aka anything that is _not_ normal cacheable DRAM.
@@ -1642,15 +1653,15 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
 +/// The Read+Execute (RX) pages of the kernel binary.
 +fn phys_rx_page_desc() -> PageSliceDescriptor<Physical> {
 +    virt_rx_page_desc().into()
++}
++
++/// The Read+Write (RW) pages of the kernel binary.
++fn phys_rw_page_desc() -> PageSliceDescriptor<Physical> {
++    virt_rw_page_desc().into()
  }
 
 -fn mmio_range_inclusive() -> RangeInclusive<usize> {
 -    RangeInclusive::new(memory_map::mmio::START, memory_map::mmio::END_INCLUSIVE)
-+/// The Read+Write (RW) pages of the kernel binary.
-+fn phys_rw_page_desc() -> PageSliceDescriptor<Physical> {
-+    virt_rw_page_desc().into()
-+}
-+
 +/// The boot core's stack.
 +fn phys_boot_core_stack_page_desc() -> PageSliceDescriptor<Physical> {
 +    virt_boot_core_stack_page_desc().into()
@@ -1726,15 +1737,17 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -82,14 +176,18 @@
+@@ -77,19 +171,24 @@
+ #[cfg(test)]
+ mod tests {
+     use super::*;
++    use core::{cell::UnsafeCell, ops::Range};
+     use test_macros::kernel_test;
+
      /// Check alignment of the kernel's virtual memory layout sections.
      #[kernel_test]
      fn virt_mem_layout_sections_are_64KiB_aligned() {
 -        const SIXTYFOUR_KIB: usize = 65536;
--
--        for i in LAYOUT.inner().iter() {
--            let start: usize = *(i.virtual_range)().start();
--            let end: usize = *(i.virtual_range)().end() + 1;
 +        for i in [
 +            virt_rx_page_desc,
 +            virt_rw_page_desc,
@@ -1745,6 +1758,10 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
 +            let start: usize = i().start_addr().into_usize();
 +            let end: usize = i().end_addr().into_usize();
 
+-        for i in LAYOUT.inner().iter() {
+-            let start: usize = *(i.virtual_range)().start();
+-            let end: usize = *(i.virtual_range)().end() + 1;
+-
 -            assert_eq!(start modulo SIXTYFOUR_KIB, 0);
 -            assert_eq!(end modulo SIXTYFOUR_KIB, 0);
 +            assert_eq!(start modulo KernelGranule::SIZE, 0);
@@ -1752,7 +1769,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
              assert!(end >= start);
          }
      }
-@@ -97,18 +195,28 @@
+@@ -97,18 +196,38 @@
      /// Ensure the kernel's virtual memory layout is free of overlaps.
      #[kernel_test]
      fn virt_mem_layout_has_no_overlaps() {
@@ -1786,7 +1803,17 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
 +    /// Check if KERNEL_TABLES is in .bss.
 +    #[kernel_test]
 +    fn kernel_tables_in_bss() {
-+        let bss_range = super::super::bss_range_inclusive();
++        extern "Rust" {
++            static __bss_start: UnsafeCell<u64>;
++            static __bss_end_exclusive: UnsafeCell<u64>;
++        }
++
++        let bss_range = unsafe {
++            Range {
++                start: __bss_start.get(),
++                end: __bss_end_exclusive.get(),
++            }
++        };
 +        let kernel_tables_addr = &KERNEL_TABLES as *const _ as usize as *mut u64;
 +
 +        assert!(bss_range.contains(&kernel_tables_addr));
@@ -1834,16 +1861,15 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs 14_v
  pub mod mmu;
 
 +use crate::memory::{Address, Physical, Virtual};
- use core::{cell::UnsafeCell, ops::RangeInclusive};
+ use core::cell::UnsafeCell;
 
  //--------------------------------------------------------------------------------------------------
-@@ -17,8 +48,16 @@
+@@ -16,6 +47,15 @@
+ extern "Rust" {
      static __rx_start: UnsafeCell<()>;
      static __rx_end_exclusive: UnsafeCell<()>;
-
++
 +    static __rw_start: UnsafeCell<()>;
-     static __bss_start: UnsafeCell<u64>;
-     static __bss_end_inclusive: UnsafeCell<u64>;
 +    static __rw_end_exclusive: UnsafeCell<()>;
 +
 +    static __boot_core_stack_start: UnsafeCell<()>;
@@ -1854,7 +1880,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs 14_v
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -28,35 +67,26 @@
+@@ -25,35 +65,26 @@
  /// The board's physical memory map.
  #[rustfmt::skip]
  pub(super) mod map {
@@ -1904,7 +1930,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs 14_v
      }
 
      /// Physical devices.
-@@ -64,13 +94,22 @@
+@@ -61,13 +92,22 @@
      pub mod mmio {
          use super::*;
 
@@ -1933,7 +1959,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs 14_v
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -83,18 +122,69 @@
+@@ -80,16 +120,67 @@
  ///
  /// - Value is provided by the linker script and must be trusted as-is.
  #[inline(always)]
@@ -1941,21 +1967,19 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs 14_v
 -    unsafe { __rx_start.get() as usize }
 +fn virt_rx_start() -> Address<Virtual> {
 +    Address::new(unsafe { __rx_start.get() as usize })
++}
++
++/// Size of the Read+Execute (RX) range.
++///
++/// # Safety
++///
++/// - Value is provided by the linker script and must be trusted as-is.
++#[inline(always)]
++fn rx_size() -> usize {
++    unsafe { (__rx_end_exclusive.get() as usize) - (__rx_start.get() as usize) }
  }
 
 -/// Exclusive end address of the Read+Execute (RX) range.
-+/// Size of the Read+Execute (RX) range.
- ///
- /// # Safety
- ///
- /// - Value is provided by the linker script and must be trusted as-is.
- #[inline(always)]
--fn rx_end_exclusive() -> usize {
--    unsafe { __rx_end_exclusive.get() as usize }
-+fn rx_size() -> usize {
-+    unsafe { (__rx_end_exclusive.get() as usize) - (__rx_start.get() as usize) }
-+}
-+
 +/// Start address of the Read+Write (RW) range.
 +#[inline(always)]
 +fn virt_rw_start() -> Address<Virtual> {
@@ -1963,11 +1987,13 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs 14_v
 +}
 +
 +/// Size of the Read+Write (RW) range.
-+///
-+/// # Safety
-+///
-+/// - Value is provided by the linker script and must be trusted as-is.
-+#[inline(always)]
+ ///
+ /// # Safety
+ ///
+ /// - Value is provided by the linker script and must be trusted as-is.
+ #[inline(always)]
+-fn rx_end_exclusive() -> usize {
+-    unsafe { __rx_end_exclusive.get() as usize }
 +fn rw_size() -> usize {
 +    unsafe { (__rw_end_exclusive.get() as usize) - (__rw_start.get() as usize) }
 +}
@@ -2006,8 +2032,6 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs 14_v
 +fn phys_addr_space_end() -> Address<Physical> {
 +    map::END
  }
-
- //--------------------------------------------------------------------------------------------------
 
 diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi.rs 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi.rs
 --- 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi.rs
@@ -2131,7 +2155,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/driver.rs 14_virtual_mem_part2
 diff -uNr 13_exceptions_part2_peripheral_IRQs/src/lib.rs 14_virtual_mem_part2_mmio_remap/src/lib.rs
 --- 13_exceptions_part2_peripheral_IRQs/src/lib.rs
 +++ 14_virtual_mem_part2_mmio_remap/src/lib.rs
-@@ -111,6 +111,8 @@
+@@ -109,6 +109,8 @@
  #![allow(clippy::upper_case_acronyms)]
  #![allow(incomplete_features)]
  #![feature(asm)]
@@ -2140,7 +2164,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/lib.rs 14_virtual_mem_part2_mm
  #![feature(const_fn_fn_ptr_basics)]
  #![feature(const_generics)]
  #![feature(const_panic)]
-@@ -132,6 +134,7 @@
+@@ -129,6 +131,7 @@
  mod synchronization;
 
  pub mod bsp;
@@ -3131,16 +3155,16 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu.rs 14_virtual_mem_p
 diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory.rs 14_virtual_mem_part2_mmio_remap/src/memory.rs
 --- 13_exceptions_part2_peripheral_IRQs/src/memory.rs
 +++ 14_virtual_mem_part2_mmio_remap/src/memory.rs
-@@ -6,12 +6,136 @@
+@@ -5,3 +5,133 @@
+ //! Memory Management.
 
  pub mod mmu;
-
--use core::ops::RangeInclusive;
++
 +use crate::common;
 +use core::{
 +    fmt,
 +    marker::PhantomData,
-+    ops::{AddAssign, RangeInclusive, SubAssign},
++    ops::{AddAssign, SubAssign},
 +};
 +
 +//--------------------------------------------------------------------------------------------------
@@ -3164,11 +3188,11 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory.rs 14_virtual_mem_part2
 +    value: usize,
 +    _address_type: PhantomData<fn() -> ATYPE>,
 +}
-
- //--------------------------------------------------------------------------------------------------
- // Public Code
- //--------------------------------------------------------------------------------------------------
-
++
++//--------------------------------------------------------------------------------------------------
++// Public Code
++//--------------------------------------------------------------------------------------------------
++
 +impl AddressType for Physical {}
 +impl AddressType for Virtual {}
 +
@@ -3265,10 +3289,6 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory.rs 14_virtual_mem_part2
 +        write!(f, "{:04x}", q1)
 +    }
 +}
-+
- /// Zero out an inclusive memory range.
- ///
- /// # Safety
 
 diff -uNr 13_exceptions_part2_peripheral_IRQs/tests/02_exception_sync_page_fault.rs 14_virtual_mem_part2_mmio_remap/tests/02_exception_sync_page_fault.rs
 --- 13_exceptions_part2_peripheral_IRQs/tests/02_exception_sync_page_fault.rs
