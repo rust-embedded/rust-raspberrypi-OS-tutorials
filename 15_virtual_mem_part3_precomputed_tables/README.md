@@ -832,7 +832,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/cpu/boot.s 15_virtua
 @@ -56,11 +56,14 @@
 
  	// Prepare the jump to Rust code.
- prepare_rust:
+ .L_prepare_rust:
 +	// Load the base address of the kernel's translation tables.
 +	ldr	x0, PHYS_KERNEL_TABLES_BASE_ADDR // provided by bsp/__board_name__/memory/mmu.rs
 +

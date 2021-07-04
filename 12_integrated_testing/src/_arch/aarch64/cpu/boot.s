@@ -33,14 +33,14 @@ _start:
 	// Only proceed if the core executes in EL2. Park it otherwise.
 	mrs	x0, CurrentEL
 	cmp	x0, _EL2
-	b.ne	parking_loop
+	b.ne	.L_parking_loop
 
 	// Only proceed on the boot core. Park it otherwise.
 	mrs	x1, MPIDR_EL1
 	and	x1, x1, _core_id_mask
 	ldr	x2, BOOT_CORE_ID      // provided by bsp/__board_name__/cpu.rs
 	cmp	x1, x2
-	b.ne	parking_loop
+	b.ne	.L_parking_loop
 
 	// If execution reaches here, it is the boot core.
 
@@ -48,14 +48,14 @@ _start:
 	ADR_REL	x0, __bss_start
 	ADR_REL x1, __bss_end_exclusive
 
-bss_init_loop:
+.L_bss_init_loop:
 	cmp	x0, x1
-	b.eq	prepare_rust
+	b.eq	.L_prepare_rust
 	stp	xzr, xzr, [x0], #16
-	b	bss_init_loop
+	b	.L_bss_init_loop
 
 	// Prepare the jump to Rust code.
-prepare_rust:
+.L_prepare_rust:
 	// Set the stack pointer. This ensures that any code in EL2 that needs the stack will work.
 	ADR_REL	x0, __boot_core_stack_end_exclusive
 	mov	sp, x0
@@ -64,9 +64,9 @@ prepare_rust:
 	b	_start_rust
 
 	// Infinitely wait for events (aka "park the core").
-parking_loop:
+.L_parking_loop:
 	wfe
-	b	parking_loop
+	b	.L_parking_loop
 
 .size	_start, . - _start
 .type	_start, function

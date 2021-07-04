@@ -300,7 +300,7 @@ diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.s 09_privilege_level/src/_
 +	// Only proceed if the core executes in EL2. Park it otherwise.
 +	mrs	x0, CurrentEL
 +	cmp	x0, _EL2
-+	b.ne	parking_loop
++	b.ne	.L_parking_loop
 +
  	// Only proceed on the boot core. Park it otherwise.
  	mrs	x1, MPIDR_EL1
@@ -308,7 +308,7 @@ diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.s 09_privilege_level/src/_
 @@ -50,11 +56,11 @@
 
  	// Prepare the jump to Rust code.
- prepare_rust:
+ .L_prepare_rust:
 -	// Set the stack pointer.
 +	// Set the stack pointer. This ensures that any code in EL2 that needs the stack will work.
  	ADR_REL	x0, __boot_core_stack_end_exclusive

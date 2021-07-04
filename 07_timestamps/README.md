@@ -163,27 +163,27 @@ diff -uNr 06_uart_chainloader/src/_arch/aarch64/cpu/boot.s 07_timestamps/src/_ar
 +	ADR_REL	x0, __bss_start
 +	ADR_REL x1, __bss_end_exclusive
 
- bss_init_loop:
+ .L_bss_init_loop:
  	cmp	x0, x1
--	b.eq	relocate_binary
-+	b.eq	prepare_rust
+-	b.eq	.L_relocate_binary
++	b.eq	.L_prepare_rust
  	stp	xzr, xzr, [x0], #16
- 	b	bss_init_loop
+ 	b	.L_bss_init_loop
 
 -	// Next, relocate the binary.
--relocate_binary:
+-.L_relocate_binary:
 -	ADR_REL	x0, __binary_nonzero_start         // The address the binary got loaded to.
 -	ADR_ABS	x1, __binary_nonzero_start         // The address the binary was linked to.
 -	ADR_ABS	x2, __binary_nonzero_end_exclusive
 -
--copy_loop:
+-.L_copy_loop:
 -	ldr	x3, [x0], #8
 -	str	x3, [x1], #8
 -	cmp	x1, x2
--	b.lo	copy_loop
+-	b.lo	.L_copy_loop
 -
  	// Prepare the jump to Rust code.
-+prepare_rust:
++.L_prepare_rust:
  	// Set the stack pointer.
 -	ADR_ABS	x0, __boot_core_stack_end_exclusive
 +	ADR_REL	x0, __boot_core_stack_end_exclusive
@@ -196,7 +196,7 @@ diff -uNr 06_uart_chainloader/src/_arch/aarch64/cpu/boot.s 07_timestamps/src/_ar
 +	b	_start_rust
 
  	// Infinitely wait for events (aka "park the core").
- parking_loop:
+ .L_parking_loop:
 
 diff -uNr 06_uart_chainloader/src/_arch/aarch64/cpu.rs 07_timestamps/src/_arch/aarch64/cpu.rs
 --- 06_uart_chainloader/src/_arch/aarch64/cpu.rs
