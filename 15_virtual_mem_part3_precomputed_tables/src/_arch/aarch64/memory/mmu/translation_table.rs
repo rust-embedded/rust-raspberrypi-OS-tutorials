@@ -24,7 +24,11 @@ use crate::{
     },
 };
 use core::convert::{self, TryInto};
-use register::{register_bitfields, InMemoryRegister};
+use tock_registers::{
+    interfaces::{Readable, Writeable},
+    register_bitfields,
+    registers::InMemoryRegister,
+};
 
 //--------------------------------------------------------------------------------------------------
 // Private Definitions
@@ -180,7 +184,7 @@ impl TableDescriptor {
 
 /// Convert the kernel's generic memory attributes to HW-specific attributes of the MMU.
 impl convert::From<AttributeFields>
-    for register::FieldValue<u64, STAGE1_PAGE_DESCRIPTOR::Register>
+    for tock_registers::fields::FieldValue<u64, STAGE1_PAGE_DESCRIPTOR::Register>
 {
     fn from(attribute_fields: AttributeFields) -> Self {
         // Memory attributes.
@@ -399,7 +403,7 @@ impl<const NUM_TABLES: usize> memory::mmu::translation_table::interface::Transla
                 return Err("Virtual page is already mapped");
             }
 
-            *page_descriptor = PageDescriptor::from_output_addr(phys_page.as_ptr(), &attr);
+            *page_descriptor = PageDescriptor::from_output_addr(phys_page.as_ptr(), attr);
         }
 
         Ok(())
