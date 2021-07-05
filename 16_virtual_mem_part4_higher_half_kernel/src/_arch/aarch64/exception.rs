@@ -17,8 +17,11 @@ use crate::{
     memory::Address,
 };
 use core::{cell::UnsafeCell, fmt};
-use cortex_a::{barrier, regs::*};
-use register::InMemoryRegister;
+use cortex_a::{asm::barrier, registers::*};
+use tock_registers::{
+    interfaces::{Readable, Writeable},
+    registers::InMemoryRegister,
+};
 
 // Assembly counterpart to this file.
 global_asm!(include_str!("exception.s"));
