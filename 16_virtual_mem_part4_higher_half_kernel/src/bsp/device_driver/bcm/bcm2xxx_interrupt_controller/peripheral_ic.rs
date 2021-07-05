@@ -10,7 +10,11 @@ use crate::{
     driver, exception, memory, synchronization,
     synchronization::{IRQSafeNullLock, InitStateLock},
 };
-use register::{mmio::*, register_structs};
+use tock_registers::{
+    interfaces::{Readable, Writeable},
+    register_structs,
+    registers::{ReadOnly, WriteOnly},
+};
 
 //--------------------------------------------------------------------------------------------------
 // Private Definitions

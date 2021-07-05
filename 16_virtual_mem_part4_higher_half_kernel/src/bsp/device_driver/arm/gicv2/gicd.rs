@@ -12,7 +12,11 @@ use crate::{
     state, synchronization,
     synchronization::{IRQSafeNullLock, InitStateLock},
 };
-use register::{mmio::*, register_bitfields, register_structs};
+use tock_registers::{
+    interfaces::{Readable, Writeable},
+    register_bitfields, register_structs,
+    registers::{ReadOnly, ReadWrite},
+};
 
 //--------------------------------------------------------------------------------------------------
 // Private Definitions
