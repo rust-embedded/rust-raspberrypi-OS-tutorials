@@ -9,7 +9,11 @@ use crate::{
     synchronization::IRQSafeNullLock,
 };
 use core::sync::atomic::{AtomicUsize, Ordering};
-use register::{mmio::*, register_bitfields, register_structs};
+use tock_registers::{
+    interfaces::{ReadWriteable, Writeable},
+    register_bitfields, register_structs,
+    registers::ReadWrite,
+};
 
 //--------------------------------------------------------------------------------------------------
 // Private Definitions
