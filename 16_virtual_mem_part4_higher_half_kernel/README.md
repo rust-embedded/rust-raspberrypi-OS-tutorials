@@ -246,7 +246,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/Cargo.toml 16_virtual_mem_part
 diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.rs 16_virtual_mem_part4_higher_half_kernel/src/_arch/aarch64/cpu/boot.rs
 --- 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.rs
 +++ 16_virtual_mem_part4_higher_half_kernel/src/_arch/aarch64/cpu/boot.rs
-@@ -29,7 +29,10 @@
+@@ -30,7 +30,10 @@
  /// - The `bss` section is not initialized yet. The code must not use or reference it in any way.
  /// - The HW state of EL1 must be prepared in a sound way.
  #[inline(always)]
@@ -258,7 +258,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.rs 
      // Enable timer counter registers for EL1.
      CNTHCTL_EL2.write(CNTHCTL_EL2::EL1PCEN::SET + CNTHCTL_EL2::EL1PCTEN::SET);
 
-@@ -52,11 +55,11 @@
+@@ -53,11 +56,11 @@
      );
 
      // Second, let the link register point to kernel_init().
@@ -272,7 +272,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.rs 
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -73,9 +76,13 @@
+@@ -74,9 +77,13 @@
  #[no_mangle]
  pub unsafe extern "C" fn _start_rust(
      phys_kernel_tables_base_addr: u64,
@@ -288,7 +288,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.rs 
 
      // Turn on the MMU for EL1.
      let addr = Address::new(phys_kernel_tables_base_addr as usize);
-@@ -83,6 +90,7 @@
+@@ -84,6 +91,7 @@
          cpu::wait_forever();
      }
 
@@ -352,7 +352,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.s 1
 diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu/translation_table.rs 16_virtual_mem_part4_higher_half_kernel/src/_arch/aarch64/memory/mmu/translation_table.rs
 --- 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu/translation_table.rs
 +++ 16_virtual_mem_part4_higher_half_kernel/src/_arch/aarch64/memory/mmu/translation_table.rs
-@@ -131,7 +131,7 @@
+@@ -135,7 +135,7 @@
  /// aligned, so the lvl3 is put first.
  #[repr(C)]
  #[repr(align(65536))]
@@ -361,7 +361,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu/t
      /// Page descriptors, covering 64 KiB windows per entry.
      lvl3: [[PageDescriptor; 8192]; NUM_TABLES],
 
-@@ -258,14 +258,23 @@
+@@ -262,14 +262,23 @@
  where
      [u8; Self::SIZE >> Granule512MiB::SHIFT]: Sized,
  {
@@ -387,7 +387,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu/t
      /// Create an instance.
      #[allow(clippy::assertions_on_constants)]
      const fn _new(for_precompute: bool) -> Self {
-@@ -294,20 +303,32 @@
+@@ -298,20 +307,32 @@
      /// The start address of the table's MMIO range.
      #[inline(always)]
      fn mmio_start_addr(&self) -> Address<Virtual> {
@@ -424,7 +424,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu/t
      }
 
      /// Helper to calculate the lvl2 and lvl3 indices from an address.
-@@ -316,7 +337,12 @@
+@@ -320,7 +341,12 @@
          &self,
          addr: *const Page<Virtual>,
      ) -> Result<(usize, usize), &'static str> {
@@ -438,7 +438,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu/t
          let lvl2_index = addr >> Granule512MiB::SHIFT;
          let lvl3_index = (addr & Granule512MiB::MASK) >> Granule64KiB::SHIFT;
 
-@@ -343,8 +369,9 @@
+@@ -347,8 +373,9 @@
  // OS Interface Code
  //------------------------------------------------------------------------------
 
@@ -450,7 +450,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu/t
  {
      fn init(&mut self) -> Result<(), &'static str> {
          if self.initialized {
-@@ -419,12 +446,16 @@
+@@ -423,12 +450,16 @@
              return Err("Not enough MMIO space left");
          }
 
@@ -468,7 +468,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu/t
          Ok(PageSliceDescriptor::from_addr(addr, num_pages))
      }
 
-@@ -447,7 +478,7 @@
+@@ -451,7 +482,7 @@
  //--------------------------------------------------------------------------------------------------
 
  #[cfg(test)]
@@ -481,7 +481,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu/t
 diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu.rs 16_virtual_mem_part4_higher_half_kernel/src/_arch/aarch64/memory/mmu.rs
 --- 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu.rs
 +++ 16_virtual_mem_part4_higher_half_kernel/src/_arch/aarch64/memory/mmu.rs
-@@ -65,6 +65,7 @@
+@@ -66,6 +66,7 @@
 
  impl MemoryManagementUnit {
      /// Setup function for the MAIR_EL1 register.
@@ -489,7 +489,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu.r
      fn set_up_mair(&self) {
          // Define the memory types being mapped.
          MAIR_EL1.write(
-@@ -78,20 +79,21 @@
+@@ -79,20 +80,21 @@
      }
 
      /// Configure various settings of stage 1 of the EL1 translation regime.
@@ -521,7 +521,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu.r
          );
      }
  }
-@@ -130,7 +132,7 @@
+@@ -131,7 +133,7 @@
          self.set_up_mair();
 
          // Set the "Translation Table Base Register".

@@ -279,7 +279,7 @@ diff -uNr 05_drivers_gpio_uart/src/_arch/aarch64/cpu/boot.s 06_uart_chainloader/
 diff -uNr 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
 --- 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
 +++ 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
-@@ -144,7 +144,7 @@
+@@ -148,7 +148,7 @@
          // Make an educated guess for a good delay value (Sequence described in the BCM2837
          // peripherals PDF).
          //
@@ -292,7 +292,7 @@ diff -uNr 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 06_uart
 diff -uNr 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 --- 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -279,7 +279,7 @@
+@@ -284,7 +284,7 @@
      }
 
      /// Retrieve a character.
@@ -301,7 +301,7 @@ diff -uNr 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 0
          // If RX FIFO is empty,
          if self.registers.FR.matches_all(FR::RXFE::SET) {
              // immediately return in non-blocking mode.
-@@ -294,12 +294,7 @@
+@@ -299,12 +299,7 @@
          }
 
          // Read one character.
@@ -315,7 +315,7 @@ diff -uNr 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 0
 
          // Update statistics.
          self.chars_read += 1;
-@@ -379,14 +374,14 @@
+@@ -384,14 +379,14 @@
  impl console::interface::Read for PL011Uart {
      fn read_char(&self) -> char {
          self.inner

@@ -802,10 +802,10 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/cpu/boot.rs 15_virtu
 
 +use crate::{cpu, memory, memory::Address};
 +use core::intrinsics::unlikely;
- use cortex_a::{asm, regs::*};
+ use cortex_a::{asm, registers::*};
+ use tock_registers::interfaces::Writeable;
 
- // Assembly counterpart to this file.
-@@ -69,9 +71,18 @@
+@@ -70,9 +72,18 @@
  ///
  /// - Exception return from EL2 must must continue execution in EL1 with `kernel_init()`.
  #[no_mangle]
@@ -857,10 +857,10 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/memory/mmu/translati
  };
 -use core::convert;
 +use core::convert::{self, TryInto};
- use register::{register_bitfields, InMemoryRegister};
-
- //--------------------------------------------------------------------------------------------------
-@@ -120,7 +120,7 @@
+ use tock_registers::{
+     interfaces::{Readable, Writeable},
+     register_bitfields,
+@@ -124,7 +124,7 @@
  }
 
  trait StartAddr {
@@ -869,7 +869,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/memory/mmu/translati
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -149,9 +149,8 @@
+@@ -153,9 +153,8 @@
  // Private Code
  //--------------------------------------------------------------------------------------------------
 
@@ -880,7 +880,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/memory/mmu/translati
          Address::new(self as *const _ as usize)
      }
  }
-@@ -269,7 +268,7 @@
+@@ -273,7 +272,7 @@
 
      /// Create an instance.
      #[allow(clippy::assertions_on_constants)]
@@ -889,7 +889,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/memory/mmu/translati
          assert!(bsp::memory::mmu::KernelGranule::SIZE == Granule64KiB::SIZE);
 
          // Can't have a zero-sized address space.
-@@ -278,11 +277,20 @@
+@@ -282,11 +281,20 @@
          Self {
              lvl3: [[PageDescriptor::new_zeroed(); 8192]; NUM_TABLES],
              lvl2: [TableDescriptor::new_zeroed(); NUM_TABLES],
@@ -912,7 +912,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/memory/mmu/translati
      /// The start address of the table's MMIO range.
      #[inline(always)]
      fn mmio_start_addr(&self) -> Address<Virtual> {
-@@ -338,24 +346,26 @@
+@@ -342,24 +350,26 @@
  impl<const NUM_TABLES: usize> memory::mmu::translation_table::interface::TranslationTable
      for FixedSizeTranslationTable<NUM_TABLES>
  {
@@ -958,8 +958,8 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/memory/mmu.rs 15_vir
 +    memory::{mmu::TranslationGranule, Address, Physical, Virtual},
  };
  use core::intrinsics::unlikely;
- use cortex_a::{barrier, regs::*};
-@@ -108,7 +108,7 @@
+ use cortex_a::{asm::barrier, registers::*};
+@@ -109,7 +109,7 @@
  //------------------------------------------------------------------------------
  // OS Interface Code
  //------------------------------------------------------------------------------
@@ -968,7 +968,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/memory/mmu.rs 15_vir
 
  impl memory::mmu::interface::MMU for MemoryManagementUnit {
      unsafe fn enable_mmu_and_caching(
-@@ -152,4 +152,31 @@
+@@ -153,4 +153,31 @@
      fn is_enabled(&self) -> bool {
          SCTLR_EL1.matches_all(SCTLR_EL1::M::Enable)
      }

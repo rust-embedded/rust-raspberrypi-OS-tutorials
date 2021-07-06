@@ -364,7 +364,7 @@ diff -uNr 09_privilege_level/Cargo.toml 10_virtual_mem_part1_identity_mapping/Ca
 diff -uNr 09_privilege_level/src/_arch/aarch64/memory/mmu/translation_table.rs 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/memory/mmu/translation_table.rs
 --- 09_privilege_level/src/_arch/aarch64/memory/mmu/translation_table.rs
 +++ 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/memory/mmu/translation_table.rs
-@@ -0,0 +1,288 @@
+@@ -0,0 +1,292 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2021 Andre Richter <andre.o.richter@gmail.com>
@@ -388,7 +388,11 @@ diff -uNr 09_privilege_level/src/_arch/aarch64/memory/mmu/translation_table.rs 1
 +    },
 +};
 +use core::convert;
-+use register::{register_bitfields, InMemoryRegister};
++use tock_registers::{
++    interfaces::{Readable, Writeable},
++    register_bitfields,
++    registers::InMemoryRegister,
++};
 +
 +//--------------------------------------------------------------------------------------------------
 +// Private Definitions
@@ -549,7 +553,7 @@ diff -uNr 09_privilege_level/src/_arch/aarch64/memory/mmu/translation_table.rs 1
 +
 +/// Convert the kernel's generic memory attributes to HW-specific attributes of the MMU.
 +impl convert::From<AttributeFields>
-+    for register::FieldValue<u64, STAGE1_PAGE_DESCRIPTOR::Register>
++    for tock_registers::fields::FieldValue<u64, STAGE1_PAGE_DESCRIPTOR::Register>
 +{
 +    fn from(attribute_fields: AttributeFields) -> Self {
 +        // Memory attributes.
@@ -657,7 +661,7 @@ diff -uNr 09_privilege_level/src/_arch/aarch64/memory/mmu/translation_table.rs 1
 diff -uNr 09_privilege_level/src/_arch/aarch64/memory/mmu.rs 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/memory/mmu.rs
 --- 09_privilege_level/src/_arch/aarch64/memory/mmu.rs
 +++ 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/memory/mmu.rs
-@@ -0,0 +1,164 @@
+@@ -0,0 +1,165 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -678,7 +682,8 @@ diff -uNr 09_privilege_level/src/_arch/aarch64/memory/mmu.rs 10_virtual_mem_part
 +    memory::mmu::{translation_table::KernelTranslationTable, TranslationGranule},
 +};
 +use core::intrinsics::unlikely;
-+use cortex_a::{barrier, regs::*};
++use cortex_a::{asm::barrier, registers::*};
++use tock_registers::interfaces::{ReadWriteable, Readable, Writeable};
 +
 +//--------------------------------------------------------------------------------------------------
 +// Private Definitions

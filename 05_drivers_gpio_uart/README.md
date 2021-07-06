@@ -126,8 +126,8 @@ diff -uNr 04_safe_globals/Cargo.toml 05_drivers_gpio_uart/Cargo.toml
  default = []
 -bsp_rpi3 = []
 -bsp_rpi4 = []
-+bsp_rpi3 = ["register"]
-+bsp_rpi4 = ["register"]
++bsp_rpi3 = ["tock-registers"]
++bsp_rpi4 = ["tock-registers"]
 
  [[bin]]
  name = "kernel"
@@ -136,11 +136,11 @@ diff -uNr 04_safe_globals/Cargo.toml 05_drivers_gpio_uart/Cargo.toml
  [dependencies]
 
 +# Optional dependencies
-+register = { version = "1.x.x", optional = true }
++tock-registers = { version = "0.7.x", default-features = false, features = ["register_types"], optional = true }
 +
  # Platform specific dependencies
  [target.'cfg(target_arch = "aarch64")'.dependencies]
- cortex-a = { version = "5.x.x" }
+ cortex-a = { version = "6.x.x" }
 
 diff -uNr 04_safe_globals/Makefile 05_drivers_gpio_uart/Makefile
 --- 04_safe_globals/Makefile
@@ -220,7 +220,7 @@ diff -uNr 04_safe_globals/src/_arch/aarch64/cpu.rs 05_drivers_gpio_uart/src/_arc
 diff -uNr 04_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
 --- 04_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
 +++ 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
-@@ -0,0 +1,221 @@
+@@ -0,0 +1,225 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -231,7 +231,11 @@ diff -uNr 04_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 05_drivers_g
 +    bsp::device_driver::common::MMIODerefWrapper, driver, synchronization,
 +    synchronization::NullLock,
 +};
-+use register::{mmio::*, register_bitfields, register_structs};
++use tock_registers::{
++    interfaces::{ReadWriteable, Writeable},
++    register_bitfields, register_structs,
++    registers::ReadWrite,
++};
 +
 +//--------------------------------------------------------------------------------------------------
 +// Private Definitions
@@ -446,7 +450,7 @@ diff -uNr 04_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 05_drivers_g
 diff -uNr 04_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 --- 04_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -0,0 +1,403 @@
+@@ -0,0 +1,408 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -463,7 +467,11 @@ diff -uNr 04_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 05_dri
 +    synchronization::NullLock,
 +};
 +use core::fmt;
-+use register::{mmio::*, register_bitfields, register_structs};
++use tock_registers::{
++    interfaces::{Readable, Writeable},
++    register_bitfields, register_structs,
++    registers::{ReadOnly, ReadWrite, WriteOnly},
++};
 +
 +//--------------------------------------------------------------------------------------------------
 +// Private Definitions
@@ -530,6 +538,7 @@ diff -uNr 04_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 05_dri
 +    LCR_H [
 +        /// Word length. These bits indicate the number of data bits transmitted or received in a
 +        /// frame.
++        #[allow(clippy::enum_variant_names)]
 +        WLEN OFFSET(5) NUMBITS(2) [
 +            FiveBit = 0b00,
 +            SixBit = 0b01,

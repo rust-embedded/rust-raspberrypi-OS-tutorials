@@ -492,14 +492,18 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/Cargo.toml 11_exceptions_part1_g
 diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 11_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs
 --- 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs
 +++ 11_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs
-@@ -11,7 +11,224 @@
+@@ -11,8 +11,227 @@
  //!
  //! crate::exception::arch_exception
 
--use cortex_a::regs::*;
+-use cortex_a::registers::*;
+-use tock_registers::interfaces::Readable;
 +use core::{cell::UnsafeCell, fmt};
-+use cortex_a::{asm, barrier, regs::*};
-+use register::InMemoryRegister;
++use cortex_a::{asm, asm::barrier, registers::*};
++use tock_registers::{
++    interfaces::{Readable, Writeable},
++    registers::InMemoryRegister,
++};
 +
 +// Assembly counterpart to this file.
 +global_asm!(include_str!("exception.s"));
@@ -718,7 +722,7 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
 
  //--------------------------------------------------------------------------------------------------
  // Public Code
-@@ -28,3 +245,23 @@
+@@ -29,3 +248,23 @@
          _ => (PrivilegeLevel::Unknown, "Unknown"),
      }
  }

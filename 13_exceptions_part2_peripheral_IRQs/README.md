@@ -761,7 +761,7 @@ diff -uNr 12_integrated_testing/Cargo.toml 13_exceptions_part2_peripheral_IRQs/C
 diff -uNr 12_integrated_testing/src/_arch/aarch64/cpu/smp.rs 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/cpu/smp.rs
 --- 12_integrated_testing/src/_arch/aarch64/cpu/smp.rs
 +++ 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/cpu/smp.rs
-@@ -0,0 +1,29 @@
+@@ -0,0 +1,30 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -775,7 +775,8 @@ diff -uNr 12_integrated_testing/src/_arch/aarch64/cpu/smp.rs 13_exceptions_part2
 +//!
 +//! crate::cpu::smp::arch_smp
 +
-+use cortex_a::regs::*;
++use cortex_a::registers::*;
++use tock_registers::interfaces::Readable;
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Code
@@ -795,7 +796,14 @@ diff -uNr 12_integrated_testing/src/_arch/aarch64/cpu/smp.rs 13_exceptions_part2
 diff -uNr 12_integrated_testing/src/_arch/aarch64/exception/asynchronous.rs 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/exception/asynchronous.rs
 --- 12_integrated_testing/src/_arch/aarch64/exception/asynchronous.rs
 +++ 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/exception/asynchronous.rs
-@@ -17,6 +17,10 @@
+@@ -12,12 +12,16 @@
+ //! crate::exception::asynchronous::arch_asynchronous
+
+ use cortex_a::registers::*;
+-use tock_registers::interfaces::Readable;
++use tock_registers::interfaces::{Readable, Writeable};
+
+ //--------------------------------------------------------------------------------------------------
  // Private Definitions
  //--------------------------------------------------------------------------------------------------
 
@@ -804,9 +812,9 @@ diff -uNr 12_integrated_testing/src/_arch/aarch64/exception/asynchronous.rs 13_e
 +}
 +
  trait DaifField {
-     fn daif_field() -> register::Field<u64, DAIF::Register>;
+     fn daif_field() -> tock_registers::fields::Field<u64, DAIF::Register>;
  }
-@@ -65,6 +69,71 @@
+@@ -66,6 +70,71 @@
  // Public Code
  //--------------------------------------------------------------------------------------------------
 
@@ -888,9 +896,9 @@ diff -uNr 12_integrated_testing/src/_arch/aarch64/exception.rs 13_exceptions_par
 
 +use crate::{bsp, exception};
  use core::{cell::UnsafeCell, fmt};
- use cortex_a::{barrier, regs::*};
- use register::InMemoryRegister;
-@@ -91,8 +92,11 @@
+ use cortex_a::{asm::barrier, registers::*};
+ use tock_registers::{
+@@ -94,8 +95,11 @@
  }
 
  #[no_mangle]
@@ -908,7 +916,7 @@ diff -uNr 12_integrated_testing/src/_arch/aarch64/exception.rs 13_exceptions_par
 diff -uNr 12_integrated_testing/src/bsp/device_driver/arm/gicv2/gicc.rs 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gicc.rs
 --- 12_integrated_testing/src/bsp/device_driver/arm/gicv2/gicc.rs
 +++ 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gicc.rs
-@@ -0,0 +1,137 @@
+@@ -0,0 +1,141 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -916,7 +924,11 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/arm/gicv2/gicc.rs 13_excep
 +//! GICC Driver - GIC CPU interface.
 +
 +use crate::{bsp::device_driver::common::MMIODerefWrapper, exception};
-+use register::{mmio::*, register_bitfields, register_structs};
++use tock_registers::{
++    interfaces::{Readable, Writeable},
++    register_bitfields, register_structs,
++    registers::ReadWrite,
++};
 +
 +//--------------------------------------------------------------------------------------------------
 +// Private Definitions
@@ -1050,7 +1062,7 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/arm/gicv2/gicc.rs 13_excep
 diff -uNr 12_integrated_testing/src/bsp/device_driver/arm/gicv2/gicd.rs 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gicd.rs
 --- 12_integrated_testing/src/bsp/device_driver/arm/gicv2/gicd.rs
 +++ 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gicd.rs
-@@ -0,0 +1,195 @@
+@@ -0,0 +1,199 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -1064,7 +1076,11 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/arm/gicv2/gicd.rs 13_excep
 +    bsp::device_driver::common::MMIODerefWrapper, state, synchronization,
 +    synchronization::IRQSafeNullLock,
 +};
-+use register::{mmio::*, register_bitfields, register_structs};
++use tock_registers::{
++    interfaces::{Readable, Writeable},
++    register_bitfields, register_structs,
++    registers::{ReadOnly, ReadWrite},
++};
 +
 +//--------------------------------------------------------------------------------------------------
 +// Private Definitions
@@ -1495,9 +1511,9 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 13_exc
 -    synchronization::NullLock,
 +    synchronization::IRQSafeNullLock,
  };
- use register::{mmio::*, register_bitfields, register_structs};
-
-@@ -117,7 +117,7 @@
+ use tock_registers::{
+     interfaces::{ReadWriteable, Writeable},
+@@ -121,7 +121,7 @@
 
  /// Representation of the GPIO HW.
  pub struct GPIO {
@@ -1506,7 +1522,7 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 13_exc
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -193,7 +193,7 @@
+@@ -197,7 +197,7 @@
      /// - The user must ensure to provide a correct MMIO start address.
      pub const unsafe fn new(mmio_start_addr: usize) -> Self {
          Self {
@@ -1519,12 +1535,12 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 13_exc
 diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
 --- 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
 +++ 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
-@@ -0,0 +1,163 @@
+@@ -0,0 +1,167 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
 +
-+//! Peripheral Interrupt regsler Driver.
++//! Peripheral Interrupt Controller Driver.
 +
 +use super::{InterruptController, PendingIRQs, PeripheralIRQ};
 +use crate::{
@@ -1532,7 +1548,11 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 +    exception, synchronization,
 +    synchronization::{IRQSafeNullLock, InitStateLock},
 +};
-+use register::{mmio::*, register_structs};
++use tock_registers::{
++    interfaces::{Readable, Writeable},
++    register_structs,
++    registers::{ReadOnly, WriteOnly},
++};
 +
 +//--------------------------------------------------------------------------------------------------
 +// Private Definitions
@@ -1833,8 +1853,8 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
 +    synchronization, synchronization::IRQSafeNullLock,
  };
  use core::fmt;
- use register::{mmio::*, register_bitfields, register_structs};
-@@ -135,6 +135,52 @@
+ use tock_registers::{
+@@ -140,6 +140,52 @@
          ]
      ],
 
@@ -1887,7 +1907,7 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
      /// Interrupt Clear Register.
      ICR [
          /// Meta field for all pending interrupts.
-@@ -153,7 +199,10 @@
+@@ -158,7 +204,10 @@
          (0x28 => FBRD: WriteOnly<u32, FBRD::Register>),
          (0x2c => LCR_H: WriteOnly<u32, LCR_H::Register>),
          (0x30 => CR: WriteOnly<u32, CR::Register>),
@@ -1899,7 +1919,7 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
          (0x44 => ICR: WriteOnly<u32, ICR::Register>),
          (0x48 => @END),
      }
-@@ -183,7 +232,8 @@
+@@ -188,7 +237,8 @@
 
  /// Representation of the UART.
  pub struct PL011Uart {
@@ -1909,7 +1929,7 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -251,6 +301,14 @@
+@@ -256,6 +306,14 @@
              .LCR_H
              .write(LCR_H::WLEN::EightBit + LCR_H::FEN::FifosEnabled);
 
@@ -1924,7 +1944,7 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
          // Turn the UART on.
          self.registers
              .CR
-@@ -333,9 +391,13 @@
+@@ -338,9 +396,13 @@
      /// # Safety
      ///
      /// - The user must ensure to provide a correct MMIO start address.
@@ -1940,7 +1960,7 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
          }
      }
  }
-@@ -355,6 +417,21 @@
+@@ -360,6 +422,21 @@
 
          Ok(())
      }
@@ -1962,7 +1982,7 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
  }
 
  impl console::interface::Write for PL011Uart {
-@@ -401,3 +478,24 @@
+@@ -406,3 +483,24 @@
          self.inner.lock(|inner| inner.chars_read)
      }
  }
@@ -2376,15 +2396,17 @@ diff -uNr 12_integrated_testing/src/exception/asynchronous.rs 13_exceptions_part
 diff -uNr 12_integrated_testing/src/lib.rs 13_exceptions_part2_peripheral_IRQs/src/lib.rs
 --- 12_integrated_testing/src/lib.rs
 +++ 13_exceptions_part2_peripheral_IRQs/src/lib.rs
-@@ -108,6 +108,7 @@
+@@ -108,7 +108,9 @@
 
  #![allow(clippy::upper_case_acronyms)]
  #![allow(incomplete_features)]
 +#![feature(asm)]
  #![feature(const_fn_fn_ptr_basics)]
++#![feature(const_fn_trait_bound)]
  #![feature(const_generics)]
  #![feature(const_panic)]
-@@ -134,6 +135,7 @@
+ #![feature(core_intrinsics)]
+@@ -134,6 +136,7 @@
  pub mod exception;
  pub mod memory;
  pub mod print;
