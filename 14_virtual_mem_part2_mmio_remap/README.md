@@ -397,9 +397,9 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/exception.rs 14_
 +    memory::Address,
 +};
  use core::{cell::UnsafeCell, fmt};
- use cortex_a::{barrier, regs::*};
- use register::InMemoryRegister;
-@@ -50,6 +54,20 @@
+ use cortex_a::{asm::barrier, registers::*};
+ use tock_registers::{
+@@ -53,6 +57,20 @@
  // Private Code
  //--------------------------------------------------------------------------------------------------
 
@@ -420,7 +420,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/exception.rs 14_
  /// Prints verbose information about the exception and then panics.
  fn default_exception_handler(e: &ExceptionContext) {
      panic!(
-@@ -166,7 +184,9 @@
+@@ -169,7 +187,9 @@
          writeln!(f, " - {}", ec_translation)?;
 
          // Raw print of instruction specific syndrome.
@@ -451,7 +451,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu/trans
      },
  };
  use core::convert;
-@@ -117,12 +120,9 @@
+@@ -121,12 +124,9 @@
  }
 
  trait StartAddr {
@@ -465,7 +465,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu/trans
  //--------------------------------------------------------------------------------------------------
  // Public Definitions
  //--------------------------------------------------------------------------------------------------
-@@ -137,10 +137,13 @@
+@@ -141,10 +141,13 @@
 
      /// Table descriptors, covering 512 MiB windows.
      lvl2: [TableDescriptor; NUM_TABLES],
@@ -482,7 +482,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu/trans
 
  //--------------------------------------------------------------------------------------------------
  // Private Code
-@@ -148,12 +151,8 @@
+@@ -152,12 +155,8 @@
 
  // The binary is still identity mapped, so we don't need to convert here.
  impl<T, const N: usize> StartAddr for [T; N] {
@@ -497,7 +497,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu/trans
      }
  }
 
-@@ -166,10 +165,10 @@
+@@ -170,10 +169,10 @@
      }
 
      /// Create an instance pointing to the supplied address.
@@ -510,7 +510,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu/trans
          val.write(
              STAGE1_TABLE_DESCRIPTOR::NEXT_LEVEL_TABLE_ADDR_64KiB.val(shifted as u64)
                  + STAGE1_TABLE_DESCRIPTOR::TYPE::Table
-@@ -226,7 +225,10 @@
+@@ -230,7 +229,10 @@
      }
 
      /// Create an instance.
@@ -522,7 +522,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu/trans
          let val = InMemoryRegister::<u64, STAGE1_PAGE_DESCRIPTOR::Register>::new(0);
 
          let shifted = phys_output_addr as u64 >> Granule64KiB::SHIFT;
-@@ -240,50 +242,193 @@
+@@ -244,50 +246,193 @@
 
          Self { value: val.get() }
      }
@@ -687,7 +687,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu/trans
 +                return Err("Virtual page is already mapped");
              }
 +
-+            *page_descriptor = PageDescriptor::from_output_addr(phys_page.as_ptr(), &attr);
++            *page_descriptor = PageDescriptor::from_output_addr(phys_page.as_ptr(), attr);
          }
 
          Ok(())
@@ -733,7 +733,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu/trans
      }
  }
 
-@@ -292,6 +437,9 @@
+@@ -296,6 +441,9 @@
  //--------------------------------------------------------------------------------------------------
 
  #[cfg(test)]
@@ -755,8 +755,8 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 14
 +    memory::{mmu::TranslationGranule, Address, Physical},
  };
  use core::intrinsics::unlikely;
- use cortex_a::{barrier, regs::*};
-@@ -45,13 +45,6 @@
+ use cortex_a::{asm::barrier, registers::*};
+@@ -46,13 +46,6 @@
  // Global instances
  //--------------------------------------------------------------------------------------------------
 
@@ -770,7 +770,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 14
  static MMU: MemoryManagementUnit = MemoryManagementUnit;
 
  //--------------------------------------------------------------------------------------------------
-@@ -86,7 +79,7 @@
+@@ -87,7 +80,7 @@
 
      /// Configure various settings of stage 1 of the EL1 translation regime.
      fn configure_translation_control(&self) {
@@ -779,7 +779,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 14
 
          TCR_EL1.write(
              TCR_EL1::TBI0::Used
-@@ -118,7 +111,10 @@
+@@ -119,7 +112,10 @@
  use memory::mmu::MMUEnableError;
 
  impl memory::mmu::interface::MMU for MemoryManagementUnit {
@@ -791,7 +791,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 14
          if unlikely(self.is_enabled()) {
              return Err(MMUEnableError::AlreadyEnabled);
          }
-@@ -133,13 +129,8 @@
+@@ -134,13 +130,8 @@
          // Prepare the memory attribute indirection register.
          self.set_up_mair();
 
@@ -806,7 +806,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 14
 
          self.configure_translation_control();
 
-@@ -162,33 +153,3 @@
+@@ -163,33 +154,3 @@
          SCTLR_EL1.matches_all(SCTLR_EL1::M::Enable)
      }
  }
@@ -852,10 +852,10 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gi
 +use crate::{
 +    bsp::device_driver::common::MMIODerefWrapper, exception, synchronization::InitStateLock,
 +};
- use register::{mmio::*, register_bitfields, register_structs};
-
- //--------------------------------------------------------------------------------------------------
-@@ -56,12 +58,13 @@
+ use tock_registers::{
+     interfaces::{Readable, Writeable},
+     register_bitfields, register_structs,
+@@ -60,12 +62,13 @@
 
  /// Representation of the GIC CPU interface.
  pub struct GICC {
@@ -870,7 +870,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gi
 
  impl GICC {
      /// Create an instance.
-@@ -71,10 +74,15 @@
+@@ -75,10 +78,15 @@
      /// - The user must ensure to provide a correct MMIO start address.
      pub const unsafe fn new(mmio_start_addr: usize) -> Self {
          Self {
@@ -887,7 +887,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gi
      /// Accept interrupts of any priority.
      ///
      /// Quoting the GICv2 Architecture Specification:
-@@ -87,7 +95,9 @@
+@@ -91,7 +99,9 @@
      /// - GICC MMIO registers are banked per CPU core. It is therefore safe to have `&self` instead
      ///   of `&mut self`.
      pub fn priority_accept_all(&self) {
@@ -898,7 +898,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gi
      }
 
      /// Enable the interface - start accepting IRQs.
-@@ -97,7 +107,9 @@
+@@ -101,7 +111,9 @@
      /// - GICC MMIO registers are banked per CPU core. It is therefore safe to have `&self` instead
      ///   of `&mut self`.
      pub fn enable(&self) {
@@ -909,7 +909,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gi
      }
 
      /// Extract the number of the highest-priority pending IRQ.
-@@ -113,7 +125,8 @@
+@@ -117,7 +129,8 @@
          &self,
          _ic: &exception::asynchronous::IRQContext<'irq_context>,
      ) -> usize {
@@ -919,7 +919,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gi
      }
 
      /// Complete handling of the currently active IRQ.
-@@ -132,6 +145,8 @@
+@@ -136,6 +149,8 @@
          irq_number: u32,
          _ic: &exception::asynchronous::IRQContext<'irq_context>,
      ) {
@@ -943,9 +943,9 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gi
 +    state, synchronization,
 +    synchronization::{IRQSafeNullLock, InitStateLock},
  };
- use register::{mmio::*, register_bitfields, register_structs};
-
-@@ -79,7 +80,7 @@
+ use tock_registers::{
+     interfaces::{Readable, Writeable},
+@@ -83,7 +84,7 @@
      shared_registers: IRQSafeNullLock<SharedRegisters>,
 
      /// Access to banked registers is unguarded.
@@ -954,7 +954,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gi
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -116,6 +117,7 @@
+@@ -120,6 +121,7 @@
  //--------------------------------------------------------------------------------------------------
  // Public Code
  //--------------------------------------------------------------------------------------------------
@@ -962,7 +962,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gi
  use synchronization::interface::Mutex;
 
  impl GICD {
-@@ -127,10 +129,17 @@
+@@ -131,10 +133,17 @@
      pub const unsafe fn new(mmio_start_addr: usize) -> Self {
          Self {
              shared_registers: IRQSafeNullLock::new(SharedRegisters::new(mmio_start_addr)),
@@ -981,7 +981,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gi
      /// Use a banked ITARGETSR to retrieve the executing core's GIC target mask.
      ///
      /// Quoting the GICv2 Architecture Specification:
-@@ -138,7 +147,8 @@
+@@ -142,7 +151,8 @@
      ///   "GICD_ITARGETSR0 to GICD_ITARGETSR7 are read-only, and each field returns a value that
      ///    corresponds only to the processor reading the register."
      fn local_gic_target_mask(&self) -> u32 {
@@ -991,7 +991,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gi
      }
 
      /// Route all SPIs to the boot core and enable the distributor.
-@@ -177,10 +187,10 @@
+@@ -181,10 +191,10 @@
          // Check if we are handling a private or shared IRQ.
          match irq_num {
              // Private.
@@ -1096,10 +1096,10 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
      synchronization::IRQSafeNullLock,
  };
 +use core::sync::atomic::{AtomicUsize, Ordering};
- use register::{mmio::*, register_bitfields, register_structs};
-
- //--------------------------------------------------------------------------------------------------
-@@ -117,6 +118,8 @@
+ use tock_registers::{
+     interfaces::{ReadWriteable, Writeable},
+     register_bitfields, register_structs,
+@@ -121,6 +122,8 @@
 
  /// Representation of the GPIO HW.
  pub struct GPIO {
@@ -1108,7 +1108,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
      inner: IRQSafeNullLock<GPIOInner>,
  }
 
-@@ -136,6 +139,19 @@
+@@ -140,6 +143,19 @@
          }
      }
 
@@ -1128,7 +1128,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
      /// Disable pull-up/down on pins 14 and 15.
      #[cfg(feature = "bsp_rpi3")]
      fn disable_pud_14_15_bcm2837(&mut self) {
-@@ -190,10 +206,12 @@
+@@ -194,10 +210,12 @@
      ///
      /// # Safety
      ///
@@ -1144,7 +1144,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
          }
      }
 
-@@ -212,4 +230,26 @@
+@@ -216,4 +234,26 @@
      fn compatible(&self) -> &'static str {
          "BCM GPIO"
      }
@@ -1175,13 +1175,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
 diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs 14_virtual_mem_part2_mmio_remap/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
 --- 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
 +++ 14_virtual_mem_part2_mmio_remap/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
-@@ -2,12 +2,12 @@
- //
- // Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
-
--//! Peripheral Interrupt regsler Driver.
-+//! Peripheral Interrupt Controller Driver.
-
+@@ -7,7 +7,7 @@
  use super::{InterruptController, PendingIRQs, PeripheralIRQ};
  use crate::{
      bsp::device_driver::common::MMIODerefWrapper,
@@ -1189,8 +1183,8 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
 +    driver, exception, memory, synchronization,
      synchronization::{IRQSafeNullLock, InitStateLock},
  };
- use register::{mmio::*, register_structs};
-@@ -51,11 +51,13 @@
+ use tock_registers::{
+@@ -55,11 +55,13 @@
 
  /// Representation of the peripheral interrupt controller.
  pub struct PeripheralIC {
@@ -1205,7 +1199,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
 
      /// Stores registered IRQ handlers. Writable only during kernel init. RO afterwards.
      handler_table: InitStateLock<HandlerTable>,
-@@ -70,21 +72,26 @@
+@@ -74,21 +76,26 @@
      ///
      /// # Safety
      ///
@@ -1239,7 +1233,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
      }
  }
 
-@@ -93,6 +100,24 @@
+@@ -97,6 +104,24 @@
  //------------------------------------------------------------------------------
  use synchronization::interface::{Mutex, ReadWriteEx};
 
@@ -1322,10 +1316,10 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
 +    fmt,
 +    sync::atomic::{AtomicUsize, Ordering},
 +};
- use register::{mmio::*, register_bitfields, register_structs};
-
- //--------------------------------------------------------------------------------------------------
-@@ -232,6 +235,8 @@
+ use tock_registers::{
+     interfaces::{Readable, Writeable},
+     register_bitfields, register_structs,
+@@ -237,6 +240,8 @@
 
  /// Representation of the UART.
  pub struct PL011Uart {
@@ -1334,7 +1328,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
      inner: IRQSafeNullLock<PL011UartInner>,
      irq_number: bsp::device_driver::IRQNumber,
  }
-@@ -271,7 +276,15 @@
+@@ -276,7 +281,15 @@
      /// genrated baud rate of `48_000_000 / (16 * 3.25) = 923_077`.
      ///
      /// Error = `((923_077 - 921_600) / 921_600) * 100 = 0.16modulo`.
@@ -1351,7 +1345,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
          // Execution can arrive here while there are still characters queued in the TX FIFO and
          // actively being sent out by the UART hardware. If the UART is turned off in this case,
          // those queued characters would be lost.
-@@ -313,6 +326,8 @@
+@@ -318,6 +331,8 @@
          self.registers
              .CR
              .write(CR::UARTEN::Enabled + CR::TXE::Enabled + CR::RXE::Enabled);
@@ -1360,7 +1354,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
      }
 
      /// Send a character.
-@@ -390,13 +405,18 @@
+@@ -395,13 +410,18 @@
      ///
      /// # Safety
      ///
@@ -1382,7 +1376,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
              irq_number,
          }
      }
-@@ -413,7 +433,13 @@
+@@ -418,7 +438,13 @@
      }
 
      unsafe fn init(&self) -> Result<(), &'static str> {
@@ -1397,7 +1391,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
 
          Ok(())
      }
-@@ -432,6 +458,16 @@
+@@ -437,6 +463,16 @@
 
          Ok(())
      }
@@ -2155,16 +2149,15 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/driver.rs 14_virtual_mem_part2
 diff -uNr 13_exceptions_part2_peripheral_IRQs/src/lib.rs 14_virtual_mem_part2_mmio_remap/src/lib.rs
 --- 13_exceptions_part2_peripheral_IRQs/src/lib.rs
 +++ 14_virtual_mem_part2_mmio_remap/src/lib.rs
-@@ -109,6 +109,8 @@
+@@ -109,6 +109,7 @@
  #![allow(clippy::upper_case_acronyms)]
  #![allow(incomplete_features)]
  #![feature(asm)]
 +#![feature(const_evaluatable_checked)]
-+#![feature(const_fn)]
  #![feature(const_fn_fn_ptr_basics)]
+ #![feature(const_fn_trait_bound)]
  #![feature(const_generics)]
- #![feature(const_panic)]
-@@ -129,6 +131,7 @@
+@@ -130,6 +131,7 @@
  mod synchronization;
 
  pub mod bsp;

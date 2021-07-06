@@ -825,10 +825,10 @@ diff -uNr 11_exceptions_part1_groundwork/Cargo.toml 12_integrated_testing/Cargo.
  authors = ["Andre Richter <andre.o.richter@gmail.com>"]
  edition = "2018"
 
-@@ -11,20 +11,46 @@
+@@ -11,21 +11,46 @@
  default = []
- bsp_rpi3 = ["register"]
- bsp_rpi4 = ["register"]
+ bsp_rpi3 = ["tock-registers"]
+ bsp_rpi4 = ["tock-registers"]
 -
 -[[bin]]
 -name = "kernel"
@@ -843,14 +843,13 @@ diff -uNr 11_exceptions_part1_groundwork/Cargo.toml 12_integrated_testing/Cargo.
 +test-types = { path = "test-types" }
 
  # Optional dependencies
--register = { version = "1.x.x", optional = true }
-+register = { version = "1.x.x", features = ["no_std_unit_tests"], optional = true }
-+qemu-exit = { version = "1.x.x", optional = true }
+ tock-registers = { version = "0.7.x", default-features = false, features = ["register_types"], optional = true }
++qemu-exit = { version = "2.x.x", optional = true }
 
  # Platform specific dependencies
  [target.'cfg(target_arch = "aarch64")'.dependencies]
- cortex-a = { version = "5.x.x" }
-+
+ cortex-a = { version = "6.x.x" }
+
 +##--------------------------------------------------------------------------------------------------
 +## Testing
 +##--------------------------------------------------------------------------------------------------
@@ -1010,12 +1009,12 @@ diff -uNr 11_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs 12_integ
  //! crate::exception::arch_exception
 
  use core::{cell::UnsafeCell, fmt};
--use cortex_a::{asm, barrier, regs::*};
-+use cortex_a::{barrier, regs::*};
- use register::InMemoryRegister;
-
- // Assembly counterpart to this file.
-@@ -87,16 +87,6 @@
+-use cortex_a::{asm, asm::barrier, registers::*};
++use cortex_a::{asm::barrier, registers::*};
+ use tock_registers::{
+     interfaces::{Readable, Writeable},
+     registers::InMemoryRegister,
+@@ -90,16 +90,6 @@
 
  #[no_mangle]
  unsafe extern "C" fn current_elx_synchronous(e: &mut ExceptionContext) {
@@ -1036,7 +1035,7 @@ diff -uNr 11_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs 12_integ
 diff -uNr 11_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu/translation_table.rs 12_integrated_testing/src/_arch/aarch64/memory/mmu/translation_table.rs
 --- 11_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu/translation_table.rs
 +++ 12_integrated_testing/src/_arch/aarch64/memory/mmu/translation_table.rs
-@@ -286,3 +286,31 @@
+@@ -290,3 +290,31 @@
          self.lvl2.phys_start_addr_u64()
      }
  }
@@ -1072,7 +1071,7 @@ diff -uNr 11_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu/translatio
 diff -uNr 11_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu.rs 12_integrated_testing/src/_arch/aarch64/memory/mmu.rs
 --- 11_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu.rs
 +++ 12_integrated_testing/src/_arch/aarch64/memory/mmu.rs
-@@ -162,3 +162,33 @@
+@@ -163,3 +163,33 @@
          SCTLR_EL1.matches_all(SCTLR_EL1::M::Enable)
      }
  }

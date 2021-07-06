@@ -221,7 +221,7 @@ diff -uNr 06_uart_chainloader/src/_arch/aarch64/cpu.rs 07_timestamps/src/_arch/a
 diff -uNr 06_uart_chainloader/src/_arch/aarch64/time.rs 07_timestamps/src/_arch/aarch64/time.rs
 --- 06_uart_chainloader/src/_arch/aarch64/time.rs
 +++ 07_timestamps/src/_arch/aarch64/time.rs
-@@ -0,0 +1,118 @@
+@@ -0,0 +1,119 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -237,7 +237,8 @@ diff -uNr 06_uart_chainloader/src/_arch/aarch64/time.rs 07_timestamps/src/_arch/
 +
 +use crate::{time, warn};
 +use core::time::Duration;
-+use cortex_a::{barrier, regs::*};
++use cortex_a::{asm::barrier, registers::*};
++use tock_registers::interfaces::{ReadWriteable, Readable, Writeable};
 +
 +//--------------------------------------------------------------------------------------------------
 +// Private Definitions
@@ -344,7 +345,7 @@ diff -uNr 06_uart_chainloader/src/_arch/aarch64/time.rs 07_timestamps/src/_arch/
 diff -uNr 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 07_timestamps/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
 --- 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
 +++ 07_timestamps/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
-@@ -139,25 +139,19 @@
+@@ -143,25 +143,19 @@
      /// Disable pull-up/down on pins 14 and 15.
      #[cfg(feature = "bsp_rpi3")]
      fn disable_pud_14_15_bcm2837(&mut self) {
@@ -380,7 +381,7 @@ diff -uNr 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 07_times
 diff -uNr 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 07_timestamps/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 --- 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 07_timestamps/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -279,7 +279,7 @@
+@@ -284,7 +284,7 @@
      }
 
      /// Retrieve a character.
@@ -389,7 +390,7 @@ diff -uNr 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 07
          // If RX FIFO is empty,
          if self.registers.FR.matches_all(FR::RXFE::SET) {
              // immediately return in non-blocking mode.
-@@ -294,7 +294,12 @@
+@@ -299,7 +299,12 @@
          }
 
          // Read one character.
@@ -403,7 +404,7 @@ diff -uNr 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 07
 
          // Update statistics.
          self.chars_read += 1;
-@@ -374,14 +379,14 @@
+@@ -379,14 +384,14 @@
  impl console::interface::Read for PL011Uart {
      fn read_char(&self) -> char {
          self.inner

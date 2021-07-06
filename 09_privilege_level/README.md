@@ -211,11 +211,12 @@ diff -uNr 08_hw_debug_JTAG/Cargo.toml 09_privilege_level/Cargo.toml
 diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.rs 09_privilege_level/src/_arch/aarch64/cpu/boot.rs
 --- 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.rs
 +++ 09_privilege_level/src/_arch/aarch64/cpu/boot.rs
-@@ -11,17 +11,67 @@
+@@ -11,17 +11,68 @@
  //!
  //! crate::cpu::boot::arch_boot
 
-+use cortex_a::{asm, regs::*};
++use cortex_a::{asm, registers::*};
++use tock_registers::interfaces::Writeable;
 +
  // Assembly counterpart to this file.
  global_asm!(include_str!("boot.s"));
@@ -323,7 +324,7 @@ diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.s 09_privilege_level/src/_
 diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/exception/asynchronous.rs 09_privilege_level/src/_arch/aarch64/exception/asynchronous.rs
 --- 08_hw_debug_JTAG/src/_arch/aarch64/exception/asynchronous.rs
 +++ 09_privilege_level/src/_arch/aarch64/exception/asynchronous.rs
-@@ -0,0 +1,81 @@
+@@ -0,0 +1,82 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -337,14 +338,15 @@ diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/exception/asynchronous.rs 09_privil
 +//!
 +//! crate::exception::asynchronous::arch_asynchronous
 +
-+use cortex_a::regs::*;
++use cortex_a::registers::*;
++use tock_registers::interfaces::Readable;
 +
 +//--------------------------------------------------------------------------------------------------
 +// Private Definitions
 +//--------------------------------------------------------------------------------------------------
 +
 +trait DaifField {
-+    fn daif_field() -> register::Field<u64, DAIF::Register>;
++    fn daif_field() -> tock_registers::fields::Field<u64, DAIF::Register>;
 +}
 +
 +struct Debug;
@@ -357,25 +359,25 @@ diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/exception/asynchronous.rs 09_privil
 +//--------------------------------------------------------------------------------------------------
 +
 +impl DaifField for Debug {
-+    fn daif_field() -> register::Field<u64, DAIF::Register> {
++    fn daif_field() -> tock_registers::fields::Field<u64, DAIF::Register> {
 +        DAIF::D
 +    }
 +}
 +
 +impl DaifField for SError {
-+    fn daif_field() -> register::Field<u64, DAIF::Register> {
++    fn daif_field() -> tock_registers::fields::Field<u64, DAIF::Register> {
 +        DAIF::A
 +    }
 +}
 +
 +impl DaifField for IRQ {
-+    fn daif_field() -> register::Field<u64, DAIF::Register> {
++    fn daif_field() -> tock_registers::fields::Field<u64, DAIF::Register> {
 +        DAIF::I
 +    }
 +}
 +
 +impl DaifField for FIQ {
-+    fn daif_field() -> register::Field<u64, DAIF::Register> {
++    fn daif_field() -> tock_registers::fields::Field<u64, DAIF::Register> {
 +        DAIF::F
 +    }
 +}
@@ -409,7 +411,7 @@ diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/exception/asynchronous.rs 09_privil
 diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/exception.rs 09_privilege_level/src/_arch/aarch64/exception.rs
 --- 08_hw_debug_JTAG/src/_arch/aarch64/exception.rs
 +++ 09_privilege_level/src/_arch/aarch64/exception.rs
-@@ -0,0 +1,30 @@
+@@ -0,0 +1,31 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -423,7 +425,8 @@ diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/exception.rs 09_privilege_level/src
 +//!
 +//! crate::exception::arch_exception
 +
-+use cortex_a::regs::*;
++use cortex_a::registers::*;
++use tock_registers::interfaces::Readable;
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Code
