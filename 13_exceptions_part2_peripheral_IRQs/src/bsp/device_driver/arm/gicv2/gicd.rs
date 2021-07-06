@@ -11,7 +11,11 @@ use crate::{
     bsp::device_driver::common::MMIODerefWrapper, state, synchronization,
     synchronization::IRQSafeNullLock,
 };
-use register::{mmio::*, register_bitfields, register_structs};
+use tock_registers::{
+    interfaces::{Readable, Writeable},
+    register_bitfields, register_structs,
+    registers::{ReadOnly, ReadWrite},
+};
 
 //--------------------------------------------------------------------------------------------------
 // Private Definitions

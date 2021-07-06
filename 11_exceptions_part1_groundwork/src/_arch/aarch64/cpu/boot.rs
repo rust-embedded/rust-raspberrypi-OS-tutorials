@@ -11,7 +11,8 @@
 //!
 //! crate::cpu::boot::arch_boot
 
-use cortex_a::{asm, regs::*};
+use cortex_a::{asm, registers::*};
+use tock_registers::interfaces::Writeable;
 
 // Assembly counterpart to this file.
 global_asm!(include_str!("boot.s"));

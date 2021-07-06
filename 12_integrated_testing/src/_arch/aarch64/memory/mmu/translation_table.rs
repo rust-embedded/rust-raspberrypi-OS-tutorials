@@ -21,7 +21,11 @@ use crate::{
     },
 };
 use core::convert;
-use register::{register_bitfields, InMemoryRegister};
+use tock_registers::{
+    interfaces::{Readable, Writeable},
+    register_bitfields,
+    registers::InMemoryRegister,
+};
 
 //--------------------------------------------------------------------------------------------------
 // Private Definitions
@@ -182,7 +186,7 @@ impl TableDescriptor {
 
 /// Convert the kernel's generic memory attributes to HW-specific attributes of the MMU.
 impl convert::From<AttributeFields>
-    for register::FieldValue<u64, STAGE1_PAGE_DESCRIPTOR::Register>
+    for tock_registers::fields::FieldValue<u64, STAGE1_PAGE_DESCRIPTOR::Register>
 {
     fn from(attribute_fields: AttributeFields) -> Self {
         // Memory attributes.

@@ -11,7 +11,8 @@
 //!
 //! crate::exception::arch_exception
 
-use cortex_a::regs::*;
+use cortex_a::registers::*;
+use tock_registers::interfaces::Readable;
 
 //--------------------------------------------------------------------------------------------------
 // Public Code
