@@ -18,7 +18,8 @@ use crate::{
     memory::mmu::{translation_table::KernelTranslationTable, TranslationGranule},
 };
 use core::intrinsics::unlikely;
-use cortex_a::{barrier, regs::*};
+use cortex_a::{asm::barrier, registers::*};
+use tock_registers::interfaces::{ReadWriteable, Readable, Writeable};
 
 //--------------------------------------------------------------------------------------------------
 // Private Definitions

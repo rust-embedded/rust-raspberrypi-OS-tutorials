@@ -14,7 +14,11 @@ use crate::{
     synchronization::NullLock,
 };
 use core::fmt;
-use register::{mmio::*, register_bitfields, register_structs};
+use tock_registers::{
+    interfaces::{Readable, Writeable},
+    register_bitfields, register_structs,
+    registers::{ReadOnly, ReadWrite, WriteOnly},
+};
 
 //--------------------------------------------------------------------------------------------------
 // Private Definitions
@@ -81,6 +85,7 @@ register_bitfields! {
     LCR_H [
         /// Word length. These bits indicate the number of data bits transmitted or received in a
         /// frame.
+        #[allow(clippy::enum_variant_names)]
         WLEN OFFSET(5) NUMBITS(2) [
             FiveBit = 0b00,
             SixBit = 0b01,

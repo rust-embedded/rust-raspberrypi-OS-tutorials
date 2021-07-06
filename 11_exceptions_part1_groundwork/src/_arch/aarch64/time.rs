@@ -13,7 +13,8 @@
 
 use crate::{time, warn};
 use core::time::Duration;
-use cortex_a::{barrier, regs::*};
+use cortex_a::{asm::barrier, registers::*};
+use tock_registers::interfaces::{ReadWriteable, Readable, Writeable};
 
 //--------------------------------------------------------------------------------------------------
 // Private Definitions

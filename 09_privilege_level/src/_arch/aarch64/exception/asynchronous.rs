@@ -11,14 +11,15 @@
 //!
 //! crate::exception::asynchronous::arch_asynchronous
 
-use cortex_a::regs::*;
+use cortex_a::registers::*;
+use tock_registers::interfaces::Readable;
 
 //--------------------------------------------------------------------------------------------------
 // Private Definitions
 //--------------------------------------------------------------------------------------------------
 
 trait DaifField {
-    fn daif_field() -> register::Field<u64, DAIF::Register>;
+    fn daif_field() -> tock_registers::fields::Field<u64, DAIF::Register>;
 }
 
 struct Debug;
@@ -31,25 +32,25 @@ struct FIQ;
 //--------------------------------------------------------------------------------------------------
 
 impl DaifField for Debug {
-    fn daif_field() -> register::Field<u64, DAIF::Register> {
+    fn daif_field() -> tock_registers::fields::Field<u64, DAIF::Register> {
         DAIF::D
     }
 }
 
 impl DaifField for SError {
-    fn daif_field() -> register::Field<u64, DAIF::Register> {
+    fn daif_field() -> tock_registers::fields::Field<u64, DAIF::Register> {
         DAIF::A
     }
 }
 
 impl DaifField for IRQ {
-    fn daif_field() -> register::Field<u64, DAIF::Register> {
+    fn daif_field() -> tock_registers::fields::Field<u64, DAIF::Register> {
         DAIF::I
     }
 }
 
 impl DaifField for FIQ {
-    fn daif_field() -> register::Field<u64, DAIF::Register> {
+    fn daif_field() -> tock_registers::fields::Field<u64, DAIF::Register> {
         DAIF::F
     }
 }
