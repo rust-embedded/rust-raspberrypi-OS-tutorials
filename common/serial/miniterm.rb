@@ -7,8 +7,9 @@
 
 require 'rubygems'
 require 'bundler/setup'
-require 'io/console'
+
 require 'colorize'
+require 'io/console'
 require 'serialport'
 
 SERIAL_BAUD = 921_600

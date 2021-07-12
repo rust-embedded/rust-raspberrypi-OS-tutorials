@@ -5,8 +5,6 @@
 #
 # Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
 
-require 'rubygems'
-require 'bundler/setup'
 require_relative '../utils/devtool/copyright'
 
 def copyright_check(staged_files)
@@ -14,6 +12,7 @@ def copyright_check(staged_files)
 
     staged_files = staged_files.select do |f|
         next if f.include?('build.rs')
+        next if f.include?('boot_test_string.rb')
 
         f.include?('Makefile') ||
             f.include?('Dockerfile') ||

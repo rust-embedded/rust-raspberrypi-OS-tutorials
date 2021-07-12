@@ -163,8 +163,9 @@ extern "Rust" {
 
 /// The default runner for unit tests.
 pub fn test_runner(tests: &[&test_types::UnitTest]) {
+    // This line will be printed as the test header.
     println!("Running {} tests", tests.len());
-    println!("-------------------------------------------------------------------\n");
+
     for (i, test) in tests.iter().enumerate() {
         print!("{:>3}. {:.<58}", i + 1, test.name);
 

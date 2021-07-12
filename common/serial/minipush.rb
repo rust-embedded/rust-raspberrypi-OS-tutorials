@@ -14,19 +14,19 @@ class ProtocolError < StandardError; end
 
 # The main class
 class MiniPush < MiniTerm
-    def initialize(serial_name, binary_image_path)
+    def initialize(serial_name, payload_path)
         super(serial_name)
 
         @name_short = 'MP' # override
-        @binary_image_path = binary_image_path
-        @binary_size = nil
-        @binary_image = nil
+        @payload_path = payload_path
+        @payload_size = nil
+        @payload_data = nil
     end
 
     private
 
     # The three characters signaling the request token form the consecutive sequence "\x03\x03\x03".
-    def wait_for_binary_request
+    def wait_for_payload_request
         puts "[#{@name_short}] 🔌 Please power the target now"
 
         # Timeout for the request token starts after the first sign of life was received.
@@ -54,27 +54,28 @@ class MiniPush < MiniTerm
         end
     end
 
-    def load_binary
-        @binary_size = File.size(@binary_image_path)
-        @binary_image = File.binread(@binary_image_path)
+    def load_payload
+        @payload_size = File.size(@payload_path)
+        @payload_data = File.binread(@payload_path)
     end
 
     def send_size
-        @target_serial.print([@binary_size].pack('L<'))
+        @target_serial.print([@payload_size].pack('L<'))
         raise ProtocolError if @target_serial.read(2) != 'OK'
     end
 
-    def send_binary
+    def send_payload
         pb = ProgressBar.create(
-            total: @binary_size,
+            total: @payload_size,
             format: "[#{@name_short}] ⏩ Pushing %k KiB %b🦀%i %p%% %r KiB/s %a",
             rate_scale: ->(rate) { rate / 1024 },
-            length: 92
+            length: 92,
+            output: $stdout
         )
 
         # Send in 512 byte chunks.
         while pb.progress < pb.total
-            part = @binary_image.slice(pb.progress, 512)
+            part = @payload_data.slice(pb.progress, 512)
             pb.progress += @target_serial.write(part)
         end
     end
@@ -95,10 +96,10 @@ class MiniPush < MiniTerm
     # override
     def run
         open_serial
-        wait_for_binary_request
-        load_binary
+        wait_for_payload_request
+        load_payload
         send_size
-        send_binary
+        send_payload
         terminal
     rescue ConnectionError, EOFError, Errno::EIO, ProtocolError, Timeout::Error => e
         handle_reconnect(e)

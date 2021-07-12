@@ -617,8 +617,8 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/tests/02_exception_sync_page_f
 --- 15_virtual_mem_part3_precomputed_tables/tests/02_exception_sync_page_fault.rs
 +++ 16_virtual_mem_part4_higher_half_kernel/tests/02_exception_sync_page_fault.rs
 @@ -27,8 +27,8 @@
+     // This line will be printed as the test header.
      println!("Testing synchronous exception handling by causing a page fault");
-     println!("-------------------------------------------------------------------\n");
 
 -    println!("Writing beyond mapped area to address 9 GiB...");
 -    let big_addr: u64 = 9 * 1024 * 1024 * 1024;

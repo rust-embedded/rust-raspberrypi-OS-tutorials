@@ -552,4 +552,13 @@ diff -uNr 08_hw_debug_JTAG/src/main.rs 09_privilege_level/src/main.rs
      }
  }
 
+diff -uNr 08_hw_debug_JTAG/tests/boot_test_string.rb 09_privilege_level/tests/boot_test_string.rb
+--- 08_hw_debug_JTAG/tests/boot_test_string.rb
++++ 09_privilege_level/tests/boot_test_string.rb
+@@ -1,3 +1,3 @@
+ # frozen_string_literal: true
+
+-EXPECTED_PRINT = 'Spinning for 1 second'
++EXPECTED_PRINT = 'Echoing input now'
+
 ```

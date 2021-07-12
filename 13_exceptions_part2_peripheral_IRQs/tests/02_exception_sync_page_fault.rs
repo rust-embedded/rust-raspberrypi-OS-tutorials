@@ -26,8 +26,8 @@ unsafe fn kernel_init() -> ! {
     exception::handling_init();
     bsp::console::qemu_bring_up_console();
 
+    // This line will be printed as the test header.
     println!("Testing synchronous exception handling by causing a page fault");
-    println!("-------------------------------------------------------------------\n");
 
     if let Err(string) = memory::mmu::mmu().enable_mmu_and_caching() {
         println!("MMU: {}", string);

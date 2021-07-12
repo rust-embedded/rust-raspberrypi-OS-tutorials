@@ -137,57 +137,95 @@ Binary files 05_drivers_gpio_uart/demo_payload_rpi4.img and 06_uart_chainloader/
 diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
 --- 05_drivers_gpio_uart/Makefile
 +++ 06_uart_chainloader/Makefile
-@@ -25,6 +25,7 @@
-     READELF_BINARY    = aarch64-none-elf-readelf
-     LINKER_FILE       = src/bsp/raspberrypi/link.ld
-     RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
+@@ -22,27 +22,29 @@
+
+ # BSP-specific arguments.
+ ifeq ($(BSP),rpi3)
+-    TARGET            = aarch64-unknown-none-softfloat
+-    KERNEL_BIN        = kernel8.img
+-    QEMU_BINARY       = qemu-system-aarch64
+-    QEMU_MACHINE_TYPE = raspi3
+-    QEMU_RELEASE_ARGS = -serial stdio -display none
+-    OBJDUMP_BINARY    = aarch64-none-elf-objdump
+-    NM_BINARY         = aarch64-none-elf-nm
+-    READELF_BINARY    = aarch64-none-elf-readelf
+-    LINKER_FILE       = src/bsp/raspberrypi/link.ld
+-    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
++    TARGET                 = aarch64-unknown-none-softfloat
++    KERNEL_BIN             = kernel8.img
++    QEMU_BINARY            = qemu-system-aarch64
++    QEMU_MACHINE_TYPE      = raspi3
++    QEMU_RELEASE_ARGS      = -serial stdio -display none
++    OBJDUMP_BINARY         = aarch64-none-elf-objdump
++    NM_BINARY              = aarch64-none-elf-nm
++    READELF_BINARY         = aarch64-none-elf-readelf
++    LINKER_FILE            = src/bsp/raspberrypi/link.ld
++    RUSTC_MISC_ARGS        = -C target-cpu=cortex-a53
 +    CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi3.img
  else ifeq ($(BSP),rpi4)
-     TARGET            = aarch64-unknown-none-softfloat
-     KERNEL_BIN        = kernel8.img
-@@ -36,6 +37,7 @@
-     READELF_BINARY    = aarch64-none-elf-readelf
-     LINKER_FILE       = src/bsp/raspberrypi/link.ld
-     RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
+-    TARGET            = aarch64-unknown-none-softfloat
+-    KERNEL_BIN        = kernel8.img
+-    QEMU_BINARY       = qemu-system-aarch64
+-    QEMU_MACHINE_TYPE =
+-    QEMU_RELEASE_ARGS = -serial stdio -display none
+-    OBJDUMP_BINARY    = aarch64-none-elf-objdump
+-    NM_BINARY         = aarch64-none-elf-nm
+-    READELF_BINARY    = aarch64-none-elf-readelf
+-    LINKER_FILE       = src/bsp/raspberrypi/link.ld
+-    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
++    TARGET                 = aarch64-unknown-none-softfloat
++    KERNEL_BIN             = kernel8.img
++    QEMU_BINARY            = qemu-system-aarch64
++    QEMU_MACHINE_TYPE      =
++    QEMU_RELEASE_ARGS      = -serial stdio -display none
++    OBJDUMP_BINARY         = aarch64-none-elf-objdump
++    NM_BINARY              = aarch64-none-elf-nm
++    READELF_BINARY         = aarch64-none-elf-readelf
++    LINKER_FILE            = src/bsp/raspberrypi/link.ld
++    RUSTC_MISC_ARGS        = -C target-cpu=cortex-a72
 +    CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi4.img
  endif
 
- # Export for build.rs
-@@ -68,19 +70,22 @@
- DOCKER_ARG_DEV       = --privileged -v /dev:/dev
+ QEMU_MISSING_STRING = "This board is not yet supported for QEMU."
+@@ -74,8 +76,8 @@
+     -O binary
 
- DOCKER_QEMU  = $(DOCKER_CMD_INTERACT) $(DOCKER_IMAGE)
-+DOCKER_TEST  = $(DOCKER_CMD) -t $(DOCKER_ARG_DIR_UTILS) $(DOCKER_IMAGE)
- DOCKER_TOOLS = $(DOCKER_CMD) $(DOCKER_IMAGE)
+ EXEC_QEMU          = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
+-EXEC_TEST_DISPATCH = ruby ../common/tests/dispatch.rb
+-EXEC_MINITERM      = ruby ../common/serial/miniterm.rb
++EXEC_TEST_MINIPUSH = ruby tests/chainboot_test.rb
++EXEC_MINIPUSH      = ruby ../common/serial/minipush.rb
 
- # Dockerize commands that require USB device passthrough only on Linux
- ifeq ($(UNAME_S),Linux)
+ ##------------------------------------------------------------------------------
+ ## Dockerization
+@@ -94,7 +96,7 @@
+ ifeq ($(shell uname -s),Linux)
      DOCKER_CMD_DEV = $(DOCKER_CMD_INTERACT) $(DOCKER_ARG_DEV)
 
--    DOCKER_MINITERM = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_IMAGE)
-+    DOCKER_CHAINBOOT = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_IMAGE)
+-    DOCKER_MINITERM = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_COMMON) $(DOCKER_IMAGE)
++    DOCKER_CHAINBOOT = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_COMMON) $(DOCKER_IMAGE)
  endif
 
--EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
--EXEC_MINITERM = ruby ../utils/miniterm.rb
-+EXEC_QEMU          = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
-+EXEC_MINIPUSH      = ruby ../utils/minipush.rb
-+EXEC_QEMU_MINIPUSH = ruby tests/qemu_minipush.rb
 
+@@ -102,7 +104,7 @@
+ ##--------------------------------------------------------------------------------------------------
+ ## Targets
+ ##--------------------------------------------------------------------------------------------------
 -.PHONY: all $(KERNEL_ELF) $(KERNEL_BIN) doc qemu miniterm clippy clean readelf objdump nm check
-+.PHONY: all $(KERNEL_ELF) $(KERNEL_BIN) doc qemu qemuasm chainboot clippy clean readelf objdump nm \
-+    check
++.PHONY: all $(KERNEL_ELF) $(KERNEL_BIN) doc qemu chainboot clippy clean readelf objdump nm check
 
  all: $(KERNEL_BIN)
 
-@@ -96,16 +101,26 @@
- 	@$(DOC_CMD) --document-private-items --open
+@@ -131,7 +133,7 @@
+ ##------------------------------------------------------------------------------
+ ifeq ($(QEMU_MACHINE_TYPE),) # QEMU is not supported for the board.
 
- ifeq ($(QEMU_MACHINE_TYPE),)
 -qemu:
-+qemu test:
++qemu qemuasm:
  	$(call colorecho, "\n$(QEMU_MISSING_STRING)")
- else
+
+ else # QEMU is supported.
+@@ -139,13 +141,18 @@
  qemu: $(KERNEL_BIN)
  	$(call colorecho, "\nLaunching QEMU")
  	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
@@ -196,20 +234,29 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
 +	$(call colorecho, "\nLaunching QEMU with ASM output")
 +	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN) -d in_asm
 +
-+test: $(KERNEL_BIN)
-+	$(call colorecho, "\nTesting chainloading - $(BSP)")
-+	@$(DOCKER_TEST) $(EXEC_QEMU_MINIPUSH) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) \
-+                -kernel $(KERNEL_BIN) $(CHAINBOOT_DEMO_PAYLOAD)
-+
  endif
 
+ ##------------------------------------------------------------------------------
+-## Connect to the target's serial
++## Push the kernel to the real HW target
+ ##------------------------------------------------------------------------------
 -miniterm:
 -	@$(DOCKER_MINITERM) $(EXEC_MINITERM) $(DEV_SERIAL)
-+chainboot:
++chainboot: $(KERNEL_BIN)
 +	@$(DOCKER_CHAINBOOT) $(EXEC_MINIPUSH) $(DEV_SERIAL) $(CHAINBOOT_DEMO_PAYLOAD)
 
- clippy:
- 	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD)
+ ##------------------------------------------------------------------------------
+ ## Run clippy
+@@ -209,7 +216,8 @@
+ ##------------------------------------------------------------------------------
+ test_boot: $(KERNEL_BIN)
+ 	$(call colorecho, "\nBoot test - $(BSP)")
+-	@$(DOCKER_TEST) $(EXEC_TEST_DISPATCH) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
++	@$(DOCKER_TEST) $(EXEC_TEST_MINIPUSH) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) \
++		-kernel $(KERNEL_BIN) $(CHAINBOOT_DEMO_PAYLOAD)
+
+ test: test_boot
+
 
 diff -uNr 05_drivers_gpio_uart/src/_arch/aarch64/cpu/boot.s 06_uart_chainloader/src/_arch/aarch64/cpu/boot.s
 --- 05_drivers_gpio_uart/src/_arch/aarch64/cpu/boot.s
@@ -492,9 +539,17 @@ diff -uNr 05_drivers_gpio_uart/src/main.rs 06_uart_chainloader/src/main.rs
 +    kernel()
  }
 
-diff -uNr 05_drivers_gpio_uart/tests/qemu_minipush.rb 06_uart_chainloader/tests/qemu_minipush.rb
---- 05_drivers_gpio_uart/tests/qemu_minipush.rb
-+++ 06_uart_chainloader/tests/qemu_minipush.rb
+diff -uNr 05_drivers_gpio_uart/tests/boot_test_string.rb 06_uart_chainloader/tests/boot_test_string.rb
+--- 05_drivers_gpio_uart/tests/boot_test_string.rb
++++ 06_uart_chainloader/tests/boot_test_string.rb
+@@ -1,3 +0,0 @@
+-# frozen_string_literal: true
+-
+-EXPECTED_PRINT = 'Echoing input now'
+
+diff -uNr 05_drivers_gpio_uart/tests/chainboot_test.rb 06_uart_chainloader/tests/chainboot_test.rb
+--- 05_drivers_gpio_uart/tests/chainboot_test.rb
++++ 06_uart_chainloader/tests/chainboot_test.rb
 @@ -0,0 +1,80 @@
 +# frozen_string_literal: true
 +
@@ -502,80 +557,80 @@ diff -uNr 05_drivers_gpio_uart/tests/qemu_minipush.rb 06_uart_chainloader/tests/
 +#
 +# Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
 +
-+require_relative '../../utils/minipush'
-+require 'expect'
-+require 'timeout'
++require_relative '../../common/serial/minipush'
++require_relative '../../common/tests/boot_test'
++require 'pty'
 +
 +# Match for the last print that 'demo_payload_rpiX.img' produces.
 +EXPECTED_PRINT = 'Echoing input now'
 +
-+# The main class
-+class QEMUMiniPush < MiniPush
-+    TIMEOUT_SECS = 3
++# Extend BootTest so that it listens on the output of a MiniPush instance, which is itself connected
++# to a QEMU instance instead of a real HW.
++class ChainbootTest < BootTest
++    MINIPUSH = '../common/serial/minipush.rb'
++    MINIPUSH_POWER_TARGET_REQUEST = 'Please power the target now'
 +
-+    # override
-+    def initialize(qemu_cmd, binary_image_path)
-+        super(nil, binary_image_path)
++    def initialize(qemu_cmd, payload_path)
++        super(qemu_cmd, EXPECTED_PRINT)
 +
-+        @qemu_cmd = qemu_cmd
++        @test_name = 'Boot test using Minipush'
++
++        @payload_path = payload_path
 +    end
 +
 +    private
 +
-+    def quit_qemu_graceful
-+        Timeout.timeout(5) do
-+            pid = @target_serial.pid
-+            Process.kill('TERM', pid)
-+            Process.wait(pid)
++    # override
++    def post_process_and_add_output(output)
++        temp = output.join.split("\r\n")
++
++        # Should a line have solo carriage returns, remove any overridden parts of the string.
++        temp.map! { |x| x.gsub(/.*\r/, '') }
++
++        @test_output += temp
++    end
++
++    def wait_for_minipush_power_request(mp_out)
++        output = []
++        Timeout.timeout(MAX_WAIT_SECS) do
++            loop do
++                output << mp_out.gets
++                break if output.last.include?(MINIPUSH_POWER_TARGET_REQUEST)
++            end
 +        end
++    rescue Timeout::Error
++        @test_error = 'Timed out waiting for power request'
++    rescue StandardError => e
++        @test_error = e.message
++    ensure
++        post_process_and_add_output(output)
 +    end
 +
 +    # override
-+    def open_serial
-+        @target_serial = IO.popen(@qemu_cmd, 'r+', err: '/dev/null')
++    def setup
++        pty_main, pty_secondary = PTY.open
++        mp_out, _mp_in = PTY.spawn("ruby #{MINIPUSH} #{pty_secondary.path} #{@payload_path}")
 +
-+        # Ensure all output is immediately flushed to the device.
-+        @target_serial.sync = true
++        # Wait until MiniPush asks for powering the target.
++        wait_for_minipush_power_request(mp_out)
 +
-+        puts "[#{@name_short}] ✅ Serial connected"
-+    end
++        # Now is the time to start QEMU with the chainloader binary. QEMU's virtual tty is connected
++        # to the MiniPush instance spawned above, so that the two processes talk to each other.
++        Process.spawn(@qemu_cmd, in: pty_main, out: pty_main)
 +
-+    # override
-+    def terminal
-+        result = @target_serial.expect(EXPECTED_PRINT, TIMEOUT_SECS)
-+        exit(1) if result.nil?
-+
-+        puts result
-+
-+        quit_qemu_graceful
-+    end
-+
-+    # override
-+    def connetion_reset; end
-+
-+    # override
-+    def handle_reconnect(error)
-+        handle_unexpected(error)
++        # The remainder of the test is done by the parent class' run_concrete_test, which listens on
++        # @qemu_serial. Hence, point it to MiniPush's output.
++        @qemu_serial = mp_out
 +    end
 +end
 +
 +##--------------------------------------------------------------------------------------------------
 +## Execution starts here
 +##--------------------------------------------------------------------------------------------------
-+puts
-+puts 'QEMUMiniPush 1.0'.cyan
-+puts
-+
-+# CTRL + C handler. Only here to suppress Ruby's default exception print.
-+trap('INT') do
-+    # The `ensure` block from `QEMUMiniPush::run` will run after exit, restoring console state.
-+    exit
-+end
-+
-+binary_image_path = ARGV.pop
++payload_path = ARGV.pop
 +qemu_cmd = ARGV.join(' ')
 +
-+QEMUMiniPush.new(qemu_cmd, binary_image_path).run
++ChainbootTest.new(qemu_cmd, payload_path).run
 
 diff -uNr 05_drivers_gpio_uart/update.sh 06_uart_chainloader/update.sh
 --- 05_drivers_gpio_uart/update.sh

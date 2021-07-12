@@ -4,6 +4,8 @@
 #
 # Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
 
+require 'rubygems'
+require 'bundler/setup'
 require 'colorize'
 
 def copyright_check_files(source_files)

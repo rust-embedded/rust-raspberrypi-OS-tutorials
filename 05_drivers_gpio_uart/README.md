@@ -145,55 +145,64 @@ diff -uNr 04_safe_globals/Cargo.toml 05_drivers_gpio_uart/Cargo.toml
 diff -uNr 04_safe_globals/Makefile 05_drivers_gpio_uart/Makefile
 --- 04_safe_globals/Makefile
 +++ 05_drivers_gpio_uart/Makefile
-@@ -7,6 +7,12 @@
- # Default to the RPi3
+@@ -11,6 +11,9 @@
+ # Default to the RPi3.
  BSP ?= rpi3
 
 +# Default to a serial device name that is common in Linux.
 +DEV_SERIAL ?= /dev/ttyUSB0
 +
-+# Query the host system's kernel name
-+UNAME_S = $(shell uname -s)
-+
- # BSP-specific arguments
- ifeq ($(BSP),rpi3)
-     TARGET            = aarch64-unknown-none-softfloat
-@@ -58,13 +64,23 @@
- DOCKER_IMAGE         = rustembedded/osdev-utils
- DOCKER_CMD           = docker run --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
- DOCKER_CMD_INTERACT  = $(DOCKER_CMD) -i -t
-+DOCKER_ARG_DIR_UTILS = -v $(shell pwd)/../utils:/work/utils
-+DOCKER_ARG_DEV       = --privileged -v /dev:/dev
+
+
+ ##--------------------------------------------------------------------------------------------------
+@@ -72,6 +75,7 @@
+
+ EXEC_QEMU          = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
+ EXEC_TEST_DISPATCH = ruby ../common/tests/dispatch.rb
++EXEC_MINITERM      = ruby ../common/serial/miniterm.rb
+
+ ##------------------------------------------------------------------------------
+ ## Dockerization
+@@ -80,17 +84,25 @@
+ DOCKER_CMD            = docker run -t --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
+ DOCKER_CMD_INTERACT   = $(DOCKER_CMD) -i
+ DOCKER_ARG_DIR_COMMON = -v $(shell pwd)/../common:/work/common
++DOCKER_ARG_DEV        = --privileged -v /dev:/dev
 
  DOCKER_QEMU  = $(DOCKER_CMD_INTERACT) $(DOCKER_IMAGE)
  DOCKER_TOOLS = $(DOCKER_CMD) $(DOCKER_IMAGE)
+ DOCKER_TEST  = $(DOCKER_CMD) $(DOCKER_ARG_DIR_COMMON) $(DOCKER_IMAGE)
 
--EXEC_QEMU = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
-+# Dockerize commands that require USB device passthrough only on Linux
-+ifeq ($(UNAME_S),Linux)
++# Dockerize commands, which require USB device passthrough, only on Linux.
++ifeq ($(shell uname -s),Linux)
 +    DOCKER_CMD_DEV = $(DOCKER_CMD_INTERACT) $(DOCKER_ARG_DEV)
 +
-+    DOCKER_MINITERM = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_UTILS) $(DOCKER_IMAGE)
++    DOCKER_MINITERM = $(DOCKER_CMD_DEV) $(DOCKER_ARG_DIR_COMMON) $(DOCKER_IMAGE)
 +endif
 +
-+EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
-+EXEC_MINITERM = ruby ../utils/miniterm.rb
 
+
+ ##--------------------------------------------------------------------------------------------------
+ ## Targets
+ ##--------------------------------------------------------------------------------------------------
 -.PHONY: all $(KERNEL_ELF) $(KERNEL_BIN) doc qemu clippy clean readelf objdump nm check
 +.PHONY: all $(KERNEL_ELF) $(KERNEL_BIN) doc qemu miniterm clippy clean readelf objdump nm check
 
  all: $(KERNEL_BIN)
 
-@@ -88,6 +104,9 @@
- 	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
+@@ -130,6 +142,12 @@
  endif
 
+ ##------------------------------------------------------------------------------
++## Connect to the target's serial
++##------------------------------------------------------------------------------
 +miniterm:
 +	@$(DOCKER_MINITERM) $(EXEC_MINITERM) $(DEV_SERIAL)
 +
++##------------------------------------------------------------------------------
+ ## Run clippy
+ ##------------------------------------------------------------------------------
  clippy:
- 	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD)
-
 
 diff -uNr 04_safe_globals/src/_arch/aarch64/cpu.rs 05_drivers_gpio_uart/src/_arch/aarch64/cpu.rs
 --- 04_safe_globals/src/_arch/aarch64/cpu.rs
@@ -1450,5 +1459,14 @@ diff -uNr 04_safe_globals/src/panic_wait.rs 05_drivers_gpio_uart/src/panic_wait.
      }
 
      cpu::wait_forever()
+
+diff -uNr 04_safe_globals/tests/boot_test_string.rb 05_drivers_gpio_uart/tests/boot_test_string.rb
+--- 04_safe_globals/tests/boot_test_string.rb
++++ 05_drivers_gpio_uart/tests/boot_test_string.rb
+@@ -1,3 +1,3 @@
+ # frozen_string_literal: true
+
+-EXPECTED_PRINT = 'Stopping here'
++EXPECTED_PRINT = 'Echoing input now'
 
 ```

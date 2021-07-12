@@ -776,21 +776,29 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/Cargo.toml 15_virtual_mem_part3_precom
 diff -uNr 14_virtual_mem_part2_mmio_remap/Makefile 15_virtual_mem_part3_precomputed_tables/Makefile
 --- 14_virtual_mem_part2_mmio_remap/Makefile
 +++ 15_virtual_mem_part3_precomputed_tables/Makefile
-@@ -112,6 +112,7 @@
+@@ -88,6 +88,7 @@
+     -O binary
+
+ EXEC_QEMU          = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
++EXEC_TT_TOOL       = ruby translation_table_tool/main.rb
+ EXEC_TEST_DISPATCH = ruby ../common/tests/dispatch.rb
+ EXEC_MINIPUSH      = ruby ../common/serial/minipush.rb
+
+@@ -133,6 +134,7 @@
  $(KERNEL_ELF):
  	$(call colorecho, "\nCompiling kernel - $(BSP)")
  	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(RUSTC_CMD)
-+	@$(DOCKER_TOOLS) ruby translation_table_tool/main.rb $(TARGET) $(BSP) $(KERNEL_ELF)
++	@$(DOCKER_TOOLS) $(EXEC_TT_TOOL) $(TARGET) $(BSP) $(KERNEL_ELF)
 
- $(KERNEL_BIN): $(KERNEL_ELF)
- 	@$(OBJCOPY_CMD) $(KERNEL_ELF) $(KERNEL_BIN)
-@@ -134,6 +135,7 @@
+ ##------------------------------------------------------------------------------
+ ## Build the stripped kernel binary
+@@ -271,6 +273,7 @@
      TEST_ELF=$$(echo $$1 | sed -e 's/.*target/target/g')
      TEST_BINARY=$$(echo $$1.img | sed -e 's/.*target/target/g')
 
-+    $(DOCKER_TOOLS) ruby translation_table_tool/main.rb $(TARGET) $(BSP) $$TEST_ELF > /dev/null
++    $(DOCKER_TOOLS) $(EXEC_TT_TOOL) $(TARGET) $(BSP) $$TEST_ELF > /dev/null
      $(OBJCOPY_CMD) $$TEST_ELF $$TEST_BINARY
-     $(DOCKER_TEST) ruby tests/runner.rb $(EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
+     $(DOCKER_TEST) $(EXEC_TEST_DISPATCH) $(EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
  endef
 
 diff -uNr 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/cpu/boot.rs 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.rs
@@ -1555,8 +1563,8 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/tests/02_exception_sync_page_fault.rs 
      exception::handling_init();
      bsp::console::qemu_bring_up_console();
 
+     // This line will be printed as the test header.
      println!("Testing synchronous exception handling by causing a page fault");
-     println!("-------------------------------------------------------------------\n");
 
 -    let phys_kernel_tables_base_addr = match memory::mmu::kernel_map_binary() {
 -        Err(string) => {

@@ -53,7 +53,7 @@ diff -uNr 01_wait_forever/Cargo.toml 02_runtime_init/Cargo.toml
 diff -uNr 01_wait_forever/Makefile 02_runtime_init/Makefile
 --- 01_wait_forever/Makefile
 +++ 02_runtime_init/Makefile
-@@ -102,6 +102,8 @@
+@@ -152,6 +152,8 @@
  	$(call colorecho, "\nLaunching objdump")
  	@$(DOCKER_TOOLS) $(OBJDUMP_BINARY) --disassemble --demangle \
                  --section .text   \
@@ -61,7 +61,7 @@ diff -uNr 01_wait_forever/Makefile 02_runtime_init/Makefile
 +                --section .got    \
                  $(KERNEL_ELF) | rustfilt
 
- nm: $(KERNEL_ELF)
+ ##------------------------------------------------------------------------------
 
 diff -uNr 01_wait_forever/src/_arch/aarch64/cpu/boot.rs 02_runtime_init/src/_arch/aarch64/cpu/boot.rs
 --- 01_wait_forever/src/_arch/aarch64/cpu/boot.rs

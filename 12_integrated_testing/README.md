@@ -2,12 +2,14 @@
 
 ## tl;dr
 
-- We implement our own test framework using `Rust`'s [custom_test_frameworks] feature by enabling
-  `Unit Tests` and `Integration Tests` using `QEMU`.
-- It is also possible to have test automation for the kernel's `console` (provided over `UART` in
-  our case): Sending strings/characters to the console and expecting specific answers in return.
+- We implement our own integrated test framework using `Rust`'s [custom_test_frameworks] feature by
+  enabling `Unit Tests` and `Integration Tests` using `QEMU`.
+- It is also possible to have test automation for I/O with the kernel's `console` (provided over
+  `UART` in our case). That is, sending strings/characters to the console and expecting specific
+  answers in return.
+- The already existing basic `boot test` remains unchanged.
 
-<img src="../doc/13_demo.gif" width="880">
+<img src="../doc/12_demo.gif" width="880">
 
 ## Table of Contents
 
@@ -40,13 +42,13 @@ functionality. For example:
   - Stalling execution during boot to test the kernel's timekeeping code by spinning for 1 second.
   - Willingly causing exceptions to see the exception handler running.
 
-The feature set of the kernel is now rich enough so that it makes sense to introduce proper testing
-modeled after Rust's [native testing framework]. This tutorial extends our kernel with three basic
-testing facilities:
+The feature set of the kernel is now rich enough so that it makes sense to introduce proper
+integrated testing modeled after Rust's [native testing framework]. This tutorial extends our single
+existing kernel test with three new testing facilities:
   - Classic `Unit Tests`.
   - [Integration Tests] (self-contained tests stored in the `$CRATE/tests/` directory).
-  - `Console Tests`. These are integration tests acting on external stimuli - aka `console` input.
-    Sending strings/characters to the console and expecting specific answers in return.
+  - `Console I/O Tests`. These are integration tests acting on external stimuli - aka `console`
+    input. Sending strings/characters to the console and expecting specific answers in return.
 
 [native testing framework]: https://doc.rust-lang.org/book/ch11-00-testing.html
 
@@ -64,7 +66,7 @@ dependencies on the standard library, but comes at the cost of having a reduced 
 of annotating functions with `#[test]`, the `#[test_case]` attribute must be used. Additionally, we
 need to write a `test_runner` function, which is supposed to execute all the functions annotated
 with `#[test_case]`. This is barely enough to get `Unit Tests` running, though. There will be some
-more challenges that need solving for getting `Integration Tests` running as well.
+more challenges that need be solved for getting `Integration Tests` running as well.
 
 Please note that for automation purposes, all testing will be done in `QEMU` and not on real
 hardware.
@@ -82,15 +84,23 @@ additional insights.
 
 ## Implementation
 
-We introduce a new `Makefile` target:
+We introduce two new `Makefile` targets:
 
 ```console
-$ make test
+$ make test_unit
+$ make test_integration
 ```
 
-In essence, `make test` will execute `cargo test` instead of `cargo rustc`. The details will be
-explained in due course. The rest of the tutorial will explain as chronologically as possible what
-happens when `make test` aka `cargo test` runs.
+In essence, the `make test_*` targets will execute `cargo test` instead of `cargo rustc`. The
+details will be explained in due course. The rest of the tutorial will explain as chronologically as
+possible what happens when `make test_*` aka `cargo test` runs.
+
+Please note that the new targets are added to the existing `make test` target, so this is now your
+one-stop target to execute all possible tests for the kernel:
+
+```Makefile
+test: test_boot test_unit test_integration
+```
 
 ### Test Organization
 
@@ -166,8 +176,9 @@ that we are supposed to provide. This is the one that will be called by the `car
 ```rust
 /// The default runner for unit tests.
 pub fn test_runner(tests: &[&test_types::UnitTest]) {
+    // This line will be printed as the test header.
     println!("Running {} tests", tests.len());
-    println!("-------------------------------------------------------------------\n");
+
     for (i, test) in tests.iter().enumerate() {
         print!("{:>3}. {:.<58}", i + 1, test.name);
 
@@ -255,7 +266,7 @@ opportunity to cut down on setup code.
 [tutorial 03]: ../03_hacky_hello_world
 
 As a matter of fact, for the `Raspberrys`, nothing needs to be done, so the function is empy. But
-this might be different for other hardware emulated by QEMU, so it makes sense to introduce the
+this might be different for other hardware emulated by `QEMU`, so it makes sense to introduce the
 function now to make it easier in case new `BSPs` are added to the kernel in the future.
 
 Next, the reexported `test_main()` is called, which will call our `test_runner()` which finally
@@ -265,9 +276,10 @@ prints the unit test names and executes them.
 
 Let's recap where we are right now:
 
-We've enabled `custom_test_frameworks` in `lib.rs` to a point where, when using `make test`, the
-code gets compiled to a test kernel binary that eventually executes all the (yet-to-be-defined)
-`UnitTest` instances by executing all the way from `_start()` to our `test_runner()` function.
+We've enabled `custom_test_frameworks` in `lib.rs` to a point where, when using a `make test_unit`
+target, the code gets compiled to a test kernel binary that eventually executes all the
+(yet-to-be-defined) `UnitTest` instances by executing all the way from `_start()` to our
+`test_runner()` function.
 
 Through mechanisms that are explained later, `cargo` will now instantiate a `QEMU` process that
 exectues this test kernel. The question now is: How is test success/failure communicated to `cargo`?
@@ -339,30 +351,30 @@ concludes:
 #[linkage = "weak"]
 #[no_mangle]
 fn _panic_exit() -> ! {
-    #[cfg(not(test_build))]
+    #[cfg(not(feature = "test_build"))]
     {
         cpu::wait_forever()
     }
 
-    #[cfg(test_build)]
+    #[cfg(feature = "test_build")]
     {
         cpu::qemu_exit_failure()
     }
 }
 ```
 
-In case none of the unit tests panicked, `lib.rs`'s `kernel_init()` calls `cpu::qemu_exit_success()`
-to successfully conclude the unit test run.
+In case _none_ of the unit tests panicked, `lib.rs`'s `kernel_init()` calls
+`cpu::qemu_exit_success()` to successfully conclude the unit test run.
 
 ### Controlling Test Kernel Execution
 
 Now is a good time to catch up on how the test kernel binary is actually being executed. Normally,
 `cargo test` would try to execute the compiled binary as a normal child process. This would fail
-horribly because we build a kernel, and not a userspace process. Also, chances are very high that
-you sit in front of an `x86` machine, whereas the RPi kernel is `AArch64`.
+horribly because we build a kernel, and not a userspace process. Also, chances are high that you sit
+in front of an `x86` machine, whereas the RPi kernel is `AArch64`.
 
 Therefore, we need to install some hooks that make sure the test kernel gets executed inside `QEMU`,
-quite like it is done for the existing `make qemu` target that is in place since tutorial 1. The
+quite like it is done for the existing `make qemu` target that is in place since `tutorial 1`. The
 first step is to add a new file to the project, `.cargo/config.toml`:
 
 ```toml
@@ -374,10 +386,13 @@ Instead of executing a compilation result directly, the `runner` flag will instr
 delegate the execution. Using the setting depicted above, `target/kernel_test_runner.sh` will be
 executed and given the full path to the compiled test kernel as the first command line argument.
 
-The file `kernel_test_runner.sh` does not exist by default. We generate it on demand throguh the
-`make test` target:
+The file `kernel_test_runner.sh` does not exist by default. We generate it on demand when one of the
+`make test_*` targets is called:
 
 ```Makefile
+##------------------------------------------------------------------------------
+## Helpers for unit and integration test targets
+##------------------------------------------------------------------------------
 define KERNEL_TEST_RUNNER
     #!/usr/bin/env bash
 
@@ -385,16 +400,26 @@ define KERNEL_TEST_RUNNER
     TEST_BINARY=$$(echo $$1.img | sed -e 's/.*target/target/g')
 
     $(OBJCOPY_CMD) $$TEST_ELF $$TEST_BINARY
-    $(DOCKER_TEST) ruby tests/runner.rb $(EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
+    $(DOCKER_TEST) $(EXEC_TEST_DISPATCH) $(EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
 endef
 
 export KERNEL_TEST_RUNNER
-test: FEATURES += --features test_build
-test:
-	@mkdir -p target
-	@echo "$$KERNEL_TEST_RUNNER" > target/kernel_test_runner.sh
-	@chmod +x target/kernel_test_runner.sh
-	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(TEST_CMD) $(TEST_ARG)
+
+define test_prepare
+    @mkdir -p target
+    @echo "$$KERNEL_TEST_RUNNER" > target/kernel_test_runner.sh
+    @chmod +x target/kernel_test_runner.sh
+endef
+
+test_unit test_integration: FEATURES += --features test_build
+
+##------------------------------------------------------------------------------
+## Run unit test(s)
+##------------------------------------------------------------------------------
+test_unit:
+	$(call colorecho, "\nCompiling unit test(s) - $(BSP)")
+	$(call test_prepare)
+	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(TEST_CMD) --lib
 ```
 
 It first does the standard `objcopy` step to strip the `ELF` down to a raw binary. Just like in all
@@ -403,44 +428,76 @@ provided to it by `cargo`, and finally compiles a `docker` command to execute th
 reference, here it is fully resolved for an `RPi3 BSP`:
 
 ```bash
-docker run -i --rm -v /opt/rust-raspberrypi-OS-tutorials/12_integrated_testing:/work/tutorial -w /work/tutorial rustembedded/osdev-utils ruby tests/runner.rb qemu-system-aarch64 -M raspi3 -serial stdio -display none -semihosting -kernel $TEST_BINARY
+docker run --rm -v /opt/rust-raspberrypi-OS-tutorials/12_integrated_testing:/work/tutorial -w /work/tutorial -v /opt/rust-raspberrypi-OS-tutorials/12_integrated_testing/../common:/work/common rustembedded/osdev-utils ruby ../common/tests/dispatch.rb qemu-system-aarch64 -M raspi3 -serial stdio -display none -semihosting -kernel $TEST_BINARY
 ```
 
-We're still not done with all the redirections. Spotted the `ruby tests/runner.rb` part that gets
-excuted inside Docker?
+This command is quite similar to the one used in the `make test_boot` target that we have since
+`tutorial 3`. However, we never bothered explaining it, so lets take a closer look this time. One of
+the key ingredients is that we execute this script: `ruby ../common/tests/dispatch.rb`.
 
 #### Wrapping QEMU Test Execution
 
-`runner.rb` is a [Ruby] wrapper script around `QEMU` that, for unit tests, catches the case that a
-test gets stuck, e.g. in an unintentional busy loop or a crash. If `runner.rb` does not observe any
-output of the test kernel for `5 seconds`, it cancels the execution and reports a failure back to
-`cargo`. If `QEMU` exited itself by means of `aarch64::exit_success() / aarch64::exit_failure()`,
-the respective exit status code is passed through. The essential part happens here in `class
-RawTest`:
+`dispatch.rb` is a [Ruby] script which first determines what kind of test is due by inspecting the
+`QEMU`-command that was given to it. In case of `unit tests`, we are only interested if they all
+executed successfully, which can be checked by inspecting `QEMU`'s exit code. So the script takes
+the provided qemu command it got from `ARGV`, and creates and runs an instance of `ExitCodeTest`:
 
 ```ruby
-def exec
-    error = 'Timed out waiting for test'
+require_relative 'boot_test'
+require_relative 'console_io_test'
+require_relative 'exit_code_test'
+
+qemu_cmd = ARGV.join(' ')
+binary = ARGV.last
+test_name = binary.gsub(%r{.*deps/}, '').split('-')[0]
+
+case test_name
+when 'kernel8.img'
+    load 'tests/boot_test_string.rb' # provides 'EXPECTED_PRINT'
+    BootTest.new(qemu_cmd, EXPECTED_PRINT).run # Doesn't return
+
+when 'libkernel'
+    ExitCodeTest.new(qemu_cmd, 'Kernel library unit tests').run # Doesn't return
+```
+
+The easy case is `QEMU` existing by itself by means of `aarch64::exit_success()` or
+`aarch64::exit_failure()`. But the script can also catch the case of a test that gets stuck, e.g. in
+an unintentional busy loop or a crash. If `ExitCodeTest` does not observe any output of the test
+kernel for `MAX_WAIT_SECS`, it cancels the execution and marks the test as failed. Test success or
+failure is finally reported back to `cargo`.
+
+Here is the essential part happening in `class ExitCodeTest` (If `QEMU` exits itself, an `EOFError`
+is thrown):
+
+```ruby
+def run_concrete_test
     io = IO.popen(@qemu_cmd)
 
-    while IO.select([io], nil, nil, MAX_WAIT_SECS)
-        begin
-            @output << io.read_nonblock(1024)
-        rescue EOFError
-            io.close
-            error = $CHILD_STATUS.to_i != 0
-            break
-        end
+    Timeout.timeout(MAX_WAIT_SECS) do
+        @test_output << io.read_nonblock(1024) while IO.select([io])
     end
+rescue EOFError
+    io.close
+    @test_error = $CHILD_STATUS.to_i.zero? ? false : 'QEMU exit status != 0'
+rescue Timeout::Error
+    @test_error = 'Timed out waiting for test'
+rescue StandardError => e
+    @test_error = e.message
+ensure
+    post_process_output
+end
 ```
+
+Please note that `dispatch.rb` and all its dependencies live in the shared folder
+`../common/tests/`.
 
 [Ruby]: https://www.ruby-lang.org/
 
 ### Writing Unit Tests
 
-Alright, that's a wrap for the whole chain from `make test` all the way to reporting the test exit
-status back to `cargo test`. It is a lot to digest already, but we haven't even learned to write
-`Unit Tests` yet.
+Alright, that's a wrap for the whole chain from `make test_unit` all the way to reporting the test
+exit status back to `cargo test`. It is a lot to digest already, but we haven't even learned to
+write `Unit Tests` yet.
 
 In essence, it is almost like in `std` environments, with the difference that `#[test]` can't be
 used, because it is part of the standard library. The `no_std` replacement attribute provided by
@@ -485,9 +542,9 @@ Since this is a bit boiler-platy with the const and name definition, let's write
 macro] named `#[kernel_test]` to simplify this. It should work this way:
 
   1. Must be put before functions that take no arguments and return nothing.
-  2. Automatically constructs a `const UnitTest` from attributed functions like shown above by:
+  1. Automatically constructs a `const UnitTest` from attributed functions like shown above by:
       1. Converting the function name to the `name` member of the `UnitTest` struct.
-      2. Populating the `test_func` member with a closure that executes the body of the attributed
+      1. Populating the `test_func` member with a closure that executes the body of the attributed
          function.
 
 For the sake of brevity, we're not going to discuss the macro implementation. [The source is in the
@@ -609,12 +666,12 @@ function? This marks the function in `lib.rs` as a [weak symbol]. Let's look at 
 #[linkage = "weak"]
 #[no_mangle]
 fn _panic_exit() -> ! {
-    #[cfg(not(test_build))]
+    #[cfg(not(feature = "test_build"))]
     {
         cpu::wait_forever()
     }
 
-    #[cfg(test_build)]
+    #[cfg(feature = "test_build")]
     {
         cpu::qemu_exit_failure()
     }
@@ -624,7 +681,7 @@ fn _panic_exit() -> ! {
 [weak symbol]: https://en.wikipedia.org/wiki/Weak_symbol
 
 This enables integration tests in `$CRATE/tests/` to override this function according to their
-needs. This is useful because depending on the kind of test, a `panic!` could mean success or
+needs. This is useful, because depending on the kind of test, a `panic!` could mean success or
 failure. For example, `tests/02_exception_sync_page_fault.rs` is intentionally causing a page fault,
 so the wanted outcome is a `panic!`. Here is the whole test (minus some inline comments):
 
@@ -646,10 +703,10 @@ unsafe fn kernel_init() -> ! {
     exception::handling_init();
     bsp::console::qemu_bring_up_console();
 
+    // This line will be printed as the test header.
     println!("Testing synchronous exception handling by causing a page fault");
-    println!("-------------------------------------------------------------------\n");
 
-    if let Err(string) = memory::mmu::mmu().init() {
+    if let Err(string) = memory::mmu::mmu().enable_mmu_and_caching() {
         println!("MMU: {}", string);
         cpu::qemu_exit_failure()
     }
@@ -661,7 +718,6 @@ unsafe fn kernel_init() -> ! {
     // If execution reaches here, the memory access above did not cause a page fault exception.
     cpu::qemu_exit_failure()
 }
-
 ```
 
 The `_panic_exit()` version that makes `QEMU` return `0` (indicating test success) is pulled in by
@@ -671,22 +727,21 @@ The `_panic_exit()` version that makes `QEMU` return `0` (indicating test succes
 
 As the kernel or OS grows, it will be more and more interesting to test user/kernel interaction
 through the serial console. That is, sending strings/characters to the console and expecting
-specific answers in return. The `runner.rb` wrapper script provides infrastructure to do this with
-little overhead. It basically works like this:
+specific answers in return. The `dispatch.rb` wrapper script provides infrastructure to recognize
+and dispatch console I/O tests with little overhead. It basically works like this:
 
   1. For each integration test, check if a companion file to the `.rs` test file exists.
       - A companion file has the same name, but ends in `.rb`.
-      - The companion file contains one or more console subtests.
-  2. If it exists, load the file to dynamically import the console subtests.
-  3. Spawn `QEMU` and attach to the serial console.
-  4. Run the console subtests.
+      - The companion file contains one or more console I/O subtests.
+  1. If it exists, load the file to dynamically import the console subtests.
+  1. Create a `ConsoleIOTest` instance and run it.
+      - This first spawns `QEMU` and attaches to `QEMU`'s serial console emulation.
+      - Then it runs all console subtests on it.
 
 Here is an excerpt from `00_console_sanity.rb` showing a subtest that does a handshake with the
 kernel over the console:
 
 ```ruby
-TIMEOUT_SECS = 3
-
 # Verify sending and receiving works as expected.
 class TxRxHandshake
     def name
@@ -695,7 +750,7 @@ class TxRxHandshake
 
     def run(qemu_out, qemu_in)
         qemu_in.write_nonblock('ABC')
-        raise('TX/RX test failed') if qemu_out.expect('OK1234', TIMEOUT_SECS).nil?
+        raise ExpectTimeoutError if qemu_out.expect('OK1234', TIMEOUT_SECS).nil?
     end
 end
 ```
@@ -727,20 +782,22 @@ unsafe fn kernel_init() -> ! {
 
 ## Test it
 
-Believe it or not, that is all. There are three ways you can run tests:
+Believe it or not, that is all. There are four ways you can run tests now:
 
-  1. `make test` will run all tests back-to-back.
-  2. `TEST=unit make test` will run `libkernel`'s unit tests.
-  3. `TEST=TEST_NAME make test` will run a specficic integration test.
-      - For example, `TEST=01_timer_sanity make test`
+  1. `make test` will run all tests back-to-back. That is, the ever existing `boot test` first, then
+     `unit tests`, then `integration tests`.
+  1. `make test_unit` will run `libkernel`'s unit tests.
+  1. `make test_integration` will run all integration tests back-to-back.
+  1. `TEST=TEST_NAME make test_integration` will run a specficic integration test.
+      - For example, `TEST=01_timer_sanity make test_integration`
 
 ```console
 $ make test
 [...]
 
-     Running unittests (target/aarch64-unknown-none-softfloat/release/deps/libkernel-836110ac5dd535ba)
+     Running unittests (target/aarch64-unknown-none-softfloat/release/deps/libkernel-142a8d94bc9c615a)
          -------------------------------------------------------------------
-         🦀 Running 8 tests
+         🦀 Running 6 tests
          -------------------------------------------------------------------
 
            1. virt_mem_layout_sections_are_64KiB_aligned................[ok]
@@ -749,17 +806,18 @@ $ make test
            4. kernel_tables_in_bss......................................[ok]
            5. size_of_tabledescriptor_equals_64_bit.....................[ok]
            6. size_of_pagedescriptor_equals_64_bit......................[ok]
-           7. zero_volatile_works.......................................[ok]
-           8. bss_section_is_sane.......................................[ok]
 
          -------------------------------------------------------------------
-         ✅ Success: libkernel
+         ✅ Success: Kernel library unit tests
          -------------------------------------------------------------------
 
 
-     Running tests/00_console_sanity.rs (target/aarch64-unknown-none-softfloat/release/deps/00_console_sanity-78c12c5472d40df7)
+
+Compiling integration test(s) - rpi3
+    Finished release [optimized] target(s) in 0.00s
+     Running tests/00_console_sanity.rs (target/aarch64-unknown-none-softfloat/release/deps/00_console_sanity-c06130838f14dbff)
          -------------------------------------------------------------------
-         🦀 Running 3 console-based tests
+         🦀 Running 3 console I/O tests
          -------------------------------------------------------------------
 
            1. Transmit and Receive handshake............................[ok]
@@ -767,11 +825,11 @@ $ make test
            3. Receive statistics........................................[ok]
 
          -------------------------------------------------------------------
-         ✅ Success: 00_console_sanity
+         ✅ Success: 00_console_sanity.rs
          -------------------------------------------------------------------
 
 
-     Running tests/01_timer_sanity.rs (target/aarch64-unknown-none-softfloat/release/deps/01_timer_sanity-4866734b14c83c9b)
+     Running tests/01_timer_sanity.rs (target/aarch64-unknown-none-softfloat/release/deps/01_timer_sanity-62a954d22239d1a3)
          -------------------------------------------------------------------
          🦀 Running 3 tests
          -------------------------------------------------------------------
@@ -781,11 +839,11 @@ $ make test
            3. spin_accuracy_check_1_second..............................[ok]
 
          -------------------------------------------------------------------
-         ✅ Success: 01_timer_sanity
+         ✅ Success: 01_timer_sanity.rs
          -------------------------------------------------------------------
 
 
-     Running tests/02_exception_sync_page_fault.rs (target/aarch64-unknown-none-softfloat/release/deps/02_exception_sync_page_fault-f2d0885cada1105b)
+     Running tests/02_exception_sync_page_fault.rs (target/aarch64-unknown-none-softfloat/release/deps/02_exception_sync_page_fault-2d8ec603ef1c4d8e)
          -------------------------------------------------------------------
          🦀 Testing synchronous exception handling by causing a page fault
          -------------------------------------------------------------------
@@ -800,7 +858,7 @@ $ make test
          [...]
 
          -------------------------------------------------------------------
-         ✅ Success: 02_exception_sync_page_fault
+         ✅ Success: 02_exception_sync_page_fault.rs
          -------------------------------------------------------------------
 ```
 
@@ -880,7 +938,21 @@ diff -uNr 11_exceptions_part1_groundwork/Cargo.toml 12_integrated_testing/Cargo.
 diff -uNr 11_exceptions_part1_groundwork/Makefile 12_integrated_testing/Makefile
 --- 11_exceptions_part1_groundwork/Makefile
 +++ 12_integrated_testing/Makefile
-@@ -20,6 +20,7 @@
+@@ -14,6 +14,13 @@
+ # Default to a serial device name that is common in Linux.
+ DEV_SERIAL ?= /dev/ttyUSB0
+
++# Optional integration test name.
++ifdef TEST
++    TEST_ARG = --test $(TEST)
++else
++    TEST_ARG = --test '*'
++endif
++
+
+
+ ##--------------------------------------------------------------------------------------------------
+@@ -27,6 +34,7 @@
      QEMU_BINARY       = qemu-system-aarch64
      QEMU_MACHINE_TYPE = raspi3
      QEMU_RELEASE_ARGS = -serial stdio -display none
@@ -888,7 +960,7 @@ diff -uNr 11_exceptions_part1_groundwork/Makefile 12_integrated_testing/Makefile
      OBJDUMP_BINARY    = aarch64-none-elf-objdump
      NM_BINARY         = aarch64-none-elf-nm
      READELF_BINARY    = aarch64-none-elf-readelf
-@@ -33,6 +34,7 @@
+@@ -40,6 +48,7 @@
      QEMU_BINARY       = qemu-system-aarch64
      QEMU_MACHINE_TYPE =
      QEMU_RELEASE_ARGS = -serial stdio -display none
@@ -896,23 +968,7 @@ diff -uNr 11_exceptions_part1_groundwork/Makefile 12_integrated_testing/Makefile
      OBJDUMP_BINARY    = aarch64-none-elf-objdump
      NM_BINARY         = aarch64-none-elf-nm
      READELF_BINARY    = aarch64-none-elf-readelf
-@@ -45,6 +47,15 @@
- # Export for build.rs
- export LINKER_FILE
-
-+# Testing-specific arguments
-+ifdef TEST
-+    ifeq ($(TEST),unit)
-+        TEST_ARG = --lib
-+    else
-+        TEST_ARG = --test $(TEST)
-+    endif
-+endif
-+
- QEMU_MISSING_STRING = "This board is not yet supported for QEMU."
-
- RUSTFLAGS          = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
-@@ -59,6 +70,7 @@
+@@ -73,6 +82,7 @@
  DOC_CMD     = cargo doc $(COMPILER_ARGS)
  CLIPPY_CMD  = cargo clippy $(COMPILER_ARGS)
  CHECK_CMD   = cargo check $(COMPILER_ARGS)
@@ -920,37 +976,28 @@ diff -uNr 11_exceptions_part1_groundwork/Makefile 12_integrated_testing/Makefile
  OBJCOPY_CMD = rust-objcopy \
      --strip-all            \
      -O binary
-@@ -75,6 +87,7 @@
+@@ -236,11 +246,11 @@
+ ##--------------------------------------------------------------------------------------------------
+ ## Testing targets
+ ##--------------------------------------------------------------------------------------------------
+-.PHONY: test test_boot
++.PHONY: test test_boot test_unit test_integration
 
- DOCKER_QEMU  = $(DOCKER_CMD_INTERACT) $(DOCKER_IMAGE)
- DOCKER_GDB   = $(DOCKER_CMD_INTERACT) $(DOCKER_ARG_NET) $(DOCKER_IMAGE)
-+DOCKER_TEST  = $(DOCKER_CMD) $(DOCKER_IMAGE)
- DOCKER_TOOLS = $(DOCKER_CMD) $(DOCKER_IMAGE)
+ ifeq ($(QEMU_MACHINE_TYPE),) # QEMU is not supported for the board.
 
- # Dockerize commands that require USB device passthrough only on Linux
-@@ -91,8 +104,8 @@
- EXEC_QEMU     = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
- EXEC_MINIPUSH = ruby ../utils/minipush.rb
-
--.PHONY: all $(KERNEL_ELF) $(KERNEL_BIN) doc qemu chainboot jtagboot openocd gdb gdb-opt0  clippy \
--    clean readelf objdump nm check
-+.PHONY: all $(KERNEL_ELF) $(KERNEL_BIN) doc qemu test chainboot jtagboot openocd gdb gdb-opt0 \
-+    clippy clean readelf objdump nm check
-
- all: $(KERNEL_BIN)
-
-@@ -108,12 +121,31 @@
- 	@$(DOC_CMD) --document-private-items --open
-
- ifeq ($(QEMU_MACHINE_TYPE),)
--qemu:
-+qemu test:
+-test_boot test :
++test_boot test_unit test_integration test:
  	$(call colorecho, "\n$(QEMU_MISSING_STRING)")
- else
- qemu: $(KERNEL_BIN)
- 	$(call colorecho, "\nLaunching QEMU")
- 	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
-+
+
+ else # QEMU is supported.
+@@ -252,6 +262,45 @@
+ 	$(call colorecho, "\nBoot test - $(BSP)")
+ 	@$(DOCKER_TEST) $(EXEC_TEST_DISPATCH) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
+
+-test: test_boot
++##------------------------------------------------------------------------------
++## Helpers for unit and integration test targets
++##------------------------------------------------------------------------------
 +define KERNEL_TEST_RUNNER
 +    #!/usr/bin/env bash
 +
@@ -958,20 +1005,38 @@ diff -uNr 11_exceptions_part1_groundwork/Makefile 12_integrated_testing/Makefile
 +    TEST_BINARY=$$(echo $$1.img | sed -e 's/.*target/target/g')
 +
 +    $(OBJCOPY_CMD) $$TEST_ELF $$TEST_BINARY
-+    $(DOCKER_TEST) ruby tests/runner.rb $(EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
++    $(DOCKER_TEST) $(EXEC_TEST_DISPATCH) $(EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
 +endef
 +
 +export KERNEL_TEST_RUNNER
-+test: FEATURES += --features test_build
-+test:
-+	$(call colorecho, "\nCompiling test(s) - $(BSP)")
-+	@mkdir -p target
-+	@echo "$$KERNEL_TEST_RUNNER" > target/kernel_test_runner.sh
-+	@chmod +x target/kernel_test_runner.sh
++
++define test_prepare
++    @mkdir -p target
++    @echo "$$KERNEL_TEST_RUNNER" > target/kernel_test_runner.sh
++    @chmod +x target/kernel_test_runner.sh
++endef
++
++test_unit test_integration: FEATURES += --features test_build
++
++##------------------------------------------------------------------------------
++## Run unit test(s)
++##------------------------------------------------------------------------------
++test_unit:
++	$(call colorecho, "\nCompiling unit test(s) - $(BSP)")
++	$(call test_prepare)
++	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(TEST_CMD) --lib
++
++##------------------------------------------------------------------------------
++## Run integration test(s)
++##------------------------------------------------------------------------------
++test_integration:
++	$(call colorecho, "\nCompiling integration test(s) - $(BSP)")
++	$(call test_prepare)
 +	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(TEST_CMD) $(TEST_ARG)
- endif
++
++test: test_boot test_unit test_integration
 
- chainboot: $(KERNEL_BIN)
+ endif
 
 diff -uNr 11_exceptions_part1_groundwork/src/_arch/aarch64/cpu.rs 12_integrated_testing/src/_arch/aarch64/cpu.rs
 --- 11_exceptions_part1_groundwork/src/_arch/aarch64/cpu.rs
@@ -1216,7 +1281,7 @@ diff -uNr 11_exceptions_part1_groundwork/src/exception.rs 12_integrated_testing/
 diff -uNr 11_exceptions_part1_groundwork/src/lib.rs 12_integrated_testing/src/lib.rs
 --- 11_exceptions_part1_groundwork/src/lib.rs
 +++ 12_integrated_testing/src/lib.rs
-@@ -0,0 +1,186 @@
+@@ -0,0 +1,187 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -1379,8 +1444,9 @@ diff -uNr 11_exceptions_part1_groundwork/src/lib.rs 12_integrated_testing/src/li
 +
 +/// The default runner for unit tests.
 +pub fn test_runner(tests: &[&test_types::UnitTest]) {
++    // This line will be printed as the test header.
 +    println!("Running {} tests", tests.len());
-+    println!("-------------------------------------------------------------------\n");
++
 +    for (i, test) in tests.iter().enumerate() {
 +        print!("{:>3}. {:.<58}", i + 1, test.name);
 +
@@ -1630,12 +1696,12 @@ diff -uNr 11_exceptions_part1_groundwork/src/panic_wait.rs 12_integrated_testing
 +#[linkage = "weak"]
 +#[no_mangle]
 +fn _panic_exit() -> ! {
-+    #[cfg(not(test_build))]
++    #[cfg(not(feature = "test_build"))]
 +    {
 +        cpu::wait_forever()
 +    }
 +
-+    #[cfg(test_build)]
++    #[cfg(feature = "test_build")]
 +    {
 +        cpu::qemu_exit_failure()
 +    }
@@ -1708,7 +1774,7 @@ diff -uNr 11_exceptions_part1_groundwork/test-macros/src/lib.rs 12_integrated_te
 diff -uNr 11_exceptions_part1_groundwork/tests/00_console_sanity.rb 12_integrated_testing/tests/00_console_sanity.rb
 --- 11_exceptions_part1_groundwork/tests/00_console_sanity.rb
 +++ 12_integrated_testing/tests/00_console_sanity.rb
-@@ -0,0 +1,50 @@
+@@ -0,0 +1,57 @@
 +# frozen_string_literal: true
 +
 +# SPDX-License-Identifier: MIT OR Apache-2.0
@@ -1719,6 +1785,13 @@ diff -uNr 11_exceptions_part1_groundwork/tests/00_console_sanity.rb 12_integrate
 +
 +TIMEOUT_SECS = 3
 +
++# Error class for when expect times out.
++class ExpectTimeoutError < StandardError
++    def initialize
++        super('Timeout while expecting string')
++    end
++end
++
 +# Verify sending and receiving works as expected.
 +class TxRxHandshake
 +    def name
@@ -1727,7 +1800,7 @@ diff -uNr 11_exceptions_part1_groundwork/tests/00_console_sanity.rb 12_integrate
 +
 +    def run(qemu_out, qemu_in)
 +        qemu_in.write_nonblock('ABC')
-+        raise('TX/RX test failed') if qemu_out.expect('OK1234', TIMEOUT_SECS).nil?
++        raise ExpectTimeoutError if qemu_out.expect('OK1234', TIMEOUT_SECS).nil?
 +    end
 +end
 +
@@ -1738,7 +1811,7 @@ diff -uNr 11_exceptions_part1_groundwork/tests/00_console_sanity.rb 12_integrate
 +    end
 +
 +    def run(qemu_out, _qemu_in)
-+        raise('chars_written reported wrong') if qemu_out.expect('6', TIMEOUT_SECS).nil?
++        raise ExpectTimeoutError if qemu_out.expect('6', TIMEOUT_SECS).nil?
 +    end
 +end
 +
@@ -1749,7 +1822,7 @@ diff -uNr 11_exceptions_part1_groundwork/tests/00_console_sanity.rb 12_integrate
 +    end
 +
 +    def run(qemu_out, _qemu_in)
-+        raise('chars_read reported wrong') if qemu_out.expect('3', TIMEOUT_SECS).nil?
++        raise ExpectTimeoutError if qemu_out.expect('3', TIMEOUT_SECS).nil?
 +    end
 +end
 +
@@ -1763,7 +1836,7 @@ diff -uNr 11_exceptions_part1_groundwork/tests/00_console_sanity.rb 12_integrate
 diff -uNr 11_exceptions_part1_groundwork/tests/00_console_sanity.rs 12_integrated_testing/tests/00_console_sanity.rs
 --- 11_exceptions_part1_groundwork/tests/00_console_sanity.rs
 +++ 12_integrated_testing/tests/00_console_sanity.rs
-@@ -0,0 +1,42 @@
+@@ -0,0 +1,35 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2019-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -1797,14 +1870,7 @@ diff -uNr 11_exceptions_part1_groundwork/tests/00_console_sanity.rs 12_integrate
 +    print!("{}", console().chars_read());
 +
 +    // The QEMU process running this test will be closed by the I/O test harness.
-+    // cpu::wait_forever();
-+
-+    // For some reason, in this test, rustc or the linker produces an empty binary when
-+    // wait_forever() is used. Calling qemu_exit_success() fixes this behavior. So for the time
-+    // being, the following lines are just a workaround to fix this compiler/linker weirdness.
-+    use libkernel::time::interface::TimeManager;
-+    libkernel::time::time_manager().spin_for(core::time::Duration::from_secs(3600));
-+    cpu::qemu_exit_success()
++    cpu::wait_forever();
 +}
 
 diff -uNr 11_exceptions_part1_groundwork/tests/01_timer_sanity.rs 12_integrated_testing/tests/01_timer_sanity.rs
@@ -1893,8 +1959,8 @@ diff -uNr 11_exceptions_part1_groundwork/tests/02_exception_sync_page_fault.rs 1
 +    exception::handling_init();
 +    bsp::console::qemu_bring_up_console();
 +
++    // This line will be printed as the test header.
 +    println!("Testing synchronous exception handling by causing a page fault");
-+    println!("-------------------------------------------------------------------\n");
 +
 +    if let Err(string) = memory::mmu::mmu().enable_mmu_and_caching() {
 +        println!("MMU: {}", string);
@@ -1909,6 +1975,15 @@ diff -uNr 11_exceptions_part1_groundwork/tests/02_exception_sync_page_fault.rs 1
 +    cpu::qemu_exit_failure()
 +}
 
+diff -uNr 11_exceptions_part1_groundwork/tests/boot_test_string.rb 12_integrated_testing/tests/boot_test_string.rb
+--- 11_exceptions_part1_groundwork/tests/boot_test_string.rb
++++ 12_integrated_testing/tests/boot_test_string.rb
+@@ -1,3 +1,3 @@
+ # frozen_string_literal: true
+
+-EXPECTED_PRINT = 'lr : 0x'
++EXPECTED_PRINT = 'Echoing input now'
+
 diff -uNr 11_exceptions_part1_groundwork/tests/panic_exit_success/mod.rs 12_integrated_testing/tests/panic_exit_success/mod.rs
 --- 11_exceptions_part1_groundwork/tests/panic_exit_success/mod.rs
 +++ 12_integrated_testing/tests/panic_exit_success/mod.rs
@@ -1922,154 +1997,6 @@ diff -uNr 11_exceptions_part1_groundwork/tests/panic_exit_success/mod.rs 12_inte
 +fn _panic_exit() -> ! {
 +    libkernel::cpu::qemu_exit_success()
 +}
-
-diff -uNr 11_exceptions_part1_groundwork/tests/runner.rb 12_integrated_testing/tests/runner.rb
---- 11_exceptions_part1_groundwork/tests/runner.rb
-+++ 12_integrated_testing/tests/runner.rb
-@@ -0,0 +1,143 @@
-+#!/usr/bin/env ruby
-+# frozen_string_literal: true
-+
-+# SPDX-License-Identifier: MIT OR Apache-2.0
-+#
-+# Copyright (c) 2019-2021 Andre Richter <andre.o.richter@gmail.com>
-+
-+require 'English'
-+require 'pty'
-+
-+# Test base class.
-+class Test
-+    INDENT = '         '
-+
-+    def print_border(status)
-+        puts
-+        puts "#{INDENT}-------------------------------------------------------------------"
-+        puts status
-+        puts "#{INDENT}-------------------------------------------------------------------\n\n\n"
-+    end
-+
-+    def print_error(error)
-+        puts
-+        print_border("#{INDENT}❌ Failure: #{error}: #{@test_name}")
-+    end
-+
-+    def print_success
-+        print_border("#{INDENT}✅ Success: #{@test_name}")
-+    end
-+
-+    def print_output
-+        puts "#{INDENT}-------------------------------------------------------------------"
-+        print INDENT
-+        print '🦀 '
-+        print @output.join.gsub("\n", "\n#{INDENT}")
-+    end
-+
-+    def finish(error)
-+        print_output
-+
-+        exit_code = if error
-+                        print_error(error)
-+                        false
-+                    else
-+                        print_success
-+                        true
-+                    end
-+
-+        exit(exit_code)
-+    end
-+end
-+
-+# Executes tests with console I/O.
-+class ConsoleTest < Test
-+    def initialize(binary, qemu_cmd, test_name, console_subtests)
-+        super()
-+
-+        @binary = binary
-+        @qemu_cmd = qemu_cmd
-+        @test_name = test_name
-+        @console_subtests = console_subtests
-+        @cur_subtest = 1
-+        @output = ["Running #{@console_subtests.length} console-based tests\n",
-+                   "-------------------------------------------------------------------\n\n"]
-+    end
-+
-+    def format_test_name(number, name)
-+        formatted_name = "#{number.to_s.rjust(3)}. #{name}"
-+        formatted_name.ljust(63, '.')
-+    end
-+
-+    def run_subtest(subtest, qemu_out, qemu_in)
-+        @output << format_test_name(@cur_subtest, subtest.name)
-+
-+        subtest.run(qemu_out, qemu_in)
-+
-+        @output << "[ok]\n"
-+        @cur_subtest += 1
-+    end
-+
-+    def exec
-+        error = false
-+
-+        PTY.spawn(@qemu_cmd) do |qemu_out, qemu_in|
-+            begin
-+                @console_subtests.each { |t| run_subtest(t, qemu_out, qemu_in) }
-+            rescue StandardError => e
-+                error = e.message
-+            end
-+
-+            finish(error)
-+        end
-+    end
-+end
-+
-+# A wrapper around the bare QEMU invocation.
-+class RawTest < Test
-+    MAX_WAIT_SECS = 5
-+
-+    def initialize(binary, qemu_cmd, test_name)
-+        super()
-+
-+        @binary = binary
-+        @qemu_cmd = qemu_cmd
-+        @test_name = test_name
-+        @output = []
-+    end
-+
-+    def exec
-+        error = 'Timed out waiting for test'
-+        io = IO.popen(@qemu_cmd)
-+
-+        while IO.select([io], nil, nil, MAX_WAIT_SECS)
-+            begin
-+                @output << io.read_nonblock(1024)
-+            rescue EOFError
-+                io.close
-+                error = $CHILD_STATUS.to_i != 0
-+                break
-+            end
-+        end
-+
-+        finish(error)
-+    end
-+end
-+
-+##--------------------------------------------------------------------------------------------------
-+## Script entry point
-+##--------------------------------------------------------------------------------------------------
-+binary = ARGV.last
-+test_name = binary.gsub(modulor{.*deps/}, '').split('-')[0]
-+console_test_file = "tests/#{test_name}.rb"
-+qemu_cmd = ARGV.join(' ')
-+
-+test_runner = if File.exist?(console_test_file)
-+                  load console_test_file
-+                  # subtest_collection is provided by console_test_file
-+                  ConsoleTest.new(binary, qemu_cmd, test_name, subtest_collection)
-+              else
-+                  RawTest.new(binary, qemu_cmd, test_name)
-+              end
-+
-+test_runner.exec
 
 diff -uNr 11_exceptions_part1_groundwork/test-types/Cargo.toml 12_integrated_testing/test-types/Cargo.toml
 --- 11_exceptions_part1_groundwork/test-types/Cargo.toml
