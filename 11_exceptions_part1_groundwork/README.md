@@ -1016,4 +1016,13 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/main.rs 11_exceptions_part1_
 
      // Discard any spurious received characters before going into echo mode.
 
+diff -uNr 10_virtual_mem_part1_identity_mapping/tests/boot_test_string.rb 11_exceptions_part1_groundwork/tests/boot_test_string.rb
+--- 10_virtual_mem_part1_identity_mapping/tests/boot_test_string.rb
++++ 11_exceptions_part1_groundwork/tests/boot_test_string.rb
+@@ -1,3 +1,3 @@
+ # frozen_string_literal: true
+
+-EXPECTED_PRINT = 'Echoing input now'
++EXPECTED_PRINT = 'lr : 0x'
+
 ```

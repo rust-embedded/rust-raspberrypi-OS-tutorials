@@ -11,7 +11,7 @@ require 'colorize'
 require 'fileutils'
 require_relative 'devtool/copyright'
 
-# Actions for tutorial folders
+# Actions for tutorial folders.
 class TutorialCrate
     attr_reader :folder
 
@@ -26,16 +26,19 @@ class TutorialCrate
     def clean
         puts 'Cleaning '.light_blue + @folder
 
-        Dir.chdir(@folder) { system('make clean') }
+        # No output needed.
+        Dir.chdir(@folder) { `make clean` }
     end
 
     def update
+        puts "\n\n"
         puts 'Updating '.light_blue + @folder
 
         Dir.chdir(@folder) { system('cargo update') }
     end
 
     def clippy(bsp)
+        puts "\n\n"
         puts "Clippy #{@folder} - BSP: #{bsp}".light_blue
 
         Dir.chdir(@folder) { exit(1) unless system("BSP=#{bsp} make clippy") }
@@ -46,40 +49,60 @@ class TutorialCrate
     end
 
     def make(bsp)
+        puts "\n\n"
         puts "Make #{@folder} - BSP: #{bsp}".light_blue
 
         Dir.chdir(@folder) { exit(1) unless system("BSP=#{bsp} make") }
     end
 
-    def test_unit
-        return unless kernel_tests?
+    def test(bsp)
+        return unless boot_test?
 
-        puts "Unit Tests #{@folder}".light_blue
+        puts "\n\n"
+        puts "Test #{@folder} - BSP: #{bsp}".light_blue
 
-        Dir.chdir(@folder) { exit(1) unless system('TEST=unit make test') }
+        Dir.chdir(@folder) { exit(1) unless system("BSP=#{bsp} make test") }
     end
 
-    def test_integration
-        return unless kernel_tests?
+    def test_boot(bsp)
+        return unless boot_test?
 
-        puts "Integration Tests #{@folder}".light_blue
+        puts "\n\n"
+        puts "Test Boot #{@folder} - BSP: #{bsp}".light_blue
 
-        Dir.chdir(@folder) do
-            Dir['tests/*.rs'].sort.each do |t|
-                t = t.delete_prefix('tests/').delete_suffix('.rs')
-                exit(1) unless system("TEST=#{t} make test")
-            end
-        end
+        Dir.chdir(@folder) { exit(1) unless system("BSP=#{bsp} make test_boot") }
+    end
+
+    def test_unit(bsp)
+        return unless unit_integration_tests?
+
+        puts "\n\n"
+        puts "Test Unit #{@folder} - BSP: #{bsp}".light_blue
+
+        Dir.chdir(@folder) { exit(1) unless system("BSP=#{bsp} make test_unit") }
+    end
+
+    def test_integration(bsp)
+        return unless unit_integration_tests?
+
+        puts "\n\n"
+        puts "Test Integration #{@folder} - BSP: #{bsp}".light_blue
+
+        Dir.chdir(@folder) { exit(1) unless system("BSP=#{bsp} make test_integration") }
     end
 
     private
 
-    def kernel_tests?
-        File.exist?("#{@folder}/tests/runner.rb")
+    def boot_test?
+        Dir.exist?("#{@folder}/tests")
+    end
+
+    def unit_integration_tests?
+        !Dir.glob("#{@folder}/tests/00_*.rs").empty?
     end
 end
 
-# Forks commands to all applicable receivers
+# Forks commands to all applicable receivers.
 class DevTool
     def initialize
         @user_has_supplied_crates = false
@@ -100,11 +123,7 @@ class DevTool
     def clippy(bsp = nil)
         bsp ||= @bsp
 
-        @crates.each do |c|
-            c.clippy(bsp)
-            puts
-            puts
-        end
+        @crates.each { |c| c.clippy(bsp) }
     end
 
     def diff
@@ -132,34 +151,40 @@ class DevTool
     def make(bsp = nil)
         bsp ||= @bsp
 
-        @crates.each do |c|
-            c.make(bsp)
-            puts
-            puts
-        end
+        @crates.each { |c| c.make(bsp) }
     end
 
     def make_xtra
         return if @user_has_supplied_crates
 
+        puts "\n\n"
         puts 'Make Xtra stuff'.light_blue
         system('cd *_uart_chainloader && bash update.sh')
         system('cd X1_JTAG_boot && bash update.sh')
     end
 
-    def test_xtra
-        return if @user_has_supplied_crates
+    def test(bsp = nil)
+        bsp ||= @bsp
 
-        puts 'Test Xtra stuff'.light_blue
-        exit(1) unless system('cd *_uart_chainloader && make test')
+        @crates.each { |c| c.test(bsp) }
     end
 
-    def test_unit
-        @crates.each(&:test_unit)
+    def test_boot(bsp = nil)
+        bsp ||= @bsp
+
+        @crates.each { |c| c.test_boot(bsp) }
     end
 
-    def test_integration
-        @crates.each(&:test_integration)
+    def test_unit(bsp = nil)
+        bsp ||= @bsp
+
+        @crates.each { |c| c.test_unit(bsp) }
+    end
+
+    def test_integration(bsp = nil)
+        bsp ||= @bsp
+
+        @crates.each { |c| c.test_integration(bsp) }
     end
 
     def copyright
@@ -176,31 +201,25 @@ class DevTool
         exit(1) unless system('bundle exec rubocop')
     end
 
-    def ready_for_publish
-        clean
-        fmt
-        misspell
-        rubocop
-        clippy('rpi4')
-        clippy('rpi3')
-        copyright
-        diff
-
-        clean
-        make_xtra
-        test_xtra
-        test_unit
-        test_integration
-        clean
-    end
-
     def ready_for_publish_no_rust
         clean
         fmt
-        misspell
         rubocop
         copyright
         diff
+        misspell
+        clean
+    end
+
+    def ready_for_publish
+        ready_for_publish_no_rust
+
+        make_xtra
+        clippy('rpi4')
+        clippy('rpi3')
+        test_boot('rpi3')
+        test_unit('rpi3')
+        test_integration('rpi3')
         clean
     end
 
@@ -288,6 +307,7 @@ class DevTool
         tracked_files.select do |f|
             next unless File.exist?(f)
             next if f.include?('build.rs')
+            next if f.include?('boot_test_string.rb')
 
             f.include?('Makefile') ||
                 f.include?('Dockerfile') ||

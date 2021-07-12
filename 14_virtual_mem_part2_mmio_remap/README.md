@@ -3296,8 +3296,8 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/tests/02_exception_sync_page_fault
      exception::handling_init();
      bsp::console::qemu_bring_up_console();
 @@ -29,10 +29,30 @@
+     // This line will be printed as the test header.
      println!("Testing synchronous exception handling by causing a page fault");
-     println!("-------------------------------------------------------------------\n");
 
 -    if let Err(string) = memory::mmu::mmu().enable_mmu_and_caching() {
 -        println!("MMU: {}", string);

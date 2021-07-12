@@ -2,12 +2,22 @@
 ##
 ## Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
 
-include ../utils/color.mk.in
+include ../common/color.mk.in
 
-# Default to the RPi3
+##--------------------------------------------------------------------------------------------------
+## Optional, user-provided configuration values
+##--------------------------------------------------------------------------------------------------
+
+# Default to the RPi3.
 BSP ?= rpi3
 
-# BSP-specific arguments
+
+
+##--------------------------------------------------------------------------------------------------
+## Hardcoded configuration values
+##--------------------------------------------------------------------------------------------------
+
+# BSP-specific arguments.
 ifeq ($(BSP),rpi3)
     TARGET            = aarch64-unknown-none-softfloat
     KERNEL_BIN        = kernel8.img
@@ -32,11 +42,18 @@ else ifeq ($(BSP),rpi4)
     RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
 endif
 
-# Export for build.rs
-export LINKER_FILE
-
 QEMU_MISSING_STRING = "This board is not yet supported for QEMU."
 
+# Export for build.rs.
+export LINKER_FILE
+
+KERNEL_ELF = target/$(TARGET)/release/kernel
+
+
+
+##--------------------------------------------------------------------------------------------------
+## Command building blocks
+##--------------------------------------------------------------------------------------------------
 RUSTFLAGS          = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
 RUSTFLAGS_PEDANTIC = $(RUSTFLAGS) -D warnings -D missing_docs
 
@@ -53,51 +70,87 @@ OBJCOPY_CMD = rust-objcopy \
     --strip-all            \
     -O binary
 
-KERNEL_ELF = target/$(TARGET)/release/kernel
+EXEC_QEMU          = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
+EXEC_TEST_DISPATCH = ruby ../common/tests/dispatch.rb
 
-DOCKER_IMAGE         = rustembedded/osdev-utils
-DOCKER_CMD           = docker run --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
-DOCKER_CMD_INTERACT  = $(DOCKER_CMD) -i -t
+##------------------------------------------------------------------------------
+## Dockerization
+##------------------------------------------------------------------------------
+DOCKER_IMAGE          = rustembedded/osdev-utils
+DOCKER_CMD            = docker run -t --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
+DOCKER_CMD_INTERACT   = $(DOCKER_CMD) -i
+DOCKER_ARG_DIR_COMMON = -v $(shell pwd)/../common:/work/common
 
 DOCKER_QEMU  = $(DOCKER_CMD_INTERACT) $(DOCKER_IMAGE)
 DOCKER_TOOLS = $(DOCKER_CMD) $(DOCKER_IMAGE)
+DOCKER_TEST  = $(DOCKER_CMD) $(DOCKER_ARG_DIR_COMMON) $(DOCKER_IMAGE)
 
-EXEC_QEMU = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
 
+
+##--------------------------------------------------------------------------------------------------
+## Targets
+##--------------------------------------------------------------------------------------------------
 .PHONY: all $(KERNEL_ELF) $(KERNEL_BIN) doc qemu clippy clean readelf objdump nm check
 
 all: $(KERNEL_BIN)
 
+##------------------------------------------------------------------------------
+## Build the kernel ELF
+##------------------------------------------------------------------------------
 $(KERNEL_ELF):
 	$(call colorecho, "\nCompiling kernel - $(BSP)")
 	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(RUSTC_CMD)
 
+##------------------------------------------------------------------------------
+## Build the stripped kernel binary
+##------------------------------------------------------------------------------
 $(KERNEL_BIN): $(KERNEL_ELF)
 	@$(OBJCOPY_CMD) $(KERNEL_ELF) $(KERNEL_BIN)
 
+##------------------------------------------------------------------------------
+## Build the documentation
+##------------------------------------------------------------------------------
 doc:
 	$(call colorecho, "\nGenerating docs")
 	@$(DOC_CMD) --document-private-items --open
 
-ifeq ($(QEMU_MACHINE_TYPE),)
+##------------------------------------------------------------------------------
+## Run the kernel in QEMU
+##------------------------------------------------------------------------------
+ifeq ($(QEMU_MACHINE_TYPE),) # QEMU is not supported for the board.
+
 qemu:
 	$(call colorecho, "\n$(QEMU_MISSING_STRING)")
-else
+
+else # QEMU is supported.
+
 qemu: $(KERNEL_BIN)
 	$(call colorecho, "\nLaunching QEMU")
 	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
 endif
 
+##------------------------------------------------------------------------------
+## Run clippy
+##------------------------------------------------------------------------------
 clippy:
 	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD)
 
+##------------------------------------------------------------------------------
+## Clean
+##------------------------------------------------------------------------------
 clean:
 	rm -rf target $(KERNEL_BIN)
 
+##------------------------------------------------------------------------------
+## Run readelf
+##------------------------------------------------------------------------------
 readelf: $(KERNEL_ELF)
 	$(call colorecho, "\nLaunching readelf")
 	@$(DOCKER_TOOLS) $(READELF_BINARY) --headers $(KERNEL_ELF)
 
+##------------------------------------------------------------------------------
+## Run objdump
+##------------------------------------------------------------------------------
 objdump: $(KERNEL_ELF)
 	$(call colorecho, "\nLaunching objdump")
 	@$(DOCKER_TOOLS) $(OBJDUMP_BINARY) --disassemble --demangle \
@@ -106,10 +159,40 @@ objdump: $(KERNEL_ELF)
                 --section .got    \
                 $(KERNEL_ELF) | rustfilt
 
+##------------------------------------------------------------------------------
+## Run nm
+##------------------------------------------------------------------------------
 nm: $(KERNEL_ELF)
 	$(call colorecho, "\nLaunching nm")
 	@$(DOCKER_TOOLS) $(NM_BINARY) --demangle --print-size $(KERNEL_ELF) | sort | rustfilt
 
-# For rust-analyzer
+##------------------------------------------------------------------------------
+## Helper target for rust-analyzer
+##------------------------------------------------------------------------------
 check:
 	@RUSTFLAGS="$(RUSTFLAGS)" $(CHECK_CMD) --message-format=json
+
+
+
+##--------------------------------------------------------------------------------------------------
+## Testing targets
+##--------------------------------------------------------------------------------------------------
+.PHONY: test test_boot
+
+ifeq ($(QEMU_MACHINE_TYPE),) # QEMU is not supported for the board.
+
+test_boot test :
+	$(call colorecho, "\n$(QEMU_MISSING_STRING)")
+
+else # QEMU is supported.
+
+##------------------------------------------------------------------------------
+## Run boot test
+##------------------------------------------------------------------------------
+test_boot: $(KERNEL_BIN)
+	$(call colorecho, "\nBoot test - $(BSP)")
+	@$(DOCKER_TEST) $(EXEC_TEST_DISPATCH) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
+
+test: test_boot
+
+endif

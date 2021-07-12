@@ -23,12 +23,12 @@ fn _panic_print(args: fmt::Arguments) {
 #[linkage = "weak"]
 #[no_mangle]
 fn _panic_exit() -> ! {
-    #[cfg(not(test_build))]
+    #[cfg(not(feature = "test_build"))]
     {
         cpu::wait_forever()
     }
 
-    #[cfg(test_build)]
+    #[cfg(feature = "test_build")]
     {
         cpu::qemu_exit_failure()
     }

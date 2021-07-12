@@ -24,8 +24,8 @@ unsafe fn kernel_init() -> ! {
     exception::handling_init();
     bsp::console::qemu_bring_up_console();
 
+    // This line will be printed as the test header.
     println!("Testing synchronous exception handling by causing a page fault");
-    println!("-------------------------------------------------------------------\n");
 
     println!("Writing to bottom of address space to address 1 GiB...");
     let big_addr: u64 = 1 * 1024 * 1024 * 1024;
