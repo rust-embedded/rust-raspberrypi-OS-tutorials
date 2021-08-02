@@ -14,7 +14,7 @@
 
 有的内核的子系统是基于特定目标架构的处理器的低级代码。对于每种支持的处理器架构，都有一个子文件夹在`src/_arch`中。例如，`src/_arch/aarch64`
 
-子模块系统在每个处理器架构的`src`文件夹中。例如，属于内核内存子系统(`src/memory.rs`)的代码将会被放在`src/_arch/aarch64/memory.rs`.后一个文件将被直接包含和重新导出到`src/memory.rs`中，以便架构代码部分是明显的遵循代码模块话。这意味着在`src/_arch/aarch64/memory.rs`中定义的公共函数foo（）。仅可通过`crate :: memory :: foo（）`访问。
+子模块系统在每个处理器架构的`src`文件夹中。例如，属于内核内存子系统(`src/memory.rs`)的代码将会被放在`src/_arch/aarch64/memory.rs`.后一个文件将被直接包含和重新导出到`src/memory.rs`中，以便架构代码部分是明显的遵循代码模块化。这意味着在`src/_arch/aarch64/memory.rs`中定义的公共函数foo（）。仅可通过`crate :: memory :: foo（）`访问。
 
 `_arch`中的`_`表示此文件夹不属于标准模块层次结构。而是使用`＃[path =“ _ arch/xxx/yyy.rs”]`属性将其内容有条件地引入各自的文件中。
 
