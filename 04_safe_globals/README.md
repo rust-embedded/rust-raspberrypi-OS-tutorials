@@ -64,7 +64,7 @@ diff -uNr 03_hacky_hello_world/Cargo.toml 04_safe_globals/Cargo.toml
 -version = "0.3.0"
 +version = "0.4.0"
  authors = ["Andre Richter <andre.o.richter@gmail.com>"]
- edition = "2018"
+ edition = "2021"
 
 
 diff -uNr 03_hacky_hello_world/src/bsp/raspberrypi/console.rs 04_safe_globals/src/bsp/raspberrypi/console.rs

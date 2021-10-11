@@ -486,7 +486,7 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/Cargo.toml 11_exceptions_part1_g
 -version = "0.10.0"
 +version = "0.11.0"
  authors = ["Andre Richter <andre.o.richter@gmail.com>"]
- edition = "2018"
+ edition = "2021"
 
 
 diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 11_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs

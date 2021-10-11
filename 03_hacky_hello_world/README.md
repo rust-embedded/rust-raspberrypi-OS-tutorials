@@ -41,7 +41,7 @@ diff -uNr 02_runtime_init/Cargo.toml 03_hacky_hello_world/Cargo.toml
 -version = "0.2.0"
 +version = "0.3.0"
  authors = ["Andre Richter <andre.o.richter@gmail.com>"]
- edition = "2018"
+ edition = "2021"
 
 
 diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile

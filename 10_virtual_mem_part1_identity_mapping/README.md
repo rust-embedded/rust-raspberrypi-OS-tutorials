@@ -358,7 +358,7 @@ diff -uNr 09_privilege_level/Cargo.toml 10_virtual_mem_part1_identity_mapping/Ca
 -version = "0.9.0"
 +version = "0.10.0"
  authors = ["Andre Richter <andre.o.richter@gmail.com>"]
- edition = "2018"
+ edition = "2021"
 
 
 diff -uNr 09_privilege_level/src/_arch/aarch64/memory/mmu/translation_table.rs 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/memory/mmu/translation_table.rs

@@ -881,7 +881,7 @@ diff -uNr 11_exceptions_part1_groundwork/Cargo.toml 12_integrated_testing/Cargo.
 -version = "0.11.0"
 +version = "0.12.0"
  authors = ["Andre Richter <andre.o.richter@gmail.com>"]
- edition = "2018"
+ edition = "2021"
 
 @@ -11,21 +11,46 @@
  default = []
@@ -1722,7 +1722,7 @@ diff -uNr 11_exceptions_part1_groundwork/test-macros/Cargo.toml 12_integrated_te
 +name = "test-macros"
 +version = "0.1.0"
 +authors = ["Andre Richter <andre.o.richter@gmail.com>"]
-+edition = "2018"
++edition = "2021"
 +
 +[lib]
 +proc-macro = true
@@ -2002,7 +2002,7 @@ diff -uNr 11_exceptions_part1_groundwork/test-types/Cargo.toml 12_integrated_tes
 +name = "test-types"
 +version = "0.1.0"
 +authors = ["Andre Richter <andre.o.richter@gmail.com>"]
-+edition = "2018"
++edition = "2021"
 
 diff -uNr 11_exceptions_part1_groundwork/test-types/src/lib.rs 12_integrated_testing/test-types/src/lib.rs
 --- 11_exceptions_part1_groundwork/test-types/src/lib.rs

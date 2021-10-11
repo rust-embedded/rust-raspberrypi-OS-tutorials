@@ -314,7 +314,7 @@ diff -uNr 07_timestamps/Cargo.toml 08_hw_debug_JTAG/Cargo.toml
 -version = "0.7.0"
 +version = "0.8.0"
  authors = ["Andre Richter <andre.o.richter@gmail.com>"]
- edition = "2018"
+ edition = "2021"
 
 
 diff -uNr 07_timestamps/Makefile 08_hw_debug_JTAG/Makefile

@@ -118,7 +118,7 @@ diff -uNr 04_safe_globals/Cargo.toml 05_drivers_gpio_uart/Cargo.toml
 -version = "0.4.0"
 +version = "0.5.0"
  authors = ["Andre Richter <andre.o.richter@gmail.com>"]
- edition = "2018"
+ edition = "2021"
 
 @@ -9,8 +9,8 @@
 

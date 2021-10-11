@@ -2,7 +2,7 @@
 name = "mingo"
 version = "0.1.0"
 authors = ["Andre Richter <andre.o.richter@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 [profile.release]
 lto = true

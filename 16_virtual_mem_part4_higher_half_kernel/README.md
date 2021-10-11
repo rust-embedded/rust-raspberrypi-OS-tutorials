@@ -240,7 +240,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/Cargo.toml 16_virtual_mem_part
 -version = "0.15.0"
 +version = "0.16.0"
  authors = ["Andre Richter <andre.o.richter@gmail.com>"]
- edition = "2018"
+ edition = "2021"
 
 
 diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.rs 16_virtual_mem_part4_higher_half_kernel/src/_arch/aarch64/cpu/boot.rs

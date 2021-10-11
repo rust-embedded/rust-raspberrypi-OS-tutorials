@@ -755,7 +755,7 @@ diff -uNr 12_integrated_testing/Cargo.toml 13_exceptions_part2_peripheral_IRQs/C
 -version = "0.12.0"
 +version = "0.13.0"
  authors = ["Andre Richter <andre.o.richter@gmail.com>"]
- edition = "2018"
+ edition = "2021"
 
 
 diff -uNr 12_integrated_testing/Makefile 13_exceptions_part2_peripheral_IRQs/Makefile

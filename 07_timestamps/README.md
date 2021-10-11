@@ -54,7 +54,7 @@ diff -uNr 06_uart_chainloader/Cargo.toml 07_timestamps/Cargo.toml
 -version = "0.6.0"
 +version = "0.7.0"
  authors = ["Andre Richter <andre.o.richter@gmail.com>"]
- edition = "2018"
+ edition = "2021"
 
 Binary files 06_uart_chainloader/demo_payload_rpi3.img and 07_timestamps/demo_payload_rpi3.img differ
 Binary files 06_uart_chainloader/demo_payload_rpi4.img and 07_timestamps/demo_payload_rpi4.img differ

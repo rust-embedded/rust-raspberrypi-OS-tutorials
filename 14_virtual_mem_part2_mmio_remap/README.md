@@ -380,7 +380,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/Cargo.toml 14_virtual_mem_part2_mm
 -version = "0.13.0"
 +version = "0.14.0"
  authors = ["Andre Richter <andre.o.richter@gmail.com>"]
- edition = "2018"
+ edition = "2021"
 
 
 diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/exception.rs 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/exception.rs
