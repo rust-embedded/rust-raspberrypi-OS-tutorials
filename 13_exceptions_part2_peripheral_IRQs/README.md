@@ -2416,10 +2416,10 @@ diff -uNr 12_integrated_testing/src/lib.rs 13_exceptions_part2_peripheral_IRQs/s
 +#![feature(asm)]
  #![feature(const_fn_fn_ptr_basics)]
 +#![feature(const_fn_trait_bound)]
- #![feature(const_generics)]
- #![feature(const_panic)]
  #![feature(core_intrinsics)]
-@@ -134,6 +136,7 @@
+ #![feature(format_args_nl)]
+ #![feature(global_asm)]
+@@ -132,6 +134,7 @@
  pub mod exception;
  pub mod memory;
  pub mod print;

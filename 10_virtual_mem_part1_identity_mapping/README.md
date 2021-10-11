@@ -801,7 +801,7 @@ diff -uNr 09_privilege_level/src/_arch/aarch64/memory/mmu.rs 10_virtual_mem_part
 +        // Populate translation tables.
 +        KERNEL_TABLES
 +            .populate_tt_entries()
-+            .map_err(|e| MMUEnableError::Other(e))?;
++            .map_err(MMUEnableError::Other)?;
 +
 +        // Set the "Translation Table Base Register".
 +        TTBR0_EL1.set_baddr(KERNEL_TABLES.phys_base_address());
@@ -1042,19 +1042,17 @@ diff -uNr 09_privilege_level/src/bsp.rs 10_virtual_mem_part1_identity_mapping/sr
 diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/src/main.rs
 --- 09_privilege_level/src/main.rs
 +++ 10_virtual_mem_part1_identity_mapping/src/main.rs
-@@ -105,7 +105,11 @@
+@@ -105,7 +105,9 @@
  //! 2. Once finished with architectural setup, the arch code calls `kernel_init()`.
 
  #![allow(clippy::upper_case_acronyms)]
 +#![allow(incomplete_features)]
  #![feature(const_fn_fn_ptr_basics)]
-+#![feature(const_generics)]
-+#![feature(const_panic)]
 +#![feature(core_intrinsics)]
  #![feature(format_args_nl)]
  #![feature(global_asm)]
  #![feature(panic_info_message)]
-@@ -118,6 +122,7 @@
+@@ -118,6 +120,7 @@
  mod cpu;
  mod driver;
  mod exception;
@@ -1062,7 +1060,7 @@ diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/s
  mod panic_wait;
  mod print;
  mod synchronization;
-@@ -128,9 +133,17 @@
+@@ -128,9 +131,17 @@
  /// # Safety
  ///
  /// - Only a single core must be active and running this function.
@@ -1081,7 +1079,7 @@ diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/s
 
      for i in bsp::driver::driver_manager().all_device_drivers().iter() {
          if let Err(x) = i.init() {
-@@ -159,6 +172,9 @@
+@@ -159,6 +170,9 @@
      );
      info!("Booting on: {}", bsp::board_name());
 
@@ -1091,7 +1089,7 @@ diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/s
      let (_, privilege_level) = exception::current_privilege_level();
      info!("Current privilege level: {}", privilege_level);
 
-@@ -182,6 +198,13 @@
+@@ -182,6 +196,13 @@
      info!("Timer test, spinning for 1 second");
      time::time_manager().spin_for(Duration::from_secs(1));
 

@@ -111,8 +111,6 @@
 #![feature(asm)]
 #![feature(const_fn_fn_ptr_basics)]
 #![feature(const_fn_trait_bound)]
-#![feature(const_generics)]
-#![feature(const_panic)]
 #![feature(core_intrinsics)]
 #![feature(format_args_nl)]
 #![feature(global_asm)]

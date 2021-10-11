@@ -1613,7 +1613,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/arch.rb 15_virt
 +
 +    def self.attr_bitfield(name, offset, num_bits)
 +        define_method("#{name}=") do |bits|
-+            mask = 2**num_bits - 1
++            mask = (2**num_bits) - 1
 +
 +            raise "Input out of range: #{name} = 0x#{bits.to_s(16)}" if (bits & ~mask).positive?
 +
@@ -2167,7 +2167,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/generic.rb 15_v
 +
 +        num_pages = size / granule_size
 +        super(num_pages) do |i|
-+            i * granule_size + start_addr
++            (i * granule_size) + start_addr
 +        end
 +    end
 +end
@@ -2232,8 +2232,8 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/generic.rb 15_v
 +    print ' Kernel table struct at physical '
 +    puts BSP.phys_table_struct_start_addr.to_hex_underscore
 +
-+    IO.binwrite(kernel_binary, TRANSLATION_TABLES.to_binary,
-+                BSP.table_struct_offset_in_kernel_elf)
++    File.binwrite(kernel_binary, TRANSLATION_TABLES.to_binary,
++                  BSP.table_struct_offset_in_kernel_elf)
 +end
 +
 +def kernel_patch_base_addr(kernel_binary)
@@ -2243,8 +2243,8 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/generic.rb 15_v
 +    print ') at physical '
 +    puts BSP.phys_tables_base_addr.to_hex_underscore
 +
-+    IO.binwrite(kernel_binary, TRANSLATION_TABLES.phys_tables_base_addr_binary,
-+                BSP.phys_tables_base_addr_offset_in_kernel_elf)
++    File.binwrite(kernel_binary, TRANSLATION_TABLES.phys_tables_base_addr_binary,
++                  BSP.phys_tables_base_addr_offset_in_kernel_elf)
 +end
 
 diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/main.rb 15_virtual_mem_part3_precomputed_tables/translation_table_tool/main.rb

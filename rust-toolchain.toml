@@ -1,4 +1,4 @@
 [toolchain]
-channel = "nightly-2021-07-12"
+channel = "nightly-2021-10-10"
 components = ["llvm-tools-preview"]
 targets = ["aarch64-unknown-none-softfloat"]

@@ -137,7 +137,7 @@ impl memory::mmu::interface::MMU for MemoryManagementUnit {
         // Populate translation tables.
         KERNEL_TABLES
             .populate_tt_entries()
-            .map_err(|e| MMUEnableError::Other(e))?;
+            .map_err(MMUEnableError::Other)?;
 
         // Set the "Translation Table Base Register".
         TTBR0_EL1.set_baddr(KERNEL_TABLES.phys_base_address());

@@ -44,7 +44,7 @@ class PageArray < Array
 
         num_pages = size / granule_size
         super(num_pages) do |i|
-            i * granule_size + start_addr
+            (i * granule_size) + start_addr
         end
     end
 end
@@ -109,8 +109,8 @@ def kernel_patch_tables(kernel_binary)
     print ' Kernel table struct at physical '
     puts BSP.phys_table_struct_start_addr.to_hex_underscore
 
-    IO.binwrite(kernel_binary, TRANSLATION_TABLES.to_binary,
-                BSP.table_struct_offset_in_kernel_elf)
+    File.binwrite(kernel_binary, TRANSLATION_TABLES.to_binary,
+                  BSP.table_struct_offset_in_kernel_elf)
 end
 
 def kernel_patch_base_addr(kernel_binary)
@@ -120,6 +120,6 @@ def kernel_patch_base_addr(kernel_binary)
     print ') at physical '
     puts BSP.phys_tables_base_addr.to_hex_underscore
 
-    IO.binwrite(kernel_binary, TRANSLATION_TABLES.phys_tables_base_addr_binary,
-                BSP.phys_tables_base_addr_offset_in_kernel_elf)
+    File.binwrite(kernel_binary, TRANSLATION_TABLES.phys_tables_base_addr_binary,
+                  BSP.phys_tables_base_addr_offset_in_kernel_elf)
 end

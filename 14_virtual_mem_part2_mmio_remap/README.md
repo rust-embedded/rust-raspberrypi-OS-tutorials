@@ -798,7 +798,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 14
 -        // Populate translation tables.
 -        KERNEL_TABLES
 -            .populate_tt_entries()
--            .map_err(|e| MMUEnableError::Other(e))?;
+-            .map_err(MMUEnableError::Other)?;
 -
          // Set the "Translation Table Base Register".
 -        TTBR0_EL1.set_baddr(KERNEL_TABLES.phys_base_address());
@@ -2149,15 +2149,15 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/driver.rs 14_virtual_mem_part2
 diff -uNr 13_exceptions_part2_peripheral_IRQs/src/lib.rs 14_virtual_mem_part2_mmio_remap/src/lib.rs
 --- 13_exceptions_part2_peripheral_IRQs/src/lib.rs
 +++ 14_virtual_mem_part2_mmio_remap/src/lib.rs
-@@ -109,6 +109,7 @@
- #![allow(clippy::upper_case_acronyms)]
- #![allow(incomplete_features)]
- #![feature(asm)]
-+#![feature(const_evaluatable_checked)]
- #![feature(const_fn_fn_ptr_basics)]
+@@ -113,6 +113,7 @@
  #![feature(const_fn_trait_bound)]
- #![feature(const_generics)]
-@@ -130,6 +131,7 @@
+ #![feature(core_intrinsics)]
+ #![feature(format_args_nl)]
++#![feature(generic_const_exprs)]
+ #![feature(global_asm)]
+ #![feature(linkage)]
+ #![feature(panic_info_message)]
+@@ -128,6 +129,7 @@
  mod synchronization;
 
  pub mod bsp;

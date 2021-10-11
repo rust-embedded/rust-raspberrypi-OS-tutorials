@@ -1281,7 +1281,7 @@ diff -uNr 11_exceptions_part1_groundwork/src/exception.rs 12_integrated_testing/
 diff -uNr 11_exceptions_part1_groundwork/src/lib.rs 12_integrated_testing/src/lib.rs
 --- 11_exceptions_part1_groundwork/src/lib.rs
 +++ 12_integrated_testing/src/lib.rs
-@@ -0,0 +1,187 @@
+@@ -0,0 +1,185 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -1393,8 +1393,6 @@ diff -uNr 11_exceptions_part1_groundwork/src/lib.rs 12_integrated_testing/src/li
 +#![allow(clippy::upper_case_acronyms)]
 +#![allow(incomplete_features)]
 +#![feature(const_fn_fn_ptr_basics)]
-+#![feature(const_generics)]
-+#![feature(const_panic)]
 +#![feature(core_intrinsics)]
 +#![feature(format_args_nl)]
 +#![feature(global_asm)]
@@ -1473,7 +1471,7 @@ diff -uNr 11_exceptions_part1_groundwork/src/lib.rs 12_integrated_testing/src/li
 diff -uNr 11_exceptions_part1_groundwork/src/main.rs 12_integrated_testing/src/main.rs
 --- 11_exceptions_part1_groundwork/src/main.rs
 +++ 12_integrated_testing/src/main.rs
-@@ -6,127 +6,12 @@
+@@ -6,125 +6,12 @@
  #![doc(html_logo_url = "https://git.io/JeGIp")]
 
  //! The `kernel` binary.
@@ -1578,8 +1576,6 @@ diff -uNr 11_exceptions_part1_groundwork/src/main.rs 12_integrated_testing/src/m
 -#![allow(clippy::upper_case_acronyms)]
 -#![allow(incomplete_features)]
 -#![feature(const_fn_fn_ptr_basics)]
--#![feature(const_generics)]
--#![feature(const_panic)]
 -#![feature(core_intrinsics)]
 +
  #![feature(format_args_nl)]
@@ -1603,7 +1599,7 @@ diff -uNr 11_exceptions_part1_groundwork/src/main.rs 12_integrated_testing/src/m
 
  /// Early init code.
  ///
-@@ -137,6 +22,7 @@
+@@ -135,6 +22,7 @@
  ///     - MMU + Data caching must be activated at the earliest. Without it, any atomic operations,
  ///       e.g. the yet-to-be-introduced spinlocks in the device drivers (which currently employ
  ///       NullLocks instead of spinlocks), will fail to work (properly) on the RPi SoCs.
@@ -1611,7 +1607,7 @@ diff -uNr 11_exceptions_part1_groundwork/src/main.rs 12_integrated_testing/src/m
  unsafe fn kernel_init() -> ! {
      use driver::interface::DriverManager;
      use memory::mmu::interface::MMU;
-@@ -163,15 +49,9 @@
+@@ -161,15 +49,9 @@
  fn kernel_main() -> ! {
      use bsp::console::console;
      use console::interface::All;
@@ -1628,7 +1624,7 @@ diff -uNr 11_exceptions_part1_groundwork/src/main.rs 12_integrated_testing/src/m
      info!("Booting on: {}", bsp::board_name());
 
      info!("MMU online. Special regions:");
-@@ -197,31 +77,6 @@
+@@ -195,31 +77,6 @@
          info!("      {}. {}", i + 1, driver.compatible());
      }
 
