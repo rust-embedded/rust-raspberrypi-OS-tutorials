@@ -10,7 +10,7 @@
 
 /// Overwrites libkernel's `panic_wait::_panic_exit()` so that it returns a "success" code.
 ///
-/// In this test, teaching the panic is a success, because it is called from the synchronous
+/// In this test, reaching the panic is a success, because it is called from the synchronous
 /// exception handler, which is what this test wants to achieve.
 ///
 /// It also means that this integration test can not use any other code that calls panic!() directly
