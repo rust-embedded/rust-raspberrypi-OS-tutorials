@@ -853,8 +853,8 @@ Compiling integration test(s) - rpi3
          Kernel panic:
 
          CPU Exception!
-         FAR_EL1: 0x0000000240000000
          ESR_EL1: 0x96000004
+               Exception Class         (EC) : 0x25 - Data Abort, current EL
          [...]
 
          -------------------------------------------------------------------
@@ -1070,27 +1070,20 @@ diff -uNr 11_exceptions_part1_groundwork/src/_arch/aarch64/cpu.rs 12_integrated_
 diff -uNr 11_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs 12_integrated_testing/src/_arch/aarch64/exception.rs
 --- 11_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs
 +++ 12_integrated_testing/src/_arch/aarch64/exception.rs
-@@ -12,7 +12,7 @@
- //! crate::exception::arch_exception
-
- use core::{cell::UnsafeCell, fmt};
--use cortex_a::{asm, asm::barrier, registers::*};
-+use cortex_a::{asm::barrier, registers::*};
- use tock_registers::{
-     interfaces::{Readable, Writeable},
-     registers::InMemoryRegister,
-@@ -90,16 +90,6 @@
+@@ -87,18 +87,6 @@
 
  #[no_mangle]
  unsafe extern "C" fn current_elx_synchronous(e: &mut ExceptionContext) {
--    let far_el1 = FAR_EL1.get();
+-    if e.fault_address_valid() {
+-        let far_el1 = FAR_EL1.get();
 -
--    // This catches the demo case for this tutorial. If the fault address happens to be 8 GiB,
--    // advance the exception link register for one instruction, so that execution can continue.
--    if far_el1 == 8 * 1024 * 1024 * 1024 {
--        e.elr_el1 += 4;
+-        // This catches the demo case for this tutorial. If the fault address happens to be 8 GiB,
+-        // advance the exception link register for one instruction, so that execution can continue.
+-        if far_el1 == 8 * 1024 * 1024 * 1024 {
+-            e.elr_el1 += 4;
 -
--        asm::eret()
+-            return;
+-        }
 -    }
 -
      default_exception_handler(e);

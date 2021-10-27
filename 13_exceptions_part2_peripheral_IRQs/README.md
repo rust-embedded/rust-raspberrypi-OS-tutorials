@@ -911,7 +911,7 @@ diff -uNr 12_integrated_testing/src/_arch/aarch64/exception.rs 13_exceptions_par
  use core::{cell::UnsafeCell, fmt};
  use cortex_a::{asm::barrier, registers::*};
  use tock_registers::{
-@@ -94,8 +95,11 @@
+@@ -91,8 +92,11 @@
  }
 
  #[no_mangle]

@@ -203,12 +203,14 @@ some hand-crafted assembly. Introducing `exception.s`:
 	stp	x26, x27, [sp, #16 * 13]
 	stp	x28, x29, [sp, #16 * 14]
 
-	// Add the exception link register (ELR_EL1) and the saved program status (SPSR_EL1).
+	// Add the exception link register (ELR_EL1), saved program status (SPSR_EL1) and exception
+	// syndrome register (ESR_EL1).
 	mrs	x1,  ELR_EL1
 	mrs	x2,  SPSR_EL1
+	mrs	x3,  ESR_EL1
 
 	stp	lr,  x1,  [sp, #16 * 15]
-	str	x2,       [sp, #16 * 16]
+	stp	x2,  x3,  [sp, #16 * 16]
 
 	// x0 is the first argument for the function called through `\handler`.
 	mov	x0,  sp
@@ -224,10 +226,10 @@ some hand-crafted assembly. Introducing `exception.s`:
 
 First, a macro for saving the context is defined. It eventually jumps to follow-up handler code, and
 finally restores the context. In advance, we reserve space on the stack for the context. That is,
-the 30 `GPRs`, the `link register`, the `saved program status` and the `exception link register`
-(holding the preferred return address). Afterwards, we store those registers, save the current stack
-address in `x0` and branch off to follow-up handler-code, whose function name is supplied as an
-argument to the macro (`\handler`).
+the 30 `GPRs`, the `link register`, the `exception link register` (holding the preferred return
+address), the `saved program status` and the `exception syndrome register`. Afterwards, we store
+those registers, save the current stack address in `x0` and branch off to follow-up handler-code,
+whose function name is supplied as an argument to the macro (`\handler`).
 
 The handler code will be written in Rust, but use the platform's `C` ABI. This way, we can define a
 function signature that has a pointer to the context-data on the stack as its first argument, and
@@ -298,6 +300,9 @@ struct ExceptionContext {
 
     /// Saved program status.
     spsr_el1: SpsrEL1,
+
+    // Exception syndrome register.
+    esr_el1: EsrEL1,
 }
 ```
 
@@ -305,16 +310,12 @@ The handlers take a `struct ExceptionContext` argument. Since we do not plan to 
 for each exception yet, a default handler is provided:
 
 ```rust
-/// Print verbose information about the exception and the panic.
-fn default_exception_handler(e: &ExceptionContext) {
+/// Prints verbose information about the exception and then panics.
+fn default_exception_handler(exc: &ExceptionContext) {
     panic!(
         "\n\nCPU Exception!\n\
-         FAR_EL1: {:#018x}\n\
-         {}\n\
-         {}",
-        FAR_EL1.get(),
-        EsrEL1 {},
-        e
+        {}",
+        exc
     );
 }
 ```
@@ -363,14 +364,16 @@ To survive this exception, the respective handler has a special demo case:
 ```rust
 #[no_mangle]
 unsafe extern "C" fn current_elx_synchronous(e: &mut ExceptionContext) {
-    let far_el1 = FAR_EL1.get();
+    if e.fault_address_valid() {
+        let far_el1 = FAR_EL1.get();
 
-    // This catches the demo case for this tutorial. If the fault address happens to be 8 GiB,
-    // advance the exception link register for one instruction, so that execution can continue.
-    if far_el1 == 8 * 1024 * 1024 * 1024 {
-        e.elr_el1 += 4;
+        // This catches the demo case for this tutorial. If the fault address happens to be 8 GiB,
+        // advance the exception link register for one instruction, so that execution can continue.
+        if far_el1 == 8 * 1024 * 1024 * 1024 {
+            e.elr_el1 += 4;
 
-        asm::eret()
+            return;
+        }
     }
 
     default_exception_handler(e);
@@ -398,6 +401,7 @@ Minipush 1.0
 [MP] ⏳ Waiting for /dev/ttyUSB0
 [MP] ✅ Serial connected
 [MP] 🔌 Please power the target now
+
  __  __ _      _ _                 _
 |  \/  (_)_ _ (_) |   ___  __ _ __| |
 | |\/| | | ' \| | |__/ _ \/ _` / _` |
@@ -409,39 +413,38 @@ Minipush 1.0
 [MP] ⏩ Pushing 64 KiB =========================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
-[    0.980247] mingo version 0.11.0
-[    0.980454] Booting on: Raspberry Pi 3
-[    0.980909] MMU online. Special regions:
-[    0.981386]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
-[    0.982404]       0x3f000000 - 0x4000ffff |  16 MiB | Dev RW PXN | Device MMIO
-[    0.983293] Current privilege level: EL1
-[    0.983769] Exception handling state:
-[    0.984213]       Debug:  Masked
-[    0.984604]       SError: Masked
-[    0.984993]       IRQ:    Masked
-[    0.985383]       FIQ:    Masked
-[    0.985773] Architectural timer resolution: 52 ns
-[    0.986347] Drivers loaded:
-[    0.986684]       1. BCM GPIO
-[    0.987041]       2. BCM PL011 UART
-[    0.987463] Timer test, spinning for 1 second
-[    1.987994]
-[    1.987998] Trying to read from address 8 GiB...
-[    1.988547] ************************************************
-[    1.989240] Whoa! We recovered from a synchronous exception!
-[    1.989933] ************************************************
-[    1.990627]
-[    1.990800] Let's try again
-[    1.991136] Trying to read from address 9 GiB...
+[    0.788994] mingo version 0.11.0
+[    0.789201] Booting on: Raspberry Pi 3
+[    0.789656] MMU online. Special regions:
+[    0.790133]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
+[    0.791151]       0x3f000000 - 0x4000ffff |  16 MiB | Dev RW PXN | Device MMIO
+[    0.792040] Current privilege level: EL1
+[    0.792516] Exception handling state:
+[    0.792960]       Debug:  Masked
+[    0.793350]       SError: Masked
+[    0.793740]       IRQ:    Masked
+[    0.794130]       FIQ:    Masked
+[    0.794520] Architectural timer resolution: 52 ns
+[    0.795094] Drivers loaded:
+[    0.795430]       1. BCM GPIO
+[    0.795788]       2. BCM PL011 UART
+[    0.796210] Timer test, spinning for 1 second
+[    1.796741]
+[    1.796745] Trying to read from address 8 GiB...
+[    1.797295] ************************************************
+[    1.797987] Whoa! We recovered from a synchronous exception!
+[    1.798680] ************************************************
+[    1.799373]
+[    1.799547] Let's try again
+[    1.799883] Trying to read from address 9 GiB...
 
 Kernel panic:
 
 CPU Exception!
-FAR_EL1: 0x0000000240000000
 ESR_EL1: 0x96000004
       Exception Class         (EC) : 0x25 - Data Abort, current EL
       Instr Specific Syndrome (ISS): 0x4
-ELR_EL1: 0x0000000000082578
+FAR_EL1: 0x0000000240000000
 SPSR_EL1: 0x600003c5
       Flags:
             Negative (N): Not set
@@ -454,24 +457,25 @@ SPSR_EL1: 0x600003c5
             IRQ    (I): Masked
             FIQ    (F): Masked
       Illegal Execution State (IL): Not set
+ELR_EL1: 0x0000000000082580
 
 General purpose register:
-      x0 : 0x0000000000000000         x1 : 0x00000000000858c7
-      x2 : 0x0000000000000027         x3 : 0x0000000000084cc4
-      x4 : 0x0000000000000003         x5 : 0x3f27329400000000
-      x6 : 0x0000000000000000         x7 : 0xd3d0b80800000000
-      x8 : 0x0000000240000000         x9 : 0x000000003f201000
-      x10: 0x0000000000000019         x11: 0x0000000000000000
-      x12: 0x0000000000000001         x13: 0x0000000000000036
-      x14: 0x000000000007fc2d         x15: 0x0000000000000000
-      x16: 0x0000000000000040         x17: 0xfd39702255e846c0
-      x18: 0x9cd47880832f1200         x19: 0x0000000000090008
-      x20: 0x00000000000856b0         x21: 0x000000003b9aca00
-      x22: 0x000000000008274c         x23: 0x00000000000833d8
+      x0 : 0x0000000000000000         x1 : 0x00000000000859b7
+      x2 : 0x0000000000000027         x3 : 0x0000000000084d3c
+      x4 : 0x0000000000000003         x5 : 0x3f26329c00000000
+      x6 : 0x0000000000000000         x7 : 0xd3d18800228d0241
+      x8 : 0x0000000240000000         x9 : 0x00000000000859b7
+      x10: 0x0000000000000443         x11: 0x000000003f201000
+      x12: 0x0000000000000019         x13: 0x0000000000000033
+      x14: 0x000000000007fd3d         x15: 0x0000000000000058
+      x16: 0x0000000000000078         x17: 0xfd29f02255a847c0
+      x18: 0x9cd4788000000008         x19: 0x0000000000090008
+      x20: 0x00000000000857a0         x21: 0x000000003b9aca00
+      x22: 0x000000000008271c         x23: 0x0000000000083314
       x24: 0x00000000000003e8         x25: 0xffffffffc4653600
-      x26: 0x00000000000f4240         x27: 0x0000000000085790
-      x28: 0x0000000000086a50         x29: 0x00000000000867ed
-      lr : 0x000000000008256c
+      x26: 0x00000000000f4240         x27: 0x0000000000085880
+      x28: 0x0000000000085170         x29: 0x0000000000086c10
+      lr : 0x0000000000082574
 ```
 
 ## Diff to previous
@@ -492,14 +496,14 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/Cargo.toml 11_exceptions_part1_g
 diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 11_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs
 --- 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs
 +++ 11_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs
-@@ -11,8 +11,227 @@
+@@ -11,8 +11,263 @@
  //!
  //! crate::exception::arch_exception
 
 -use cortex_a::registers::*;
 -use tock_registers::interfaces::Readable;
 +use core::{cell::UnsafeCell, fmt};
-+use cortex_a::{asm, asm::barrier, registers::*};
++use cortex_a::{asm::barrier, registers::*};
 +use tock_registers::{
 +    interfaces::{Readable, Writeable},
 +    registers::InMemoryRegister,
@@ -512,9 +516,10 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
 +// Private Definitions
 +//--------------------------------------------------------------------------------------------------
 +
-+/// Wrapper struct for memory copy of SPSR_EL1.
++/// Wrapper structs for memory copies of registers.
 +#[repr(transparent)]
 +struct SpsrEL1(InMemoryRegister<u64, SPSR_EL1::Register>);
++struct EsrEL1(InMemoryRegister<u64, ESR_EL1::Register>);
 +
 +/// The exception context as it is stored on the stack on exception entry.
 +#[repr(C)]
@@ -530,25 +535,21 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
 +
 +    /// Saved program status.
 +    spsr_el1: SpsrEL1,
-+}
 +
-+/// Wrapper struct for pretty printing ESR_EL1.
-+struct EsrEL1;
++    // Exception syndrome register.
++    esr_el1: EsrEL1,
++}
 +
 +//--------------------------------------------------------------------------------------------------
 +// Private Code
 +//--------------------------------------------------------------------------------------------------
 +
 +/// Prints verbose information about the exception and then panics.
-+fn default_exception_handler(e: &ExceptionContext) {
++fn default_exception_handler(exc: &ExceptionContext) {
 +    panic!(
 +        "\n\nCPU Exception!\n\
-+         FAR_EL1: {:#018x}\n\
-+         {}\n\
-+         {}",
-+        FAR_EL1.get(),
-+        EsrEL1 {},
-+        e
++        {}",
++        exc
 +    );
 +}
 +
@@ -577,14 +578,16 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
 +
 +#[no_mangle]
 +unsafe extern "C" fn current_elx_synchronous(e: &mut ExceptionContext) {
-+    let far_el1 = FAR_EL1.get();
++    if e.fault_address_valid() {
++        let far_el1 = FAR_EL1.get();
 +
-+    // This catches the demo case for this tutorial. If the fault address happens to be 8 GiB,
-+    // advance the exception link register for one instruction, so that execution can continue.
-+    if far_el1 == 8 * 1024 * 1024 * 1024 {
-+        e.elr_el1 += 4;
++        // This catches the demo case for this tutorial. If the fault address happens to be 8 GiB,
++        // advance the exception link register for one instruction, so that execution can continue.
++        if far_el1 == 8 * 1024 * 1024 * 1024 {
++            e.elr_el1 += 4;
 +
-+        asm::eret()
++            return;
++        }
 +    }
 +
 +    default_exception_handler(e);
@@ -639,32 +642,8 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
 +}
 +
 +//------------------------------------------------------------------------------
-+// Pretty printing
++// Misc
 +//------------------------------------------------------------------------------
-+
-+/// Human readable ESR_EL1.
-+#[rustfmt::skip]
-+impl fmt::Display for EsrEL1 {
-+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-+        let esr_el1 = ESR_EL1.extract();
-+
-+        // Raw print of whole register.
-+        writeln!(f, "ESR_EL1: {:#010x}", esr_el1.get())?;
-+
-+        // Raw print of exception class.
-+        write!(f, "      Exception Class         (EC) : {:#x}", esr_el1.read(ESR_EL1::EC))?;
-+
-+        // Exception class, translation.
-+        let ec_translation = match esr_el1.read_as_enum(ESR_EL1::EC) {
-+            Some(ESR_EL1::EC::Value::DataAbortCurrentEL) => "Data Abort, current EL",
-+            _ => "N/A",
-+        };
-+        writeln!(f, " - {}", ec_translation)?;
-+
-+        // Raw print of instruction specific syndrome.
-+        write!(f, "      Instr Specific Syndrome (ISS): {:#x}", esr_el1.read(ESR_EL1::ISS))
-+    }
-+}
 +
 +/// Human readable SPSR_EL1.
 +#[rustfmt::skip]
@@ -699,11 +678,72 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
 +    }
 +}
 +
++impl EsrEL1 {
++    #[inline(always)]
++    fn exception_class(&self) -> Option<ESR_EL1::EC::Value> {
++        self.0.read_as_enum(ESR_EL1::EC)
++    }
++}
++
++/// Human readable ESR_EL1.
++#[rustfmt::skip]
++impl fmt::Display for EsrEL1 {
++    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
++        // Raw print of whole register.
++        writeln!(f, "ESR_EL1: {:#010x}", self.0.get())?;
++
++        // Raw print of exception class.
++        write!(f, "      Exception Class         (EC) : {:#x}", self.0.read(ESR_EL1::EC))?;
++
++        // Exception class.
++        let ec_translation = match self.exception_class() {
++            Some(ESR_EL1::EC::Value::DataAbortCurrentEL) => "Data Abort, current EL",
++            _ => "N/A",
++        };
++        writeln!(f, " - {}", ec_translation)?;
++
++        // Raw print of instruction specific syndrome.
++        write!(f, "      Instr Specific Syndrome (ISS): {:#x}", self.0.read(ESR_EL1::ISS))
++    }
++}
++
++impl ExceptionContext {
++    #[inline(always)]
++    fn exception_class(&self) -> Option<ESR_EL1::EC::Value> {
++        self.esr_el1.exception_class()
++    }
++
++    #[inline(always)]
++    fn fault_address_valid(&self) -> bool {
++        use ESR_EL1::EC::Value::*;
++
++        match self.exception_class() {
++            None => false,
++            Some(ec) => matches!(
++                ec,
++                InstrAbortLowerEL
++                    | InstrAbortCurrentEL
++                    | PCAlignmentFault
++                    | DataAbortLowerEL
++                    | DataAbortCurrentEL
++                    | WatchpointLowerEL
++                    | WatchpointCurrentEL
++            ),
++        }
++    }
++}
++
 +/// Human readable print of the exception context.
 +impl fmt::Display for ExceptionContext {
 +    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-+        writeln!(f, "ELR_EL1: {:#018x}", self.elr_el1)?;
++        writeln!(f, "{}", self.esr_el1)?;
++
++        if self.fault_address_valid() {
++            writeln!(f, "FAR_EL1: {:#018x}", FAR_EL1.get() as usize)?;
++        }
++
 +        writeln!(f, "{}", self.spsr_el1)?;
++        writeln!(f, "ELR_EL1: {:#018x}", self.elr_el1)?;
 +        writeln!(f)?;
 +        writeln!(f, "General purpose register:")?;
 +
@@ -722,7 +762,7 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
 
  //--------------------------------------------------------------------------------------------------
  // Public Code
-@@ -29,3 +248,23 @@
+@@ -29,3 +284,23 @@
          _ => (PrivilegeLevel::Unknown, "Unknown"),
      }
  }
@@ -750,7 +790,7 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
 diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.s 11_exceptions_part1_groundwork/src/_arch/aarch64/exception.s
 --- 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.s
 +++ 11_exceptions_part1_groundwork/src/_arch/aarch64/exception.s
-@@ -0,0 +1,148 @@
+@@ -0,0 +1,150 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -782,12 +822,14 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.s 11
 +	stp	x26, x27, [sp, #16 * 13]
 +	stp	x28, x29, [sp, #16 * 14]
 +
-+	// Add the exception link register (ELR_EL1) and the saved program status (SPSR_EL1).
++	// Add the exception link register (ELR_EL1), saved program status (SPSR_EL1) and exception
++	// syndrome register (ESR_EL1).
 +	mrs	x1,  ELR_EL1
 +	mrs	x2,  SPSR_EL1
++	mrs	x3,  ESR_EL1
 +
 +	stp	lr,  x1,  [sp, #16 * 15]
-+	str	x2,       [sp, #16 * 16]
++	stp	x2,  x3,  [sp, #16 * 16]
 +
 +	// x0 is the first argument for the function called through `\handler`.
 +	mov	x0,  sp

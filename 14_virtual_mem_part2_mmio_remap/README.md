@@ -279,10 +279,6 @@ through them:
 - [`src/bsp/raspberrypi/memory.rs`](src/bsp/raspberrypi/memory.rs) and
   [`src/bsp/raspberrypi/link.ld`](src/bsp/raspberrypi/link.ld) changed the location of the boot
   core's stack. It is now located after the data segment, and separated by an unmapped `guard page`.
-  There is also supporting code in
-  [`src/_arch/aarch64/exception.rs`](src/_arch/aarch64/exception.rs) that runs on data aborts and
-  checks if the fault address lies within the `stack guard page`. This can be an indication that a
-  kernel stack overflow happened.
 - [`src/memory/mmu/types.rs`](src/memory/mmu/types.rs) introduces a couple of supporting types, like
   `Page<ATYPE>`.
 - [`src/memory/mmu/mapping_record.rs`](src/memory/mmu/mapping_record.rs) provides the generic kernel
@@ -381,55 +377,6 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/Cargo.toml 14_virtual_mem_part2_mm
 +version = "0.14.0"
  authors = ["Andre Richter <andre.o.richter@gmail.com>"]
  edition = "2021"
-
-
-diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/exception.rs 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/exception.rs
---- 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/exception.rs
-+++ 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/exception.rs
-@@ -11,7 +11,11 @@
- //!
- //! crate::exception::arch_exception
-
--use crate::{bsp, exception};
-+use crate::{
-+    bsp::{self},
-+    exception,
-+    memory::Address,
-+};
- use core::{cell::UnsafeCell, fmt};
- use cortex_a::{asm::barrier, registers::*};
- use tock_registers::{
-@@ -53,6 +57,20 @@
- // Private Code
- //--------------------------------------------------------------------------------------------------
-
-+/// Check if additional context can be derived from a data abort.
-+fn inspect_data_abort(f: &mut fmt::Formatter) -> fmt::Result {
-+    let fault_addr = Address::new(FAR_EL1.get() as usize);
-+
-+    if bsp::memory::mmu::virt_boot_core_stack_guard_page_desc().contains(fault_addr) {
-+        writeln!(
-+            f,
-+            "\n\n      >> Attempted to access the guard page of the kernel's boot core stack <<"
-+        )?;
-+    }
-+
-+    Ok(())
-+}
-+
- /// Prints verbose information about the exception and then panics.
- fn default_exception_handler(e: &ExceptionContext) {
-     panic!(
-@@ -169,7 +187,9 @@
-         writeln!(f, " - {}", ec_translation)?;
-
-         // Raw print of instruction specific syndrome.
--        write!(f, "      Instr Specific Syndrome (ISS): {:#x}", esr_el1.read(ESR_EL1::ISS))
-+        write!(f, "      Instr Specific Syndrome (ISS): {:#x}", esr_el1.read(ESR_EL1::ISS))?;
-+
-+        inspect_data_abort(f)
-     }
- }
 
 
 diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu/translation_table.rs 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/memory/mmu/translation_table.rs
@@ -1495,7 +1442,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/link.ld 14_vir
      .data : { *(.data*) } :segment_rw
 
      /* Section is zeroed in pairs of u64. Align start and end to 16 bytes */
-@@ -54,4 +50,23 @@
+@@ -54,4 +50,21 @@
          . = ALIGN(16);
          __bss_end_exclusive = .;
      } :NONE
@@ -1506,9 +1453,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/link.ld 14_vir
 +    /***********************************************************************************************
 +    * Guard Page between boot core stack and data
 +    ***********************************************************************************************/
-+    __boot_core_stack_guard_page_start = .;
 +    . += 64K;
-+    __boot_core_stack_guard_page_end_exclusive = .;
 +
 +    /***********************************************************************************************
 +    * Boot Core Stack
@@ -1523,7 +1468,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/link.ld 14_vir
 diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs
 --- 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs
 +++ 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs
-@@ -4,70 +4,164 @@
+@@ -4,70 +4,157 @@
 
  //! BSP Memory Management Unit.
 
@@ -1559,16 +1504,16 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
 +/// The translation granule chosen by this BSP. This will be used everywhere else in the kernel to
 +/// derive respective data structures and their sizes. For example, the `crate::memory::mmu::Page`.
 +pub type KernelGranule = TranslationGranule<{ 64 * 1024 }>;
-
--const NUM_MEM_RANGES: usize = 2;
++
 +/// The kernel's virtual address space defined by this BSP.
 +pub type KernelVirtAddrSpace = AddressSpace<{ 8 * 1024 * 1024 * 1024 }>;
 
--/// The virtual memory layout.
+-const NUM_MEM_RANGES: usize = 2;
 +//--------------------------------------------------------------------------------------------------
 +// Global instances
 +//--------------------------------------------------------------------------------------------------
-+
+
+-/// The virtual memory layout.
 +/// The kernel translation tables.
  ///
 -/// The layout must contain only special ranges, aka anything that is _not_ normal cacheable DRAM.
@@ -1647,15 +1592,15 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
 +/// The Read+Execute (RX) pages of the kernel binary.
 +fn phys_rx_page_desc() -> PageSliceDescriptor<Physical> {
 +    virt_rx_page_desc().into()
-+}
-+
-+/// The Read+Write (RW) pages of the kernel binary.
-+fn phys_rw_page_desc() -> PageSliceDescriptor<Physical> {
-+    virt_rw_page_desc().into()
  }
 
 -fn mmio_range_inclusive() -> RangeInclusive<usize> {
 -    RangeInclusive::new(memory_map::mmio::START, memory_map::mmio::END_INCLUSIVE)
++/// The Read+Write (RW) pages of the kernel binary.
++fn phys_rw_page_desc() -> PageSliceDescriptor<Physical> {
++    virt_rw_page_desc().into()
++}
++
 +/// The boot core's stack.
 +fn phys_boot_core_stack_page_desc() -> PageSliceDescriptor<Physical> {
 +    virt_boot_core_stack_page_desc().into()
@@ -1671,13 +1616,6 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
 +/// Return a reference to the kernel's translation tables.
 +pub fn kernel_translation_tables() -> &'static InitStateLock<KernelTranslationTable> {
 +    &KERNEL_TABLES
-+}
-+
-+/// The boot core's stack guard page.
-+pub fn virt_boot_core_stack_guard_page_desc() -> PageSliceDescriptor<Virtual> {
-+    let num_pages = size_to_num_pages(super::boot_core_stack_guard_page_size());
-+
-+    PageSliceDescriptor::from_addr(super::virt_boot_core_stack_guard_page_start(), num_pages)
 +}
 +
 +/// Pointer to the last page of the physical address space.
@@ -1731,7 +1669,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -77,19 +171,24 @@
+@@ -77,19 +164,24 @@
  #[cfg(test)]
  mod tests {
      use super::*;
@@ -1742,6 +1680,10 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
      #[kernel_test]
      fn virt_mem_layout_sections_are_64KiB_aligned() {
 -        const SIXTYFOUR_KIB: usize = 65536;
+-
+-        for i in LAYOUT.inner().iter() {
+-            let start: usize = *(i.virtual_range)().start();
+-            let end: usize = *(i.virtual_range)().end() + 1;
 +        for i in [
 +            virt_rx_page_desc,
 +            virt_rw_page_desc,
@@ -1752,10 +1694,6 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
 +            let start: usize = i().start_addr().into_usize();
 +            let end: usize = i().end_addr().into_usize();
 
--        for i in LAYOUT.inner().iter() {
--            let start: usize = *(i.virtual_range)().start();
--            let end: usize = *(i.virtual_range)().end() + 1;
--
 -            assert_eq!(start modulo SIXTYFOUR_KIB, 0);
 -            assert_eq!(end modulo SIXTYFOUR_KIB, 0);
 +            assert_eq!(start modulo KernelGranule::SIZE, 0);
@@ -1763,7 +1701,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
              assert!(end >= start);
          }
      }
-@@ -97,18 +196,38 @@
+@@ -97,18 +189,38 @@
      /// Ensure the kernel's virtual memory layout is free of overlaps.
      #[kernel_test]
      fn virt_mem_layout_has_no_overlaps() {
@@ -1953,7 +1891,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs 14_v
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -80,16 +120,67 @@
+@@ -80,16 +120,52 @@
  ///
  /// - Value is provided by the linker script and must be trusted as-is.
  #[inline(always)]
@@ -1961,26 +1899,10 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs 14_v
 -    unsafe { __rx_start.get() as usize }
 +fn virt_rx_start() -> Address<Virtual> {
 +    Address::new(unsafe { __rx_start.get() as usize })
-+}
-+
-+/// Size of the Read+Execute (RX) range.
-+///
-+/// # Safety
-+///
-+/// - Value is provided by the linker script and must be trusted as-is.
-+#[inline(always)]
-+fn rx_size() -> usize {
-+    unsafe { (__rx_end_exclusive.get() as usize) - (__rx_start.get() as usize) }
  }
 
 -/// Exclusive end address of the Read+Execute (RX) range.
-+/// Start address of the Read+Write (RW) range.
-+#[inline(always)]
-+fn virt_rw_start() -> Address<Virtual> {
-+    Address::new(unsafe { __rw_start.get() as usize })
-+}
-+
-+/// Size of the Read+Write (RW) range.
++/// Size of the Read+Execute (RX) range.
  ///
  /// # Safety
  ///
@@ -1988,6 +1910,22 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs 14_v
  #[inline(always)]
 -fn rx_end_exclusive() -> usize {
 -    unsafe { __rx_end_exclusive.get() as usize }
++fn rx_size() -> usize {
++    unsafe { (__rx_end_exclusive.get() as usize) - (__rx_start.get() as usize) }
++}
++
++/// Start address of the Read+Write (RW) range.
++#[inline(always)]
++fn virt_rw_start() -> Address<Virtual> {
++    Address::new(unsafe { __rw_start.get() as usize })
++}
++
++/// Size of the Read+Write (RW) range.
++///
++/// # Safety
++///
++/// - Value is provided by the linker script and must be trusted as-is.
++#[inline(always)]
 +fn rw_size() -> usize {
 +    unsafe { (__rw_end_exclusive.get() as usize) - (__rw_start.get() as usize) }
 +}
@@ -2003,21 +1941,6 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs 14_v
 +fn boot_core_stack_size() -> usize {
 +    unsafe {
 +        (__boot_core_stack_end_exclusive.get() as usize) - (__boot_core_stack_start.get() as usize)
-+    }
-+}
-+
-+/// Start address of the boot core's stack guard page.
-+#[inline(always)]
-+fn virt_boot_core_stack_guard_page_start() -> Address<Virtual> {
-+    Address::new(unsafe { __boot_core_stack_guard_page_start.get() as usize })
-+}
-+
-+/// Size of the boot core's stack guard page.
-+#[inline(always)]
-+fn boot_core_stack_guard_page_size() -> usize {
-+    unsafe {
-+        (__boot_core_stack_guard_page_end_exclusive.get() as usize)
-+            - (__boot_core_stack_guard_page_start.get() as usize)
 +    }
 +}
 +

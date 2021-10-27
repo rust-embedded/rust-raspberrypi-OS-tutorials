@@ -29,12 +29,14 @@
 	stp	x26, x27, [sp, #16 * 13]
 	stp	x28, x29, [sp, #16 * 14]
 
-	// Add the exception link register (ELR_EL1) and the saved program status (SPSR_EL1).
+	// Add the exception link register (ELR_EL1), saved program status (SPSR_EL1) and exception
+	// syndrome register (ESR_EL1).
 	mrs	x1,  ELR_EL1
 	mrs	x2,  SPSR_EL1
+	mrs	x3,  ESR_EL1
 
 	stp	lr,  x1,  [sp, #16 * 15]
-	str	x2,       [sp, #16 * 16]
+	stp	x2,  x3,  [sp, #16 * 16]
 
 	// x0 is the first argument for the function called through `\handler`.
 	mov	x0,  sp

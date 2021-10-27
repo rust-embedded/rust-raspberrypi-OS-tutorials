@@ -164,21 +164,6 @@ fn boot_core_stack_size() -> usize {
     }
 }
 
-/// Start address of the boot core's stack guard page.
-#[inline(always)]
-fn virt_boot_core_stack_guard_page_start() -> Address<Virtual> {
-    Address::new(unsafe { __boot_core_stack_guard_page_start.get() as usize })
-}
-
-/// Size of the boot core's stack guard page.
-#[inline(always)]
-fn boot_core_stack_guard_page_size() -> usize {
-    unsafe {
-        (__boot_core_stack_guard_page_end_exclusive.get() as usize)
-            - (__boot_core_stack_guard_page_start.get() as usize)
-    }
-}
-
 /// Exclusive end address of the physical address space.
 #[inline(always)]
 fn phys_addr_space_end() -> Address<Physical> {

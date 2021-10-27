@@ -129,13 +129,6 @@ pub fn kernel_translation_tables() -> &'static InitStateLock<KernelTranslationTa
     &KERNEL_TABLES
 }
 
-/// The boot core's stack guard page.
-pub fn virt_boot_core_stack_guard_page_desc() -> PageSliceDescriptor<Virtual> {
-    let num_pages = size_to_num_pages(super::boot_core_stack_guard_page_size());
-
-    PageSliceDescriptor::from_addr(super::virt_boot_core_stack_guard_page_start(), num_pages)
-}
-
 /// Pointer to the last page of the physical address space.
 pub fn phys_addr_space_end_page() -> *const Page<Physical> {
     common::align_down(

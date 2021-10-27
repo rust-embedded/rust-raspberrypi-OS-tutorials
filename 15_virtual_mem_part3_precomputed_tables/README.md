@@ -1166,7 +1166,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs 15_v
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -122,13 +144,15 @@
+@@ -115,13 +137,15 @@
      ) as *const Page<_>
  }
 
@@ -1187,7 +1187,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs 15_v
          "Kernel code and RO data",
          &virt_rx_page_desc(),
          &phys_rx_page_desc(),
-@@ -137,9 +161,9 @@
+@@ -130,9 +154,9 @@
              acc_perms: AccessPermissions::ReadOnly,
              execute_never: false,
          },
@@ -1199,7 +1199,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs 15_v
          "Kernel data and bss",
          &virt_rw_page_desc(),
          &phys_rw_page_desc(),
-@@ -148,9 +172,9 @@
+@@ -141,9 +165,9 @@
              acc_perms: AccessPermissions::ReadWrite,
              execute_never: true,
          },
@@ -1211,7 +1211,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs 15_v
          "Kernel boot-core stack",
          &virt_boot_core_stack_page_desc(),
          &phys_boot_core_stack_page_desc(),
-@@ -159,75 +183,5 @@
+@@ -152,75 +176,5 @@
              acc_perms: AccessPermissions::ReadWrite,
              execute_never: true,
          },

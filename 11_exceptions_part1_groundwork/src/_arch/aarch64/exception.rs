@@ -12,7 +12,7 @@
 //! crate::exception::arch_exception
 
 use core::{cell::UnsafeCell, fmt};
-use cortex_a::{asm, asm::barrier, registers::*};
+use cortex_a::{asm::barrier, registers::*};
 use tock_registers::{
     interfaces::{Readable, Writeable},
     registers::InMemoryRegister,
@@ -25,9 +25,10 @@ global_asm!(include_str!("exception.s"));
 // Private Definitions
 //--------------------------------------------------------------------------------------------------
 
-/// Wrapper struct for memory copy of SPSR_EL1.
+/// Wrapper structs for memory copies of registers.
 #[repr(transparent)]
 struct SpsrEL1(InMemoryRegister<u64, SPSR_EL1::Register>);
+struct EsrEL1(InMemoryRegister<u64, ESR_EL1::Register>);
 
 /// The exception context as it is stored on the stack on exception entry.
 #[repr(C)]
@@ -43,25 +44,21 @@ struct ExceptionContext {
 
     /// Saved program status.
     spsr_el1: SpsrEL1,
-}
 
-/// Wrapper struct for pretty printing ESR_EL1.
-struct EsrEL1;
+    // Exception syndrome register.
+    esr_el1: EsrEL1,
+}
 
 //--------------------------------------------------------------------------------------------------
 // Private Code
 //--------------------------------------------------------------------------------------------------
 
 /// Prints verbose information about the exception and then panics.
-fn default_exception_handler(e: &ExceptionContext) {
+fn default_exception_handler(exc: &ExceptionContext) {
     panic!(
         "\n\nCPU Exception!\n\
-         FAR_EL1: {:#018x}\n\
-         {}\n\
-         {}",
-        FAR_EL1.get(),
-        EsrEL1 {},
-        e
+        {}",
+        exc
     );
 }
 
@@ -90,14 +87,16 @@ unsafe extern "C" fn current_el0_serror(_e: &mut ExceptionContext) {
 
 #[no_mangle]
 unsafe extern "C" fn current_elx_synchronous(e: &mut ExceptionContext) {
-    let far_el1 = FAR_EL1.get();
+    if e.fault_address_valid() {
+        let far_el1 = FAR_EL1.get();
 
-    // This catches the demo case for this tutorial. If the fault address happens to be 8 GiB,
-    // advance the exception link register for one instruction, so that execution can continue.
-    if far_el1 == 8 * 1024 * 1024 * 1024 {
-        e.elr_el1 += 4;
+        // This catches the demo case for this tutorial. If the fault address happens to be 8 GiB,
+        // advance the exception link register for one instruction, so that execution can continue.
+        if far_el1 == 8 * 1024 * 1024 * 1024 {
+            e.elr_el1 += 4;
 
-        asm::eret()
+            return;
+        }
     }
 
     default_exception_handler(e);
@@ -152,32 +151,8 @@ unsafe extern "C" fn lower_aarch32_serror(e: &mut ExceptionContext) {
 }
 
 //------------------------------------------------------------------------------
-// Pretty printing
+// Misc
 //------------------------------------------------------------------------------
-
-/// Human readable ESR_EL1.
-#[rustfmt::skip]
-impl fmt::Display for EsrEL1 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let esr_el1 = ESR_EL1.extract();
-
-        // Raw print of whole register.
-        writeln!(f, "ESR_EL1: {:#010x}", esr_el1.get())?;
-
-        // Raw print of exception class.
-        write!(f, "      Exception Class         (EC) : {:#x}", esr_el1.read(ESR_EL1::EC))?;
-
-        // Exception class, translation.
-        let ec_translation = match esr_el1.read_as_enum(ESR_EL1::EC) {
-            Some(ESR_EL1::EC::Value::DataAbortCurrentEL) => "Data Abort, current EL",
-            _ => "N/A",
-        };
-        writeln!(f, " - {}", ec_translation)?;
-
-        // Raw print of instruction specific syndrome.
-        write!(f, "      Instr Specific Syndrome (ISS): {:#x}", esr_el1.read(ESR_EL1::ISS))
-    }
-}
 
 /// Human readable SPSR_EL1.
 #[rustfmt::skip]
@@ -212,11 +187,72 @@ impl fmt::Display for SpsrEL1 {
     }
 }
 
+impl EsrEL1 {
+    #[inline(always)]
+    fn exception_class(&self) -> Option<ESR_EL1::EC::Value> {
+        self.0.read_as_enum(ESR_EL1::EC)
+    }
+}
+
+/// Human readable ESR_EL1.
+#[rustfmt::skip]
+impl fmt::Display for EsrEL1 {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // Raw print of whole register.
+        writeln!(f, "ESR_EL1: {:#010x}", self.0.get())?;
+
+        // Raw print of exception class.
+        write!(f, "      Exception Class         (EC) : {:#x}", self.0.read(ESR_EL1::EC))?;
+
+        // Exception class.
+        let ec_translation = match self.exception_class() {
+            Some(ESR_EL1::EC::Value::DataAbortCurrentEL) => "Data Abort, current EL",
+            _ => "N/A",
+        };
+        writeln!(f, " - {}", ec_translation)?;
+
+        // Raw print of instruction specific syndrome.
+        write!(f, "      Instr Specific Syndrome (ISS): {:#x}", self.0.read(ESR_EL1::ISS))
+    }
+}
+
+impl ExceptionContext {
+    #[inline(always)]
+    fn exception_class(&self) -> Option<ESR_EL1::EC::Value> {
+        self.esr_el1.exception_class()
+    }
+
+    #[inline(always)]
+    fn fault_address_valid(&self) -> bool {
+        use ESR_EL1::EC::Value::*;
+
+        match self.exception_class() {
+            None => false,
+            Some(ec) => matches!(
+                ec,
+                InstrAbortLowerEL
+                    | InstrAbortCurrentEL
+                    | PCAlignmentFault
+                    | DataAbortLowerEL
+                    | DataAbortCurrentEL
+                    | WatchpointLowerEL
+                    | WatchpointCurrentEL
+            ),
+        }
+    }
+}
+
 /// Human readable print of the exception context.
 impl fmt::Display for ExceptionContext {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f, "ELR_EL1: {:#018x}", self.elr_el1)?;
+        writeln!(f, "{}", self.esr_el1)?;
+
+        if self.fault_address_valid() {
+            writeln!(f, "FAR_EL1: {:#018x}", FAR_EL1.get() as usize)?;
+        }
+
         writeln!(f, "{}", self.spsr_el1)?;
+        writeln!(f, "ELR_EL1: {:#018x}", self.elr_el1)?;
         writeln!(f)?;
         writeln!(f, "General purpose register:")?;
 
