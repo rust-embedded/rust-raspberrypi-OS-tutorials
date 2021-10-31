@@ -53,9 +53,6 @@ extern "Rust" {
 
     static __boot_core_stack_start: UnsafeCell<()>;
     static __boot_core_stack_end_exclusive: UnsafeCell<()>;
-
-    static __boot_core_stack_guard_page_start: UnsafeCell<()>;
-    static __boot_core_stack_guard_page_end_exclusive: UnsafeCell<()>;
 }
 
 //--------------------------------------------------------------------------------------------------

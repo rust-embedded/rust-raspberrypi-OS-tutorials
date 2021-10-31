@@ -1796,7 +1796,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs 14_v
  use core::cell::UnsafeCell;
 
  //--------------------------------------------------------------------------------------------------
-@@ -16,6 +47,15 @@
+@@ -16,6 +47,12 @@
  extern "Rust" {
      static __rx_start: UnsafeCell<()>;
      static __rx_end_exclusive: UnsafeCell<()>;
@@ -1806,13 +1806,10 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs 14_v
 +
 +    static __boot_core_stack_start: UnsafeCell<()>;
 +    static __boot_core_stack_end_exclusive: UnsafeCell<()>;
-+
-+    static __boot_core_stack_guard_page_start: UnsafeCell<()>;
-+    static __boot_core_stack_guard_page_end_exclusive: UnsafeCell<()>;
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -25,35 +65,26 @@
+@@ -25,35 +62,26 @@
  /// The board's physical memory map.
  #[rustfmt::skip]
  pub(super) mod map {
@@ -1862,7 +1859,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs 14_v
      }
 
      /// Physical devices.
-@@ -61,13 +92,22 @@
+@@ -61,13 +89,22 @@
      pub mod mmio {
          use super::*;
 
@@ -1891,7 +1888,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs 14_v
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -80,16 +120,52 @@
+@@ -80,16 +117,52 @@
  ///
  /// - Value is provided by the linker script and must be trusted as-is.
  #[inline(always)]
@@ -1899,17 +1896,14 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs 14_v
 -    unsafe { __rx_start.get() as usize }
 +fn virt_rx_start() -> Address<Virtual> {
 +    Address::new(unsafe { __rx_start.get() as usize })
- }
-
--/// Exclusive end address of the Read+Execute (RX) range.
++}
++
 +/// Size of the Read+Execute (RX) range.
- ///
- /// # Safety
- ///
- /// - Value is provided by the linker script and must be trusted as-is.
- #[inline(always)]
--fn rx_end_exclusive() -> usize {
--    unsafe { __rx_end_exclusive.get() as usize }
++///
++/// # Safety
++///
++/// - Value is provided by the linker script and must be trusted as-is.
++#[inline(always)]
 +fn rx_size() -> usize {
 +    unsafe { (__rx_end_exclusive.get() as usize) - (__rx_start.get() as usize) }
 +}
@@ -1918,14 +1912,17 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs 14_v
 +#[inline(always)]
 +fn virt_rw_start() -> Address<Virtual> {
 +    Address::new(unsafe { __rw_start.get() as usize })
-+}
-+
+ }
+
+-/// Exclusive end address of the Read+Execute (RX) range.
 +/// Size of the Read+Write (RW) range.
-+///
-+/// # Safety
-+///
-+/// - Value is provided by the linker script and must be trusted as-is.
-+#[inline(always)]
+ ///
+ /// # Safety
+ ///
+ /// - Value is provided by the linker script and must be trusted as-is.
+ #[inline(always)]
+-fn rx_end_exclusive() -> usize {
+-    unsafe { __rx_end_exclusive.get() as usize }
 +fn rw_size() -> usize {
 +    unsafe { (__rw_end_exclusive.get() as usize) - (__rw_start.get() as usize) }
 +}
