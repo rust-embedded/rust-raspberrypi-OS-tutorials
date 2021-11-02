@@ -50,11 +50,11 @@ register_bitfields! {
         /// - If the FIFO is enabled, the TXFF bit is set when the transmit FIFO is full.
         TXFF OFFSET(5) NUMBITS(1) [],
 
-        /// Receive FIFO empty. The meaning of this bit depends on the state of the FEN bit in the
+        /// Receive FIFO full. The meaning of this bit depends on the state of the FEN bit in the
         /// LCR_H Register.
-        ///
-        /// If the FIFO is disabled, this bit is set when the receive holding register is empty. If
-        /// the FIFO is enabled, the RXFE bit is set when the receive FIFO is empty.
+        /// - If the FIFO is disabled, this bit is set when the receive holding register is full.
+        /// - If the FIFO is enabled, the RXFF bit is set when the receive FIFO is full.
+        RXFF OFFSET(6) NUMBITS(1) [],
 
         /// Receive FIFO empty. The meaning of this bit depends on the state of the FEN bit in the
         /// LCR_H Register.
