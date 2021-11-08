@@ -1867,7 +1867,7 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
  };
  use core::fmt;
  use tock_registers::{
-@@ -140,6 +140,52 @@
+@@ -134,6 +134,52 @@
          ]
      ],
 
@@ -1920,7 +1920,7 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
      /// Interrupt Clear Register.
      ICR [
          /// Meta field for all pending interrupts.
-@@ -158,7 +204,10 @@
+@@ -152,7 +198,10 @@
          (0x28 => FBRD: WriteOnly<u32, FBRD::Register>),
          (0x2c => LCR_H: WriteOnly<u32, LCR_H::Register>),
          (0x30 => CR: WriteOnly<u32, CR::Register>),
@@ -1932,7 +1932,7 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
          (0x44 => ICR: WriteOnly<u32, ICR::Register>),
          (0x48 => @END),
      }
-@@ -188,7 +237,8 @@
+@@ -182,7 +231,8 @@
 
  /// Representation of the UART.
  pub struct PL011Uart {
@@ -1942,7 +1942,7 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -256,6 +306,14 @@
+@@ -250,6 +300,14 @@
              .LCR_H
              .write(LCR_H::WLEN::EightBit + LCR_H::FEN::FifosEnabled);
 
@@ -1957,7 +1957,7 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
          // Turn the UART on.
          self.registers
              .CR
-@@ -338,9 +396,13 @@
+@@ -332,9 +390,13 @@
      /// # Safety
      ///
      /// - The user must ensure to provide a correct MMIO start address.
@@ -1973,7 +1973,7 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
          }
      }
  }
-@@ -360,6 +422,21 @@
+@@ -354,6 +416,21 @@
 
          Ok(())
      }
@@ -1995,7 +1995,7 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
  }
 
  impl console::interface::Write for PL011Uart {
-@@ -406,3 +483,24 @@
+@@ -400,3 +477,24 @@
          self.inner.lock(|inner| inner.chars_read)
      }
  }
