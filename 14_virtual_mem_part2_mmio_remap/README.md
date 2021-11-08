@@ -1266,7 +1266,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
  use tock_registers::{
      interfaces::{Readable, Writeable},
      register_bitfields, register_structs,
-@@ -237,6 +240,8 @@
+@@ -231,6 +234,8 @@
 
  /// Representation of the UART.
  pub struct PL011Uart {
@@ -1275,7 +1275,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
      inner: IRQSafeNullLock<PL011UartInner>,
      irq_number: bsp::device_driver::IRQNumber,
  }
-@@ -276,7 +281,15 @@
+@@ -270,7 +275,15 @@
      /// genrated baud rate of `48_000_000 / (16 * 3.25) = 923_077`.
      ///
      /// Error = `((923_077 - 921_600) / 921_600) * 100 = 0.16modulo`.
@@ -1292,7 +1292,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
          // Execution can arrive here while there are still characters queued in the TX FIFO and
          // actively being sent out by the UART hardware. If the UART is turned off in this case,
          // those queued characters would be lost.
-@@ -318,6 +331,8 @@
+@@ -312,6 +325,8 @@
          self.registers
              .CR
              .write(CR::UARTEN::Enabled + CR::TXE::Enabled + CR::RXE::Enabled);
@@ -1301,7 +1301,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
      }
 
      /// Send a character.
-@@ -395,13 +410,18 @@
+@@ -389,13 +404,18 @@
      ///
      /// # Safety
      ///
@@ -1323,7 +1323,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
              irq_number,
          }
      }
-@@ -418,7 +438,13 @@
+@@ -412,7 +432,13 @@
      }
 
      unsafe fn init(&self) -> Result<(), &'static str> {
@@ -1338,7 +1338,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
 
          Ok(())
      }
-@@ -437,6 +463,16 @@
+@@ -431,6 +457,16 @@
 
          Ok(())
      }

@@ -459,7 +459,7 @@ diff -uNr 04_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 05_drivers_g
 diff -uNr 04_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 --- 04_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -0,0 +1,408 @@
+@@ -0,0 +1,402 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -508,12 +508,6 @@ diff -uNr 04_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 05_dri
 +        /// - If the FIFO is disabled, this bit is set when the transmit holding register is full.
 +        /// - If the FIFO is enabled, the TXFF bit is set when the transmit FIFO is full.
 +        TXFF OFFSET(5) NUMBITS(1) [],
-+
-+        /// Receive FIFO empty. The meaning of this bit depends on the state of the FEN bit in the
-+        /// LCR_H Register.
-+        ///
-+        /// If the FIFO is disabled, this bit is set when the receive holding register is empty. If
-+        /// the FIFO is enabled, the RXFE bit is set when the receive FIFO is empty.
 +
 +        /// Receive FIFO empty. The meaning of this bit depends on the state of the FEN bit in the
 +        /// LCR_H Register.

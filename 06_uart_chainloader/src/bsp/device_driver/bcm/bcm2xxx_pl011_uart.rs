@@ -50,12 +50,6 @@ register_bitfields! {
         /// Receive FIFO empty. The meaning of this bit depends on the state of the FEN bit in the
         /// LCR_H Register.
         ///
-        /// If the FIFO is disabled, this bit is set when the receive holding register is empty. If
-        /// the FIFO is enabled, the RXFE bit is set when the receive FIFO is empty.
-
-        /// Receive FIFO empty. The meaning of this bit depends on the state of the FEN bit in the
-        /// LCR_H Register.
-        ///
         /// - If the FIFO is disabled, this bit is set when the receive holding register is empty.
         /// - If the FIFO is enabled, the RXFE bit is set when the receive FIFO is empty.
         RXFE OFFSET(4) NUMBITS(1) [],
