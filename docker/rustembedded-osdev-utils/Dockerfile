@@ -41,12 +41,13 @@ RUN set -ex;                                      \
         ruby-dev                                  \
     ;                                             \
     # Ruby dependencies
-    gem install bundler;                            \
-    bundle install --retry 3 --without development; \
+    gem install bundler;                             \
+    bundle config set --local without 'development'; \
+    bundle install --retry 3;                        \
     # QEMU
-    git clone https://git.qemu.org/git/qemu.git;               \
+    git clone https://gitlab.com/qemu-project/qemu.git;        \
     cd qemu;                                                   \
-    git checkout tags/v5.2.0;                                  \
+    git checkout tags/v6.1.0;                                  \
     ./configure --target-list=aarch64-softmmu --enable-modules \
         --enable-tcg-interpreter --enable-debug-tcg            \
         --python=/usr/bin/python3;                             \
@@ -81,8 +82,8 @@ RUN set -ex;                                      \
 # Locales
 RUN locale-gen en_US.UTF-8
 
-ENV LANG=en_US.UTF-8  \
-    LANGUAGE=en_US:en \
+ENV LANG=en_US.UTF-8   \
+    LANGUAGE=en_US:en  \
     LC_ALL=en_US.UTF-8 \
     RUBYOPT=-W0
 

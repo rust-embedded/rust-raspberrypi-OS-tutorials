@@ -777,7 +777,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/Cargo.toml 15_virtual_mem_part3_precom
 diff -uNr 14_virtual_mem_part2_mmio_remap/Makefile 15_virtual_mem_part3_precomputed_tables/Makefile
 --- 14_virtual_mem_part2_mmio_remap/Makefile
 +++ 15_virtual_mem_part3_precomputed_tables/Makefile
-@@ -88,6 +88,7 @@
+@@ -89,6 +89,7 @@
      -O binary
 
  EXEC_QEMU          = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
@@ -785,7 +785,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/Makefile 15_virtual_mem_part3_precompu
  EXEC_TEST_DISPATCH = ruby ../common/tests/dispatch.rb
  EXEC_MINIPUSH      = ruby ../common/serial/minipush.rb
 
-@@ -133,6 +134,7 @@
+@@ -134,6 +135,7 @@
  $(KERNEL_ELF):
  	$(call colorecho, "\nCompiling kernel - $(BSP)")
  	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(RUSTC_CMD)
@@ -793,7 +793,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/Makefile 15_virtual_mem_part3_precompu
 
  ##------------------------------------------------------------------------------
  ## Build the stripped kernel binary
-@@ -271,6 +273,7 @@
+@@ -272,6 +274,7 @@
      TEST_ELF=$$(echo $$1 | sed -e 's/.*target/target/g')
      TEST_BINARY=$$(echo $$1.img | sed -e 's/.*target/target/g')
 

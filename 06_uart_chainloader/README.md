@@ -137,7 +137,7 @@ Binary files 05_drivers_gpio_uart/demo_payload_rpi4.img and 06_uart_chainloader/
 diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
 --- 05_drivers_gpio_uart/Makefile
 +++ 06_uart_chainloader/Makefile
-@@ -22,27 +22,29 @@
+@@ -23,27 +23,29 @@
 
  # BSP-specific arguments.
  ifeq ($(BSP),rpi3)
@@ -187,7 +187,7 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
  endif
 
  QEMU_MISSING_STRING = "This board is not yet supported for QEMU."
-@@ -74,8 +76,8 @@
+@@ -75,8 +77,8 @@
      -O binary
 
  EXEC_QEMU          = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
@@ -198,7 +198,7 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
 
  ##------------------------------------------------------------------------------
  ## Dockerization
-@@ -94,7 +96,7 @@
+@@ -95,7 +97,7 @@
  ifeq ($(shell uname -s),Linux)
      DOCKER_CMD_DEV = $(DOCKER_CMD_INTERACT) $(DOCKER_ARG_DEV)
 
@@ -207,7 +207,7 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
  endif
 
 
-@@ -102,7 +104,7 @@
+@@ -103,7 +105,7 @@
  ##--------------------------------------------------------------------------------------------------
  ## Targets
  ##--------------------------------------------------------------------------------------------------
@@ -216,7 +216,7 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
 
  all: $(KERNEL_BIN)
 
-@@ -131,7 +133,7 @@
+@@ -132,7 +134,7 @@
  ##------------------------------------------------------------------------------
  ifeq ($(QEMU_MACHINE_TYPE),) # QEMU is not supported for the board.
 
@@ -225,7 +225,7 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
  	$(call colorecho, "\n$(QEMU_MISSING_STRING)")
 
  else # QEMU is supported.
-@@ -139,13 +141,18 @@
+@@ -140,13 +142,18 @@
  qemu: $(KERNEL_BIN)
  	$(call colorecho, "\nLaunching QEMU")
  	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
@@ -247,7 +247,7 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
 
  ##------------------------------------------------------------------------------
  ## Run clippy
-@@ -209,7 +216,8 @@
+@@ -210,7 +217,8 @@
  ##------------------------------------------------------------------------------
  test_boot: $(KERNEL_BIN)
  	$(call colorecho, "\nBoot test - $(BSP)")

@@ -47,7 +47,7 @@ diff -uNr 02_runtime_init/Cargo.toml 03_hacky_hello_world/Cargo.toml
 diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
 --- 02_runtime_init/Makefile
 +++ 03_hacky_hello_world/Makefile
-@@ -23,7 +23,7 @@
+@@ -24,7 +24,7 @@
      KERNEL_BIN        = kernel8.img
      QEMU_BINARY       = qemu-system-aarch64
      QEMU_MACHINE_TYPE = raspi3
@@ -56,7 +56,7 @@ diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
      OBJDUMP_BINARY    = aarch64-none-elf-objdump
      NM_BINARY         = aarch64-none-elf-nm
      READELF_BINARY    = aarch64-none-elf-readelf
-@@ -34,7 +34,7 @@
+@@ -35,7 +35,7 @@
      KERNEL_BIN        = kernel8.img
      QEMU_BINARY       = qemu-system-aarch64
      QEMU_MACHINE_TYPE =
@@ -65,7 +65,7 @@ diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
      OBJDUMP_BINARY    = aarch64-none-elf-objdump
      NM_BINARY         = aarch64-none-elf-nm
      READELF_BINARY    = aarch64-none-elf-readelf
-@@ -70,17 +70,20 @@
+@@ -71,17 +71,20 @@
      --strip-all            \
      -O binary
 
@@ -76,21 +76,20 @@ diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
  ##------------------------------------------------------------------------------
  ## Dockerization
  ##------------------------------------------------------------------------------
--DOCKER_IMAGE        = rustembedded/osdev-utils
 -DOCKER_CMD          = docker run -t --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
 -DOCKER_CMD_INTERACT = $(DOCKER_CMD) -i
-+DOCKER_IMAGE          = rustembedded/osdev-utils
 +DOCKER_CMD            = docker run -t --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
 +DOCKER_CMD_INTERACT   = $(DOCKER_CMD) -i
 +DOCKER_ARG_DIR_COMMON = -v $(shell pwd)/../common:/work/common
 
+ # DOCKER_IMAGE defined in include file (see top of this file).
  DOCKER_QEMU  = $(DOCKER_CMD_INTERACT) $(DOCKER_IMAGE)
  DOCKER_TOOLS = $(DOCKER_CMD) $(DOCKER_IMAGE)
 +DOCKER_TEST  = $(DOCKER_CMD) $(DOCKER_ARG_DIR_COMMON) $(DOCKER_IMAGE)
 
 
 
-@@ -168,3 +171,28 @@
+@@ -169,3 +172,28 @@
  ##------------------------------------------------------------------------------
  check:
  	@RUSTFLAGS="$(RUSTFLAGS)" $(CHECK_CMD) --message-format=json

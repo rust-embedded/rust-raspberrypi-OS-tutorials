@@ -320,7 +320,7 @@ diff -uNr 07_timestamps/Cargo.toml 08_hw_debug_JTAG/Cargo.toml
 diff -uNr 07_timestamps/Makefile 08_hw_debug_JTAG/Makefile
 --- 07_timestamps/Makefile
 +++ 08_hw_debug_JTAG/Makefile
-@@ -30,6 +30,8 @@
+@@ -31,6 +31,8 @@
      OBJDUMP_BINARY    = aarch64-none-elf-objdump
      NM_BINARY         = aarch64-none-elf-nm
      READELF_BINARY    = aarch64-none-elf-readelf
@@ -329,7 +329,7 @@ diff -uNr 07_timestamps/Makefile 08_hw_debug_JTAG/Makefile
      LINKER_FILE       = src/bsp/raspberrypi/link.ld
      RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
  else ifeq ($(BSP),rpi4)
-@@ -41,6 +43,8 @@
+@@ -42,6 +44,8 @@
      OBJDUMP_BINARY    = aarch64-none-elf-objdump
      NM_BINARY         = aarch64-none-elf-nm
      READELF_BINARY    = aarch64-none-elf-readelf
@@ -338,7 +338,7 @@ diff -uNr 07_timestamps/Makefile 08_hw_debug_JTAG/Makefile
      LINKER_FILE       = src/bsp/raspberrypi/link.ld
      RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
  endif
-@@ -84,17 +88,24 @@
+@@ -84,18 +88,25 @@
  DOCKER_CMD            = docker run -t --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
  DOCKER_CMD_INTERACT   = $(DOCKER_CMD) -i
  DOCKER_ARG_DIR_COMMON = -v $(shell pwd)/../common:/work/common
@@ -346,6 +346,7 @@ diff -uNr 07_timestamps/Makefile 08_hw_debug_JTAG/Makefile
  DOCKER_ARG_DEV        = --privileged -v /dev:/dev
 +DOCKER_ARG_NET        = --network host
 
+ # DOCKER_IMAGE defined in include file (see top of this file).
  DOCKER_QEMU  = $(DOCKER_CMD_INTERACT) $(DOCKER_IMAGE)
  DOCKER_TOOLS = $(DOCKER_CMD) $(DOCKER_IMAGE)
  DOCKER_TEST  = $(DOCKER_CMD) $(DOCKER_ARG_DIR_COMMON) $(DOCKER_IMAGE)
@@ -363,7 +364,7 @@ diff -uNr 07_timestamps/Makefile 08_hw_debug_JTAG/Makefile
  endif
 
 
-@@ -193,6 +204,35 @@
+@@ -194,6 +205,35 @@
 
 
 

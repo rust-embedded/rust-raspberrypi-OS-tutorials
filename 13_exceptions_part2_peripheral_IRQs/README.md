@@ -761,7 +761,7 @@ diff -uNr 12_integrated_testing/Cargo.toml 13_exceptions_part2_peripheral_IRQs/C
 diff -uNr 12_integrated_testing/Makefile 13_exceptions_part2_peripheral_IRQs/Makefile
 --- 12_integrated_testing/Makefile
 +++ 13_exceptions_part2_peripheral_IRQs/Makefile
-@@ -291,7 +291,7 @@
+@@ -292,7 +292,7 @@
  test_unit:
  	$(call colorecho, "\nCompiling unit test(s) - $(BSP)")
  	$(call test_prepare)

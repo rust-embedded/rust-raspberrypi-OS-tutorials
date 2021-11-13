@@ -62,7 +62,7 @@ Binary files 06_uart_chainloader/demo_payload_rpi4.img and 07_timestamps/demo_pa
 diff -uNr 06_uart_chainloader/Makefile 07_timestamps/Makefile
 --- 06_uart_chainloader/Makefile
 +++ 07_timestamps/Makefile
-@@ -22,29 +22,27 @@
+@@ -23,29 +23,27 @@
 
  # BSP-specific arguments.
  ifeq ($(BSP),rpi3)
@@ -112,7 +112,7 @@ diff -uNr 06_uart_chainloader/Makefile 07_timestamps/Makefile
  endif
 
  QEMU_MISSING_STRING = "This board is not yet supported for QEMU."
-@@ -76,7 +74,7 @@
+@@ -77,7 +75,7 @@
      -O binary
 
  EXEC_QEMU          = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
@@ -121,7 +121,7 @@ diff -uNr 06_uart_chainloader/Makefile 07_timestamps/Makefile
  EXEC_MINIPUSH      = ruby ../common/serial/minipush.rb
 
  ##------------------------------------------------------------------------------
-@@ -133,7 +131,7 @@
+@@ -134,7 +132,7 @@
  ##------------------------------------------------------------------------------
  ifeq ($(QEMU_MACHINE_TYPE),) # QEMU is not supported for the board.
 
@@ -130,7 +130,7 @@ diff -uNr 06_uart_chainloader/Makefile 07_timestamps/Makefile
  	$(call colorecho, "\n$(QEMU_MISSING_STRING)")
 
  else # QEMU is supported.
-@@ -142,17 +140,13 @@
+@@ -143,17 +141,13 @@
  	$(call colorecho, "\nLaunching QEMU")
  	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
 
@@ -149,7 +149,7 @@ diff -uNr 06_uart_chainloader/Makefile 07_timestamps/Makefile
 
  ##------------------------------------------------------------------------------
  ## Run clippy
-@@ -216,8 +210,7 @@
+@@ -217,8 +211,7 @@
  ##------------------------------------------------------------------------------
  test_boot: $(KERNEL_BIN)
  	$(call colorecho, "\nBoot test - $(BSP)")

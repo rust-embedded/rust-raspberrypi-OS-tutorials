@@ -938,7 +938,7 @@ diff -uNr 11_exceptions_part1_groundwork/Cargo.toml 12_integrated_testing/Cargo.
 diff -uNr 11_exceptions_part1_groundwork/Makefile 12_integrated_testing/Makefile
 --- 11_exceptions_part1_groundwork/Makefile
 +++ 12_integrated_testing/Makefile
-@@ -14,6 +14,13 @@
+@@ -15,6 +15,13 @@
  # Default to a serial device name that is common in Linux.
  DEV_SERIAL ?= /dev/ttyUSB0
 
@@ -952,7 +952,7 @@ diff -uNr 11_exceptions_part1_groundwork/Makefile 12_integrated_testing/Makefile
 
 
  ##--------------------------------------------------------------------------------------------------
-@@ -27,6 +34,7 @@
+@@ -28,6 +35,7 @@
      QEMU_BINARY       = qemu-system-aarch64
      QEMU_MACHINE_TYPE = raspi3
      QEMU_RELEASE_ARGS = -serial stdio -display none
@@ -960,7 +960,7 @@ diff -uNr 11_exceptions_part1_groundwork/Makefile 12_integrated_testing/Makefile
      OBJDUMP_BINARY    = aarch64-none-elf-objdump
      NM_BINARY         = aarch64-none-elf-nm
      READELF_BINARY    = aarch64-none-elf-readelf
-@@ -40,6 +48,7 @@
+@@ -41,6 +49,7 @@
      QEMU_BINARY       = qemu-system-aarch64
      QEMU_MACHINE_TYPE =
      QEMU_RELEASE_ARGS = -serial stdio -display none
@@ -968,7 +968,7 @@ diff -uNr 11_exceptions_part1_groundwork/Makefile 12_integrated_testing/Makefile
      OBJDUMP_BINARY    = aarch64-none-elf-objdump
      NM_BINARY         = aarch64-none-elf-nm
      READELF_BINARY    = aarch64-none-elf-readelf
-@@ -73,6 +82,7 @@
+@@ -74,6 +83,7 @@
  DOC_CMD     = cargo doc $(COMPILER_ARGS)
  CLIPPY_CMD  = cargo clippy $(COMPILER_ARGS)
  CHECK_CMD   = cargo check $(COMPILER_ARGS)
@@ -976,7 +976,7 @@ diff -uNr 11_exceptions_part1_groundwork/Makefile 12_integrated_testing/Makefile
  OBJCOPY_CMD = rust-objcopy \
      --strip-all            \
      -O binary
-@@ -236,11 +246,11 @@
+@@ -237,11 +247,11 @@
  ##--------------------------------------------------------------------------------------------------
  ## Testing targets
  ##--------------------------------------------------------------------------------------------------
@@ -990,7 +990,7 @@ diff -uNr 11_exceptions_part1_groundwork/Makefile 12_integrated_testing/Makefile
  	$(call colorecho, "\n$(QEMU_MISSING_STRING)")
 
  else # QEMU is supported.
-@@ -252,6 +262,45 @@
+@@ -253,6 +263,45 @@
  	$(call colorecho, "\nBoot test - $(BSP)")
  	@$(DOCKER_TEST) $(EXEC_TEST_DISPATCH) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
 
