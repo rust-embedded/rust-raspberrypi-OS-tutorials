@@ -230,12 +230,12 @@ impl PageDescriptor {
 
     /// Create an instance.
     pub fn from_output_page(
-        phys_output_page: *const Page<Physical>,
+        phys_output_page_ptr: *const Page<Physical>,
         attribute_fields: &AttributeFields,
     ) -> Self {
         let val = InMemoryRegister::<u64, STAGE1_PAGE_DESCRIPTOR::Register>::new(0);
 
-        let shifted = phys_output_page as u64 >> Granule64KiB::SHIFT;
+        let shifted = phys_output_page_ptr as u64 >> Granule64KiB::SHIFT;
         val.write(
             STAGE1_PAGE_DESCRIPTOR::OUTPUT_ADDR_64KiB.val(shifted)
                 + STAGE1_PAGE_DESCRIPTOR::AF::True
@@ -310,9 +310,9 @@ impl<const NUM_TABLES: usize> FixedSizeTranslationTable<NUM_TABLES> {
     #[inline(always)]
     fn lvl2_lvl3_index_from_page(
         &self,
-        virt_page: *const Page<Virtual>,
+        virt_page_ptr: *const Page<Virtual>,
     ) -> Result<(usize, usize), &'static str> {
-        let addr = virt_page as usize;
+        let addr = virt_page_ptr as usize;
         let lvl2_index = addr >> Granule512MiB::SHIFT;
         let lvl3_index = (addr & Granule512MiB::MASK) >> Granule64KiB::SHIFT;
 
@@ -329,10 +329,10 @@ impl<const NUM_TABLES: usize> FixedSizeTranslationTable<NUM_TABLES> {
     #[inline(always)]
     fn set_page_descriptor_from_page(
         &mut self,
-        virt_page: *const Page<Virtual>,
+        virt_page_ptr: *const Page<Virtual>,
         new_desc: &PageDescriptor,
     ) -> Result<(), &'static str> {
-        let (lvl2_index, lvl3_index) = self.lvl2_lvl3_index_from_page(virt_page)?;
+        let (lvl2_index, lvl3_index) = self.lvl2_lvl3_index_from_page(virt_page_ptr)?;
         let desc = &mut self.lvl3[lvl2_index][lvl3_index];
 
         if desc.is_valid() {
@@ -392,7 +392,7 @@ impl<const NUM_TABLES: usize> memory::mmu::translation_table::interface::Transla
             return Err("Tried to map page slices with unequal sizes");
         }
 
-        if p.last().unwrap().as_ptr() >= bsp::memory::mmu::phys_addr_space_end_page() {
+        if p.last().unwrap().as_ptr() >= bsp::memory::mmu::phys_addr_space_end_page_ptr() {
             return Err("Tried to map outside of physical address space");
         }
 

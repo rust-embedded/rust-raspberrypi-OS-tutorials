@@ -463,13 +463,13 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu/trans
      /// Create an instance.
 -    pub fn from_output_addr(phys_output_addr: usize, attribute_fields: &AttributeFields) -> Self {
 +    pub fn from_output_page(
-+        phys_output_page: *const Page<Physical>,
++        phys_output_page_ptr: *const Page<Physical>,
 +        attribute_fields: &AttributeFields,
 +    ) -> Self {
          let val = InMemoryRegister::<u64, STAGE1_PAGE_DESCRIPTOR::Register>::new(0);
 
 -        let shifted = phys_output_addr as u64 >> Granule64KiB::SHIFT;
-+        let shifted = phys_output_page as u64 >> Granule64KiB::SHIFT;
++        let shifted = phys_output_page_ptr as u64 >> Granule64KiB::SHIFT;
          val.write(
              STAGE1_PAGE_DESCRIPTOR::OUTPUT_ADDR_64KiB.val(shifted)
                  + STAGE1_PAGE_DESCRIPTOR::AF::True
@@ -544,9 +544,9 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu/trans
 +    #[inline(always)]
 +    fn lvl2_lvl3_index_from_page(
 +        &self,
-+        virt_page: *const Page<Virtual>,
++        virt_page_ptr: *const Page<Virtual>,
 +    ) -> Result<(usize, usize), &'static str> {
-+        let addr = virt_page as usize;
++        let addr = virt_page_ptr as usize;
 +        let lvl2_index = addr >> Granule512MiB::SHIFT;
 +        let lvl3_index = (addr & Granule512MiB::MASK) >> Granule64KiB::SHIFT;
 +
@@ -568,10 +568,10 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu/trans
 +    #[inline(always)]
 +    fn set_page_descriptor_from_page(
 +        &mut self,
-+        virt_page: *const Page<Virtual>,
++        virt_page_ptr: *const Page<Virtual>,
 +        new_desc: &PageDescriptor,
 +    ) -> Result<(), &'static str> {
-+        let (lvl2_index, lvl3_index) = self.lvl2_lvl3_index_from_page(virt_page)?;
++        let (lvl2_index, lvl3_index) = self.lvl2_lvl3_index_from_page(virt_page_ptr)?;
 +        let desc = &mut self.lvl3[lvl2_index][lvl3_index];
 
 -            for (l3_nr, l3_entry) in self.lvl3[l2_nr].iter_mut().enumerate() {
@@ -637,7 +637,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu/trans
 +            return Err("Tried to map page slices with unequal sizes");
 +        }
 +
-+        if p.last().unwrap().as_ptr() >= bsp::memory::mmu::phys_addr_space_end_page() {
++        if p.last().unwrap().as_ptr() >= bsp::memory::mmu::phys_addr_space_end_page_ptr() {
 +            return Err("Tried to map outside of physical address space");
 +        }
 +
@@ -1624,7 +1624,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
 +}
 +
 +/// Pointer to the last page of the physical address space.
-+pub fn phys_addr_space_end_page() -> *const Page<Physical> {
++pub fn phys_addr_space_end_page_ptr() -> *const Page<Physical> {
 +    common::align_down(
 +        super::phys_addr_space_end().into_usize(),
 +        KernelGranule::SIZE,
@@ -2582,7 +2582,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/types.rs 14_virtual
 +    }
 +
 +    /// Return a pointer to the first page of the described slice.
-+    const fn first_page(&self) -> *const Page<ATYPE> {
++    const fn first_page_ptr(&self) -> *const Page<ATYPE> {
 +        self.start.into_usize() as *const _
 +    }
 +
@@ -2622,7 +2622,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/types.rs 14_virtual
 +    ///
 +    /// - Same as applies for `core::slice::from_raw_parts`.
 +    pub unsafe fn as_slice(&self) -> &[Page<ATYPE>] {
-+        core::slice::from_raw_parts(self.first_page(), self.num_pages)
++        core::slice::from_raw_parts(self.first_page_ptr(), self.num_pages)
 +    }
 +}
 +

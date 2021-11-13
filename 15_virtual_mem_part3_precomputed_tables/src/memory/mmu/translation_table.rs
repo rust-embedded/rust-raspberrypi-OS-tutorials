@@ -71,9 +71,9 @@ pub mod interface {
         /// Try to translate a virtual page pointer to a physical page pointer.
         ///
         /// Will only succeed if there exists a valid mapping for the input page.
-        fn try_virt_page_to_phys_page(
+        fn try_virt_page_ptr_to_phys_page_ptr(
             &self,
-            virt_page: *const Page<Virtual>,
+            virt_page_ptr: *const Page<Virtual>,
         ) -> Result<*const Page<Physical>, &'static str>;
 
         /// Try to get the attributes of a page.
@@ -81,7 +81,7 @@ pub mod interface {
         /// Will only succeed if there exists a valid mapping for the input page.
         fn try_page_attributes(
             &self,
-            virt_page: *const Page<Virtual>,
+            virt_page_ptr: *const Page<Virtual>,
         ) -> Result<AttributeFields, &'static str>;
 
         /// Try to translate a virtual address to a physical address.

@@ -431,10 +431,10 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu/t
      /// Helper to calculate the lvl2 and lvl3 indices from an address.
 @@ -363,7 +384,12 @@
          &self,
-         virt_page: *const Page<Virtual>,
+         virt_page_ptr: *const Page<Virtual>,
      ) -> Result<(usize, usize), &'static str> {
--        let addr = virt_page as usize;
-+        let mut addr = virt_page as usize;
+-        let addr = virt_page_ptr as usize;
++        let mut addr = virt_page_ptr as usize;
 +
 +        if START_FROM_TOP {
 +            addr -= Self::START_FROM_TOP_OFFSET.into_usize()

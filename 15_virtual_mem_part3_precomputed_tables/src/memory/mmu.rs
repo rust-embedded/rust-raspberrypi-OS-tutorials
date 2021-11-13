@@ -227,21 +227,21 @@ pub unsafe fn kernel_map_mmio(
 /// Try to translate a kernel virtual page pointer to a physical page pointer.
 ///
 /// Will only succeed if there exists a valid mapping for the input page.
-pub fn try_kernel_virt_page_to_phys_page(
-    virt_page: *const Page<Virtual>,
+pub fn try_kernel_virt_page_ptr_to_phys_page_ptr(
+    virt_page_ptr: *const Page<Virtual>,
 ) -> Result<*const Page<Physical>, &'static str> {
     bsp::memory::mmu::kernel_translation_tables()
-        .read(|tables| tables.try_virt_page_to_phys_page(virt_page))
+        .read(|tables| tables.try_virt_page_ptr_to_phys_page_ptr(virt_page_ptr))
 }
 
 /// Try to get the attributes of a kernel page.
 ///
 /// Will only succeed if there exists a valid mapping for the input page.
 pub fn try_kernel_page_attributes(
-    virt_page: *const Page<Virtual>,
+    virt_page_ptr: *const Page<Virtual>,
 ) -> Result<AttributeFields, &'static str> {
     bsp::memory::mmu::kernel_translation_tables()
-        .read(|tables| tables.try_page_attributes(virt_page))
+        .read(|tables| tables.try_page_attributes(virt_page_ptr))
 }
 
 /// Try to translate a kernel virtual address to a physical address.

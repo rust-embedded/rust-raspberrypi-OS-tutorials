@@ -916,13 +916,22 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/memory/mmu/translati
  impl PageDescriptor {
      /// Create an instance.
      ///
+@@ -229,7 +257,7 @@
+     }
+
+     /// Create an instance.
+-    pub fn from_output_page(
++    pub fn from_output_page_ptr(
+         phys_output_page_ptr: *const Page<Physical>,
+         attribute_fields: &AttributeFields,
+     ) -> Self {
 @@ -252,6 +280,20 @@
          InMemoryRegister::<u64, STAGE1_PAGE_DESCRIPTOR::Register>::new(self.value)
              .is_set(STAGE1_PAGE_DESCRIPTOR::VALID)
      }
 +
 +    /// Returns the output page.
-+    fn output_page(&self) -> *const Page<Physical> {
++    fn output_page_ptr(&self) -> *const Page<Physical> {
 +        let shifted = InMemoryRegister::<u64, STAGE1_PAGE_DESCRIPTOR::Register>::new(self.value)
 +            .read(STAGE1_PAGE_DESCRIPTOR::OUTPUT_ADDR_64KiB);
 +        let addr = shifted << Granule64KiB::SHIFT;
@@ -969,17 +978,26 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/memory/mmu/translati
      /// The start address of the table's MMIO range.
      #[inline(always)]
      fn mmio_start_addr(&self) -> Address<Virtual> {
-@@ -323,6 +374,18 @@
+@@ -308,7 +359,7 @@
+
+     /// Helper to calculate the lvl2 and lvl3 indices from an address.
+     #[inline(always)]
+-    fn lvl2_lvl3_index_from_page(
++    fn lvl2_lvl3_index_from_page_ptr(
+         &self,
+         virt_page_ptr: *const Page<Virtual>,
+     ) -> Result<(usize, usize), &'static str> {
+@@ -323,16 +374,28 @@
          Ok((lvl2_index, lvl3_index))
      }
 
 +    /// Returns the PageDescriptor corresponding to the supplied page address.
 +    #[inline(always)]
-+    fn page_descriptor_from_page(
++    fn page_descriptor_from_page_ptr(
 +        &self,
-+        virt_page: *const Page<Virtual>,
++        virt_page_ptr: *const Page<Virtual>,
 +    ) -> Result<&PageDescriptor, &'static str> {
-+        let (lvl2_index, lvl3_index) = self.lvl2_lvl3_index_from_page(virt_page)?;
++        let (lvl2_index, lvl3_index) = self.lvl2_lvl3_index_from_page_ptr(virt_page_ptr)?;
 +        let desc = &self.lvl3[lvl2_index][lvl3_index];
 +
 +        Ok(desc)
@@ -988,6 +1006,18 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/memory/mmu/translati
      /// Sets the PageDescriptor corresponding to the supplied page address.
      ///
      /// Doesn't allow overriding an already valid page.
+     #[inline(always)]
+-    fn set_page_descriptor_from_page(
++    fn set_page_descriptor_from_page_ptr(
+         &mut self,
+         virt_page_ptr: *const Page<Virtual>,
+         new_desc: &PageDescriptor,
+     ) -> Result<(), &'static str> {
+-        let (lvl2_index, lvl3_index) = self.lvl2_lvl3_index_from_page(virt_page_ptr)?;
++        let (lvl2_index, lvl3_index) = self.lvl2_lvl3_index_from_page_ptr(virt_page_ptr)?;
+         let desc = &mut self.lvl3[lvl2_index][lvl3_index];
+
+         if desc.is_valid() {
 @@ -351,14 +414,15 @@
  impl<const NUM_TABLES: usize> memory::mmu::translation_table::interface::TranslationTable
      for FixedSizeTranslationTable<NUM_TABLES>
@@ -1019,29 +1049,42 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/memory/mmu/translati
      }
 
      unsafe fn map_pages_at(
+@@ -398,10 +460,10 @@
+
+         let iter = p.iter().zip(v.iter());
+         for (phys_page, virt_page) in iter {
+-            let new_desc = PageDescriptor::from_output_page(phys_page.as_ptr(), attr);
++            let new_desc = PageDescriptor::from_output_page_ptr(phys_page.as_ptr(), attr);
+             let virt_page = virt_page.as_ptr();
+
+-            self.set_page_descriptor_from_page(virt_page, &new_desc)?;
++            self.set_page_descriptor_from_page_ptr(virt_page, &new_desc)?;
+         }
+
+         Ok(())
 @@ -442,6 +504,44 @@
 
          false
      }
 +
-+    fn try_virt_page_to_phys_page(
++    fn try_virt_page_ptr_to_phys_page_ptr(
 +        &self,
-+        virt_page: *const Page<Virtual>,
++        virt_page_ptr: *const Page<Virtual>,
 +    ) -> Result<*const Page<Physical>, &'static str> {
-+        let page_desc = self.page_descriptor_from_page(virt_page)?;
++        let page_desc = self.page_descriptor_from_page_ptr(virt_page_ptr)?;
 +
 +        if !page_desc.is_valid() {
 +            return Err("Page marked invalid");
 +        }
 +
-+        Ok(page_desc.output_page())
++        Ok(page_desc.output_page_ptr())
 +    }
 +
 +    fn try_page_attributes(
 +        &self,
-+        virt_page: *const Page<Virtual>,
++        virt_page_ptr: *const Page<Virtual>,
 +    ) -> Result<AttributeFields, &'static str> {
-+        let page_desc = self.page_descriptor_from_page(virt_page)?;
++        let page_desc = self.page_descriptor_from_page_ptr(virt_page_ptr)?;
 +
 +        if !page_desc.is_valid() {
 +            return Err("Page marked invalid");
@@ -1057,7 +1100,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/memory/mmu/translati
 +        &self,
 +        virt_addr: Address<Virtual>,
 +    ) -> Result<Address<Physical>, &'static str> {
-+        let page = self.try_virt_page_to_phys_page(virt_addr.as_page_ptr())?;
++        let page = self.try_virt_page_ptr_to_phys_page_ptr(virt_addr.as_page_ptr())?;
 +
 +        Ok(Address::new(page as usize + virt_addr.offset_into_page()))
 +    }
@@ -1198,7 +1241,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs 15_v
  /// Helper function for calculating the number of pages the given parameter spans.
  const fn size_to_num_pages(size: usize) -> usize {
      assert!(size > 0);
-@@ -81,16 +101,22 @@
+@@ -81,16 +101,23 @@
      PageSliceDescriptor::from_addr(super::virt_boot_core_stack_start(), num_pages)
  }
 
@@ -1211,20 +1254,21 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs 15_v
  ) -> PageSliceDescriptor<Physical> {
 -    let phys_start_addr = Address::<Physical>::new(virt_slice.start_addr().into_usize());
 +    let phys_first_page =
-+        generic_mmu::try_kernel_virt_page_to_phys_page(virt_slice.first_page()).unwrap();
++        generic_mmu::try_kernel_virt_page_ptr_to_phys_page_ptr(virt_slice.first_page_ptr())
++            .unwrap();
 +    let phys_start_addr = Address::new(phys_first_page as usize);
 
      PageSliceDescriptor::from_addr(phys_start_addr, virt_slice.num_pages())
  }
 
-+fn kernel_page_attributes(virt_page: *const Page<Virtual>) -> AttributeFields {
-+    generic_mmu::try_kernel_page_attributes(virt_page).unwrap()
++fn kernel_page_attributes(virt_page_ptr: *const Page<Virtual>) -> AttributeFields {
++    generic_mmu::try_kernel_page_attributes(virt_page_ptr).unwrap()
 +}
 +
  //--------------------------------------------------------------------------------------------------
  // Public Code
  //--------------------------------------------------------------------------------------------------
-@@ -108,112 +134,33 @@
+@@ -108,112 +135,33 @@
      ) as *const Page<_>
  }
 
@@ -1253,7 +1297,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs 15_v
 -    )?;
 +        &virt_rx_page_desc,
 +        &kernel_virt_to_phys_page_slice(virt_rx_page_desc),
-+        &kernel_page_attributes(virt_rx_page_desc.first_page()),
++        &kernel_page_attributes(virt_rx_page_desc.first_page_ptr()),
 +    );
 
 -    generic_mmu::kernel_map_pages_at(
@@ -1270,7 +1314,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs 15_v
 -    )?;
 +        &virt_rw_page_desc,
 +        &kernel_virt_to_phys_page_slice(virt_rw_page_desc),
-+        &kernel_page_attributes(virt_rw_page_desc.first_page()),
++        &kernel_page_attributes(virt_rw_page_desc.first_page_ptr()),
 +    );
 
 -    generic_mmu::kernel_map_pages_at(
@@ -1357,7 +1401,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs 15_v
 -    }
 +        &virt_boot_core_stack_page_desc,
 +        &kernel_virt_to_phys_page_slice(virt_boot_core_stack_page_desc),
-+        &kernel_page_attributes(virt_boot_core_stack_page_desc.first_page()),
++        &kernel_page_attributes(virt_boot_core_stack_page_desc.first_page_ptr()),
 +    );
  }
 
@@ -1441,9 +1485,9 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/memory/mmu/translation_table.rs 15
 +        /// Try to translate a virtual page pointer to a physical page pointer.
 +        ///
 +        /// Will only succeed if there exists a valid mapping for the input page.
-+        fn try_virt_page_to_phys_page(
++        fn try_virt_page_ptr_to_phys_page_ptr(
 +            &self,
-+            virt_page: *const Page<Virtual>,
++            virt_page_ptr: *const Page<Virtual>,
 +        ) -> Result<*const Page<Physical>, &'static str>;
 +
 +        /// Try to get the attributes of a page.
@@ -1451,7 +1495,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/memory/mmu/translation_table.rs 15
 +        /// Will only succeed if there exists a valid mapping for the input page.
 +        fn try_page_attributes(
 +            &self,
-+            virt_page: *const Page<Virtual>,
++            virt_page_ptr: *const Page<Virtual>,
 +        ) -> Result<AttributeFields, &'static str>;
 +
 +        /// Try to translate a virtual address to a physical address.
@@ -1493,8 +1537,8 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/memory/mmu/types.rs 15_virtual_mem
      }
 
      /// Return a pointer to the first page of the described slice.
--    const fn first_page(&self) -> *const Page<ATYPE> {
-+    pub const fn first_page(&self) -> *const Page<ATYPE> {
+-    const fn first_page_ptr(&self) -> *const Page<ATYPE> {
++    pub const fn first_page_ptr(&self) -> *const Page<ATYPE> {
          self.start.into_usize() as *const _
      }
 
@@ -1549,11 +1593,11 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/memory/mmu.rs 15_virtual_mem_part3
 -            tables.phys_base_address()
 -        });
 +/// Will only succeed if there exists a valid mapping for the input page.
-+pub fn try_kernel_virt_page_to_phys_page(
-+    virt_page: *const Page<Virtual>,
++pub fn try_kernel_virt_page_ptr_to_phys_page_ptr(
++    virt_page_ptr: *const Page<Virtual>,
 +) -> Result<*const Page<Physical>, &'static str> {
 +    bsp::memory::mmu::kernel_translation_tables()
-+        .read(|tables| tables.try_virt_page_to_phys_page(virt_page))
++        .read(|tables| tables.try_virt_page_ptr_to_phys_page_ptr(virt_page_ptr))
 +}
 
 -    bsp::memory::mmu::kernel_map_binary()?;
@@ -1561,10 +1605,10 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/memory/mmu.rs 15_virtual_mem_part3
 +///
 +/// Will only succeed if there exists a valid mapping for the input page.
 +pub fn try_kernel_page_attributes(
-+    virt_page: *const Page<Virtual>,
++    virt_page_ptr: *const Page<Virtual>,
 +) -> Result<AttributeFields, &'static str> {
 +    bsp::memory::mmu::kernel_translation_tables()
-+        .read(|tables| tables.try_page_attributes(virt_page))
++        .read(|tables| tables.try_page_attributes(virt_page_ptr))
 +}
 
 -    Ok(phys_kernel_tables_base_addr)

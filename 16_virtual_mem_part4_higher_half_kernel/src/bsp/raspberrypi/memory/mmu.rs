@@ -107,14 +107,15 @@ fn kernel_virt_to_phys_page_slice(
     virt_slice: PageSliceDescriptor<Virtual>,
 ) -> PageSliceDescriptor<Physical> {
     let phys_first_page =
-        generic_mmu::try_kernel_virt_page_to_phys_page(virt_slice.first_page()).unwrap();
+        generic_mmu::try_kernel_virt_page_ptr_to_phys_page_ptr(virt_slice.first_page_ptr())
+            .unwrap();
     let phys_start_addr = Address::new(phys_first_page as usize);
 
     PageSliceDescriptor::from_addr(phys_start_addr, virt_slice.num_pages())
 }
 
-fn kernel_page_attributes(virt_page: *const Page<Virtual>) -> AttributeFields {
-    generic_mmu::try_kernel_page_attributes(virt_page).unwrap()
+fn kernel_page_attributes(virt_page_ptr: *const Page<Virtual>) -> AttributeFields {
+    generic_mmu::try_kernel_page_attributes(virt_page_ptr).unwrap()
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -127,7 +128,7 @@ pub fn kernel_translation_tables() -> &'static InitStateLock<KernelTranslationTa
 }
 
 /// Pointer to the last page of the physical address space.
-pub fn phys_addr_space_end_page() -> *const Page<Physical> {
+pub fn phys_addr_space_end_page_ptr() -> *const Page<Physical> {
     common::align_down(
         super::phys_addr_space_end().into_usize(),
         KernelGranule::SIZE,
@@ -145,7 +146,7 @@ pub fn kernel_add_mapping_records_for_precomputed() {
         "Kernel code and RO data",
         &virt_rx_page_desc,
         &kernel_virt_to_phys_page_slice(virt_rx_page_desc),
-        &kernel_page_attributes(virt_rx_page_desc.first_page()),
+        &kernel_page_attributes(virt_rx_page_desc.first_page_ptr()),
     );
 
     let virt_rw_page_desc = virt_rw_page_desc();
@@ -153,7 +154,7 @@ pub fn kernel_add_mapping_records_for_precomputed() {
         "Kernel data and bss",
         &virt_rw_page_desc,
         &kernel_virt_to_phys_page_slice(virt_rw_page_desc),
-        &kernel_page_attributes(virt_rw_page_desc.first_page()),
+        &kernel_page_attributes(virt_rw_page_desc.first_page_ptr()),
     );
 
     let virt_boot_core_stack_page_desc = virt_boot_core_stack_page_desc();
@@ -161,6 +162,6 @@ pub fn kernel_add_mapping_records_for_precomputed() {
         "Kernel boot-core stack",
         &virt_boot_core_stack_page_desc,
         &kernel_virt_to_phys_page_slice(virt_boot_core_stack_page_desc),
-        &kernel_page_attributes(virt_boot_core_stack_page_desc.first_page()),
+        &kernel_page_attributes(virt_boot_core_stack_page_desc.first_page_ptr()),
     );
 }

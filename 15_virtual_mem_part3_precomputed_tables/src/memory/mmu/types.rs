@@ -92,7 +92,7 @@ impl<ATYPE: AddressType> PageSliceDescriptor<ATYPE> {
     }
 
     /// Return a pointer to the first page of the described slice.
-    pub const fn first_page(&self) -> *const Page<ATYPE> {
+    pub const fn first_page_ptr(&self) -> *const Page<ATYPE> {
         self.start.into_usize() as *const _
     }
 
@@ -132,7 +132,7 @@ impl<ATYPE: AddressType> PageSliceDescriptor<ATYPE> {
     ///
     /// - Same as applies for `core::slice::from_raw_parts`.
     pub unsafe fn as_slice(&self) -> &[Page<ATYPE>] {
-        core::slice::from_raw_parts(self.first_page(), self.num_pages)
+        core::slice::from_raw_parts(self.first_page_ptr(), self.num_pages)
     }
 }
 

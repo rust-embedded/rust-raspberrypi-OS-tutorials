@@ -101,7 +101,7 @@ pub fn kernel_translation_tables() -> &'static InitStateLock<KernelTranslationTa
 }
 
 /// Pointer to the last page of the physical address space.
-pub fn phys_addr_space_end_page() -> *const Page<Physical> {
+pub fn phys_addr_space_end_page_ptr() -> *const Page<Physical> {
     common::align_down(
         super::phys_addr_space_end().into_usize(),
         KernelGranule::SIZE,
