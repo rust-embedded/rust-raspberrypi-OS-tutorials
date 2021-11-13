@@ -229,13 +229,13 @@ impl PageDescriptor {
     }
 
     /// Create an instance.
-    pub fn from_output_addr(
-        phys_output_addr: *const Page<Physical>,
+    pub fn from_output_page(
+        phys_output_page: *const Page<Physical>,
         attribute_fields: &AttributeFields,
     ) -> Self {
         let val = InMemoryRegister::<u64, STAGE1_PAGE_DESCRIPTOR::Register>::new(0);
 
-        let shifted = phys_output_addr as u64 >> Granule64KiB::SHIFT;
+        let shifted = phys_output_page as u64 >> Granule64KiB::SHIFT;
         val.write(
             STAGE1_PAGE_DESCRIPTOR::OUTPUT_ADDR_64KiB.val(shifted)
                 + STAGE1_PAGE_DESCRIPTOR::AF::True
@@ -308,11 +308,11 @@ impl<const NUM_TABLES: usize> FixedSizeTranslationTable<NUM_TABLES> {
 
     /// Helper to calculate the lvl2 and lvl3 indices from an address.
     #[inline(always)]
-    fn lvl2_lvl3_index_from(
+    fn lvl2_lvl3_index_from_page(
         &self,
-        addr: *const Page<Virtual>,
+        virt_page: *const Page<Virtual>,
     ) -> Result<(usize, usize), &'static str> {
-        let addr = addr as usize;
+        let addr = virt_page as usize;
         let lvl2_index = addr >> Granule512MiB::SHIFT;
         let lvl3_index = (addr & Granule512MiB::MASK) >> Granule64KiB::SHIFT;
 
@@ -323,15 +323,24 @@ impl<const NUM_TABLES: usize> FixedSizeTranslationTable<NUM_TABLES> {
         Ok((lvl2_index, lvl3_index))
     }
 
-    /// Returns the PageDescriptor corresponding to the supplied Page.
+    /// Sets the PageDescriptor corresponding to the supplied page address.
+    ///
+    /// Doesn't allow overriding an already valid page.
     #[inline(always)]
-    fn page_descriptor_from(
+    fn set_page_descriptor_from_page(
         &mut self,
-        addr: *const Page<Virtual>,
-    ) -> Result<&mut PageDescriptor, &'static str> {
-        let (lvl2_index, lvl3_index) = self.lvl2_lvl3_index_from(addr)?;
+        virt_page: *const Page<Virtual>,
+        new_desc: &PageDescriptor,
+    ) -> Result<(), &'static str> {
+        let (lvl2_index, lvl3_index) = self.lvl2_lvl3_index_from_page(virt_page)?;
+        let desc = &mut self.lvl3[lvl2_index][lvl3_index];
 
-        Ok(&mut self.lvl3[lvl2_index][lvl3_index])
+        if desc.is_valid() {
+            return Err("Virtual page is already mapped");
+        }
+
+        *desc = *new_desc;
+        Ok(())
     }
 }
 
@@ -349,9 +358,10 @@ impl<const NUM_TABLES: usize> memory::mmu::translation_table::interface::Transla
 
         // Populate the l2 entries.
         for (lvl2_nr, lvl2_entry) in self.lvl2.iter_mut().enumerate() {
-            let desc =
-                TableDescriptor::from_next_lvl_table_addr(self.lvl3[lvl2_nr].phys_start_addr());
-            *lvl2_entry = desc;
+            let phys_table_addr = self.lvl3[lvl2_nr].phys_start_addr();
+
+            let new_desc = TableDescriptor::from_next_lvl_table_addr(phys_table_addr);
+            *lvl2_entry = new_desc;
         }
 
         self.cur_l3_mmio_index = Self::L3_MMIO_START_INDEX;
@@ -370,8 +380,8 @@ impl<const NUM_TABLES: usize> memory::mmu::translation_table::interface::Transla
     ) -> Result<(), &'static str> {
         assert!(self.initialized, "Translation tables not initialized");
 
-        let p = phys_pages.as_slice();
         let v = virt_pages.as_slice();
+        let p = phys_pages.as_slice();
 
         // No work to do for empty slices.
         if v.is_empty() {
@@ -388,12 +398,10 @@ impl<const NUM_TABLES: usize> memory::mmu::translation_table::interface::Transla
 
         let iter = p.iter().zip(v.iter());
         for (phys_page, virt_page) in iter {
-            let page_descriptor = self.page_descriptor_from(virt_page.as_ptr())?;
-            if page_descriptor.is_valid() {
-                return Err("Virtual page is already mapped");
-            }
+            let new_desc = PageDescriptor::from_output_page(phys_page.as_ptr(), attr);
+            let virt_page = virt_page.as_ptr();
 
-            *page_descriptor = PageDescriptor::from_output_addr(phys_page.as_ptr(), attr);
+            self.set_page_descriptor_from_page(virt_page, &new_desc)?;
         }
 
         Ok(())

@@ -144,7 +144,7 @@ Precomputing kernel translation tables and patching kernel ELF
   Generating Boot-core stack  | 0xffff_ffff_8010_0000 | 512 KiB
              --------------------------------------------------
     Patching Kernel table struct at physical 0x9_0000
-    Patching Value of kernel table physical base address (0xd_0000) at physical 0x8_0060
+    Patching Value of kernel table physical base address (0xd_0000) at physical 0x8_0080
     Finished in 0.03s
 
 Minipush 1.0
@@ -152,6 +152,7 @@ Minipush 1.0
 [MP] ⏳ Waiting for /dev/ttyUSB0
 [MP] ✅ Serial connected
 [MP] 🔌 Please power the target now
+
  __  __ _      _ _                 _
 |  \/  (_)_ _ (_) |   ___  __ _ __| |
 | |\/| | | ' \| | |__/ _ \/ _` / _` |
@@ -163,19 +164,20 @@ Minipush 1.0
 [MP] ⏩ Pushing 387 KiB =======================================🦀 100% 96 KiB/s Time: 00:00:04
 [ML] Loaded! Executing the payload now
 
-[    4.316420] mingo version 0.16.0
-[    4.316627] Booting on: Raspberry Pi 3
-[    4.317082] MMU online:
-[    4.317375]       -------------------------------------------------------------------------------------------------------------------------------------------
-[    4.319119]                         Virtual                                   Physical               Size       Attr                    Entity
-[    4.320863]       -------------------------------------------------------------------------------------------------------------------------------------------
-[    4.322610]       0xffff_ffff_8008_0000..0xffff_ffff_8008_ffff --> 0x00_0008_0000..0x00_0008_ffff |  64 KiB | C   RO X  | Kernel code and RO data
-[    4.324223]       0xffff_ffff_8009_0000..0xffff_ffff_800e_ffff --> 0x00_0009_0000..0x00_000e_ffff | 384 KiB | C   RW XN | Kernel data and bss
-[    4.325793]       0xffff_ffff_8010_0000..0xffff_ffff_8017_ffff --> 0x00_0010_0000..0x00_0017_ffff | 512 KiB | C   RW XN | Kernel boot-core stack
-[    4.327397]       0xffff_ffff_f000_0000..0xffff_ffff_f000_ffff --> 0x00_3f20_0000..0x00_3f20_ffff |  64 KiB | Dev RW XN | BCM GPIO
-[    4.328847]                                                                                                             | BCM PL011 UART
-[    4.330365]       0xffff_ffff_f001_0000..0xffff_ffff_f001_ffff --> 0x00_3f00_0000..0x00_3f00_ffff |  64 KiB | Dev RW XN | BCM Peripheral Interrupt Controller
-[    4.332108]       -------------------------------------------------------------------------------------------------------------------------------------------
+[    4.318584] mingo version 0.16.0
+[    4.318792] Booting on: Raspberry Pi 3
+[    4.319247] MMU online:
+[    4.319540]       -------------------------------------------------------------------------------------------------------------------------------------------
+[    4.321284]                         Virtual                                   Physical               Size       Attr                    Entity
+[    4.323028]       -------------------------------------------------------------------------------------------------------------------------------------------
+[    4.324773]       0xffff_ffff_8008_0000..0xffff_ffff_8008_ffff --> 0x00_0008_0000..0x00_0008_ffff |  64 KiB | C   RO X  | Kernel code and RO data
+[    4.326387]       0xffff_ffff_8009_0000..0xffff_ffff_800e_ffff --> 0x00_0009_0000..0x00_000e_ffff | 384 KiB | C   RW XN | Kernel data and bss
+[    4.327957]       0xffff_ffff_8010_0000..0xffff_ffff_8017_ffff --> 0x00_0010_0000..0x00_0017_ffff | 512 KiB | C   RW XN | Kernel boot-core stack
+[    4.329560]       0xffff_ffff_f000_0000..0xffff_ffff_f000_ffff --> 0x00_3f20_0000..0x00_3f20_ffff |  64 KiB | Dev RW XN | BCM GPIO
+[    4.331012]                                                                                                             | BCM PL011 UART
+[    4.332529]       0xffff_ffff_f001_0000..0xffff_ffff_f001_ffff --> 0x00_3f00_0000..0x00_3f00_ffff |  64 KiB | Dev RW XN | BCM Peripheral Interrupt Controller
+[    4.334273]       -------------------------------------------------------------------------------------------------------------------------------------------
+
 ```
 
 Raspberry Pi 4:
@@ -189,18 +191,20 @@ Precomputing kernel translation tables and patching kernel ELF
                  Section           Start Virt Addr       Size
              --------------------------------------------------
   Generating Code and RO data | 0xffff_ffff_8008_0000 |  64 KiB
-  Generating Data and bss     | 0xffff_ffff_8009_0000 | 448 KiB
-  Generating Boot-core stack  | 0xffff_ffff_8011_0000 | 512 KiB
+  Generating Data and bss     | 0xffff_ffff_8009_0000 | 384 KiB
+  Generating Boot-core stack  | 0xffff_ffff_8010_0000 | 512 KiB
              --------------------------------------------------
-    Patching Kernel table struct at physical 0xa_0000
-    Patching Value of kernel table physical base address (0xe_0000) at physical 0x8_0068
+    Patching Kernel table struct at physical 0x9_0000
+    Patching Value of kernel table physical base address (0xd_0000) at physical 0x8_0080
     Finished in 0.03s
+
 
 Minipush 1.0
 
 [MP] ⏳ Waiting for /dev/ttyUSB0
 [MP] ✅ Serial connected
 [MP] 🔌 Please power the target now
+
  __  __ _      _ _                 _
 |  \/  (_)_ _ (_) |   ___  __ _ __| |
 | |\/| | | ' \| | |__/ _ \/ _` / _` |
@@ -209,23 +213,24 @@ Minipush 1.0
            Raspberry Pi 4
 
 [ML] Requesting binary
-[MP] ⏩ Pushing 449 KiB ======================================🦀 100% 112 KiB/s Time: 00:00:04
+[MP] ⏩ Pushing 394 KiB =======================================🦀 100% 98 KiB/s Time: 00:00:04
 [ML] Loaded! Executing the payload now
 
-[    5.009551] mingo version 0.16.0
-[    5.009585] Booting on: Raspberry Pi 4
-[    5.010040] MMU online:
-[    5.010332]       -------------------------------------------------------------------------------------------------------------------------------------------
-[    5.012077]                         Virtual                                   Physical               Size       Attr                    Entity
-[    5.013821]       -------------------------------------------------------------------------------------------------------------------------------------------
-[    5.015566]       0xffff_ffff_8008_0000..0xffff_ffff_8008_ffff --> 0x00_0008_0000..0x00_0008_ffff |  64 KiB | C   RO X  | Kernel code and RO data
-[    5.017181]       0xffff_ffff_8009_0000..0xffff_ffff_800f_ffff --> 0x00_0009_0000..0x00_000f_ffff | 448 KiB | C   RW XN | Kernel data and bss
-[    5.018751]       0xffff_ffff_8011_0000..0xffff_ffff_8018_ffff --> 0x00_0011_0000..0x00_0018_ffff | 512 KiB | C   RW XN | Kernel boot-core stack
-[    5.020354]       0xffff_ffff_f000_0000..0xffff_ffff_f000_ffff --> 0x00_fe20_0000..0x00_fe20_ffff |  64 KiB | Dev RW XN | BCM GPIO
-[    5.021805]                                                                                                             | BCM PL011 UART
-[    5.023322]       0xffff_ffff_f001_0000..0xffff_ffff_f001_ffff --> 0x00_ff84_0000..0x00_ff84_ffff |  64 KiB | Dev RW XN | GICD
-[    5.024730]                                                                                                             | GICC
-[    5.026138]       -------------------------------------------------------------------------------------------------------------------------------------------
+[    4.401227] mingo version 0.16.0
+[    4.401260] Booting on: Raspberry Pi 4
+[    4.401715] MMU online:
+[    4.402008]       -------------------------------------------------------------------------------------------------------------------------------------------
+[    4.403752]                         Virtual                                   Physical               Size       Attr                    Entity
+[    4.405496]       -------------------------------------------------------------------------------------------------------------------------------------------
+[    4.407241]       0xffff_ffff_8008_0000..0xffff_ffff_8008_ffff --> 0x00_0008_0000..0x00_0008_ffff |  64 KiB | C   RO X  | Kernel code and RO data
+[    4.408855]       0xffff_ffff_8009_0000..0xffff_ffff_800e_ffff --> 0x00_0009_0000..0x00_000e_ffff | 384 KiB | C   RW XN | Kernel data and bss
+[    4.410425]       0xffff_ffff_8010_0000..0xffff_ffff_8017_ffff --> 0x00_0010_0000..0x00_0017_ffff | 512 KiB | C   RW XN | Kernel boot-core stack
+[    4.412028]       0xffff_ffff_f000_0000..0xffff_ffff_f000_ffff --> 0x00_fe20_0000..0x00_fe20_ffff |  64 KiB | Dev RW XN | BCM GPIO
+[    4.413480]                                                                                                             | BCM PL011 UART
+[    4.414997]       0xffff_ffff_f001_0000..0xffff_ffff_f001_ffff --> 0x00_ff84_0000..0x00_ff84_ffff |  64 KiB | Dev RW XN | GICD
+[    4.416405]                                                                                                             | GICC
+[    4.417814]       -------------------------------------------------------------------------------------------------------------------------------------------
+
 ```
 
 ## Diff to previous
@@ -361,7 +366,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu/t
      /// Page descriptors, covering 64 KiB windows per entry.
      lvl3: [[PageDescriptor; 8192]; NUM_TABLES],
 
-@@ -262,14 +262,23 @@
+@@ -305,14 +305,23 @@
  where
      [u8; Self::SIZE >> Granule512MiB::SHIFT]: Sized,
  {
@@ -387,7 +392,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu/t
      /// Create an instance.
      #[allow(clippy::assertions_on_constants)]
      const fn _new(for_precompute: bool) -> Self {
-@@ -298,20 +307,32 @@
+@@ -341,20 +350,32 @@
      /// The start address of the table's MMIO range.
      #[inline(always)]
      fn mmio_start_addr(&self) -> Address<Virtual> {
@@ -424,12 +429,12 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu/t
      }
 
      /// Helper to calculate the lvl2 and lvl3 indices from an address.
-@@ -320,7 +341,12 @@
+@@ -363,7 +384,12 @@
          &self,
-         addr: *const Page<Virtual>,
+         virt_page: *const Page<Virtual>,
      ) -> Result<(usize, usize), &'static str> {
--        let addr = addr as usize;
-+        let mut addr = addr as usize;
+-        let addr = virt_page as usize;
++        let mut addr = virt_page as usize;
 +
 +        if START_FROM_TOP {
 +            addr -= Self::START_FROM_TOP_OFFSET.into_usize()
@@ -438,7 +443,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu/t
          let lvl2_index = addr >> Granule512MiB::SHIFT;
          let lvl3_index = (addr & Granule512MiB::MASK) >> Granule64KiB::SHIFT;
 
-@@ -347,8 +373,9 @@
+@@ -411,8 +437,9 @@
  // OS Interface Code
  //------------------------------------------------------------------------------
 
@@ -450,7 +455,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu/t
  {
      fn init(&mut self) -> Result<(), &'static str> {
          if self.initialized {
-@@ -423,12 +450,16 @@
+@@ -483,12 +510,16 @@
              return Err("Not enough MMIO space left");
          }
 
@@ -468,7 +473,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu/t
          Ok(PageSliceDescriptor::from_addr(addr, num_pages))
      }
 
-@@ -451,7 +482,7 @@
+@@ -549,7 +580,7 @@
  //--------------------------------------------------------------------------------------------------
 
  #[cfg(test)]
@@ -571,7 +576,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/link.ld 16
 diff -uNr 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/memory/mmu.rs 16_virtual_mem_part4_higher_half_kernel/src/bsp/raspberrypi/memory/mmu.rs
 --- 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/memory/mmu.rs
 +++ 16_virtual_mem_part4_higher_half_kernel/src/bsp/raspberrypi/memory/mmu.rs
-@@ -23,7 +23,7 @@
+@@ -22,7 +22,7 @@
  //--------------------------------------------------------------------------------------------------
 
  type KernelTranslationTable =
@@ -600,7 +605,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/lib.rs 16_virtual_mem_part
 diff -uNr 15_virtual_mem_part3_precomputed_tables/src/memory/mmu.rs 16_virtual_mem_part4_higher_half_kernel/src/memory/mmu.rs
 --- 15_virtual_mem_part3_precomputed_tables/src/memory/mmu.rs
 +++ 16_virtual_mem_part4_higher_half_kernel/src/memory/mmu.rs
-@@ -80,6 +80,11 @@
+@@ -64,6 +64,11 @@
  pub trait AssociatedTranslationTable {
      /// A translation table whose address range is:
      ///

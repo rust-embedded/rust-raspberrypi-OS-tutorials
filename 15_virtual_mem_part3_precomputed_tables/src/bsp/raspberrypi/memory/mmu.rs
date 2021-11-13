@@ -9,14 +9,13 @@ use crate::{
     memory::{
         mmu as generic_mmu,
         mmu::{
-            AccessPermissions, AddressSpace, AssociatedTranslationTable, AttributeFields,
-            MemAttributes, Page, PageSliceDescriptor, TranslationGranule,
+            AddressSpace, AssociatedTranslationTable, AttributeFields, Page, PageSliceDescriptor,
+            TranslationGranule,
         },
-        Physical, Virtual,
+        Address, Physical, Virtual,
     },
     synchronization::InitStateLock,
 };
-use core::convert::TryInto;
 
 //--------------------------------------------------------------------------------------------------
 // Private Definitions
@@ -103,21 +102,19 @@ fn virt_boot_core_stack_page_desc() -> PageSliceDescriptor<Virtual> {
 }
 
 // There is no reason to expect the following conversions to fail, since they were generated offline
-// by the `translation table tool`. If it doesn't work, a panic due to the unwrap is justified.
+// by the `translation table tool`. If it doesn't work, a panic due to the unwraps is justified.
+fn kernel_virt_to_phys_page_slice(
+    virt_slice: PageSliceDescriptor<Virtual>,
+) -> PageSliceDescriptor<Physical> {
+    let phys_first_page =
+        generic_mmu::try_kernel_virt_page_to_phys_page(virt_slice.first_page()).unwrap();
+    let phys_start_addr = Address::new(phys_first_page as usize);
 
-/// The Read+Execute (RX) pages of the kernel binary.
-fn phys_rx_page_desc() -> PageSliceDescriptor<Physical> {
-    virt_rx_page_desc().try_into().unwrap()
+    PageSliceDescriptor::from_addr(phys_start_addr, virt_slice.num_pages())
 }
 
-/// The Read+Write (RW) pages of the kernel binary.
-fn phys_rw_page_desc() -> PageSliceDescriptor<Physical> {
-    virt_rw_page_desc().try_into().unwrap()
-}
-
-/// The boot core's stack.
-fn phys_boot_core_stack_page_desc() -> PageSliceDescriptor<Physical> {
-    virt_boot_core_stack_page_desc().try_into().unwrap()
+fn kernel_page_attributes(virt_page: *const Page<Virtual>) -> AttributeFields {
+    generic_mmu::try_kernel_page_attributes(virt_page).unwrap()
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -142,39 +139,28 @@ pub fn phys_addr_space_end_page() -> *const Page<Physical> {
 /// The actual translation table entries for the kernel binary are generated using the offline
 /// `translation table tool` and patched into the kernel binary. This function just adds the mapping
 /// record entries.
-///
-/// It must be ensured that these entries are in sync with the offline tool.
 pub fn kernel_add_mapping_records_for_precomputed() {
+    let virt_rx_page_desc = virt_rx_page_desc();
     generic_mmu::kernel_add_mapping_record(
         "Kernel code and RO data",
-        &virt_rx_page_desc(),
-        &phys_rx_page_desc(),
-        &AttributeFields {
-            mem_attributes: MemAttributes::CacheableDRAM,
-            acc_perms: AccessPermissions::ReadOnly,
-            execute_never: false,
-        },
+        &virt_rx_page_desc,
+        &kernel_virt_to_phys_page_slice(virt_rx_page_desc),
+        &kernel_page_attributes(virt_rx_page_desc.first_page()),
     );
 
+    let virt_rw_page_desc = virt_rw_page_desc();
     generic_mmu::kernel_add_mapping_record(
         "Kernel data and bss",
-        &virt_rw_page_desc(),
-        &phys_rw_page_desc(),
-        &AttributeFields {
-            mem_attributes: MemAttributes::CacheableDRAM,
-            acc_perms: AccessPermissions::ReadWrite,
-            execute_never: true,
-        },
+        &virt_rw_page_desc,
+        &kernel_virt_to_phys_page_slice(virt_rw_page_desc),
+        &kernel_page_attributes(virt_rw_page_desc.first_page()),
     );
 
+    let virt_boot_core_stack_page_desc = virt_boot_core_stack_page_desc();
     generic_mmu::kernel_add_mapping_record(
         "Kernel boot-core stack",
-        &virt_boot_core_stack_page_desc(),
-        &phys_boot_core_stack_page_desc(),
-        &AttributeFields {
-            mem_attributes: MemAttributes::CacheableDRAM,
-            acc_perms: AccessPermissions::ReadWrite,
-            execute_never: true,
-        },
+        &virt_boot_core_stack_page_desc,
+        &kernel_virt_to_phys_page_slice(virt_boot_core_stack_page_desc),
+        &kernel_page_attributes(virt_boot_core_stack_page_desc.first_page()),
     );
 }

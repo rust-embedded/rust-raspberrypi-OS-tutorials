@@ -6,7 +6,7 @@
 
 use crate::{
     bsp, common,
-    memory::{Address, AddressType, Physical, Virtual},
+    memory::{Address, AddressType, Physical},
 };
 use core::{convert::From, marker::PhantomData};
 
@@ -92,11 +92,11 @@ impl<ATYPE: AddressType> PageSliceDescriptor<ATYPE> {
     }
 
     /// Return a pointer to the first page of the described slice.
-    const fn first_page_ptr(&self) -> *const Page<ATYPE> {
+    const fn first_page(&self) -> *const Page<ATYPE> {
         self.start.into_usize() as *const _
     }
 
-    /// Return the number of Pages the slice describes.
+    /// Return the number of pages the slice describes.
     pub const fn num_pages(&self) -> usize {
         self.num_pages
     }
@@ -126,22 +126,13 @@ impl<ATYPE: AddressType> PageSliceDescriptor<ATYPE> {
         (addr >= self.start_addr()) && (addr <= self.end_addr_inclusive())
     }
 
-    /// Return a non-mutable slice of Pages.
+    /// Return a non-mutable slice of pages.
     ///
     /// # Safety
     ///
     /// - Same as applies for `core::slice::from_raw_parts`.
     pub unsafe fn as_slice(&self) -> &[Page<ATYPE>] {
-        core::slice::from_raw_parts(self.first_page_ptr(), self.num_pages)
-    }
-}
-
-impl From<PageSliceDescriptor<Virtual>> for PageSliceDescriptor<Physical> {
-    fn from(desc: PageSliceDescriptor<Virtual>) -> Self {
-        Self {
-            start: Address::new(desc.start.into_usize()),
-            num_pages: desc.num_pages,
-        }
+        core::slice::from_raw_parts(self.first_page(), self.num_pages)
     }
 }
 

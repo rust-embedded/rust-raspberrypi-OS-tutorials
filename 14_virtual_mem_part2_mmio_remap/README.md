@@ -457,19 +457,23 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu/trans
          val.write(
              STAGE1_TABLE_DESCRIPTOR::NEXT_LEVEL_TABLE_ADDR_64KiB.val(shifted as u64)
                  + STAGE1_TABLE_DESCRIPTOR::TYPE::Table
-@@ -230,7 +229,10 @@
+@@ -230,10 +229,13 @@
      }
 
      /// Create an instance.
 -    pub fn from_output_addr(phys_output_addr: usize, attribute_fields: &AttributeFields) -> Self {
-+    pub fn from_output_addr(
-+        phys_output_addr: *const Page<Physical>,
++    pub fn from_output_page(
++        phys_output_page: *const Page<Physical>,
 +        attribute_fields: &AttributeFields,
 +    ) -> Self {
          let val = InMemoryRegister::<u64, STAGE1_PAGE_DESCRIPTOR::Register>::new(0);
 
-         let shifted = phys_output_addr as u64 >> Granule64KiB::SHIFT;
-@@ -244,50 +246,193 @@
+-        let shifted = phys_output_addr as u64 >> Granule64KiB::SHIFT;
++        let shifted = phys_output_page as u64 >> Granule64KiB::SHIFT;
+         val.write(
+             STAGE1_PAGE_DESCRIPTOR::OUTPUT_ADDR_64KiB.val(shifted)
+                 + STAGE1_PAGE_DESCRIPTOR::AF::True
+@@ -244,50 +246,201 @@
 
          Self { value: val.get() }
      }
@@ -517,12 +521,6 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu/trans
 -    /// Iterates over all static translation table entries and fills them at once.
 -    ///
 -    /// # Safety
--    ///
--    /// - Modifies a `static mut`. Ensure it only happens from here.
--    pub unsafe fn populate_tt_entries(&mut self) -> Result<(), &'static str> {
--        for (l2_nr, l2_entry) in self.lvl2.iter_mut().enumerate() {
--            *l2_entry =
--                TableDescriptor::from_next_lvl_table_addr(self.lvl3[l2_nr].phys_start_addr_usize());
 +    /// The start address of the table's MMIO range.
 +    #[inline(always)]
 +    fn mmio_start_addr(&self) -> Address<Virtual> {
@@ -544,11 +542,11 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu/trans
 +
 +    /// Helper to calculate the lvl2 and lvl3 indices from an address.
 +    #[inline(always)]
-+    fn lvl2_lvl3_index_from(
++    fn lvl2_lvl3_index_from_page(
 +        &self,
-+        addr: *const Page<Virtual>,
++        virt_page: *const Page<Virtual>,
 +    ) -> Result<(usize, usize), &'static str> {
-+        let addr = addr as usize;
++        let addr = virt_page as usize;
 +        let lvl2_index = addr >> Granule512MiB::SHIFT;
 +        let lvl3_index = (addr & Granule512MiB::MASK) >> Granule64KiB::SHIFT;
 +
@@ -559,24 +557,42 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu/trans
 +        Ok((lvl2_index, lvl3_index))
 +    }
 +
-+    /// Returns the PageDescriptor corresponding to the supplied Page.
++    /// Sets the PageDescriptor corresponding to the supplied page address.
+     ///
+-    /// - Modifies a `static mut`. Ensure it only happens from here.
+-    pub unsafe fn populate_tt_entries(&mut self) -> Result<(), &'static str> {
+-        for (l2_nr, l2_entry) in self.lvl2.iter_mut().enumerate() {
+-            *l2_entry =
+-                TableDescriptor::from_next_lvl_table_addr(self.lvl3[l2_nr].phys_start_addr_usize());
++    /// Doesn't allow overriding an already valid page.
 +    #[inline(always)]
-+    fn page_descriptor_from(
++    fn set_page_descriptor_from_page(
 +        &mut self,
-+        addr: *const Page<Virtual>,
-+    ) -> Result<&mut PageDescriptor, &'static str> {
-+        let (lvl2_index, lvl3_index) = self.lvl2_lvl3_index_from(addr)?;
-+
-+        Ok(&mut self.lvl3[lvl2_index][lvl3_index])
-+    }
-+}
-+
-+//------------------------------------------------------------------------------
-+// OS Interface Code
-+//------------------------------------------------------------------------------
++        virt_page: *const Page<Virtual>,
++        new_desc: &PageDescriptor,
++    ) -> Result<(), &'static str> {
++        let (lvl2_index, lvl3_index) = self.lvl2_lvl3_index_from_page(virt_page)?;
++        let desc = &mut self.lvl3[lvl2_index][lvl3_index];
 
 -            for (l3_nr, l3_entry) in self.lvl3[l2_nr].iter_mut().enumerate() {
 -                let virt_addr = (l2_nr << Granule512MiB::SHIFT) + (l3_nr << Granule64KiB::SHIFT);
++        if desc.is_valid() {
++            return Err("Virtual page is already mapped");
++        }
+
+-                let (phys_output_addr, attribute_fields) =
+-                    bsp::memory::mmu::virt_mem_layout().virt_addr_properties(virt_addr)?;
++        *desc = *new_desc;
++        Ok(())
++    }
++}
+
+-                *l3_entry = PageDescriptor::from_output_addr(phys_output_addr, &attribute_fields);
+-            }
++//------------------------------------------------------------------------------
++// OS Interface Code
++//------------------------------------------------------------------------------
++
 +impl<const NUM_TABLES: usize> memory::mmu::translation_table::interface::TranslationTable
 +    for FixedSizeTranslationTable<NUM_TABLES>
 +{
@@ -587,9 +603,10 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu/trans
 +
 +        // Populate the l2 entries.
 +        for (lvl2_nr, lvl2_entry) in self.lvl2.iter_mut().enumerate() {
-+            let desc =
-+                TableDescriptor::from_next_lvl_table_addr(self.lvl3[lvl2_nr].phys_start_addr());
-+            *lvl2_entry = desc;
++            let phys_table_addr = self.lvl3[lvl2_nr].phys_start_addr();
++
++            let new_desc = TableDescriptor::from_next_lvl_table_addr(phys_table_addr);
++            *lvl2_entry = new_desc;
 +        }
 +
 +        self.cur_l3_mmio_index = Self::L3_MMIO_START_INDEX;
@@ -608,33 +625,28 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu/trans
 +    ) -> Result<(), &'static str> {
 +        assert!(self.initialized, "Translation tables not initialized");
 +
-+        let p = phys_pages.as_slice();
 +        let v = virt_pages.as_slice();
++        let p = phys_pages.as_slice();
 +
 +        // No work to do for empty slices.
 +        if v.is_empty() {
 +            return Ok(());
 +        }
-
--                let (phys_output_addr, attribute_fields) =
--                    bsp::memory::mmu::virt_mem_layout().virt_addr_properties(virt_addr)?;
++
 +        if v.len() != p.len() {
 +            return Err("Tried to map page slices with unequal sizes");
 +        }
-
--                *l3_entry = PageDescriptor::from_output_addr(phys_output_addr, &attribute_fields);
++
 +        if p.last().unwrap().as_ptr() >= bsp::memory::mmu::phys_addr_space_end_page() {
 +            return Err("Tried to map outside of physical address space");
 +        }
 +
 +        let iter = p.iter().zip(v.iter());
 +        for (phys_page, virt_page) in iter {
-+            let page_descriptor = self.page_descriptor_from(virt_page.as_ptr())?;
-+            if page_descriptor.is_valid() {
-+                return Err("Virtual page is already mapped");
-             }
++            let new_desc = PageDescriptor::from_output_page(phys_page.as_ptr(), attr);
++            let virt_page = virt_page.as_ptr();
 +
-+            *page_descriptor = PageDescriptor::from_output_addr(phys_page.as_ptr(), attr);
++            self.set_page_descriptor_from_page(virt_page, &new_desc)?;
          }
 
          Ok(())
@@ -680,7 +692,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu/trans
      }
  }
 
-@@ -296,6 +441,9 @@
+@@ -296,6 +449,9 @@
  //--------------------------------------------------------------------------------------------------
 
  #[cfg(test)]
@@ -1468,7 +1480,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/link.ld 14_vir
 diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs
 --- 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs
 +++ 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs
-@@ -4,70 +4,157 @@
+@@ -4,70 +4,150 @@
 
  //! BSP Memory Management Unit.
 
@@ -1483,7 +1495,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
 +            AccessPermissions, AddressSpace, AssociatedTranslationTable, AttributeFields,
 +            MemAttributes, Page, PageSliceDescriptor, TranslationGranule,
 +        },
-+        Physical, Virtual,
++        Address, Physical, Virtual,
 +    },
 +    synchronization::InitStateLock,
 +};
@@ -1504,16 +1516,16 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
 +/// The translation granule chosen by this BSP. This will be used everywhere else in the kernel to
 +/// derive respective data structures and their sizes. For example, the `crate::memory::mmu::Page`.
 +pub type KernelGranule = TranslationGranule<{ 64 * 1024 }>;
-+
+
+-const NUM_MEM_RANGES: usize = 2;
 +/// The kernel's virtual address space defined by this BSP.
 +pub type KernelVirtAddrSpace = AddressSpace<{ 8 * 1024 * 1024 * 1024 }>;
 
--const NUM_MEM_RANGES: usize = 2;
+-/// The virtual memory layout.
 +//--------------------------------------------------------------------------------------------------
 +// Global instances
 +//--------------------------------------------------------------------------------------------------
-
--/// The virtual memory layout.
++
 +/// The kernel translation tables.
  ///
 -/// The layout must contain only special ranges, aka anything that is _not_ normal cacheable DRAM.
@@ -1571,8 +1583,10 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
 +    let num_pages = size_to_num_pages(super::rx_size());
 +
 +    PageSliceDescriptor::from_addr(super::virt_rx_start(), num_pages)
-+}
-+
+ }
+
+-fn mmio_range_inclusive() -> RangeInclusive<usize> {
+-    RangeInclusive::new(memory_map::mmio::START, memory_map::mmio::END_INCLUSIVE)
 +/// The Read+Write (RW) pages of the kernel binary.
 +fn virt_rw_page_desc() -> PageSliceDescriptor<Virtual> {
 +    let num_pages = size_to_num_pages(super::rw_size());
@@ -1587,23 +1601,14 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
 +    PageSliceDescriptor::from_addr(super::virt_boot_core_stack_start(), num_pages)
 +}
 +
-+// The binary is still identity mapped, so we don't need to convert in the following.
++// The binary is still identity mapped, so use this trivial conversion function for mapping below.
 +
-+/// The Read+Execute (RX) pages of the kernel binary.
-+fn phys_rx_page_desc() -> PageSliceDescriptor<Physical> {
-+    virt_rx_page_desc().into()
- }
-
--fn mmio_range_inclusive() -> RangeInclusive<usize> {
--    RangeInclusive::new(memory_map::mmio::START, memory_map::mmio::END_INCLUSIVE)
-+/// The Read+Write (RW) pages of the kernel binary.
-+fn phys_rw_page_desc() -> PageSliceDescriptor<Physical> {
-+    virt_rw_page_desc().into()
-+}
++fn kernel_virt_to_phys_page_slice(
++    virt_slice: PageSliceDescriptor<Virtual>,
++) -> PageSliceDescriptor<Physical> {
++    let phys_start_addr = Address::<Physical>::new(virt_slice.start_addr().into_usize());
 +
-+/// The boot core's stack.
-+fn phys_boot_core_stack_page_desc() -> PageSliceDescriptor<Physical> {
-+    virt_boot_core_stack_page_desc().into()
++    PageSliceDescriptor::from_addr(phys_start_addr, virt_slice.num_pages())
  }
 
  //--------------------------------------------------------------------------------------------------
@@ -1635,7 +1640,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
 +    generic_mmu::kernel_map_pages_at(
 +        "Kernel code and RO data",
 +        &virt_rx_page_desc(),
-+        &phys_rx_page_desc(),
++        &kernel_virt_to_phys_page_slice(virt_rx_page_desc()),
 +        &AttributeFields {
 +            mem_attributes: MemAttributes::CacheableDRAM,
 +            acc_perms: AccessPermissions::ReadOnly,
@@ -1646,7 +1651,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
 +    generic_mmu::kernel_map_pages_at(
 +        "Kernel data and bss",
 +        &virt_rw_page_desc(),
-+        &phys_rw_page_desc(),
++        &kernel_virt_to_phys_page_slice(virt_rw_page_desc()),
 +        &AttributeFields {
 +            mem_attributes: MemAttributes::CacheableDRAM,
 +            acc_perms: AccessPermissions::ReadWrite,
@@ -1657,7 +1662,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
 +    generic_mmu::kernel_map_pages_at(
 +        "Kernel boot-core stack",
 +        &virt_boot_core_stack_page_desc(),
-+        &phys_boot_core_stack_page_desc(),
++        &kernel_virt_to_phys_page_slice(virt_boot_core_stack_page_desc()),
 +        &AttributeFields {
 +            mem_attributes: MemAttributes::CacheableDRAM,
 +            acc_perms: AccessPermissions::ReadWrite,
@@ -1669,7 +1674,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -77,19 +164,24 @@
+@@ -77,19 +157,24 @@
  #[cfg(test)]
  mod tests {
      use super::*;
@@ -1701,7 +1706,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
              assert!(end >= start);
          }
      }
-@@ -97,18 +189,38 @@
+@@ -97,18 +182,38 @@
      /// Ensure the kernel's virtual memory layout is free of overlaps.
      #[kernel_test]
      fn virt_mem_layout_has_no_overlaps() {
@@ -2482,7 +2487,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/translation_table.r
 diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/types.rs 14_virtual_mem_part2_mmio_remap/src/memory/mmu/types.rs
 --- 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/types.rs
 +++ 14_virtual_mem_part2_mmio_remap/src/memory/mmu/types.rs
-@@ -0,0 +1,210 @@
+@@ -0,0 +1,201 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -2491,7 +2496,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/types.rs 14_virtual
 +
 +use crate::{
 +    bsp, common,
-+    memory::{Address, AddressType, Physical, Virtual},
++    memory::{Address, AddressType, Physical},
 +};
 +use core::{convert::From, marker::PhantomData};
 +
@@ -2577,11 +2582,11 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/types.rs 14_virtual
 +    }
 +
 +    /// Return a pointer to the first page of the described slice.
-+    const fn first_page_ptr(&self) -> *const Page<ATYPE> {
++    const fn first_page(&self) -> *const Page<ATYPE> {
 +        self.start.into_usize() as *const _
 +    }
 +
-+    /// Return the number of Pages the slice describes.
++    /// Return the number of pages the slice describes.
 +    pub const fn num_pages(&self) -> usize {
 +        self.num_pages
 +    }
@@ -2611,22 +2616,13 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/types.rs 14_virtual
 +        (addr >= self.start_addr()) && (addr <= self.end_addr_inclusive())
 +    }
 +
-+    /// Return a non-mutable slice of Pages.
++    /// Return a non-mutable slice of pages.
 +    ///
 +    /// # Safety
 +    ///
 +    /// - Same as applies for `core::slice::from_raw_parts`.
 +    pub unsafe fn as_slice(&self) -> &[Page<ATYPE>] {
-+        core::slice::from_raw_parts(self.first_page_ptr(), self.num_pages)
-+    }
-+}
-+
-+impl From<PageSliceDescriptor<Virtual>> for PageSliceDescriptor<Physical> {
-+    fn from(desc: PageSliceDescriptor<Virtual>) -> Self {
-+        Self {
-+            start: Address::new(desc.start.into_usize()),
-+            num_pages: desc.num_pages,
-+        }
++        core::slice::from_raw_parts(self.first_page(), self.num_pages)
 +    }
 +}
 +

@@ -12,7 +12,7 @@ use crate::{
             AccessPermissions, AddressSpace, AssociatedTranslationTable, AttributeFields,
             MemAttributes, Page, PageSliceDescriptor, TranslationGranule,
         },
-        Physical, Virtual,
+        Address, Physical, Virtual,
     },
     synchronization::InitStateLock,
 };
@@ -81,21 +81,14 @@ fn virt_boot_core_stack_page_desc() -> PageSliceDescriptor<Virtual> {
     PageSliceDescriptor::from_addr(super::virt_boot_core_stack_start(), num_pages)
 }
 
-// The binary is still identity mapped, so we don't need to convert in the following.
+// The binary is still identity mapped, so use this trivial conversion function for mapping below.
 
-/// The Read+Execute (RX) pages of the kernel binary.
-fn phys_rx_page_desc() -> PageSliceDescriptor<Physical> {
-    virt_rx_page_desc().into()
-}
+fn kernel_virt_to_phys_page_slice(
+    virt_slice: PageSliceDescriptor<Virtual>,
+) -> PageSliceDescriptor<Physical> {
+    let phys_start_addr = Address::<Physical>::new(virt_slice.start_addr().into_usize());
 
-/// The Read+Write (RW) pages of the kernel binary.
-fn phys_rw_page_desc() -> PageSliceDescriptor<Physical> {
-    virt_rw_page_desc().into()
-}
-
-/// The boot core's stack.
-fn phys_boot_core_stack_page_desc() -> PageSliceDescriptor<Physical> {
-    virt_boot_core_stack_page_desc().into()
+    PageSliceDescriptor::from_addr(phys_start_addr, virt_slice.num_pages())
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -124,7 +117,7 @@ pub unsafe fn kernel_map_binary() -> Result<(), &'static str> {
     generic_mmu::kernel_map_pages_at(
         "Kernel code and RO data",
         &virt_rx_page_desc(),
-        &phys_rx_page_desc(),
+        &kernel_virt_to_phys_page_slice(virt_rx_page_desc()),
         &AttributeFields {
             mem_attributes: MemAttributes::CacheableDRAM,
             acc_perms: AccessPermissions::ReadOnly,
@@ -135,7 +128,7 @@ pub unsafe fn kernel_map_binary() -> Result<(), &'static str> {
     generic_mmu::kernel_map_pages_at(
         "Kernel data and bss",
         &virt_rw_page_desc(),
-        &phys_rw_page_desc(),
+        &kernel_virt_to_phys_page_slice(virt_rw_page_desc()),
         &AttributeFields {
             mem_attributes: MemAttributes::CacheableDRAM,
             acc_perms: AccessPermissions::ReadWrite,
@@ -146,7 +139,7 @@ pub unsafe fn kernel_map_binary() -> Result<(), &'static str> {
     generic_mmu::kernel_map_pages_at(
         "Kernel boot-core stack",
         &virt_boot_core_stack_page_desc(),
-        &phys_boot_core_stack_page_desc(),
+        &kernel_virt_to_phys_page_slice(virt_boot_core_stack_page_desc()),
         &AttributeFields {
             mem_attributes: MemAttributes::CacheableDRAM,
             acc_perms: AccessPermissions::ReadWrite,

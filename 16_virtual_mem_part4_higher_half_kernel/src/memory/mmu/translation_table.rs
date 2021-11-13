@@ -10,7 +10,7 @@ mod arch_translation_table;
 
 use crate::memory::{
     mmu::{AttributeFields, PageSliceDescriptor},
-    Physical, Virtual,
+    Address, Page, Physical, Virtual,
 };
 
 //--------------------------------------------------------------------------------------------------
@@ -67,6 +67,30 @@ pub mod interface {
 
         /// Check if a virtual page splice is in the "MMIO region".
         fn is_virt_page_slice_mmio(&self, virt_pages: &PageSliceDescriptor<Virtual>) -> bool;
+
+        /// Try to translate a virtual page pointer to a physical page pointer.
+        ///
+        /// Will only succeed if there exists a valid mapping for the input page.
+        fn try_virt_page_to_phys_page(
+            &self,
+            virt_page: *const Page<Virtual>,
+        ) -> Result<*const Page<Physical>, &'static str>;
+
+        /// Try to get the attributes of a page.
+        ///
+        /// Will only succeed if there exists a valid mapping for the input page.
+        fn try_page_attributes(
+            &self,
+            virt_page: *const Page<Virtual>,
+        ) -> Result<AttributeFields, &'static str>;
+
+        /// Try to translate a virtual address to a physical address.
+        ///
+        /// Will only succeed if there exists a valid mapping for the input address.
+        fn try_virt_addr_to_phys_addr(
+            &self,
+            virt_addr: Address<Virtual>,
+        ) -> Result<Address<Physical>, &'static str>;
     }
 }
 

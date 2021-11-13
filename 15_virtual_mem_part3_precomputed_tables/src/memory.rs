@@ -6,13 +6,13 @@
 
 pub mod mmu;
 
-use crate::common;
+use crate::{bsp, common};
 use core::{
-    convert::TryFrom,
     fmt,
     marker::PhantomData,
     ops::{AddAssign, SubAssign},
 };
+use mmu::Page;
 
 //--------------------------------------------------------------------------------------------------
 // Public Definitions
@@ -66,13 +66,16 @@ impl<ATYPE: AddressType> Address<ATYPE> {
     pub const fn into_usize(self) -> usize {
         self.value
     }
-}
 
-impl TryFrom<Address<Virtual>> for Address<Physical> {
-    type Error = mmu::TranslationError;
+    /// Return a pointer to the page that contains this address.
+    pub const fn as_page_ptr(&self) -> *const Page<ATYPE> {
+        self.align_down(bsp::memory::mmu::KernelGranule::SIZE)
+            .into_usize() as *const _
+    }
 
-    fn try_from(virt: Address<Virtual>) -> Result<Self, Self::Error> {
-        mmu::try_virt_to_phys(virt)
+    /// Return the address' offset into the underlying page.
+    pub const fn offset_into_page(&self) -> usize {
+        self.value & bsp::memory::mmu::KernelGranule::MASK
     }
 }
 

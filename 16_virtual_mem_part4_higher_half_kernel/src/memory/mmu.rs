@@ -33,14 +33,6 @@ pub enum MMUEnableError {
     Other(&'static str),
 }
 
-/// Translation error variants.
-#[allow(missing_docs)]
-#[derive(Debug)]
-pub enum TranslationError {
-    MMUDisabled,
-    Aborted,
-}
-
 /// Memory Management interfaces.
 pub mod interface {
     use super::*;
@@ -59,14 +51,6 @@ pub mod interface {
 
         /// Returns true if the MMU is enabled, false otherwise.
         fn is_enabled(&self) -> bool;
-
-        /// Try to translate a virtual address to a physical address.
-        ///
-        /// Will only succeed if there exists a valid mapping for the input VA.
-        fn try_virt_to_phys(
-            &self,
-            virt: Address<Virtual>,
-        ) -> Result<Address<Physical>, TranslationError>;
     }
 }
 
@@ -245,11 +229,34 @@ pub unsafe fn kernel_map_mmio(
     Ok(virt_addr + offset_into_start_page)
 }
 
-/// Try to translate a virtual address to a physical address.
+/// Try to translate a kernel virtual page pointer to a physical page pointer.
 ///
-/// Will only succeed if there exists a valid mapping for the input VA.
-pub fn try_virt_to_phys(virt: Address<Virtual>) -> Result<Address<Physical>, TranslationError> {
-    arch_mmu::mmu().try_virt_to_phys(virt)
+/// Will only succeed if there exists a valid mapping for the input page.
+pub fn try_kernel_virt_page_to_phys_page(
+    virt_page: *const Page<Virtual>,
+) -> Result<*const Page<Physical>, &'static str> {
+    bsp::memory::mmu::kernel_translation_tables()
+        .read(|tables| tables.try_virt_page_to_phys_page(virt_page))
+}
+
+/// Try to get the attributes of a kernel page.
+///
+/// Will only succeed if there exists a valid mapping for the input page.
+pub fn try_kernel_page_attributes(
+    virt_page: *const Page<Virtual>,
+) -> Result<AttributeFields, &'static str> {
+    bsp::memory::mmu::kernel_translation_tables()
+        .read(|tables| tables.try_page_attributes(virt_page))
+}
+
+/// Try to translate a kernel virtual address to a physical address.
+///
+/// Will only succeed if there exists a valid mapping for the input address.
+fn try_kernel_virt_addr_to_phys_addr(
+    virt_addr: Address<Virtual>,
+) -> Result<Address<Physical>, &'static str> {
+    bsp::memory::mmu::kernel_translation_tables()
+        .read(|tables| tables.try_virt_addr_to_phys_addr(virt_addr))
 }
 
 /// Enable the MMU and data + instruction caching.
