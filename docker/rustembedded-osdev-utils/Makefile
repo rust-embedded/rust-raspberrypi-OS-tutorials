@@ -2,10 +2,24 @@
 ##
 ## Copyright (c) 2019-2021 Andre Richter <andre.o.richter@gmail.com>
 
-default: docker_build
+# Reference followed: https://www.docker.com/blog/getting-started-with-docker-for-arm-on-linux
 
-docker_build:
+TAG=2021.11
+
+default: build_local
+
+build_local:
 	cp ../../Gemfile .
-	docker build -t rustembedded/osdev-utils:2021.11 \
-	--build-arg VCS_REF=`git rev-parse --short HEAD` .
+	docker build                                           \
+	    --tag rustembedded/osdev-utils:$(TAG)              \
+	    --build-arg VCS_REF=`git rev-parse --short HEAD` . \
+	rm Gemfile
+
+buildx_push:
+	cp ../../Gemfile .
+	docker buildx build                                    \
+	    --push                                             \
+	    --platform linux/arm64/v8,linux/amd64              \
+	    --tag rustembedded/osdev-utils:$(TAG)              \
+	    --build-arg VCS_REF=`git rev-parse --short HEAD` .
 	rm Gemfile

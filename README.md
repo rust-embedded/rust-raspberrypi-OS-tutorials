@@ -59,13 +59,12 @@ moment though.
 
 ## 🛠 System Requirements
 
-The tutorials are primarily targeted at **Linux**-based distributions. Most stuff will also work on
-other Unix flavors such as **macOS**, but this is only _experimental_.
+The tutorials are primarily targeted at **Linux**-based distributions. Most stuff will also work on **macOS**, but this is only _experimental_.
 
 ### 🚀 The tl;dr Version
 
-1. [Install Docker][install_docker].
-1. Ensure your user account is in the [docker group].
+1. [Install Docker Desktop][install_docker].
+1. (**Linux only**) Ensure your user account is in the [docker group].
 1. Prepare the `Rust` toolchain. Most of it will be handled on first use through the
    [rust-toolchain](rust-toolchain) file. What's left for us to do is:
    1. If you already have a version of Rust installed:
@@ -82,12 +81,12 @@ other Unix flavors such as **macOS**, but this is only _experimental_.
       ```
 
 1. In case you use `Visual Studio Code`, I strongly recommend installing the [Rust Analyzer extension].
-1. If you are **NOT** running Linux, some `Ruby` gems are needed as well:
+1. (**macOS only**) Install a few `Ruby` gems.
+
+   Run this in the repository root folder:
 
    ```bash
-   sudo gem install bundler
-   bundle config set path '.vendor/bundle'
-   bundle install
+   bundle install --path .vendor/bundle --without development
    ```
 
 [docker group]: https://docs.docker.com/engine/install/linux-postinstall/

@@ -5,6 +5,8 @@
 FROM ubuntu:20.04
 
 ARG VCS_REF
+ARG GCC_AARCH64=https://developer.arm.com/-/media/Files/downloads/gnu-a/10.3-2021.07/binrel/gcc-arm-10.3-2021.07-aarch64-aarch64-none-elf.tar.xz
+ARG GCC_X86_64=https://developer.arm.com/-/media/Files/downloads/gnu-a/10.3-2021.07/binrel/gcc-arm-10.3-2021.07-x86_64-aarch64-none-elf.tar.xz
 
 LABEL org.label-schema.vcs-ref=$VCS_REF \
     org.label-schema.vcs-url="https://github.com/rust-embedded/rust-raspberrypi-OS-tutorials"
@@ -40,6 +42,15 @@ RUN set -ex;                                      \
         ruby                                      \
         ruby-dev                                  \
     ;                                             \
+    # GCC AArch64 tools
+    if [ "$(uname -m)" = "aarch64" ]; then wget ${GCC_AARCH64}; else wget ${GCC_X86_64}; fi; \
+    tar -xf gcc-arm-10*;                                                                     \
+    cp                                                                                       \
+        gcc-arm-10*/bin/aarch64-none-elf-objdump                                             \
+        gcc-arm-10*/bin/aarch64-none-elf-readelf                                             \
+        gcc-arm-10*/bin/aarch64-none-elf-nm                                                  \
+        /usr/local/bin/;                                                                     \
+    rm -rf gcc-arm-10*;                                                                      \
     # Ruby dependencies
     gem install bundler;                             \
     bundle config set --local without 'development'; \
@@ -51,7 +62,7 @@ RUN set -ex;                                      \
     ./configure --target-list=aarch64-softmmu --enable-modules \
         --enable-tcg-interpreter --enable-debug-tcg            \
         --python=/usr/bin/python3;                             \
-    make -j8;                                                  \
+    make -j10;                                                 \
     make install;                                              \
     cd ..;                                                     \
     rm -rf qemu;                                               \
@@ -60,19 +71,10 @@ RUN set -ex;                                      \
     cd openocd;                                                         \
     ./bootstrap;                                                        \
     ./configure --enable-ftdi;                                          \
-    make -j8;                                                           \
+    make -j10;                                                          \
     make install;                                                       \
     # GDB
     wget -P ~ git.io/.gdbinit; \
-    # GCC AArch64 tools
-    wget https://developer.arm.com/-/media/Files/downloads/gnu-a/10.2-2020.11/binrel/gcc-arm-10.2-2020.11-x86_64-aarch64-none-elf.tar.xz; \
-    tar -xf gcc-arm-10*;                                                                                                                  \
-    cp                                                                                                                                    \
-        gcc-arm-10*/bin/aarch64-none-elf-objdump                                                                                          \
-        gcc-arm-10*/bin/aarch64-none-elf-readelf                                                                                          \
-        gcc-arm-10*/bin/aarch64-none-elf-nm                                                                                               \
-        /usr/local/bin/;                                                                                                                  \
-    rm -rf gcc-arm-10*;                                                                                                                   \
     # Cleanup
     apt-get purge -y --auto-remove $tempPkgs; \
     apt-get autoremove -q -y;                 \
