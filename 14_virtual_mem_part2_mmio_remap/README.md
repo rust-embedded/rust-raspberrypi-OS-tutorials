@@ -57,8 +57,8 @@ separation, this tutorial makes a start by changing the following things:
 
 1. Instead of bulk-`identity mapping` the whole of the board's address space, only the particular
    parts that are needed will be mapped.
-1. For now, the `kernel binary` stays identity mapped. This will be changed in the in the coming
-   tutorials as it is a quite difficult and peculiar exercise to remap the kernel.
+1. For now, the `kernel binary` stays identity mapped. This will be changed in the coming tutorials
+   as it is a quite difficult and peculiar exercise to remap the kernel.
 1. Device `MMIO regions` are lazily remapped during a device driver's `init()`.
    1. A dedicated region of virtual addresses that we reserve using `BSP` code and the `linker
       script` is used for this.
@@ -162,8 +162,8 @@ use:
 /// Prevents mapping into the MMIO range of the tables.
 pub unsafe fn kernel_map_at(
     name: &'static str,
-    virt_pages: &MemoryRegion<Virtual>,
-    phys_pages: &MemoryRegion<Physical>,
+    virt_region: &MemoryRegion<Virtual>,
+    phys_region: &MemoryRegion<Physical>,
     attr: &AttributeFields,
 ) -> Result<(), &'static str>;
 
@@ -3207,11 +3207,11 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu.rs 14_virtual_mem_p
 +/// - Does not prevent aliasing. Currently, the callers must be trusted.
 +pub unsafe fn kernel_map_at(
 +    name: &'static str,
-+    virt_pages: &MemoryRegion<Virtual>,
-+    phys_pages: &MemoryRegion<Physical>,
++    virt_region: &MemoryRegion<Virtual>,
++    phys_region: &MemoryRegion<Physical>,
 +    attr: &AttributeFields,
 +) -> Result<(), &'static str> {
-+    if bsp::memory::mmu::virt_mmio_remap_region().overlaps(virt_pages) {
++    if bsp::memory::mmu::virt_mmio_remap_region().overlaps(virt_region) {
 +        return Err("Attempt to manually map into MMIO region");
      }
 -}
@@ -3238,7 +3238,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu.rs 14_virtual_mem_p
 -        } else {
 -            (size, "Byte")
 -        };
-+    kernel_map_at_unchecked(name, virt_pages, phys_pages, attr)?;
++    kernel_map_at_unchecked(name, virt_region, phys_region, attr)?;
 
 -        let attr = match self.attribute_fields.mem_attributes {
 -            MemAttributes::CacheableDRAM => "C",

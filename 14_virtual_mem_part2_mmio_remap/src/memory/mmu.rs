@@ -165,15 +165,15 @@ impl<const AS_SIZE: usize> AddressSpace<AS_SIZE> {
 /// - Does not prevent aliasing. Currently, the callers must be trusted.
 pub unsafe fn kernel_map_at(
     name: &'static str,
-    virt_pages: &MemoryRegion<Virtual>,
-    phys_pages: &MemoryRegion<Physical>,
+    virt_region: &MemoryRegion<Virtual>,
+    phys_region: &MemoryRegion<Physical>,
     attr: &AttributeFields,
 ) -> Result<(), &'static str> {
-    if bsp::memory::mmu::virt_mmio_remap_region().overlaps(virt_pages) {
+    if bsp::memory::mmu::virt_mmio_remap_region().overlaps(virt_region) {
         return Err("Attempt to manually map into MMIO region");
     }
 
-    kernel_map_at_unchecked(name, virt_pages, phys_pages, attr)?;
+    kernel_map_at_unchecked(name, virt_region, phys_region, attr)?;
 
     Ok(())
 }

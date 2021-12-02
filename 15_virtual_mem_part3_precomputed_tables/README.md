@@ -1578,20 +1578,18 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/memory/mmu.rs 15_virtual_mem_part3
 +/// Add an entry to the mapping info record.
 +pub fn kernel_add_mapping_record(
      name: &'static str,
--    virt_pages: &MemoryRegion<Virtual>,
--    phys_pages: &MemoryRegion<Physical>,
-+    virt_region: &MemoryRegion<Virtual>,
-+    phys_region: &MemoryRegion<Physical>,
+     virt_region: &MemoryRegion<Virtual>,
+     phys_region: &MemoryRegion<Physical>,
      attr: &AttributeFields,
 -) -> Result<(), &'static str> {
--    if bsp::memory::mmu::virt_mmio_remap_region().overlaps(virt_pages) {
+-    if bsp::memory::mmu::virt_mmio_remap_region().overlaps(virt_region) {
 -        return Err("Attempt to manually map into MMIO region");
 +) {
 +    if let Err(x) = mapping_record::kernel_add(name, virt_region, phys_region, attr) {
 +        warn!("{}", x);
      }
 -
--    kernel_map_at_unchecked(name, virt_pages, phys_pages, attr)?;
+-    kernel_map_at_unchecked(name, virt_region, phys_region, attr)?;
 -
 -    Ok(())
  }
