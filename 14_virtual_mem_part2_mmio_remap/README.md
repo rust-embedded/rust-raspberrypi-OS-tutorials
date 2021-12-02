@@ -239,7 +239,7 @@ of a raw address. The following is an example for the `UART`:
 impl PL011Uart {
     /// Create an instance.
     pub const unsafe fn new(
-        phys_mmio_descriptor: memory::mmu::MMIODescriptor<Physical>,
+        mmio_descriptor: memory::mmu::MMIODescriptor,
         irq_number: bsp::device_driver::IRQNumber,
     ) -> Self {
         Self {

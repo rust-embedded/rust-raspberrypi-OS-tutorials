@@ -528,9 +528,7 @@ pub unsafe extern "C" fn _start_rust(
 
     // Turn on the MMU for EL1.
     let addr = Address::new(phys_kernel_tables_base_addr as usize);
-    if unlikely(memory::mmu::enable_mmu_and_caching(addr).is_err()) {
-        cpu::wait_forever();
-    }
+    memory::mmu::enable_mmu_and_caching(addr).unwrap();
 
     // Use `eret` to "return" to EL1. This results in execution of kernel_init() in EL1.
     asm::eret()
