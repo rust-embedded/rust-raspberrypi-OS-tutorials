@@ -5,14 +5,12 @@
 //! BSP Memory Management Unit.
 
 use crate::{
-    common,
     memory::{
-        mmu as generic_mmu,
         mmu::{
-            AccessPermissions, AddressSpace, AssociatedTranslationTable, AttributeFields,
-            MemAttributes, Page, PageSliceDescriptor, TranslationGranule,
+            self as generic_mmu, AccessPermissions, AddressSpace, AssociatedTranslationTable,
+            AttributeFields, MemAttributes, MemoryRegion, PageAddress, TranslationGranule,
         },
-        Address, Physical, Virtual,
+        Physical, Virtual,
     },
     synchronization::InitStateLock,
 };
@@ -33,7 +31,7 @@ type KernelTranslationTable =
 pub type KernelGranule = TranslationGranule<{ 64 * 1024 }>;
 
 /// The kernel's virtual address space defined by this BSP.
-pub type KernelVirtAddrSpace = AddressSpace<{ 8 * 1024 * 1024 * 1024 }>;
+pub type KernelVirtAddrSpace = AddressSpace<{ 1024 * 1024 * 1024 }>;
 
 //--------------------------------------------------------------------------------------------------
 // Global instances
@@ -60,35 +58,48 @@ const fn size_to_num_pages(size: usize) -> usize {
     size >> KernelGranule::SHIFT
 }
 
-/// The Read+Execute (RX) pages of the kernel binary.
-fn virt_rx_page_desc() -> PageSliceDescriptor<Virtual> {
-    let num_pages = size_to_num_pages(super::rx_size());
+/// The code pages of the kernel binary.
+fn virt_code_region() -> MemoryRegion<Virtual> {
+    let num_pages = size_to_num_pages(super::code_size());
 
-    PageSliceDescriptor::from_addr(super::virt_rx_start(), num_pages)
+    let start_page_addr = super::virt_code_start();
+    let end_exclusive_page_addr = start_page_addr.checked_offset(num_pages as isize).unwrap();
+
+    MemoryRegion::new(start_page_addr, end_exclusive_page_addr)
 }
 
-/// The Read+Write (RW) pages of the kernel binary.
-fn virt_rw_page_desc() -> PageSliceDescriptor<Virtual> {
-    let num_pages = size_to_num_pages(super::rw_size());
+/// The data pages of the kernel binary.
+fn virt_data_region() -> MemoryRegion<Virtual> {
+    let num_pages = size_to_num_pages(super::data_size());
 
-    PageSliceDescriptor::from_addr(super::virt_rw_start(), num_pages)
+    let start_page_addr = super::virt_data_start();
+    let end_exclusive_page_addr = start_page_addr.checked_offset(num_pages as isize).unwrap();
+
+    MemoryRegion::new(start_page_addr, end_exclusive_page_addr)
 }
 
-/// The boot core's stack.
-fn virt_boot_core_stack_page_desc() -> PageSliceDescriptor<Virtual> {
+/// The boot core stack pages.
+fn virt_boot_core_stack_region() -> MemoryRegion<Virtual> {
     let num_pages = size_to_num_pages(super::boot_core_stack_size());
 
-    PageSliceDescriptor::from_addr(super::virt_boot_core_stack_start(), num_pages)
+    let start_page_addr = super::virt_boot_core_stack_start();
+    let end_exclusive_page_addr = start_page_addr.checked_offset(num_pages as isize).unwrap();
+
+    MemoryRegion::new(start_page_addr, end_exclusive_page_addr)
 }
 
 // The binary is still identity mapped, so use this trivial conversion function for mapping below.
 
-fn kernel_virt_to_phys_page_slice(
-    virt_slice: PageSliceDescriptor<Virtual>,
-) -> PageSliceDescriptor<Physical> {
-    let phys_start_addr = Address::<Physical>::new(virt_slice.start_addr().into_usize());
-
-    PageSliceDescriptor::from_addr(phys_start_addr, virt_slice.num_pages())
+fn kernel_virt_to_phys_region(virt_region: MemoryRegion<Virtual>) -> MemoryRegion<Physical> {
+    MemoryRegion::new(
+        PageAddress::from(virt_region.start_page_addr().into_inner().as_usize()),
+        PageAddress::from(
+            virt_region
+                .end_exclusive_page_addr()
+                .into_inner()
+                .as_usize(),
+        ),
+    )
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -100,12 +111,14 @@ pub fn kernel_translation_tables() -> &'static InitStateLock<KernelTranslationTa
     &KERNEL_TABLES
 }
 
-/// Pointer to the last page of the physical address space.
-pub fn phys_addr_space_end_page_ptr() -> *const Page<Physical> {
-    common::align_down(
-        super::phys_addr_space_end().into_usize(),
-        KernelGranule::SIZE,
-    ) as *const Page<_>
+/// The MMIO remap pages.
+pub fn virt_mmio_remap_region() -> MemoryRegion<Virtual> {
+    let num_pages = size_to_num_pages(super::mmio_remap_size());
+
+    let start_page_addr = super::virt_mmio_remap_start();
+    let end_exclusive_page_addr = start_page_addr.checked_offset(num_pages as isize).unwrap();
+
+    MemoryRegion::new(start_page_addr, end_exclusive_page_addr)
 }
 
 /// Map the kernel binary.
@@ -114,21 +127,10 @@ pub fn phys_addr_space_end_page_ptr() -> *const Page<Physical> {
 ///
 /// - Any miscalculation or attribute error will likely be fatal. Needs careful manual checking.
 pub unsafe fn kernel_map_binary() -> Result<(), &'static str> {
-    generic_mmu::kernel_map_pages_at(
-        "Kernel code and RO data",
-        &virt_rx_page_desc(),
-        &kernel_virt_to_phys_page_slice(virt_rx_page_desc()),
-        &AttributeFields {
-            mem_attributes: MemAttributes::CacheableDRAM,
-            acc_perms: AccessPermissions::ReadOnly,
-            execute_never: false,
-        },
-    )?;
-
-    generic_mmu::kernel_map_pages_at(
-        "Kernel data and bss",
-        &virt_rw_page_desc(),
-        &kernel_virt_to_phys_page_slice(virt_rw_page_desc()),
+    generic_mmu::kernel_map_at(
+        "Kernel boot-core stack",
+        &virt_boot_core_stack_region(),
+        &kernel_virt_to_phys_region(virt_boot_core_stack_region()),
         &AttributeFields {
             mem_attributes: MemAttributes::CacheableDRAM,
             acc_perms: AccessPermissions::ReadWrite,
@@ -136,10 +138,21 @@ pub unsafe fn kernel_map_binary() -> Result<(), &'static str> {
         },
     )?;
 
-    generic_mmu::kernel_map_pages_at(
-        "Kernel boot-core stack",
-        &virt_boot_core_stack_page_desc(),
-        &kernel_virt_to_phys_page_slice(virt_boot_core_stack_page_desc()),
+    generic_mmu::kernel_map_at(
+        "Kernel code and RO data",
+        &virt_code_region(),
+        &kernel_virt_to_phys_region(virt_code_region()),
+        &AttributeFields {
+            mem_attributes: MemAttributes::CacheableDRAM,
+            acc_perms: AccessPermissions::ReadOnly,
+            execute_never: false,
+        },
+    )?;
+
+    generic_mmu::kernel_map_at(
+        "Kernel data and bss",
+        &virt_data_region(),
+        &kernel_virt_to_phys_region(virt_data_region()),
         &AttributeFields {
             mem_attributes: MemAttributes::CacheableDRAM,
             acc_perms: AccessPermissions::ReadWrite,
@@ -164,18 +177,18 @@ mod tests {
     #[kernel_test]
     fn virt_mem_layout_sections_are_64KiB_aligned() {
         for i in [
-            virt_rx_page_desc,
-            virt_rw_page_desc,
-            virt_boot_core_stack_page_desc,
+            virt_boot_core_stack_region,
+            virt_code_region,
+            virt_data_region,
         ]
         .iter()
         {
-            let start: usize = i().start_addr().into_usize();
-            let end: usize = i().end_addr().into_usize();
+            let start = i().start_page_addr().into_inner();
+            let end_exclusive = i().end_exclusive_page_addr().into_inner();
 
-            assert_eq!(start % KernelGranule::SIZE, 0);
-            assert_eq!(end % KernelGranule::SIZE, 0);
-            assert!(end >= start);
+            assert!(start.is_page_aligned());
+            assert!(end_exclusive.is_page_aligned());
+            assert!(end_exclusive >= start);
         }
     }
 
@@ -183,17 +196,14 @@ mod tests {
     #[kernel_test]
     fn virt_mem_layout_has_no_overlaps() {
         let layout = [
-            virt_rx_page_desc(),
-            virt_rw_page_desc(),
-            virt_boot_core_stack_page_desc(),
+            virt_boot_core_stack_region(),
+            virt_code_region(),
+            virt_data_region(),
         ];
 
         for (i, first_range) in layout.iter().enumerate() {
             for second_range in layout.iter().skip(i + 1) {
-                assert!(!first_range.contains(second_range.start_addr()));
-                assert!(!first_range.contains(second_range.end_addr_inclusive()));
-                assert!(!second_range.contains(first_range.start_addr()));
-                assert!(!second_range.contains(first_range.end_addr_inclusive()));
+                assert!(!first_range.overlaps(second_range))
             }
         }
     }

@@ -5,10 +5,10 @@
 //! A record of mapped pages.
 
 use super::{
-    AccessPermissions, Address, AttributeFields, MMIODescriptor, MemAttributes,
-    PageSliceDescriptor, Physical, Virtual,
+    AccessPermissions, Address, AttributeFields, MMIODescriptor, MemAttributes, MemoryRegion,
+    Physical, Virtual,
 };
-use crate::{info, synchronization, synchronization::InitStateLock, warn};
+use crate::{bsp, info, synchronization, synchronization::InitStateLock, warn};
 
 //--------------------------------------------------------------------------------------------------
 // Private Definitions
@@ -19,8 +19,9 @@ use crate::{info, synchronization, synchronization::InitStateLock, warn};
 #[derive(Copy, Clone)]
 struct MappingRecordEntry {
     pub users: [Option<&'static str>; 5],
-    pub phys_pages: PageSliceDescriptor<Physical>,
+    pub phys_start_addr: Address<Physical>,
     pub virt_start_addr: Address<Virtual>,
+    pub num_pages: usize,
     pub attribute_fields: AttributeFields,
 }
 
@@ -42,14 +43,15 @@ static KERNEL_MAPPING_RECORD: InitStateLock<MappingRecord> =
 impl MappingRecordEntry {
     pub fn new(
         name: &'static str,
-        virt_pages: &PageSliceDescriptor<Virtual>,
-        phys_pages: &PageSliceDescriptor<Physical>,
+        virt_region: &MemoryRegion<Virtual>,
+        phys_region: &MemoryRegion<Physical>,
         attr: &AttributeFields,
     ) -> Self {
         Self {
             users: [Some(name), None, None, None, None],
-            phys_pages: *phys_pages,
-            virt_start_addr: virt_pages.start_addr(),
+            phys_start_addr: phys_region.start_addr(),
+            virt_start_addr: virt_region.start_addr(),
+            num_pages: phys_region.num_pages(),
             attribute_fields: *attr,
         }
     }
@@ -84,26 +86,41 @@ impl MappingRecord {
 
     fn find_duplicate(
         &mut self,
-        phys_pages: &PageSliceDescriptor<Physical>,
+        phys_region: &MemoryRegion<Physical>,
     ) -> Option<&mut MappingRecordEntry> {
         self.inner
             .iter_mut()
             .filter(|x| x.is_some())
             .map(|x| x.as_mut().unwrap())
             .filter(|x| x.attribute_fields.mem_attributes == MemAttributes::Device)
-            .find(|x| x.phys_pages == *phys_pages)
+            .find(|x| {
+                if x.phys_start_addr != phys_region.start_addr() {
+                    return false;
+                }
+
+                if x.num_pages != phys_region.num_pages() {
+                    return false;
+                }
+
+                true
+            })
     }
 
     pub fn add(
         &mut self,
         name: &'static str,
-        virt_pages: &PageSliceDescriptor<Virtual>,
-        phys_pages: &PageSliceDescriptor<Physical>,
+        virt_region: &MemoryRegion<Virtual>,
+        phys_region: &MemoryRegion<Physical>,
         attr: &AttributeFields,
     ) -> Result<(), &'static str> {
         let x = self.find_next_free()?;
 
-        *x = Some(MappingRecordEntry::new(name, virt_pages, phys_pages, attr));
+        *x = Some(MappingRecordEntry::new(
+            name,
+            virt_region,
+            phys_region,
+            attr,
+        ));
         Ok(())
     }
 
@@ -119,11 +136,11 @@ impl MappingRecord {
         info!("      -------------------------------------------------------------------------------------------------------------------------------------------");
 
         for i in self.inner.iter().flatten() {
+            let size = i.num_pages * bsp::memory::mmu::KernelGranule::SIZE;
             let virt_start = i.virt_start_addr;
-            let virt_end_inclusive = virt_start + i.phys_pages.size() - 1;
-            let phys_start = i.phys_pages.start_addr();
-            let phys_end_inclusive = i.phys_pages.end_addr_inclusive();
-            let size = i.phys_pages.size();
+            let virt_end_inclusive = virt_start + (size - 1);
+            let phys_start = i.phys_start_addr;
+            let phys_end_inclusive = phys_start + (size - 1);
 
             let (size, unit) = if (size >> MIB_RSHIFT) > 0 {
                 (size >> MIB_RSHIFT, "MiB")
@@ -186,21 +203,21 @@ use synchronization::interface::ReadWriteEx;
 /// Add an entry to the mapping info record.
 pub fn kernel_add(
     name: &'static str,
-    virt_pages: &PageSliceDescriptor<Virtual>,
-    phys_pages: &PageSliceDescriptor<Physical>,
+    virt_region: &MemoryRegion<Virtual>,
+    phys_region: &MemoryRegion<Physical>,
     attr: &AttributeFields,
 ) -> Result<(), &'static str> {
-    KERNEL_MAPPING_RECORD.write(|mr| mr.add(name, virt_pages, phys_pages, attr))
+    KERNEL_MAPPING_RECORD.write(|mr| mr.add(name, virt_region, phys_region, attr))
 }
 
 pub fn kernel_find_and_insert_mmio_duplicate(
     mmio_descriptor: &MMIODescriptor,
     new_user: &'static str,
 ) -> Option<Address<Virtual>> {
-    let phys_pages: PageSliceDescriptor<Physical> = (*mmio_descriptor).into();
+    let phys_region: MemoryRegion<Physical> = (*mmio_descriptor).into();
 
     KERNEL_MAPPING_RECORD.write(|mr| {
-        let dup = mr.find_duplicate(&phys_pages)?;
+        let dup = mr.find_duplicate(&phys_region)?;
 
         if let Err(x) = dup.add_user(new_user) {
             warn!("{}", x);

@@ -4,7 +4,7 @@
 
 # Reference followed: https://www.docker.com/blog/getting-started-with-docker-for-arm-on-linux
 
-TAG=2021.11
+TAG := 2021.12
 
 default: build_local
 
@@ -12,7 +12,7 @@ build_local:
 	cp ../../Gemfile .
 	docker build                                           \
 	    --tag rustembedded/osdev-utils:$(TAG)              \
-	    --build-arg VCS_REF=`git rev-parse --short HEAD` . \
+	    --build-arg VCS_REF=`git rev-parse --short HEAD` .
 	rm Gemfile
 
 buildx_push:

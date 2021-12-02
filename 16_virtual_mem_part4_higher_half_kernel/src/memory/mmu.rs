@@ -8,6 +8,7 @@
 #[path = "../_arch/aarch64/memory/mmu.rs"]
 mod arch_mmu;
 
+mod alloc;
 mod mapping_record;
 mod translation_table;
 mod types;
@@ -15,9 +16,10 @@ mod types;
 use crate::{
     bsp,
     memory::{Address, Physical, Virtual},
-    synchronization, warn,
+    synchronization::{self, interface::Mutex},
+    warn,
 };
-use core::fmt;
+use core::{fmt, num::NonZeroUsize};
 
 pub use types::*;
 
@@ -80,26 +82,44 @@ use interface::MMU;
 use synchronization::interface::ReadWriteEx;
 use translation_table::interface::TranslationTable;
 
-/// Map pages in the kernel's translation tables.
+/// Query the BSP for the reserved virtual addresses for MMIO remapping and initialize the kernel's
+/// MMIO VA allocator with it.
+fn kernel_init_mmio_va_allocator() {
+    let region = bsp::memory::mmu::virt_mmio_remap_region();
+
+    alloc::kernel_mmio_va_allocator().lock(|allocator| allocator.initialize(region));
+}
+
+/// Map a region in the kernel's translation tables.
 ///
 /// No input checks done, input is passed through to the architectural implementation.
 ///
 /// # Safety
 ///
-/// - See `map_pages_at()`.
+/// - See `map_at()`.
 /// - Does not prevent aliasing.
-unsafe fn kernel_map_pages_at_unchecked(
+unsafe fn kernel_map_at_unchecked(
     name: &'static str,
-    virt_pages: &PageSliceDescriptor<Virtual>,
-    phys_pages: &PageSliceDescriptor<Physical>,
+    virt_region: &MemoryRegion<Virtual>,
+    phys_region: &MemoryRegion<Physical>,
     attr: &AttributeFields,
 ) -> Result<(), &'static str> {
     bsp::memory::mmu::kernel_translation_tables()
-        .write(|tables| tables.map_pages_at(virt_pages, phys_pages, attr))?;
+        .write(|tables| tables.map_at(virt_region, phys_region, attr))?;
 
-    kernel_add_mapping_record(name, virt_pages, phys_pages, attr);
+    kernel_add_mapping_record(name, virt_region, phys_region, attr);
 
     Ok(())
+}
+
+/// Try to translate a kernel virtual address to a physical address.
+///
+/// Will only succeed if there exists a valid mapping for the input address.
+fn try_kernel_virt_addr_to_phys_addr(
+    virt_addr: Address<Virtual>,
+) -> Result<Address<Physical>, &'static str> {
+    bsp::memory::mmu::kernel_translation_tables()
+        .read(|tables| tables.try_virt_addr_to_phys_addr(virt_addr))
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -152,38 +172,13 @@ impl<const AS_SIZE: usize> AddressSpace<AS_SIZE> {
 /// Add an entry to the mapping info record.
 pub fn kernel_add_mapping_record(
     name: &'static str,
-    virt_pages: &PageSliceDescriptor<Virtual>,
-    phys_pages: &PageSliceDescriptor<Physical>,
+    virt_region: &MemoryRegion<Virtual>,
+    phys_region: &MemoryRegion<Physical>,
     attr: &AttributeFields,
 ) {
-    if let Err(x) = mapping_record::kernel_add(name, virt_pages, phys_pages, attr) {
+    if let Err(x) = mapping_record::kernel_add(name, virt_region, phys_region, attr) {
         warn!("{}", x);
     }
-}
-
-/// Raw mapping of virtual to physical pages in the kernel translation tables.
-///
-/// Prevents mapping into the MMIO range of the tables.
-///
-/// # Safety
-///
-/// - See `kernel_map_pages_at_unchecked()`.
-/// - Does not prevent aliasing. Currently, the callers must be trusted.
-pub unsafe fn kernel_map_pages_at(
-    name: &'static str,
-    virt_pages: &PageSliceDescriptor<Virtual>,
-    phys_pages: &PageSliceDescriptor<Physical>,
-    attr: &AttributeFields,
-) -> Result<(), &'static str> {
-    let is_mmio = bsp::memory::mmu::kernel_translation_tables()
-        .read(|tables| tables.is_virt_page_slice_mmio(virt_pages));
-    if is_mmio {
-        return Err("Attempt to manually map into MMIO region");
-    }
-
-    kernel_map_pages_at_unchecked(name, virt_pages, phys_pages, attr)?;
-
-    Ok(())
 }
 
 /// MMIO remapping in the kernel translation tables.
@@ -192,30 +187,33 @@ pub unsafe fn kernel_map_pages_at(
 ///
 /// # Safety
 ///
-/// - Same as `kernel_map_pages_at_unchecked()`, minus the aliasing part.
+/// - Same as `kernel_map_at_unchecked()`, minus the aliasing part.
 pub unsafe fn kernel_map_mmio(
     name: &'static str,
     mmio_descriptor: &MMIODescriptor,
 ) -> Result<Address<Virtual>, &'static str> {
-    let phys_pages: PageSliceDescriptor<Physical> = (*mmio_descriptor).into();
-    let offset_into_start_page =
-        mmio_descriptor.start_addr().into_usize() & bsp::memory::mmu::KernelGranule::MASK;
+    let phys_region = MemoryRegion::from(*mmio_descriptor);
+    let offset_into_start_page = mmio_descriptor.start_addr().offset_into_page();
 
-    // Check if an identical page slice has been mapped for another driver. If so, reuse it.
+    // Check if an identical region has been mapped for another driver. If so, reuse it.
     let virt_addr = if let Some(addr) =
         mapping_record::kernel_find_and_insert_mmio_duplicate(mmio_descriptor, name)
     {
         addr
-    // Otherwise, allocate a new virtual page slice and map it.
+    // Otherwise, allocate a new region and map it.
     } else {
-        let virt_pages: PageSliceDescriptor<Virtual> =
-            bsp::memory::mmu::kernel_translation_tables()
-                .write(|tables| tables.next_mmio_virt_page_slice(phys_pages.num_pages()))?;
+        let num_pages = match NonZeroUsize::new(phys_region.num_pages()) {
+            None => return Err("Requested 0 pages"),
+            Some(x) => x,
+        };
 
-        kernel_map_pages_at_unchecked(
+        let virt_region =
+            alloc::kernel_mmio_va_allocator().lock(|allocator| allocator.alloc(num_pages))?;
+
+        kernel_map_at_unchecked(
             name,
-            &virt_pages,
-            &phys_pages,
+            &virt_region,
+            &phys_region,
             &AttributeFields {
                 mem_attributes: MemAttributes::Device,
                 acc_perms: AccessPermissions::ReadWrite,
@@ -223,40 +221,30 @@ pub unsafe fn kernel_map_mmio(
             },
         )?;
 
-        virt_pages.start_addr()
+        virt_region.start_addr()
     };
 
     Ok(virt_addr + offset_into_start_page)
 }
 
-/// Try to translate a kernel virtual page pointer to a physical page pointer.
+/// Try to translate a kernel virtual page address to a physical page address.
 ///
 /// Will only succeed if there exists a valid mapping for the input page.
-pub fn try_kernel_virt_page_ptr_to_phys_page_ptr(
-    virt_page_ptr: *const Page<Virtual>,
-) -> Result<*const Page<Physical>, &'static str> {
+pub fn try_kernel_virt_page_addr_to_phys_page_addr(
+    virt_page_addr: PageAddress<Virtual>,
+) -> Result<PageAddress<Physical>, &'static str> {
     bsp::memory::mmu::kernel_translation_tables()
-        .read(|tables| tables.try_virt_page_ptr_to_phys_page_ptr(virt_page_ptr))
+        .read(|tables| tables.try_virt_page_addr_to_phys_page_addr(virt_page_addr))
 }
 
 /// Try to get the attributes of a kernel page.
 ///
 /// Will only succeed if there exists a valid mapping for the input page.
 pub fn try_kernel_page_attributes(
-    virt_page_ptr: *const Page<Virtual>,
+    virt_page_addr: PageAddress<Virtual>,
 ) -> Result<AttributeFields, &'static str> {
     bsp::memory::mmu::kernel_translation_tables()
-        .read(|tables| tables.try_page_attributes(virt_page_ptr))
-}
-
-/// Try to translate a kernel virtual address to a physical address.
-///
-/// Will only succeed if there exists a valid mapping for the input address.
-fn try_kernel_virt_addr_to_phys_addr(
-    virt_addr: Address<Virtual>,
-) -> Result<Address<Physical>, &'static str> {
-    bsp::memory::mmu::kernel_translation_tables()
-        .read(|tables| tables.try_virt_addr_to_phys_addr(virt_addr))
+        .read(|tables| tables.try_page_attributes(virt_page_addr))
 }
 
 /// Enable the MMU and data + instruction caching.
@@ -269,6 +257,11 @@ pub unsafe fn enable_mmu_and_caching(
     phys_tables_base_addr: Address<Physical>,
 ) -> Result<(), MMUEnableError> {
     arch_mmu::mmu().enable_mmu_and_caching(phys_tables_base_addr)
+}
+
+/// Finish initialization of the MMU subsystem.
+pub fn post_enable_init() {
+    kernel_init_mmio_va_allocator();
 }
 
 /// Human-readable print of all recorded kernel mappings.

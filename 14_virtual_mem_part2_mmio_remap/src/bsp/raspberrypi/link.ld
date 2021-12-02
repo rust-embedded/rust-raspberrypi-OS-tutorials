@@ -3,68 +3,92 @@
  * Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
  */
 
-/* The address at which the the kernel binary will be loaded by the Raspberry's firmware */
-__rpi_load_addr = 0x80000;
+PAGE_SIZE = 64K;
+PAGE_MASK = PAGE_SIZE - 1;
 
-ENTRY(__rpi_load_addr)
+__rpi_phys_dram_start_addr = 0;
 
+/* The physical address at which the the kernel binary will be loaded by the Raspberry's firmware */
+__rpi_phys_binary_load_addr = 0x80000;
+
+
+ENTRY(__rpi_phys_binary_load_addr)
+
+/* Flags:
+ *     4 == R
+ *     5 == RX
+ *     6 == RW
+ *
+ * Segments are marked PT_LOAD below so that the ELF file provides virtual and physical addresses.
+ * It doesn't mean all of them need actually be loaded.
+ */
 PHDRS
 {
-    segment_rx PT_LOAD FLAGS(5); /* 5 == RX */
-    segment_rw PT_LOAD FLAGS(6); /* 6 == RW */
+    segment_boot_core_stack PT_LOAD FLAGS(6);
+    segment_code            PT_LOAD FLAGS(5);
+    segment_data            PT_LOAD FLAGS(6);
 }
 
 SECTIONS
 {
-    . =  __rpi_load_addr;
+    . =  __rpi_phys_dram_start_addr;
+
+    /***********************************************************************************************
+    * Boot Core Stack
+    ***********************************************************************************************/
+    .boot_core_stack (NOLOAD) :
+    {
+        __boot_core_stack_start = .;         /*   ^             */
+                                             /*   | stack       */
+        . += __rpi_phys_binary_load_addr;    /*   | growth      */
+                                             /*   | direction   */
+        __boot_core_stack_end_exclusive = .; /*   |             */
+    } :segment_boot_core_stack
+
+    ASSERT((. & PAGE_MASK) == 0, "End of boot core stack is not page aligned")
 
     /***********************************************************************************************
     * Code + RO Data + Global Offset Table
     ***********************************************************************************************/
-    __rx_start = .;
+    __code_start = .;
     .text :
     {
         KEEP(*(.text._start))
         *(.text._start_arguments) /* Constants (or statics in Rust speak) read by _start(). */
         *(.text._start_rust)      /* The Rust entry point */
         *(.text*)                 /* Everything else */
-    } :segment_rx
+    } :segment_code
 
-    .rodata : ALIGN(8) { *(.rodata*) } :segment_rx
-    .got    : ALIGN(8) { *(.got)     } :segment_rx
+    .rodata : ALIGN(8) { *(.rodata*) } :segment_code
+    .got    : ALIGN(8) { *(.got)     } :segment_code
 
-    . = ALIGN(64K); /* Align to page boundary */
-    __rx_end_exclusive = .;
+    . = ALIGN(PAGE_SIZE);
+    __code_end_exclusive = .;
 
     /***********************************************************************************************
     * Data + BSS
     ***********************************************************************************************/
-    __rw_start = .;
-    .data : { *(.data*) } :segment_rw
+    __data_start = .;
+    .data : { *(.data*) } :segment_data
 
     /* Section is zeroed in pairs of u64. Align start and end to 16 bytes */
-    .bss : ALIGN(16)
+    .bss (NOLOAD) : ALIGN(16)
     {
         __bss_start = .;
         *(.bss*);
         . = ALIGN(16);
         __bss_end_exclusive = .;
-    } :NONE
+    } :segment_data
 
-    . = ALIGN(64K); /* Align to page boundary */
-    __rw_end_exclusive = .;
-
-    /***********************************************************************************************
-    * Guard Page between boot core stack and data
-    ***********************************************************************************************/
-    . += 64K;
+    . = ALIGN(PAGE_SIZE);
+    __data_end_exclusive = .;
 
     /***********************************************************************************************
-    * Boot Core Stack
+    * MMIO Remap Reserved
     ***********************************************************************************************/
-    __boot_core_stack_start = .;         /*   ^             */
-                                         /*   | stack       */
-    . += 512K;                           /*   | growth      */
-                                         /*   | direction   */
-    __boot_core_stack_end_exclusive = .; /*   |             */
+    __mmio_remap_start = .;
+    . += 8 * 1024 * 1024;
+    __mmio_remap_end_exclusive = .;
+
+    ASSERT((. & PAGE_MASK) == 0, "MMIO remap reservation is not page aligned")
 }

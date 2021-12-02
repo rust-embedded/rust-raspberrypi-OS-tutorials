@@ -972,7 +972,7 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory/mmu.r
              virtual_range: mmio_range_inclusive,
              physical_range_translation: Translation::Identity,
 @@ -67,11 +57,6 @@
-     RangeInclusive::new(super::rx_start(), super::rx_end_exclusive() - 1)
+     RangeInclusive::new(super::code_start(), super::code_end_exclusive() - 1)
  }
 
 -fn remapped_mmio_range_inclusive() -> RangeInclusive<usize> {

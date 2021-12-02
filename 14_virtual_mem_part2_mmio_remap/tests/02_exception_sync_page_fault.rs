@@ -24,7 +24,6 @@ unsafe fn kernel_init() -> ! {
     use libkernel::driver::interface::DriverManager;
 
     exception::handling_init();
-    bsp::console::qemu_bring_up_console();
 
     // This line will be printed as the test header.
     println!("Testing synchronous exception handling by causing a page fault");
@@ -42,6 +41,9 @@ unsafe fn kernel_init() -> ! {
         cpu::qemu_exit_failure()
     }
     // Printing will silently fail from here on, because the driver's MMIO is not remapped yet.
+
+    memory::mmu::post_enable_init();
+    bsp::console::qemu_bring_up_console();
 
     // Bring up the drivers needed for printing first.
     for i in bsp::driver::driver_manager()

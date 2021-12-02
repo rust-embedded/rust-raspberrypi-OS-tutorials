@@ -38,6 +38,8 @@ unsafe fn kernel_init() -> ! {
     }
     // Printing will silently fail from here on, because the driver's MMIO is not remapped yet.
 
+    memory::mmu::post_enable_init();
+
     // Bring up the drivers needed for printing first.
     for i in bsp::driver::driver_manager()
         .early_print_device_drivers()

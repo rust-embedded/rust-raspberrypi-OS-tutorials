@@ -131,7 +131,7 @@ impl memory::mmu::interface::MMU for MemoryManagementUnit {
         self.set_up_mair();
 
         // Set the "Translation Table Base Register".
-        TTBR0_EL1.set_baddr(phys_tables_base_addr.into_usize() as u64);
+        TTBR0_EL1.set_baddr(phys_tables_base_addr.as_usize() as u64);
 
         self.configure_translation_control();
 

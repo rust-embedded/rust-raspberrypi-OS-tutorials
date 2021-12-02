@@ -414,7 +414,7 @@ impl PL011Uart {
             mmio_descriptor,
             virt_mmio_start_addr: AtomicUsize::new(0),
             inner: IRQSafeNullLock::new(PL011UartInner::new(
-                mmio_descriptor.start_addr().into_usize(),
+                mmio_descriptor.start_addr().as_usize(),
             )),
             irq_number,
         }
@@ -435,10 +435,10 @@ impl driver::interface::DeviceDriver for PL011Uart {
         let virt_addr = memory::mmu::kernel_map_mmio(self.compatible(), &self.mmio_descriptor)?;
 
         self.inner
-            .lock(|inner| inner.init(Some(virt_addr.into_usize())))?;
+            .lock(|inner| inner.init(Some(virt_addr.as_usize())))?;
 
         self.virt_mmio_start_addr
-            .store(virt_addr.into_usize(), Ordering::Relaxed);
+            .store(virt_addr.as_usize(), Ordering::Relaxed);
 
         Ok(())
     }

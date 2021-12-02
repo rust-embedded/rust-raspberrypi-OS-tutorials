@@ -200,21 +200,47 @@ diff -uNr 01_wait_forever/src/bsp/raspberrypi/cpu.rs 02_runtime_init/src/bsp/ras
 diff -uNr 01_wait_forever/src/bsp/raspberrypi/link.ld 02_runtime_init/src/bsp/raspberrypi/link.ld
 --- 01_wait_forever/src/bsp/raspberrypi/link.ld
 +++ 02_runtime_init/src/bsp/raspberrypi/link.ld
-@@ -11,17 +11,43 @@
+@@ -3,6 +3,8 @@
+  * Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
+  */
+
++__rpi_phys_dram_start_addr = 0;
++
+ /* The physical address at which the the kernel binary will be loaded by the Raspberry's firmware */
+ __rpi_phys_binary_load_addr = 0x80000;
+
+@@ -13,21 +15,58 @@
+  *     4 == R
+  *     5 == RX
+  *     6 == RW
++ *
++ * Segments are marked PT_LOAD below so that the ELF file provides virtual and physical addresses.
++ * It doesn't mean all of them need actually be loaded.
+  */
  PHDRS
  {
-     segment_rx PT_LOAD FLAGS(5); /* 5 == RX */
-+    segment_rw PT_LOAD FLAGS(6); /* 6 == RW */
+-    segment_code PT_LOAD FLAGS(5);
++    segment_boot_core_stack PT_LOAD FLAGS(6);
++    segment_code            PT_LOAD FLAGS(5);
++    segment_data            PT_LOAD FLAGS(6);
  }
 
  SECTIONS
  {
-     . =  __rpi_load_addr;
-+                                        /*   ^             */
-+                                        /*   | stack       */
-+                                        /*   | growth      */
-+                                        /*   | direction   */
-+   __boot_core_stack_end_exclusive = .; /*   |             */
+-    . =  __rpi_phys_binary_load_addr;
++    . =  __rpi_phys_dram_start_addr;
++
++    /***********************************************************************************************
++    * Boot Core Stack
++    ***********************************************************************************************/
++    .boot_core_stack (NOLOAD) :
++    {
++                                             /*   ^             */
++                                             /*   | stack       */
++        . += __rpi_phys_binary_load_addr;    /*   | growth      */
++                                             /*   | direction   */
++        __boot_core_stack_end_exclusive = .; /*   |             */
++    } :segment_boot_core_stack
 
      /***********************************************************************************************
 -    * Code
@@ -226,24 +252,24 @@ diff -uNr 01_wait_forever/src/bsp/raspberrypi/link.ld 02_runtime_init/src/bsp/ra
 +        *(.text._start_arguments) /* Constants (or statics in Rust speak) read by _start(). */
 +        *(.text._start_rust)      /* The Rust entry point */
 +        *(.text*)                 /* Everything else */
-     } :segment_rx
+     } :segment_code
 +
-+    .rodata : ALIGN(8) { *(.rodata*) } :segment_rx
-+    .got    : ALIGN(8) { *(.got)     } :segment_rx
++    .rodata : ALIGN(8) { *(.rodata*) } :segment_code
++    .got    : ALIGN(8) { *(.got)     } :segment_code
 +
 +    /***********************************************************************************************
 +    * Data + BSS
 +    ***********************************************************************************************/
-+    .data : { *(.data*) } :segment_rw
++    .data : { *(.data*) } :segment_data
 +
 +    /* Section is zeroed in pairs of u64. Align start and end to 16 bytes */
-+    .bss : ALIGN(16)
++    .bss (NOLOAD) : ALIGN(16)
 +    {
 +        __bss_start = .;
 +        *(.bss*);
 +        . = ALIGN(16);
 +        __bss_end_exclusive = .;
-+    } :NONE
++    } :segment_data
  }
 
 diff -uNr 01_wait_forever/src/bsp/raspberrypi.rs 02_runtime_init/src/bsp/raspberrypi.rs

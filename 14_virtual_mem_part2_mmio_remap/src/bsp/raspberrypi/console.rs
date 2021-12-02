@@ -25,9 +25,9 @@ use core::fmt;
 pub unsafe fn panic_console_out() -> impl fmt::Write {
     use driver::interface::DeviceDriver;
 
-    let mut panic_gpio = device_driver::PanicGPIO::new(memory::map::mmio::GPIO_START.into_usize());
+    let mut panic_gpio = device_driver::PanicGPIO::new(memory::map::mmio::GPIO_START.as_usize());
     let mut panic_uart =
-        device_driver::PanicUart::new(memory::map::mmio::PL011_UART_START.into_usize());
+        device_driver::PanicUart::new(memory::map::mmio::PL011_UART_START.as_usize());
 
     // If remapping of the driver's MMIO already happened, take the remapped start address.
     // Otherwise, take a chance with the default physical address.

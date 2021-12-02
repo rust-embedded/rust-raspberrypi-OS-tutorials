@@ -17,11 +17,12 @@
 /// or indirectly.
 mod panic_exit_success;
 
-use libkernel::{bsp, cpu, exception, println};
+use libkernel::{bsp, cpu, exception, memory, println};
 
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
     exception::handling_init();
+    memory::mmu::post_enable_init();
     bsp::console::qemu_bring_up_console();
 
     // This line will be printed as the test header.

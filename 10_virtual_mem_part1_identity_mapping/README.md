@@ -224,12 +224,12 @@ enables caching for data and instructions.
 
 ### `link.ld`
 
-We need to align the `rx` segment to `64 KiB` so that it doesn't overlap with the next section that
-needs read/write attributes instead of read/execute attributes:
+We need to align the `code` segment to `64 KiB` so that it doesn't overlap with the next section
+that needs read/write attributes instead of read/execute attributes:
 
 ```ld.s
-. = ALIGN(64K); /* Align to page boundary */
-__rx_end_exclusive = .;
+. = ALIGN(PAGE_SIZE);
+__code_end_exclusive = .;
 ```
 
 This blows up the binary in size, but is a small price to pay considering that it reduces the amount
@@ -831,20 +831,35 @@ diff -uNr 09_privilege_level/src/_arch/aarch64/memory/mmu.rs 10_virtual_mem_part
 diff -uNr 09_privilege_level/src/bsp/raspberrypi/link.ld 10_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/link.ld
 --- 09_privilege_level/src/bsp/raspberrypi/link.ld
 +++ 10_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/link.ld
-@@ -26,6 +26,7 @@
+@@ -3,6 +3,9 @@
+  * Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
+  */
+
++PAGE_SIZE = 64K;
++PAGE_MASK = PAGE_SIZE - 1;
++
+ __rpi_phys_dram_start_addr = 0;
+
+ /* The physical address at which the the kernel binary will be loaded by the Raspberry's firmware */
+@@ -42,9 +45,12 @@
+         __boot_core_stack_end_exclusive = .; /*   |             */
+     } :segment_boot_core_stack
+
++    ASSERT((. & PAGE_MASK) == 0, "End of boot core stack is not page aligned")
++
      /***********************************************************************************************
      * Code + RO Data + Global Offset Table
      ***********************************************************************************************/
-+    __rx_start = .;
++    __code_start = .;
      .text :
      {
          KEEP(*(.text._start))
-@@ -37,6 +38,9 @@
-     .rodata : ALIGN(8) { *(.rodata*) } :segment_rx
-     .got    : ALIGN(8) { *(.got)     } :segment_rx
+@@ -56,6 +62,9 @@
+     .rodata : ALIGN(8) { *(.rodata*) } :segment_code
+     .got    : ALIGN(8) { *(.got)     } :segment_code
 
-+    . = ALIGN(64K); /* Align to page boundary */
-+    __rx_end_exclusive = .;
++    . = ALIGN(PAGE_SIZE);
++    __code_end_exclusive = .;
 +
      /***********************************************************************************************
      * Data + BSS
@@ -882,7 +897,7 @@ diff -uNr 09_privilege_level/src/bsp/raspberrypi/memory/mmu.rs 10_virtual_mem_pa
 +    [
 +        TranslationDescriptor {
 +            name: "Kernel code and RO data",
-+            virtual_range: rx_range_inclusive,
++            virtual_range: code_range_inclusive,
 +            physical_range_translation: Translation::Identity,
 +            attribute_fields: AttributeFields {
 +                mem_attributes: MemAttributes::CacheableDRAM,
@@ -917,10 +932,10 @@ diff -uNr 09_privilege_level/src/bsp/raspberrypi/memory/mmu.rs 10_virtual_mem_pa
 +// Private Code
 +//--------------------------------------------------------------------------------------------------
 +
-+fn rx_range_inclusive() -> RangeInclusive<usize> {
++fn code_range_inclusive() -> RangeInclusive<usize> {
 +    // Notice the subtraction to turn the exclusive end into an inclusive end.
 +    #[allow(clippy::range_minus_one)]
-+    RangeInclusive::new(super::rx_start(), super::rx_end_exclusive() - 1)
++    RangeInclusive::new(super::code_start(), super::code_end_exclusive() - 1)
 +}
 +
 +fn remapped_mmio_range_inclusive() -> RangeInclusive<usize> {
@@ -944,10 +959,36 @@ diff -uNr 09_privilege_level/src/bsp/raspberrypi/memory/mmu.rs 10_virtual_mem_pa
 diff -uNr 09_privilege_level/src/bsp/raspberrypi/memory.rs 10_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory.rs
 --- 09_privilege_level/src/bsp/raspberrypi/memory.rs
 +++ 10_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory.rs
-@@ -4,6 +4,20 @@
+@@ -3,6 +3,45 @@
+ // Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
 
  //! BSP Memory Management.
-
++//!
++//! The physical memory layout.
++//!
++//! The Raspberry's firmware copies the kernel binary to 0x8_0000. The preceding region will be used
++//! as the boot core's stack.
++//!
++//! +---------------------------------------+
++//! |                                       | 0x0
++//! |                                       |                                ^
++//! | Boot-core Stack                       |                                | stack
++//! |                                       |                                | growth
++//! |                                       |                                | direction
++//! +---------------------------------------+
++//! |                                       | code_start @ 0x8_0000
++//! | .text                                 |
++//! | .rodata                               |
++//! | .got                                  |
++//! |                                       |
++//! +---------------------------------------+
++//! |                                       | code_end_exclusive
++//! | .data                                 |
++//! | .bss                                  |
++//! |                                       |
++//! +---------------------------------------+
++//! |                                       |
++//! |                                       |
 +pub mod mmu;
 +
 +use core::cell::UnsafeCell;
@@ -958,14 +999,13 @@ diff -uNr 09_privilege_level/src/bsp/raspberrypi/memory.rs 10_virtual_mem_part1_
 +
 +// Symbols from the linker script.
 +extern "Rust" {
-+    static __rx_start: UnsafeCell<()>;
-+    static __rx_end_exclusive: UnsafeCell<()>;
++    static __code_start: UnsafeCell<()>;
++    static __code_end_exclusive: UnsafeCell<()>;
 +}
-+
+
  //--------------------------------------------------------------------------------------------------
  // Public Definitions
- //--------------------------------------------------------------------------------------------------
-@@ -11,6 +25,20 @@
+@@ -11,6 +50,20 @@
  /// The board's physical memory map.
  #[rustfmt::skip]
  pub(super) mod map {
@@ -986,7 +1026,7 @@ diff -uNr 09_privilege_level/src/bsp/raspberrypi/memory.rs 10_virtual_mem_part1_
 
      pub const GPIO_OFFSET:         usize = 0x0020_0000;
      pub const UART_OFFSET:         usize = 0x0020_1000;
-@@ -23,6 +51,7 @@
+@@ -23,6 +76,7 @@
          pub const START:            usize =         0x3F00_0000;
          pub const GPIO_START:       usize = START + GPIO_OFFSET;
          pub const PL011_UART_START: usize = START + UART_OFFSET;
@@ -994,7 +1034,7 @@ diff -uNr 09_privilege_level/src/bsp/raspberrypi/memory.rs 10_virtual_mem_part1_
      }
 
      /// Physical devices.
-@@ -33,5 +62,30 @@
+@@ -33,5 +87,29 @@
          pub const START:            usize =         0xFE00_0000;
          pub const GPIO_START:       usize = START + GPIO_OFFSET;
          pub const PL011_UART_START: usize = START + UART_OFFSET;
@@ -1006,24 +1046,23 @@ diff -uNr 09_privilege_level/src/bsp/raspberrypi/memory.rs 10_virtual_mem_part1_
 +// Private Code
 +//--------------------------------------------------------------------------------------------------
 +
-+/// Start address of the Read+Execute (RX) range.
++/// Start page address of the code segment.
 +///
 +/// # Safety
 +///
 +/// - Value is provided by the linker script and must be trusted as-is.
 +#[inline(always)]
-+fn rx_start() -> usize {
-+    unsafe { __rx_start.get() as usize }
++fn code_start() -> usize {
++    unsafe { __code_start.get() as usize }
 +}
 +
-+/// Exclusive end address of the Read+Execute (RX) range.
-+///
++/// Exclusive end page address of the code segment.
 +/// # Safety
 +///
 +/// - Value is provided by the linker script and must be trusted as-is.
 +#[inline(always)]
-+fn rx_end_exclusive() -> usize {
-+    unsafe { __rx_end_exclusive.get() as usize }
++fn code_end_exclusive() -> usize {
++    unsafe { __code_end_exclusive.get() as usize }
 +}
 
 diff -uNr 09_privilege_level/src/bsp.rs 10_virtual_mem_part1_identity_mapping/src/bsp.rs

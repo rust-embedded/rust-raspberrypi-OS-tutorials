@@ -78,7 +78,7 @@ impl PeripheralIC {
     ///
     /// - The user must ensure to provide correct MMIO descriptors.
     pub const unsafe fn new(mmio_descriptor: memory::mmu::MMIODescriptor) -> Self {
-        let addr = mmio_descriptor.start_addr().into_usize();
+        let addr = mmio_descriptor.start_addr().as_usize();
 
         Self {
             mmio_descriptor,
@@ -111,7 +111,7 @@ impl driver::interface::DeviceDriver for PeripheralIC {
 
     unsafe fn init(&self) -> Result<(), &'static str> {
         let virt_addr =
-            memory::mmu::kernel_map_mmio(self.compatible(), &self.mmio_descriptor)?.into_usize();
+            memory::mmu::kernel_map_mmio(self.compatible(), &self.mmio_descriptor)?.as_usize();
 
         self.wo_registers
             .lock(|regs| *regs = WriteOnlyRegisters::new(virt_addr));

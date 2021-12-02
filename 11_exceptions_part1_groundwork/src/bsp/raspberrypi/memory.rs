@@ -3,7 +3,32 @@
 // Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
 
 //! BSP Memory Management.
-
+//!
+//! The physical memory layout.
+//!
+//! The Raspberry's firmware copies the kernel binary to 0x8_0000. The preceding region will be used
+//! as the boot core's stack.
+//!
+//! +---------------------------------------+
+//! |                                       | 0x0
+//! |                                       |                                ^
+//! | Boot-core Stack                       |                                | stack
+//! |                                       |                                | growth
+//! |                                       |                                | direction
+//! +---------------------------------------+
+//! |                                       | code_start @ 0x8_0000
+//! | .text                                 |
+//! | .rodata                               |
+//! | .got                                  |
+//! |                                       |
+//! +---------------------------------------+
+//! |                                       | code_end_exclusive
+//! | .data                                 |
+//! | .bss                                  |
+//! |                                       |
+//! +---------------------------------------+
+//! |                                       |
+//! |                                       |
 pub mod mmu;
 
 use core::cell::UnsafeCell;
@@ -14,8 +39,8 @@ use core::cell::UnsafeCell;
 
 // Symbols from the linker script.
 extern "Rust" {
-    static __rx_start: UnsafeCell<()>;
-    static __rx_end_exclusive: UnsafeCell<()>;
+    static __code_start: UnsafeCell<()>;
+    static __code_end_exclusive: UnsafeCell<()>;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -70,22 +95,21 @@ pub(super) mod map {
 // Private Code
 //--------------------------------------------------------------------------------------------------
 
-/// Start address of the Read+Execute (RX) range.
+/// Start page address of the code segment.
 ///
 /// # Safety
 ///
 /// - Value is provided by the linker script and must be trusted as-is.
 #[inline(always)]
-fn rx_start() -> usize {
-    unsafe { __rx_start.get() as usize }
+fn code_start() -> usize {
+    unsafe { __code_start.get() as usize }
 }
 
-/// Exclusive end address of the Read+Execute (RX) range.
-///
+/// Exclusive end page address of the code segment.
 /// # Safety
 ///
 /// - Value is provided by the linker script and must be trusted as-is.
 #[inline(always)]
-fn rx_end_exclusive() -> usize {
-    unsafe { __rx_end_exclusive.get() as usize }
+fn code_end_exclusive() -> usize {
+    unsafe { __code_end_exclusive.get() as usize }
 }

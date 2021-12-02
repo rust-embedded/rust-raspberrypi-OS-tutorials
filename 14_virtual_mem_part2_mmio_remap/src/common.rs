@@ -19,3 +19,11 @@ pub const fn align_down(value: usize, alignment: usize) -> usize {
 
     value & !(alignment - 1)
 }
+
+/// Align up.
+#[inline(always)]
+pub const fn align_up(value: usize, alignment: usize) -> usize {
+    assert!(alignment.is_power_of_two());
+
+    (value + alignment - 1) & !(alignment - 1)
+}

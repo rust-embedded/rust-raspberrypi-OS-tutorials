@@ -8,10 +8,8 @@
 #[path = "../../_arch/aarch64/memory/mmu/translation_table.rs"]
 mod arch_translation_table;
 
-use crate::memory::{
-    mmu::{AttributeFields, PageSliceDescriptor},
-    Address, Physical, Virtual,
-};
+use super::{AttributeFields, MemoryRegion};
+use crate::memory::{Address, Physical, Virtual};
 
 //--------------------------------------------------------------------------------------------------
 // Architectural Public Reexports
@@ -40,7 +38,7 @@ pub mod interface {
         /// The translation table's base address to be used for programming the MMU.
         fn phys_base_address(&self) -> Address<Physical>;
 
-        /// Map the given virtual pages to the given physical pages.
+        /// Map the given virtual memory region to the given physical memory region.
         ///
         /// # Safety
         ///
@@ -49,27 +47,12 @@ pub mod interface {
         ///   mapping to the same physical memory using multiple virtual addresses, which would
         ///   break Rust's ownership assumptions. This should be protected against in the kernel's
         ///   generic MMU code.
-        unsafe fn map_pages_at(
+        unsafe fn map_at(
             &mut self,
-            virt_pages: &PageSliceDescriptor<Virtual>,
-            phys_pages: &PageSliceDescriptor<Physical>,
+            virt_region: &MemoryRegion<Virtual>,
+            phys_region: &MemoryRegion<Physical>,
             attr: &AttributeFields,
         ) -> Result<(), &'static str>;
-
-        /// Obtain a free virtual page slice in the MMIO region.
-        ///
-        /// The "MMIO region" is a distinct region of the implementor's choice, which allows
-        /// differentiating MMIO addresses from others. This can speed up debugging efforts.
-        /// Ideally, those MMIO addresses are also standing out visually so that a human eye can
-        /// identify them. For example, by allocating them from near the end of the virtual address
-        /// space.
-        fn next_mmio_virt_page_slice(
-            &mut self,
-            num_pages: usize,
-        ) -> Result<PageSliceDescriptor<Virtual>, &'static str>;
-
-        /// Check if a virtual page splice is in the "MMIO region".
-        fn is_virt_page_slice_mmio(&self, virt_pages: &PageSliceDescriptor<Virtual>) -> bool;
     }
 }
 
@@ -80,7 +63,7 @@ pub mod interface {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bsp;
+    use crate::memory::mmu::{AccessPermissions, MemAttributes, PageAddress};
     use arch_translation_table::MinSizeTranslationTable;
     use interface::TranslationTable;
     use test_macros::kernel_test;
@@ -93,20 +76,23 @@ mod tests {
 
         tables.init();
 
-        let x = tables.next_mmio_virt_page_slice(0);
-        assert!(x.is_err());
+        let virt_start_page_addr: PageAddress<Virtual> = PageAddress::from(0);
+        let virt_end_exclusive_page_addr: PageAddress<Virtual> =
+            virt_start_page_addr.checked_offset(5).unwrap();
 
-        let x = tables.next_mmio_virt_page_slice(1_0000_0000);
-        assert!(x.is_err());
+        let phys_start_page_addr: PageAddress<Physical> = PageAddress::from(0);
+        let phys_end_exclusive_page_addr: PageAddress<Physical> =
+            phys_start_page_addr.checked_offset(5).unwrap();
 
-        let x = tables.next_mmio_virt_page_slice(2).unwrap();
-        assert_eq!(x.size(), bsp::memory::mmu::KernelGranule::SIZE * 2);
+        let virt_region = MemoryRegion::new(virt_start_page_addr, virt_end_exclusive_page_addr);
+        let phys_region = MemoryRegion::new(phys_start_page_addr, phys_end_exclusive_page_addr);
 
-        assert_eq!(tables.is_virt_page_slice_mmio(&x), true);
+        let attr = AttributeFields {
+            mem_attributes: MemAttributes::CacheableDRAM,
+            acc_perms: AccessPermissions::ReadWrite,
+            execute_never: true,
+        };
 
-        assert_eq!(
-            tables.is_virt_page_slice_mmio(&PageSliceDescriptor::from_addr(Address::new(0), 1)),
-            false
-        );
+        unsafe { assert_eq!(tables.map_at(&virt_region, &phys_region, &attr), Ok(())) };
     }
 }

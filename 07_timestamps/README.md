@@ -452,17 +452,26 @@ diff -uNr 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 07
 diff -uNr 06_uart_chainloader/src/bsp/raspberrypi/link.ld 07_timestamps/src/bsp/raspberrypi/link.ld
 --- 06_uart_chainloader/src/bsp/raspberrypi/link.ld
 +++ 07_timestamps/src/bsp/raspberrypi/link.ld
-@@ -16,8 +16,7 @@
+@@ -3,6 +3,8 @@
+  * Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
+  */
+
++__rpi_phys_dram_start_addr = 0;
++
+ /* The physical address at which the the kernel binary will be loaded by the Raspberry's firmware */
+ __rpi_phys_binary_load_addr = 0x80000;
+
+@@ -26,8 +28,7 @@
 
  SECTIONS
  {
 -    /* Set the link address to 32 MiB */
 -    . = 0x2000000;
-+    . =  __rpi_load_addr;
-                                         /*   ^             */
-                                         /*   | stack       */
-                                         /*   | growth      */
-@@ -27,7 +26,6 @@
++    . =  __rpi_phys_dram_start_addr;
+
+     /***********************************************************************************************
+     * Boot Core Stack
+@@ -44,7 +45,6 @@
      /***********************************************************************************************
      * Code + RO Data + Global Offset Table
      ***********************************************************************************************/
@@ -470,16 +479,16 @@ diff -uNr 06_uart_chainloader/src/bsp/raspberrypi/link.ld 07_timestamps/src/bsp/
      .text :
      {
          KEEP(*(.text._start))
-@@ -44,10 +42,6 @@
+@@ -61,10 +61,6 @@
      ***********************************************************************************************/
-     .data : { *(.data*) } :segment_rw
+     .data : { *(.data*) } :segment_data
 
 -    /* Fill up to 8 byte, b/c relocating the binary is done in u64 chunks */
 -    . = ALIGN(8);
 -    __binary_nonzero_end_exclusive = .;
 -
      /* Section is zeroed in pairs of u64. Align start and end to 16 bytes */
-     .bss : ALIGN(16)
+     .bss (NOLOAD) : ALIGN(16)
      {
 
 diff -uNr 06_uart_chainloader/src/bsp/raspberrypi/memory.rs 07_timestamps/src/bsp/raspberrypi/memory.rs

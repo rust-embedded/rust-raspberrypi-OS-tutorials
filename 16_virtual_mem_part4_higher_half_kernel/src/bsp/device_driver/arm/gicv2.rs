@@ -133,8 +133,8 @@ impl GICv2 {
         Self {
             gicd_mmio_descriptor,
             gicc_mmio_descriptor,
-            gicd: gicd::GICD::new(gicd_mmio_descriptor.start_addr().into_usize()),
-            gicc: gicc::GICC::new(gicc_mmio_descriptor.start_addr().into_usize()),
+            gicd: gicd::GICD::new(gicd_mmio_descriptor.start_addr().as_usize()),
+            gicc: gicc::GICC::new(gicc_mmio_descriptor.start_addr().as_usize()),
             is_mmio_remapped: AtomicBool::new(false),
             handler_table: InitStateLock::new([None; Self::NUM_IRQS]),
         }
@@ -158,11 +158,11 @@ impl driver::interface::DeviceDriver for GICv2 {
 
             // GICD
             virt_addr = memory::mmu::kernel_map_mmio("GICD", &self.gicd_mmio_descriptor)?;
-            self.gicd.set_mmio(virt_addr.into_usize());
+            self.gicd.set_mmio(virt_addr.as_usize());
 
             // GICC
             virt_addr = memory::mmu::kernel_map_mmio("GICC", &self.gicc_mmio_descriptor)?;
-            self.gicc.set_mmio(virt_addr.into_usize());
+            self.gicc.set_mmio(virt_addr.as_usize());
 
             // Conclude remapping.
             self.is_mmio_remapped.store(true, Ordering::Relaxed);

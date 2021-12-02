@@ -8,7 +8,7 @@
 #![no_main]
 #![no_std]
 
-use libkernel::{bsp, console, cpu, exception, print};
+use libkernel::{bsp, console, cpu, exception, memory, print};
 
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
@@ -16,6 +16,7 @@ unsafe fn kernel_init() -> ! {
     use console::interface::*;
 
     exception::handling_init();
+    memory::mmu::post_enable_init();
     bsp::console::qemu_bring_up_console();
 
     // Handshake

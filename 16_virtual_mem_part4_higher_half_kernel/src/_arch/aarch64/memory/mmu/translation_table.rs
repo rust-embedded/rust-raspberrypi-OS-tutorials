@@ -14,11 +14,12 @@
 //! crate::memory::mmu::translation_table::arch_translation_table
 
 use crate::{
-    bsp, memory,
+    bsp,
     memory::{
+        self,
         mmu::{
             arch_mmu::{Granule512MiB, Granule64KiB},
-            AccessPermissions, AttributeFields, MemAttributes, Page, PageSliceDescriptor,
+            AccessPermissions, AttributeFields, MemAttributes, MemoryRegion, PageAddress,
         },
         Address, Physical, Virtual,
     },
@@ -142,9 +143,6 @@ pub struct FixedSizeTranslationTable<const NUM_TABLES: usize, const START_FROM_T
     /// Table descriptors, covering 512 MiB windows.
     lvl2: [TableDescriptor; NUM_TABLES],
 
-    /// Index of the next free MMIO page.
-    cur_l3_mmio_index: usize,
-
     /// Have the tables been initialized?
     initialized: bool,
 }
@@ -171,7 +169,7 @@ impl TableDescriptor {
     pub fn from_next_lvl_table_addr(phys_next_lvl_table_addr: Address<Physical>) -> Self {
         let val = InMemoryRegister::<u64, STAGE1_TABLE_DESCRIPTOR::Register>::new(0);
 
-        let shifted = phys_next_lvl_table_addr.into_usize() >> Granule64KiB::SHIFT;
+        let shifted = phys_next_lvl_table_addr.as_usize() >> Granule64KiB::SHIFT;
         val.write(
             STAGE1_TABLE_DESCRIPTOR::NEXT_LEVEL_TABLE_ADDR_64KiB.val(shifted as u64)
                 + STAGE1_TABLE_DESCRIPTOR::TYPE::Table
@@ -257,15 +255,15 @@ impl PageDescriptor {
     }
 
     /// Create an instance.
-    pub fn from_output_page_ptr(
-        phys_output_page_ptr: *const Page<Physical>,
+    pub fn from_output_page_addr(
+        phys_output_page_addr: PageAddress<Physical>,
         attribute_fields: &AttributeFields,
     ) -> Self {
         let val = InMemoryRegister::<u64, STAGE1_PAGE_DESCRIPTOR::Register>::new(0);
 
-        let shifted = phys_output_page_ptr as u64 >> Granule64KiB::SHIFT;
+        let shifted = phys_output_page_addr.into_inner().as_usize() >> Granule64KiB::SHIFT;
         val.write(
-            STAGE1_PAGE_DESCRIPTOR::OUTPUT_ADDR_64KiB.val(shifted)
+            STAGE1_PAGE_DESCRIPTOR::OUTPUT_ADDR_64KiB.val(shifted as u64)
                 + STAGE1_PAGE_DESCRIPTOR::AF::True
                 + STAGE1_PAGE_DESCRIPTOR::TYPE::Page
                 + STAGE1_PAGE_DESCRIPTOR::VALID::True
@@ -282,12 +280,11 @@ impl PageDescriptor {
     }
 
     /// Returns the output page.
-    fn output_page_ptr(&self) -> *const Page<Physical> {
+    fn output_page_addr(&self) -> PageAddress<Physical> {
         let shifted = InMemoryRegister::<u64, STAGE1_PAGE_DESCRIPTOR::Register>::new(self.value)
-            .read(STAGE1_PAGE_DESCRIPTOR::OUTPUT_ADDR_64KiB);
-        let addr = shifted << Granule64KiB::SHIFT;
+            .read(STAGE1_PAGE_DESCRIPTOR::OUTPUT_ADDR_64KiB) as usize;
 
-        addr as *const Page<Physical>
+        PageAddress::from(shifted << Granule64KiB::SHIFT)
     }
 
     /// Returns the attributes.
@@ -315,10 +312,6 @@ where
 impl<const NUM_TABLES: usize, const START_FROM_TOP: bool>
     FixedSizeTranslationTable<NUM_TABLES, START_FROM_TOP>
 {
-    // Reserve the last 256 MiB of the address space for MMIO mappings.
-    const L2_MMIO_START_INDEX: usize = NUM_TABLES - 1;
-    const L3_MMIO_START_INDEX: usize = 8192 / 2;
-
     const START_FROM_TOP_OFFSET: Address<Virtual> =
         Address::new((usize::MAX - (Granule512MiB::SIZE * NUM_TABLES)) + 1);
 
@@ -333,7 +326,6 @@ impl<const NUM_TABLES: usize, const START_FROM_TOP: bool>
         Self {
             lvl3: [[PageDescriptor::new_zeroed(); 8192]; NUM_TABLES],
             lvl2: [TableDescriptor::new_zeroed(); NUM_TABLES],
-            cur_l3_mmio_index: Self::L3_MMIO_START_INDEX,
             initialized: for_precompute,
         }
     }
@@ -347,51 +339,20 @@ impl<const NUM_TABLES: usize, const START_FROM_TOP: bool>
         Self::_new(false)
     }
 
-    /// The start address of the table's MMIO range.
-    #[inline(always)]
-    fn mmio_start_addr(&self) -> Address<Virtual> {
-        let mut addr = Address::new(
-            (Self::L2_MMIO_START_INDEX << Granule512MiB::SHIFT)
-                | (Self::L3_MMIO_START_INDEX << Granule64KiB::SHIFT),
-        );
-
-        if START_FROM_TOP {
-            addr += Self::START_FROM_TOP_OFFSET;
-        }
-
-        addr
-    }
-
-    /// The inclusive end address of the table's MMIO range.
-    #[inline(always)]
-    fn mmio_end_addr_inclusive(&self) -> Address<Virtual> {
-        let mut addr = Address::new(
-            (Self::L2_MMIO_START_INDEX << Granule512MiB::SHIFT)
-                | (8191 << Granule64KiB::SHIFT)
-                | (Granule64KiB::SIZE - 1),
-        );
-
-        if START_FROM_TOP {
-            addr += Self::START_FROM_TOP_OFFSET;
-        }
-
-        addr
-    }
-
     /// Helper to calculate the lvl2 and lvl3 indices from an address.
     #[inline(always)]
-    fn lvl2_lvl3_index_from_page_ptr(
+    fn lvl2_lvl3_index_from_page_addr(
         &self,
-        virt_page_ptr: *const Page<Virtual>,
+        virt_page_addr: PageAddress<Virtual>,
     ) -> Result<(usize, usize), &'static str> {
-        let mut addr = virt_page_ptr as usize;
+        let mut addr = virt_page_addr.into_inner();
 
         if START_FROM_TOP {
-            addr -= Self::START_FROM_TOP_OFFSET.into_usize()
+            addr = addr - Self::START_FROM_TOP_OFFSET;
         }
 
-        let lvl2_index = addr >> Granule512MiB::SHIFT;
-        let lvl3_index = (addr & Granule512MiB::MASK) >> Granule64KiB::SHIFT;
+        let lvl2_index = addr.as_usize() >> Granule512MiB::SHIFT;
+        let lvl3_index = (addr.as_usize() & Granule512MiB::MASK) >> Granule64KiB::SHIFT;
 
         if lvl2_index > (NUM_TABLES - 1) {
             return Err("Virtual page is out of bounds of translation table");
@@ -402,11 +363,11 @@ impl<const NUM_TABLES: usize, const START_FROM_TOP: bool>
 
     /// Returns the PageDescriptor corresponding to the supplied page address.
     #[inline(always)]
-    fn page_descriptor_from_page_ptr(
+    fn page_descriptor_from_page_addr(
         &self,
-        virt_page_ptr: *const Page<Virtual>,
+        virt_page_addr: PageAddress<Virtual>,
     ) -> Result<&PageDescriptor, &'static str> {
-        let (lvl2_index, lvl3_index) = self.lvl2_lvl3_index_from_page_ptr(virt_page_ptr)?;
+        let (lvl2_index, lvl3_index) = self.lvl2_lvl3_index_from_page_addr(virt_page_addr)?;
         let desc = &self.lvl3[lvl2_index][lvl3_index];
 
         Ok(desc)
@@ -416,12 +377,12 @@ impl<const NUM_TABLES: usize, const START_FROM_TOP: bool>
     ///
     /// Doesn't allow overriding an already valid page.
     #[inline(always)]
-    fn set_page_descriptor_from_page_ptr(
+    fn set_page_descriptor_from_page_addr(
         &mut self,
-        virt_page_ptr: *const Page<Virtual>,
+        virt_page_addr: PageAddress<Virtual>,
         new_desc: &PageDescriptor,
     ) -> Result<(), &'static str> {
-        let (lvl2_index, lvl3_index) = self.lvl2_lvl3_index_from_page_ptr(virt_page_ptr)?;
+        let (lvl2_index, lvl3_index) = self.lvl2_lvl3_index_from_page_addr(virt_page_addr)?;
         let desc = &mut self.lvl3[lvl2_index][lvl3_index];
 
         if desc.is_valid() {
@@ -455,105 +416,57 @@ impl<const NUM_TABLES: usize, const START_FROM_TOP: bool>
             *lvl2_entry = new_desc;
         }
 
-        self.cur_l3_mmio_index = Self::L3_MMIO_START_INDEX;
         self.initialized = true;
 
         Ok(())
     }
 
-    unsafe fn map_pages_at(
+    unsafe fn map_at(
         &mut self,
-        virt_pages: &PageSliceDescriptor<Virtual>,
-        phys_pages: &PageSliceDescriptor<Physical>,
+        virt_region: &MemoryRegion<Virtual>,
+        phys_region: &MemoryRegion<Physical>,
         attr: &AttributeFields,
     ) -> Result<(), &'static str> {
         assert!(self.initialized, "Translation tables not initialized");
 
-        let v = virt_pages.as_slice();
-        let p = phys_pages.as_slice();
-
-        // No work to do for empty slices.
-        if v.is_empty() {
-            return Ok(());
+        if virt_region.size() != phys_region.size() {
+            return Err("Tried to map memory regions with unequal sizes");
         }
 
-        if v.len() != p.len() {
-            return Err("Tried to map page slices with unequal sizes");
-        }
-
-        if p.last().unwrap().as_ptr() >= bsp::memory::mmu::phys_addr_space_end_page_ptr() {
+        if phys_region.end_exclusive_page_addr() > bsp::memory::phys_addr_space_end_exclusive_addr()
+        {
             return Err("Tried to map outside of physical address space");
         }
 
-        let iter = p.iter().zip(v.iter());
-        for (phys_page, virt_page) in iter {
-            let new_desc = PageDescriptor::from_output_page_ptr(phys_page.as_ptr(), attr);
-            let virt_page = virt_page.as_ptr();
+        let iter = phys_region.into_iter().zip(virt_region.into_iter());
+        for (phys_page_addr, virt_page_addr) in iter {
+            let new_desc = PageDescriptor::from_output_page_addr(phys_page_addr, attr);
+            let virt_page = virt_page_addr;
 
-            self.set_page_descriptor_from_page_ptr(virt_page, &new_desc)?;
+            self.set_page_descriptor_from_page_addr(virt_page, &new_desc)?;
         }
 
         Ok(())
     }
 
-    fn next_mmio_virt_page_slice(
-        &mut self,
-        num_pages: usize,
-    ) -> Result<PageSliceDescriptor<Virtual>, &'static str> {
-        assert!(self.initialized, "Translation tables not initialized");
-
-        if num_pages == 0 {
-            return Err("num_pages == 0");
-        }
-
-        if (self.cur_l3_mmio_index + num_pages) > 8191 {
-            return Err("Not enough MMIO space left");
-        }
-
-        let mut addr = Address::new(
-            (Self::L2_MMIO_START_INDEX << Granule512MiB::SHIFT)
-                | (self.cur_l3_mmio_index << Granule64KiB::SHIFT),
-        );
-        self.cur_l3_mmio_index += num_pages;
-
-        if START_FROM_TOP {
-            addr += Self::START_FROM_TOP_OFFSET;
-        }
-
-        Ok(PageSliceDescriptor::from_addr(addr, num_pages))
-    }
-
-    fn is_virt_page_slice_mmio(&self, virt_pages: &PageSliceDescriptor<Virtual>) -> bool {
-        let start_addr = virt_pages.start_addr();
-        let end_addr_inclusive = virt_pages.end_addr_inclusive();
-
-        for i in [start_addr, end_addr_inclusive].iter() {
-            if (*i >= self.mmio_start_addr()) && (*i <= self.mmio_end_addr_inclusive()) {
-                return true;
-            }
-        }
-
-        false
-    }
-
-    fn try_virt_page_ptr_to_phys_page_ptr(
+    fn try_virt_page_addr_to_phys_page_addr(
         &self,
-        virt_page_ptr: *const Page<Virtual>,
-    ) -> Result<*const Page<Physical>, &'static str> {
-        let page_desc = self.page_descriptor_from_page_ptr(virt_page_ptr)?;
+        virt_page_addr: PageAddress<Virtual>,
+    ) -> Result<PageAddress<Physical>, &'static str> {
+        let page_desc = self.page_descriptor_from_page_addr(virt_page_addr)?;
 
         if !page_desc.is_valid() {
             return Err("Page marked invalid");
         }
 
-        Ok(page_desc.output_page_ptr())
+        Ok(page_desc.output_page_addr())
     }
 
     fn try_page_attributes(
         &self,
-        virt_page_ptr: *const Page<Virtual>,
+        virt_page_addr: PageAddress<Virtual>,
     ) -> Result<AttributeFields, &'static str> {
-        let page_desc = self.page_descriptor_from_page_ptr(virt_page_ptr)?;
+        let page_desc = self.page_descriptor_from_page_addr(virt_page_addr)?;
 
         if !page_desc.is_valid() {
             return Err("Page marked invalid");
@@ -569,9 +482,10 @@ impl<const NUM_TABLES: usize, const START_FROM_TOP: bool>
         &self,
         virt_addr: Address<Virtual>,
     ) -> Result<Address<Physical>, &'static str> {
-        let page = self.try_virt_page_ptr_to_phys_page_ptr(virt_addr.as_page_ptr())?;
+        let virt_page = PageAddress::from(virt_addr.align_down_page());
+        let phys_page = self.try_virt_page_addr_to_phys_page_addr(virt_page)?;
 
-        Ok(Address::new(page as usize + virt_addr.offset_into_page()))
+        Ok(phys_page.into_inner() + virt_addr.offset_into_page())
     }
 }
 
@@ -580,7 +494,7 @@ impl<const NUM_TABLES: usize, const START_FROM_TOP: bool>
 //--------------------------------------------------------------------------------------------------
 
 #[cfg(test)]
-pub type MinSizeTranslationTable = FixedSizeTranslationTable<1, false>;
+pub type MinSizeTranslationTable = FixedSizeTranslationTable<1, true>;
 
 #[cfg(test)]
 mod tests {

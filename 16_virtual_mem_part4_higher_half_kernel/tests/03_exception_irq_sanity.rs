@@ -10,11 +10,12 @@
 #![reexport_test_harness_main = "test_main"]
 #![test_runner(libkernel::test_runner)]
 
-use libkernel::{bsp, cpu, exception};
+use libkernel::{bsp, cpu, exception, memory};
 use test_macros::kernel_test;
 
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
+    memory::mmu::post_enable_init();
     bsp::console::qemu_bring_up_console();
 
     exception::handling_init();

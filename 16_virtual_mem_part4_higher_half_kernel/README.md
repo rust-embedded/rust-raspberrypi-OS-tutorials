@@ -8,6 +8,7 @@
 
 - [Introduction](#introduction)
 - [Implementation](#implementation)
+  - [Linking Changes](#linking-changes)
   - [Position-Independent Boot Code](#position-independent-boot-code)
 - [Test it](#test-it)
 - [Diff to previous](#diff-to-previous)
@@ -19,8 +20,9 @@ A long time in the making, in this tutorial we finally map the kernel to the mos
 applications to use the whole of the least significant area of the virtual memory space.
 
 As has been teased since `tutorial 14`, we will make use of the `AArch64`'s `TTBR1`. Since the
-kernel's virtual address space size is `2 GiB` since the last tutorial, `TTBR1` will cover the range
-from `0xffff_ffff_ffff_ffff` down to `ffff_ffff_8000_0000` (both inclusive).
+kernel's virtual address space size currently is `1 GiB` (defined in
+`bsp/__board_name__/memory/mmu.rs`), `TTBR1` will cover the range from `0xffff_ffff_ffff_ffff` down
+to `ffff_ffff_c000_0000` (both inclusive).
 
 ## Implementation
 
@@ -65,7 +67,7 @@ where
 }
 ```
 
-Thanks to this infrastructure, `BSP` Rust code in `bsp/raspberrypi/memory/mmu.rs` only needs to
+Thanks to this infrastructure, `BSP` Rust code in `bsp/__board_name__/memory/mmu.rs` only needs to
 change to this newly introduced type in order to switch from lower half to higher half translation
 tables for the kernel:
 
@@ -74,20 +76,110 @@ type KernelTranslationTable =
     <KernelVirtAddrSpace as AssociatedTranslationTable>::TableStartFromTop;
 ```
 
+### Linking Changes
+
 In the `link.ld` linker script, we define a new symbol `__kernel_virt_start_addr` now, which is the
 start address of the kernel's virtual address space, calculated as `(u64::MAX -
-__kernel_virt_addr_space_size) + 1`. In order to make virtual-to-physical address translation easier
-for the human eye (and mind), we link the kernel itself at `__kernel_virt_start_addr +
-__rpi_load_addr`.
+__kernel_virt_addr_space_size) + 1`. Before the first section definition, we set the linker script's
+location counter to this address:
 
-Before these tutorials, the first mapped address of the kernel binary was always located at
-`__rpi_load_addr == 0x8_0000`. Starting with this tutorial, due to the `2 GiB` virtual address space
-size, the new first mapped address is `ffff_ffff_8008_0000`. So by ignoring the upper bits of the
-address, you can easily derive the physical address.
+```ld.s
+SECTIONS
+{
+    . =  __kernel_virt_start_addr;
 
-The changes in the `_arch` `MMU` driver are minimal, and mostly concerned with configuring `TCR_EL1`
-for use with `TTBR1_EL1` now. And of course, setting `TTBR1_EL1` in `fn
-enable_mmu_and_caching(...)`.
+    ASSERT((. & PAGE_MASK) == 0, "Start of address space is not page aligned")
+
+    /***********************************************************************************************
+    * Code + RO Data + Global Offset Table
+    ***********************************************************************************************/
+```
+
+Since we are not identity mapping anymore, we start to make use of the `AT` keyword in the output
+section specification:
+
+```ld.s
+/* The physical address at which the the kernel binary will be loaded by the Raspberry's firmware */
+__rpi_phys_binary_load_addr = 0x80000;
+
+/* omitted */
+
+SECTIONS
+{
+    . =  __kernel_virt_start_addr;
+
+    /* omitted */
+
+    __code_start = .;
+    .text : AT(__rpi_phys_binary_load_addr)
+```
+
+This will manifest in the kernel ELF `segment` attributes, as can be inspected using the `make
+readelf` command:
+
+```console
+$ make readelf
+
+Program Headers:
+  Type           Offset             VirtAddr           PhysAddr
+                 FileSiz            MemSiz              Flags  Align
+  LOAD           0x0000000000010000 0xffffffffc0000000 0x0000000000080000
+                 0x000000000000cb08 0x000000000000cb08  R E    0x10000
+  LOAD           0x0000000000020000 0xffffffffc0010000 0x0000000000090000
+                 0x0000000000030dc0 0x0000000000030de0  RW     0x10000
+  LOAD           0x0000000000060000 0xffffffffc0860000 0x0000000000000000
+                 0x0000000000000000 0x0000000000080000  RW     0x10000
+
+ Section to Segment mapping:
+  Segment Sections...
+   00     .text .rodata
+   01     .data .bss
+   02     .boot_core_stack
+
+```
+
+As you can see, `VirtAddr` and `PhysAddr` are different now, as compared to all the previous
+tutorials where they were identical. This information from the `ELF` file will eventually be parsed
+by the `translation table tool` and incorporated when compiling the precomputed translation tables.
+
+You might have noticed that `.text .rodata` and `.boot_core_stack` exchanged places as compared to
+previous tutorials. The reason this was done is that with a remapped kernel, this is trivial to do
+without affecting the physical layout. This allows us to place an unmapped `guard page` between the
+`boot core stack` and the `mmio remap region` in the VA space, which nicely protects the kernel from
+stack overflows now:
+
+```ld.s
+/***********************************************************************************************
+* MMIO Remap Reserved
+***********************************************************************************************/
+__mmio_remap_start = .;
+. += 8 * 1024 * 1024;
+__mmio_remap_end_exclusive = .;
+
+ASSERT((. & PAGE_MASK) == 0, "MMIO remap reservation is not page aligned")
+
+/***********************************************************************************************
+* Guard Page
+***********************************************************************************************/
+. += PAGE_SIZE;
+
+/***********************************************************************************************
+* Boot Core Stack
+***********************************************************************************************/
+.boot_core_stack (NOLOAD) : AT(__rpi_phys_dram_start_addr)
+{
+    __boot_core_stack_start = .;         /*   ^             */
+                                         /*   | stack       */
+    . += __rpi_phys_binary_load_addr;    /*   | growth      */
+                                         /*   | direction   */
+    __boot_core_stack_end_exclusive = .; /*   |             */
+} :segment_boot_core_stack
+
+ASSERT((. & PAGE_MASK) == 0, "End of boot core stack is not page aligned")
+```
+
+Changes in the `_arch` `MMU` driver are minimal, and mostly concerned with configuring `TCR_EL1` for
+use with `TTBR1_EL1` now. And of course, setting `TTBR1_EL1` in `fn enable_mmu_and_caching(...)`.
 
 ### Position-Independent Boot Code
 
@@ -136,16 +228,16 @@ $ make chainboot
 [...]
 
 Precomputing kernel translation tables and patching kernel ELF
-             --------------------------------------------------
-                 Section           Start Virt Addr       Size
-             --------------------------------------------------
-  Generating Code and RO data | 0xffff_ffff_8008_0000 |  64 KiB
-  Generating Data and bss     | 0xffff_ffff_8009_0000 | 384 KiB
-  Generating Boot-core stack  | 0xffff_ffff_8010_0000 | 512 KiB
-             --------------------------------------------------
-    Patching Kernel table struct at physical 0x9_0000
-    Patching Value of kernel table physical base address (0xd_0000) at physical 0x8_0080
-    Finished in 0.03s
+             ------------------------------------------------------------------------------------
+                 Sections          Virt Start Addr         Phys Start Addr       Size      Attr
+             ------------------------------------------------------------------------------------
+  Generating .text .rodata    | 0xffff_ffff_c000_0000 | 0x0000_0000_0008_0000 |  64 KiB | C RO X
+  Generating .data .bss       | 0xffff_ffff_c001_0000 | 0x0000_0000_0009_0000 | 256 KiB | C RW XN
+  Generating .boot_core_stack | 0xffff_ffff_c086_0000 | 0x0000_0000_0000_0000 | 512 KiB | C RW XN
+             ------------------------------------------------------------------------------------
+    Patching Kernel table struct at ELF file offset 0x2_0000
+    Patching Kernel tables physical base address start argument to value 0xb_0000 at ELF file offset 0x1_0088
+    Finished in 0.14s
 
 Minipush 1.0
 
@@ -161,23 +253,22 @@ Minipush 1.0
            Raspberry Pi 3
 
 [ML] Requesting binary
-[MP] ⏩ Pushing 387 KiB =======================================🦀 100% 96 KiB/s Time: 00:00:04
+[MP] ⏩ Pushing 259 KiB ======================================🦀 100% 129 KiB/s Time: 00:00:02
 [ML] Loaded! Executing the payload now
 
-[    4.318584] mingo version 0.16.0
-[    4.318792] Booting on: Raspberry Pi 3
-[    4.319247] MMU online:
-[    4.319540]       -------------------------------------------------------------------------------------------------------------------------------------------
-[    4.321284]                         Virtual                                   Physical               Size       Attr                    Entity
-[    4.323028]       -------------------------------------------------------------------------------------------------------------------------------------------
-[    4.324773]       0xffff_ffff_8008_0000..0xffff_ffff_8008_ffff --> 0x00_0008_0000..0x00_0008_ffff |  64 KiB | C   RO X  | Kernel code and RO data
-[    4.326387]       0xffff_ffff_8009_0000..0xffff_ffff_800e_ffff --> 0x00_0009_0000..0x00_000e_ffff | 384 KiB | C   RW XN | Kernel data and bss
-[    4.327957]       0xffff_ffff_8010_0000..0xffff_ffff_8017_ffff --> 0x00_0010_0000..0x00_0017_ffff | 512 KiB | C   RW XN | Kernel boot-core stack
-[    4.329560]       0xffff_ffff_f000_0000..0xffff_ffff_f000_ffff --> 0x00_3f20_0000..0x00_3f20_ffff |  64 KiB | Dev RW XN | BCM GPIO
-[    4.331012]                                                                                                             | BCM PL011 UART
-[    4.332529]       0xffff_ffff_f001_0000..0xffff_ffff_f001_ffff --> 0x00_3f00_0000..0x00_3f00_ffff |  64 KiB | Dev RW XN | BCM Peripheral Interrupt Controller
-[    4.334273]       -------------------------------------------------------------------------------------------------------------------------------------------
-
+[    2.893480] mingo version 0.16.0
+[    2.893687] Booting on: Raspberry Pi 3
+[    2.894142] MMU online:
+[    2.894434]       -------------------------------------------------------------------------------------------------------------------------------------------
+[    2.896179]                         Virtual                                   Physical               Size       Attr                    Entity
+[    2.897923]       -------------------------------------------------------------------------------------------------------------------------------------------
+[    2.899668]       0xffff_ffff_c000_0000..0xffff_ffff_c000_ffff --> 0x00_0008_0000..0x00_0008_ffff |  64 KiB | C   RO X  | Kernel code and RO data
+[    2.901282]       0xffff_ffff_c001_0000..0xffff_ffff_c004_ffff --> 0x00_0009_0000..0x00_000c_ffff | 256 KiB | C   RW XN | Kernel data and bss
+[    2.902852]       0xffff_ffff_c086_0000..0xffff_ffff_c08d_ffff --> 0x00_0000_0000..0x00_0007_ffff | 512 KiB | C   RW XN | Kernel boot-core stack
+[    2.904455]       0xffff_ffff_c005_0000..0xffff_ffff_c005_ffff --> 0x00_3f20_0000..0x00_3f20_ffff |  64 KiB | Dev RW XN | BCM GPIO
+[    2.905907]                                                                                                             | BCM PL011 UART
+[    2.907424]       0xffff_ffff_c006_0000..0xffff_ffff_c006_ffff --> 0x00_3f00_0000..0x00_3f00_ffff |  64 KiB | Dev RW XN | BCM Peripheral Interrupt Controller
+[    2.909168]       -------------------------------------------------------------------------------------------------------------------------------------------
 ```
 
 Raspberry Pi 4:
@@ -187,17 +278,16 @@ $ BSP=rpi4 make chainboot
 [...]
 
 Precomputing kernel translation tables and patching kernel ELF
-             --------------------------------------------------
-                 Section           Start Virt Addr       Size
-             --------------------------------------------------
-  Generating Code and RO data | 0xffff_ffff_8008_0000 |  64 KiB
-  Generating Data and bss     | 0xffff_ffff_8009_0000 | 384 KiB
-  Generating Boot-core stack  | 0xffff_ffff_8010_0000 | 512 KiB
-             --------------------------------------------------
-    Patching Kernel table struct at physical 0x9_0000
-    Patching Value of kernel table physical base address (0xd_0000) at physical 0x8_0080
-    Finished in 0.03s
-
+             ------------------------------------------------------------------------------------
+                 Sections          Virt Start Addr         Phys Start Addr       Size      Attr
+             ------------------------------------------------------------------------------------
+  Generating .text .rodata    | 0xffff_ffff_c000_0000 | 0x0000_0000_0008_0000 |  64 KiB | C RO X
+  Generating .data .bss       | 0xffff_ffff_c001_0000 | 0x0000_0000_0009_0000 | 256 KiB | C RW XN
+  Generating .boot_core_stack | 0xffff_ffff_c086_0000 | 0x0000_0000_0000_0000 | 512 KiB | C RW XN
+             ------------------------------------------------------------------------------------
+    Patching Kernel table struct at ELF file offset 0x2_0000
+    Patching Kernel tables physical base address start argument to value 0xb_0000 at ELF file offset 0x1_0080
+    Finished in 0.13s
 
 Minipush 1.0
 
@@ -213,24 +303,23 @@ Minipush 1.0
            Raspberry Pi 4
 
 [ML] Requesting binary
-[MP] ⏩ Pushing 394 KiB =======================================🦀 100% 98 KiB/s Time: 00:00:04
+[MP] ⏩ Pushing 266 KiB ======================================🦀 100% 133 KiB/s Time: 00:00:02
 [ML] Loaded! Executing the payload now
 
-[    4.401227] mingo version 0.16.0
-[    4.401260] Booting on: Raspberry Pi 4
-[    4.401715] MMU online:
-[    4.402008]       -------------------------------------------------------------------------------------------------------------------------------------------
-[    4.403752]                         Virtual                                   Physical               Size       Attr                    Entity
-[    4.405496]       -------------------------------------------------------------------------------------------------------------------------------------------
-[    4.407241]       0xffff_ffff_8008_0000..0xffff_ffff_8008_ffff --> 0x00_0008_0000..0x00_0008_ffff |  64 KiB | C   RO X  | Kernel code and RO data
-[    4.408855]       0xffff_ffff_8009_0000..0xffff_ffff_800e_ffff --> 0x00_0009_0000..0x00_000e_ffff | 384 KiB | C   RW XN | Kernel data and bss
-[    4.410425]       0xffff_ffff_8010_0000..0xffff_ffff_8017_ffff --> 0x00_0010_0000..0x00_0017_ffff | 512 KiB | C   RW XN | Kernel boot-core stack
-[    4.412028]       0xffff_ffff_f000_0000..0xffff_ffff_f000_ffff --> 0x00_fe20_0000..0x00_fe20_ffff |  64 KiB | Dev RW XN | BCM GPIO
-[    4.413480]                                                                                                             | BCM PL011 UART
-[    4.414997]       0xffff_ffff_f001_0000..0xffff_ffff_f001_ffff --> 0x00_ff84_0000..0x00_ff84_ffff |  64 KiB | Dev RW XN | GICD
-[    4.416405]                                                                                                             | GICC
-[    4.417814]       -------------------------------------------------------------------------------------------------------------------------------------------
-
+[    2.973300] mingo version 0.16.0
+[    2.973334] Booting on: Raspberry Pi 4
+[    2.973789] MMU online:
+[    2.974081]       -------------------------------------------------------------------------------------------------------------------------------------------
+[    2.975825]                         Virtual                                   Physical               Size       Attr                    Entity
+[    2.977569]       -------------------------------------------------------------------------------------------------------------------------------------------
+[    2.979314]       0xffff_ffff_c000_0000..0xffff_ffff_c000_ffff --> 0x00_0008_0000..0x00_0008_ffff |  64 KiB | C   RO X  | Kernel code and RO data
+[    2.980929]       0xffff_ffff_c001_0000..0xffff_ffff_c004_ffff --> 0x00_0009_0000..0x00_000c_ffff | 256 KiB | C   RW XN | Kernel data and bss
+[    2.982499]       0xffff_ffff_c086_0000..0xffff_ffff_c08d_ffff --> 0x00_0000_0000..0x00_0007_ffff | 512 KiB | C   RW XN | Kernel boot-core stack
+[    2.984102]       0xffff_ffff_c005_0000..0xffff_ffff_c005_ffff --> 0x00_fe20_0000..0x00_fe20_ffff |  64 KiB | Dev RW XN | BCM GPIO
+[    2.985554]                                                                                                             | BCM PL011 UART
+[    2.987070]       0xffff_ffff_c006_0000..0xffff_ffff_c006_ffff --> 0x00_ff84_0000..0x00_ff84_ffff |  64 KiB | Dev RW XN | GICD
+[    2.988479]                                                                                                             | GICC
+[    2.989887]       -------------------------------------------------------------------------------------------------------------------------------------------
 ```
 
 ## Diff to previous
@@ -251,7 +340,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/Cargo.toml 16_virtual_mem_part
 diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.rs 16_virtual_mem_part4_higher_half_kernel/src/_arch/aarch64/cpu/boot.rs
 --- 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.rs
 +++ 16_virtual_mem_part4_higher_half_kernel/src/_arch/aarch64/cpu/boot.rs
-@@ -30,7 +30,10 @@
+@@ -29,7 +29,10 @@
  /// - The `bss` section is not initialized yet. The code must not use or reference it in any way.
  /// - The HW state of EL1 must be prepared in a sound way.
  #[inline(always)]
@@ -263,7 +352,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.rs 
      // Enable timer counter registers for EL1.
      CNTHCTL_EL2.write(CNTHCTL_EL2::EL1PCEN::SET + CNTHCTL_EL2::EL1PCTEN::SET);
 
-@@ -53,11 +56,11 @@
+@@ -52,11 +55,11 @@
      );
 
      // Second, let the link register point to kernel_init().
@@ -277,7 +366,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.rs 
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -74,9 +77,13 @@
+@@ -73,14 +76,19 @@
  #[no_mangle]
  pub unsafe extern "C" fn _start_rust(
      phys_kernel_tables_base_addr: u64,
@@ -293,9 +382,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.rs 
 
      // Turn on the MMU for EL1.
      let addr = Address::new(phys_kernel_tables_base_addr as usize);
-@@ -84,6 +91,7 @@
-         cpu::wait_forever();
-     }
+     memory::mmu::enable_mmu_and_caching(addr).unwrap();
 
 -    // Use `eret` to "return" to EL1. This results in execution of kernel_init() in EL1.
 +    // Use `eret` to "return" to EL1. Since virtual memory will already be enabled, this results in
@@ -357,7 +444,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.s 1
 diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu/translation_table.rs 16_virtual_mem_part4_higher_half_kernel/src/_arch/aarch64/memory/mmu/translation_table.rs
 --- 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu/translation_table.rs
 +++ 16_virtual_mem_part4_higher_half_kernel/src/_arch/aarch64/memory/mmu/translation_table.rs
-@@ -135,7 +135,7 @@
+@@ -136,7 +136,7 @@
  /// aligned, so the lvl3 is put first.
  #[repr(C)]
  #[repr(align(65536))]
@@ -366,7 +453,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu/t
      /// Page descriptors, covering 64 KiB windows per entry.
      lvl3: [[PageDescriptor; 8192]; NUM_TABLES],
 
-@@ -305,14 +305,23 @@
+@@ -302,10 +302,19 @@
  where
      [u8; Self::SIZE >> Granule512MiB::SHIFT]: Sized,
  {
@@ -382,68 +469,31 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu/t
 +impl<const NUM_TABLES: usize, const START_FROM_TOP: bool>
 +    FixedSizeTranslationTable<NUM_TABLES, START_FROM_TOP>
 +{
-     // Reserve the last 256 MiB of the address space for MMIO mappings.
-     const L2_MMIO_START_INDEX: usize = NUM_TABLES - 1;
-     const L3_MMIO_START_INDEX: usize = 8192 / 2;
-
 +    const START_FROM_TOP_OFFSET: Address<Virtual> =
 +        Address::new((usize::MAX - (Granule512MiB::SIZE * NUM_TABLES)) + 1);
 +
      /// Create an instance.
      #[allow(clippy::assertions_on_constants)]
      const fn _new(for_precompute: bool) -> Self {
-@@ -341,20 +350,32 @@
-     /// The start address of the table's MMIO range.
-     #[inline(always)]
-     fn mmio_start_addr(&self) -> Address<Virtual> {
--        Address::new(
-+        let mut addr = Address::new(
-             (Self::L2_MMIO_START_INDEX << Granule512MiB::SHIFT)
-                 | (Self::L3_MMIO_START_INDEX << Granule64KiB::SHIFT),
--        )
-+        );
-+
-+        if START_FROM_TOP {
-+            addr += Self::START_FROM_TOP_OFFSET;
-+        }
-+
-+        addr
-     }
-
-     /// The inclusive end address of the table's MMIO range.
-     #[inline(always)]
-     fn mmio_end_addr_inclusive(&self) -> Address<Virtual> {
--        Address::new(
-+        let mut addr = Address::new(
-             (Self::L2_MMIO_START_INDEX << Granule512MiB::SHIFT)
-                 | (8191 << Granule64KiB::SHIFT)
-                 | (Granule64KiB::SIZE - 1),
--        )
-+        );
-+
-+        if START_FROM_TOP {
-+            addr += Self::START_FROM_TOP_OFFSET;
-+        }
-+
-+        addr
-     }
-
-     /// Helper to calculate the lvl2 and lvl3 indices from an address.
-@@ -363,7 +384,12 @@
+@@ -336,9 +345,14 @@
          &self,
-         virt_page_ptr: *const Page<Virtual>,
+         virt_page_addr: PageAddress<Virtual>,
      ) -> Result<(usize, usize), &'static str> {
--        let addr = virt_page_ptr as usize;
-+        let mut addr = virt_page_ptr as usize;
+-        let addr = virt_page_addr.into_inner().as_usize();
+-        let lvl2_index = addr >> Granule512MiB::SHIFT;
+-        let lvl3_index = (addr & Granule512MiB::MASK) >> Granule64KiB::SHIFT;
++        let mut addr = virt_page_addr.into_inner();
 +
 +        if START_FROM_TOP {
-+            addr -= Self::START_FROM_TOP_OFFSET.into_usize()
++            addr = addr - Self::START_FROM_TOP_OFFSET;
 +        }
 +
-         let lvl2_index = addr >> Granule512MiB::SHIFT;
-         let lvl3_index = (addr & Granule512MiB::MASK) >> Granule64KiB::SHIFT;
++        let lvl2_index = addr.as_usize() >> Granule512MiB::SHIFT;
++        let lvl3_index = (addr.as_usize() & Granule512MiB::MASK) >> Granule64KiB::SHIFT;
 
-@@ -411,8 +437,9 @@
+         if lvl2_index > (NUM_TABLES - 1) {
+             return Err("Virtual page is out of bounds of translation table");
+@@ -384,8 +398,9 @@
  // OS Interface Code
  //------------------------------------------------------------------------------
 
@@ -455,30 +505,12 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu/t
  {
      fn init(&mut self) -> Result<(), &'static str> {
          if self.initialized {
-@@ -483,12 +510,16 @@
-             return Err("Not enough MMIO space left");
-         }
-
--        let addr = Address::new(
-+        let mut addr = Address::new(
-             (Self::L2_MMIO_START_INDEX << Granule512MiB::SHIFT)
-                 | (self.cur_l3_mmio_index << Granule64KiB::SHIFT),
-         );
-         self.cur_l3_mmio_index += num_pages;
-
-+        if START_FROM_TOP {
-+            addr += Self::START_FROM_TOP_OFFSET;
-+        }
-+
-         Ok(PageSliceDescriptor::from_addr(addr, num_pages))
-     }
-
-@@ -549,7 +580,7 @@
+@@ -479,7 +494,7 @@
  //--------------------------------------------------------------------------------------------------
 
  #[cfg(test)]
 -pub type MinSizeTranslationTable = FixedSizeTranslationTable<1>;
-+pub type MinSizeTranslationTable = FixedSizeTranslationTable<1, false>;
++pub type MinSizeTranslationTable = FixedSizeTranslationTable<1, true>;
 
  #[cfg(test)]
  mod tests {
@@ -530,53 +562,167 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu.r
          self.set_up_mair();
 
          // Set the "Translation Table Base Register".
--        TTBR0_EL1.set_baddr(phys_tables_base_addr.into_usize() as u64);
-+        TTBR1_EL1.set_baddr(phys_tables_base_addr.into_usize() as u64);
+-        TTBR0_EL1.set_baddr(phys_tables_base_addr.as_usize() as u64);
++        TTBR1_EL1.set_baddr(phys_tables_base_addr.as_usize() as u64);
 
          self.configure_translation_control();
 
 
+diff -uNr 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/console.rs 16_virtual_mem_part4_higher_half_kernel/src/bsp/raspberrypi/console.rs
+--- 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/console.rs
++++ 16_virtual_mem_part4_higher_half_kernel/src/bsp/raspberrypi/console.rs
+@@ -4,7 +4,6 @@
+
+ //! BSP console facilities.
+
+-use super::memory;
+ use crate::{bsp::device_driver, console, cpu, driver};
+ use core::fmt;
+
+@@ -26,21 +25,27 @@
+ pub unsafe fn panic_console_out() -> impl fmt::Write {
+     use driver::interface::DeviceDriver;
+
+-    let mut panic_gpio = device_driver::PanicGPIO::new(memory::map::mmio::GPIO_START.as_usize());
+-    let mut panic_uart =
+-        device_driver::PanicUart::new(memory::map::mmio::PL011_UART_START.as_usize());
+-
+-    // If remapping of the driver's MMIO already happened, take the remapped start address.
+-    // Otherwise, take a chance with the default physical address.
+-    let maybe_gpio_mmio_start_addr = super::GPIO.virt_mmio_start_addr();
+-    let maybe_uart_mmio_start_addr = super::PL011_UART.virt_mmio_start_addr();
++    // If remapping of the driver's MMIO hasn't already happened, we won't be able to print. Just
++    // park the CPU core in this case.
++    let gpio_mmio_start_addr = match super::GPIO.virt_mmio_start_addr() {
++        None => cpu::wait_forever(),
++        Some(x) => x,
++    };
++
++    let uart_mmio_start_addr = match super::PL011_UART.virt_mmio_start_addr() {
++        None => cpu::wait_forever(),
++        Some(x) => x,
++    };
++
++    let mut panic_gpio = device_driver::PanicGPIO::new(gpio_mmio_start_addr);
++    let mut panic_uart = device_driver::PanicUart::new(uart_mmio_start_addr);
+
+     panic_gpio
+-        .init(maybe_gpio_mmio_start_addr)
++        .init(None)
+         .unwrap_or_else(|_| cpu::wait_forever());
+     panic_gpio.map_pl011_uart();
+     panic_uart
+-        .init(maybe_uart_mmio_start_addr)
++        .init(None)
+         .unwrap_or_else(|_| cpu::wait_forever());
+
+     panic_uart
+@@ -51,13 +56,14 @@
+ pub unsafe fn panic_console_out() -> impl fmt::Write {
+     use driver::interface::DeviceDriver;
+
+-    let mut panic_uart =
+-        device_driver::PanicUart::new(memory::map::mmio::PL011_UART_START.as_usize());
+-
+-    let maybe_uart_mmio_start_addr = super::PL011_UART.virt_mmio_start_addr();
++    let uart_mmio_start_addr = match super::PL011_UART.virt_mmio_start_addr() {
++        None => cpu::wait_forever(),
++        Some(x) => x,
++    };
++    let mut panic_uart = device_driver::PanicUart::new(uart_mmio_start_addr);
+
+     panic_uart
+-        .init(maybe_uart_mmio_start_addr)
++        .init(None)
+         .unwrap_or_else(|_| cpu::qemu_exit_failure());
+
+     panic_uart
+
 diff -uNr 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/link.ld 16_virtual_mem_part4_higher_half_kernel/src/bsp/raspberrypi/link.ld
 --- 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/link.ld
 +++ 16_virtual_mem_part4_higher_half_kernel/src/bsp/raspberrypi/link.ld
-@@ -6,6 +6,15 @@
- /* This file provides __kernel_virt_addr_space_size */
- INCLUDE src/bsp/raspberrypi/kernel_virt_addr_space_size.ld;
+@@ -8,6 +8,13 @@
+ PAGE_SIZE = 64K;
+ PAGE_MASK = PAGE_SIZE - 1;
 
 +/* The kernel's virtual address range will be:
 + *
 + * [END_ADDRESS_INCLUSIVE, START_ADDRESS]
 + * [u64::MAX             , (u64::MAX - __kernel_virt_addr_space_size) + 1]
-+ *
-+ * Since the start address is needed to set the linker address below, calculate it now.
 + */
 +__kernel_virt_start_addr = ((0xffffffffffffffff - __kernel_virt_addr_space_size) + 1);
 +
- /* The address at which the the kernel binary will be loaded by the Raspberry's firmware */
- __rpi_load_addr = 0x80000;
+ __rpi_phys_dram_start_addr = 0;
 
-@@ -19,13 +28,14 @@
+ /* The physical address at which the the kernel binary will be loaded by the Raspberry's firmware */
+@@ -26,34 +33,22 @@
+  */
+ PHDRS
+ {
+-    segment_boot_core_stack PT_LOAD FLAGS(6);
+     segment_code            PT_LOAD FLAGS(5);
+     segment_data            PT_LOAD FLAGS(6);
++    segment_boot_core_stack PT_LOAD FLAGS(6);
+ }
 
  SECTIONS
  {
--    . =  __rpi_load_addr;
-+    /* Add the load address as an offset. Makes virt-to-phys translation easier for the human eye */
-+    . =  __kernel_virt_start_addr + __rpi_load_addr;
+-    . =  __rpi_phys_dram_start_addr;
++    . =  __kernel_virt_start_addr;
+
+-    /***********************************************************************************************
+-    * Boot Core Stack
+-    ***********************************************************************************************/
+-    .boot_core_stack (NOLOAD) :
+-    {
+-        __boot_core_stack_start = .;         /*   ^             */
+-                                             /*   | stack       */
+-        . += __rpi_phys_binary_load_addr;    /*   | growth      */
+-                                             /*   | direction   */
+-        __boot_core_stack_end_exclusive = .; /*   |             */
+-    } :segment_boot_core_stack
+-
+-    ASSERT((. & PAGE_MASK) == 0, "End of boot core stack is not page aligned")
++    ASSERT((. & PAGE_MASK) == 0, "Start of address space is not page aligned")
 
      /***********************************************************************************************
      * Code + RO Data + Global Offset Table
      ***********************************************************************************************/
-     __rx_start = .;
+     __code_start = .;
 -    .text :
-+    .text : AT(__rpi_load_addr)
++    .text : AT(__rpi_phys_binary_load_addr)
      {
          KEEP(*(.text._start))
          *(.text._start_arguments) /* Constants (or statics in Rust speak) read by _start(). */
+@@ -93,4 +88,23 @@
+     __mmio_remap_end_exclusive = .;
+
+     ASSERT((. & PAGE_MASK) == 0, "MMIO remap reservation is not page aligned")
++
++    /***********************************************************************************************
++    * Guard Page
++    ***********************************************************************************************/
++    . += PAGE_SIZE;
++
++    /***********************************************************************************************
++    * Boot Core Stack
++    ***********************************************************************************************/
++    .boot_core_stack (NOLOAD) : AT(__rpi_phys_dram_start_addr)
++    {
++        __boot_core_stack_start = .;         /*   ^             */
++                                             /*   | stack       */
++        . += __rpi_phys_binary_load_addr;    /*   | growth      */
++                                             /*   | direction   */
++        __boot_core_stack_end_exclusive = .; /*   |             */
++    } :segment_boot_core_stack
++
++    ASSERT((. & PAGE_MASK) == 0, "End of boot core stack is not page aligned")
+ }
 
 diff -uNr 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/memory/mmu.rs 16_virtual_mem_part4_higher_half_kernel/src/bsp/raspberrypi/memory/mmu.rs
 --- 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/memory/mmu.rs
 +++ 16_virtual_mem_part4_higher_half_kernel/src/bsp/raspberrypi/memory/mmu.rs
-@@ -22,7 +22,7 @@
+@@ -20,7 +20,7 @@
  //--------------------------------------------------------------------------------------------------
 
  type KernelTranslationTable =
@@ -585,11 +731,75 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/memory/mmu
 
  //--------------------------------------------------------------------------------------------------
  // Public Definitions
+@@ -152,14 +152,6 @@
+ /// `translation table tool` and patched into the kernel binary. This function just adds the mapping
+ /// record entries.
+ pub fn kernel_add_mapping_records_for_precomputed() {
+-    let virt_boot_core_stack_region = virt_boot_core_stack_region();
+-    generic_mmu::kernel_add_mapping_record(
+-        "Kernel boot-core stack",
+-        &virt_boot_core_stack_region,
+-        &kernel_virt_to_phys_region(virt_boot_core_stack_region),
+-        &kernel_page_attributes(virt_boot_core_stack_region.start_page_addr()),
+-    );
+-
+     let virt_code_region = virt_code_region();
+     generic_mmu::kernel_add_mapping_record(
+         "Kernel code and RO data",
+@@ -175,4 +167,12 @@
+         &kernel_virt_to_phys_region(virt_data_region),
+         &kernel_page_attributes(virt_data_region.start_page_addr()),
+     );
++
++    let virt_boot_core_stack_region = virt_boot_core_stack_region();
++    generic_mmu::kernel_add_mapping_record(
++        "Kernel boot-core stack",
++        &virt_boot_core_stack_region,
++        &kernel_virt_to_phys_region(virt_boot_core_stack_region),
++        &kernel_page_attributes(virt_boot_core_stack_region.start_page_addr()),
++    );
+ }
+
+diff -uNr 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/memory.rs 16_virtual_mem_part4_higher_half_kernel/src/bsp/raspberrypi/memory.rs
+--- 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/memory.rs
++++ 16_virtual_mem_part4_higher_half_kernel/src/bsp/raspberrypi/memory.rs
+@@ -37,13 +37,7 @@
+ //! The virtual memory layout is as follows:
+ //!
+ //! +---------------------------------------+
+-//! |                                       | boot_core_stack_start @ 0x0
+-//! |                                       |                                ^
+-//! | Boot-core Stack                       |                                | stack
+-//! |                                       |                                | growth
+-//! |                                       |                                | direction
+-//! +---------------------------------------+
+-//! |                                       | code_start @ 0x8_0000 == boot_core_stack_end_exclusive
++//! |                                       | code_start @ __kernel_virt_start_addr
+ //! | .text                                 |
+ //! | .rodata                               |
+ //! | .got                                  |
+@@ -59,6 +53,16 @@
+ //! |                                       |
+ //! +---------------------------------------+
+ //! |                                       |  mmio_remap_end_exclusive
++//! | Unmapped guard page                   |
++//! |                                       |
++//! +---------------------------------------+
++//! |                                       | boot_core_stack_start
++//! |                                       |                                ^
++//! | Boot-core Stack                       |                                | stack
++//! |                                       |                                | growth
++//! |                                       |                                | direction
++//! +---------------------------------------+
++//! |                                       | boot_core_stack_end_exclusive
+ //! |                                       |
+ pub mod mmu;
+
 
 diff -uNr 15_virtual_mem_part3_precomputed_tables/src/lib.rs 16_virtual_mem_part4_higher_half_kernel/src/lib.rs
 --- 15_virtual_mem_part3_precomputed_tables/src/lib.rs
 +++ 16_virtual_mem_part4_higher_half_kernel/src/lib.rs
-@@ -152,11 +152,6 @@
+@@ -153,11 +153,6 @@
      )
  }
 
@@ -602,10 +812,52 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/lib.rs 16_virtual_mem_part
  // Testing
  //--------------------------------------------------------------------------------------------------
 
+diff -uNr 15_virtual_mem_part3_precomputed_tables/src/memory/mmu/translation_table.rs 16_virtual_mem_part4_higher_half_kernel/src/memory/mmu/translation_table.rs
+--- 15_virtual_mem_part3_precomputed_tables/src/memory/mmu/translation_table.rs
++++ 16_virtual_mem_part4_higher_half_kernel/src/memory/mmu/translation_table.rs
+@@ -99,9 +99,9 @@
+
+         assert!(tables.init().is_ok());
+
+-        let virt_start_page_addr: PageAddress<Virtual> = PageAddress::from(0);
+-        let virt_end_exclusive_page_addr: PageAddress<Virtual> =
+-            virt_start_page_addr.checked_offset(5).unwrap();
++        let virt_end_exclusive_page_addr: PageAddress<Virtual> = PageAddress::MAX;
++        let virt_start_page_addr: PageAddress<Virtual> =
++            virt_end_exclusive_page_addr.checked_offset(-5).unwrap();
+
+         let phys_start_page_addr: PageAddress<Physical> = PageAddress::from(0);
+         let phys_end_exclusive_page_addr: PageAddress<Physical> =
+@@ -124,7 +124,7 @@
+         );
+
+         assert_eq!(
+-            tables.try_page_attributes(virt_start_page_addr.checked_offset(6).unwrap()),
++            tables.try_page_attributes(virt_start_page_addr.checked_offset(-1).unwrap()),
+             Err("Page marked invalid")
+         );
+
+
+diff -uNr 15_virtual_mem_part3_precomputed_tables/src/memory/mmu/types.rs 16_virtual_mem_part4_higher_half_kernel/src/memory/mmu/types.rs
+--- 15_virtual_mem_part3_precomputed_tables/src/memory/mmu/types.rs
++++ 16_virtual_mem_part4_higher_half_kernel/src/memory/mmu/types.rs
+@@ -67,6 +67,11 @@
+ // PageAddress
+ //------------------------------------------------------------------------------
+ impl<ATYPE: AddressType> PageAddress<ATYPE> {
++    /// The largest value that can be represented by this type.
++    pub const MAX: Self = PageAddress {
++        inner: Address::new(usize::MAX).align_down_page(),
++    };
++
+     /// Unwraps the value.
+     pub fn into_inner(self) -> Address<ATYPE> {
+         self.inner
+
 diff -uNr 15_virtual_mem_part3_precomputed_tables/src/memory/mmu.rs 16_virtual_mem_part4_higher_half_kernel/src/memory/mmu.rs
 --- 15_virtual_mem_part3_precomputed_tables/src/memory/mmu.rs
 +++ 16_virtual_mem_part4_higher_half_kernel/src/memory/mmu.rs
-@@ -64,6 +64,11 @@
+@@ -66,6 +66,11 @@
  pub trait AssociatedTranslationTable {
      /// A translation table whose address range is:
      ///
@@ -621,7 +873,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/memory/mmu.rs 16_virtual_m
 diff -uNr 15_virtual_mem_part3_precomputed_tables/tests/02_exception_sync_page_fault.rs 16_virtual_mem_part4_higher_half_kernel/tests/02_exception_sync_page_fault.rs
 --- 15_virtual_mem_part3_precomputed_tables/tests/02_exception_sync_page_fault.rs
 +++ 16_virtual_mem_part4_higher_half_kernel/tests/02_exception_sync_page_fault.rs
-@@ -27,8 +27,8 @@
+@@ -28,8 +28,8 @@
      // This line will be printed as the test header.
      println!("Testing synchronous exception handling by causing a page fault");
 
@@ -633,16 +885,38 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/tests/02_exception_sync_page_f
 
      // If execution reaches here, the memory access above did not cause a page fault exception.
 
+diff -uNr 15_virtual_mem_part3_precomputed_tables/translation_table_tool/arch.rb 16_virtual_mem_part4_higher_half_kernel/translation_table_tool/arch.rb
+--- 15_virtual_mem_part3_precomputed_tables/translation_table_tool/arch.rb
++++ 16_virtual_mem_part4_higher_half_kernel/translation_table_tool/arch.rb
+@@ -255,6 +255,8 @@
+     end
+
+     def lvl2_lvl3_index_from(addr)
++        addr -= BSP.kernel_virt_start_addr
++
+         lvl2_index = addr >> Granule512MiB::SHIFT
+         lvl3_index = (addr & Granule512MiB::MASK) >> Granule64KiB::SHIFT
+
+
 diff -uNr 15_virtual_mem_part3_precomputed_tables/translation_table_tool/bsp.rb 16_virtual_mem_part4_higher_half_kernel/translation_table_tool/bsp.rb
 --- 15_virtual_mem_part3_precomputed_tables/translation_table_tool/bsp.rb
 +++ 16_virtual_mem_part4_higher_half_kernel/translation_table_tool/bsp.rb
-@@ -31,7 +31,7 @@
+@@ -6,7 +6,7 @@
 
-         symbols = `#{NM_BINARY} --demangle #{kernel_elf}`.split("\n")
-         @kernel_virt_addr_space_size = parse_from_symbols(symbols, /__kernel_virt_addr_space_size/)
--        @kernel_virt_start_addr = 0
-+        @kernel_virt_start_addr = parse_from_symbols(symbols, /__kernel_virt_start_addr/)
-         @virt_addresses = parse_from_symbols(symbols, @virt_addresses)
-         @phys_addresses = virt_to_phys(@virt_addresses)
+ # Raspberry Pi 3 + 4
+ class RaspberryPi
+-    attr_reader :kernel_granule, :kernel_virt_addr_space_size
++    attr_reader :kernel_granule, :kernel_virt_addr_space_size, :kernel_virt_start_addr
+
+     MEMORY_SRC = File.read('src/bsp/raspberrypi/memory.rs').split("\n")
+
+@@ -14,6 +14,7 @@
+         @kernel_granule = Granule64KiB
+
+         @kernel_virt_addr_space_size = KERNEL_ELF.symbol_value('__kernel_virt_addr_space_size')
++        @kernel_virt_start_addr = KERNEL_ELF.symbol_value('__kernel_virt_start_addr')
+
+         @virt_addr_of_kernel_tables = KERNEL_ELF.symbol_value('KERNEL_TABLES')
+         @virt_addr_of_phys_kernel_tables_base_addr = KERNEL_ELF.symbol_value(
 
 ```

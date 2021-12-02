@@ -117,6 +117,7 @@
 #![feature(global_asm)]
 #![feature(linkage)]
 #![feature(panic_info_message)]
+#![feature(step_trait)]
 #![feature(trait_alias)]
 #![no_std]
 // Testing
@@ -182,6 +183,7 @@ pub fn test_runner(tests: &[&test_types::UnitTest]) {
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
     exception::handling_init();
+    memory::mmu::post_enable_init();
     bsp::console::qemu_bring_up_console();
 
     test_main();

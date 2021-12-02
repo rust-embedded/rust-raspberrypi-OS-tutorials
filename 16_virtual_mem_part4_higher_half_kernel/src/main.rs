@@ -26,6 +26,7 @@ unsafe fn kernel_init() -> ! {
     use driver::interface::DriverManager;
 
     exception::handling_init();
+    memory::mmu::post_enable_init();
 
     // Add the mapping records for the precomputed entries first, so that they appear on the top of
     // the list.

@@ -1,1 +1,1 @@
-__kernel_virt_addr_space_size = 2 * 1024 * 1024 * 1024
+__kernel_virt_addr_space_size = 1024 * 1024 * 1024

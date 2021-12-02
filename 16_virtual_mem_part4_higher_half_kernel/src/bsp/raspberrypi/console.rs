@@ -4,7 +4,6 @@
 
 //! BSP console facilities.
 
-use super::memory;
 use crate::{bsp::device_driver, console, cpu, driver};
 use core::fmt;
 
@@ -26,21 +25,27 @@ use core::fmt;
 pub unsafe fn panic_console_out() -> impl fmt::Write {
     use driver::interface::DeviceDriver;
 
-    let mut panic_gpio = device_driver::PanicGPIO::new(memory::map::mmio::GPIO_START.into_usize());
-    let mut panic_uart =
-        device_driver::PanicUart::new(memory::map::mmio::PL011_UART_START.into_usize());
+    // If remapping of the driver's MMIO hasn't already happened, we won't be able to print. Just
+    // park the CPU core in this case.
+    let gpio_mmio_start_addr = match super::GPIO.virt_mmio_start_addr() {
+        None => cpu::wait_forever(),
+        Some(x) => x,
+    };
 
-    // If remapping of the driver's MMIO already happened, take the remapped start address.
-    // Otherwise, take a chance with the default physical address.
-    let maybe_gpio_mmio_start_addr = super::GPIO.virt_mmio_start_addr();
-    let maybe_uart_mmio_start_addr = super::PL011_UART.virt_mmio_start_addr();
+    let uart_mmio_start_addr = match super::PL011_UART.virt_mmio_start_addr() {
+        None => cpu::wait_forever(),
+        Some(x) => x,
+    };
+
+    let mut panic_gpio = device_driver::PanicGPIO::new(gpio_mmio_start_addr);
+    let mut panic_uart = device_driver::PanicUart::new(uart_mmio_start_addr);
 
     panic_gpio
-        .init(maybe_gpio_mmio_start_addr)
+        .init(None)
         .unwrap_or_else(|_| cpu::wait_forever());
     panic_gpio.map_pl011_uart();
     panic_uart
-        .init(maybe_uart_mmio_start_addr)
+        .init(None)
         .unwrap_or_else(|_| cpu::wait_forever());
 
     panic_uart
@@ -51,13 +56,14 @@ pub unsafe fn panic_console_out() -> impl fmt::Write {
 pub unsafe fn panic_console_out() -> impl fmt::Write {
     use driver::interface::DeviceDriver;
 
-    let mut panic_uart =
-        device_driver::PanicUart::new(memory::map::mmio::PL011_UART_START.into_usize());
-
-    let maybe_uart_mmio_start_addr = super::PL011_UART.virt_mmio_start_addr();
+    let uart_mmio_start_addr = match super::PL011_UART.virt_mmio_start_addr() {
+        None => cpu::wait_forever(),
+        Some(x) => x,
+    };
+    let mut panic_uart = device_driver::PanicUart::new(uart_mmio_start_addr);
 
     panic_uart
-        .init(maybe_uart_mmio_start_addr)
+        .init(None)
         .unwrap_or_else(|_| cpu::qemu_exit_failure());
 
     panic_uart

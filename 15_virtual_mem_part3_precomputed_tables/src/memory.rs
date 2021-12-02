@@ -10,9 +10,8 @@ use crate::{bsp, common};
 use core::{
     fmt,
     marker::PhantomData,
-    ops::{AddAssign, SubAssign},
+    ops::{Add, Sub},
 };
-use mmu::Page;
 
 //--------------------------------------------------------------------------------------------------
 // Public Definitions
@@ -22,15 +21,15 @@ use mmu::Page;
 pub trait AddressType: Copy + Clone + PartialOrd + PartialEq {}
 
 /// Zero-sized type to mark a physical address.
-#[derive(Copy, Clone, PartialOrd, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialOrd, PartialEq)]
 pub enum Physical {}
 
 /// Zero-sized type to mark a virtual address.
-#[derive(Copy, Clone, PartialOrd, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialOrd, PartialEq)]
 pub enum Virtual {}
 
 /// Generic address type.
-#[derive(Copy, Clone, PartialOrd, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialOrd, PartialEq)]
 pub struct Address<ATYPE: AddressType> {
     value: usize,
     _address_type: PhantomData<fn() -> ATYPE>,
@@ -52,70 +51,57 @@ impl<ATYPE: AddressType> Address<ATYPE> {
         }
     }
 
-    /// Align down.
-    pub const fn align_down(self, alignment: usize) -> Self {
-        let aligned = common::align_down(self.value, alignment);
-
-        Self {
-            value: aligned,
-            _address_type: PhantomData,
-        }
-    }
-
-    /// Converts `Address` into an usize.
-    pub const fn into_usize(self) -> usize {
+    /// Convert to usize.
+    pub const fn as_usize(self) -> usize {
         self.value
     }
 
-    /// Return a pointer to the page that contains this address.
-    pub const fn as_page_ptr(&self) -> *const Page<ATYPE> {
-        self.align_down(bsp::memory::mmu::KernelGranule::SIZE)
-            .into_usize() as *const _
+    /// Align down to page size.
+    pub const fn align_down_page(self) -> Self {
+        let aligned = common::align_down(self.value, bsp::memory::mmu::KernelGranule::SIZE);
+
+        Self::new(aligned)
     }
 
-    /// Return the address' offset into the underlying page.
+    /// Align up to page size.
+    pub const fn align_up_page(self) -> Self {
+        let aligned = common::align_up(self.value, bsp::memory::mmu::KernelGranule::SIZE);
+
+        Self::new(aligned)
+    }
+
+    /// Checks if the address is page aligned.
+    pub const fn is_page_aligned(&self) -> bool {
+        common::is_aligned(self.value, bsp::memory::mmu::KernelGranule::SIZE)
+    }
+
+    /// Return the address' offset into the corresponding page.
     pub const fn offset_into_page(&self) -> usize {
         self.value & bsp::memory::mmu::KernelGranule::MASK
     }
 }
 
-impl<ATYPE: AddressType> core::ops::Add<usize> for Address<ATYPE> {
+impl<ATYPE: AddressType> Add<usize> for Address<ATYPE> {
     type Output = Self;
 
-    fn add(self, other: usize) -> Self {
-        Self {
-            value: self.value + other,
-            _address_type: PhantomData,
+    #[inline(always)]
+    fn add(self, rhs: usize) -> Self::Output {
+        match self.value.checked_add(rhs) {
+            None => panic!("Overflow on Address::add"),
+            Some(x) => Self::new(x),
         }
     }
 }
 
-impl<ATYPE: AddressType> AddAssign for Address<ATYPE> {
-    fn add_assign(&mut self, other: Self) {
-        *self = Self {
-            value: self.value + other.into_usize(),
-            _address_type: PhantomData,
-        };
-    }
-}
-
-impl<ATYPE: AddressType> core::ops::Sub<usize> for Address<ATYPE> {
+impl<ATYPE: AddressType> Sub<Address<ATYPE>> for Address<ATYPE> {
     type Output = Self;
 
-    fn sub(self, other: usize) -> Self {
-        Self {
-            value: self.value - other,
-            _address_type: PhantomData,
+    #[inline(always)]
+    fn sub(self, rhs: Address<ATYPE>) -> Self::Output {
+        match self.value.checked_sub(rhs.value) {
+            None => panic!("Overflow on Address::sub"),
+            Some(x) => Self::new(x),
         }
-    }
-}
-
-impl<ATYPE: AddressType> SubAssign for Address<ATYPE> {
-    fn sub_assign(&mut self, other: Self) {
-        *self = Self {
-            value: self.value - other.into_usize(),
-            _address_type: PhantomData,
-        };
     }
 }
 
@@ -145,5 +131,35 @@ impl fmt::Display for Address<Virtual> {
         write!(f, "{:04x}_", q3)?;
         write!(f, "{:04x}_", q2)?;
         write!(f, "{:04x}", q1)
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// Testing
+//--------------------------------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use test_macros::kernel_test;
+
+    /// Sanity of [Address] methods.
+    #[kernel_test]
+    fn address_type_method_sanity() {
+        let addr = Address::<Virtual>::new(bsp::memory::mmu::KernelGranule::SIZE + 100);
+
+        assert_eq!(
+            addr.align_down_page().as_usize(),
+            bsp::memory::mmu::KernelGranule::SIZE
+        );
+
+        assert_eq!(
+            addr.align_up_page().as_usize(),
+            bsp::memory::mmu::KernelGranule::SIZE * 2
+        );
+
+        assert_eq!(addr.is_page_aligned(), false);
+
+        assert_eq!(addr.offset_into_page(), 100);
     }
 }

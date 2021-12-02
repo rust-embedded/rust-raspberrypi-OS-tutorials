@@ -11,8 +11,7 @@
 //!
 //! crate::cpu::boot::arch_boot
 
-use crate::{cpu, memory, memory::Address};
-use core::intrinsics::unlikely;
+use crate::{memory, memory::Address};
 use cortex_a::{asm, registers::*};
 use tock_registers::interfaces::Writeable;
 
@@ -87,9 +86,7 @@ pub unsafe extern "C" fn _start_rust(
 
     // Turn on the MMU for EL1.
     let addr = Address::new(phys_kernel_tables_base_addr as usize);
-    if unlikely(memory::mmu::enable_mmu_and_caching(addr).is_err()) {
-        cpu::wait_forever();
-    }
+    memory::mmu::enable_mmu_and_caching(addr).unwrap();
 
     // Use `eret` to "return" to EL1. Since virtual memory will already be enabled, this results in
     // execution of kernel_init() in EL1 from its _virtual address_.

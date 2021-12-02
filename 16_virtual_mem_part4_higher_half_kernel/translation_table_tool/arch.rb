@@ -180,21 +180,16 @@ end
 
 # Translation table representing the structure defined in translation_table.rs.
 class TranslationTable
-    MMIO_APERTURE_MiB = 256 * 1024 * 1024
-
     module MAIR
         NORMAL = 1
     end
 
     def initialize
-        @virt_mmio_start_addr = (BSP.kernel_virt_addr_space_size - MMIO_APERTURE_MiB) +
-                                BSP.kernel_virt_start_addr
-
         do_sanity_checks
 
         num_lvl2_tables = BSP.kernel_virt_addr_space_size >> Granule512MiB::SHIFT
 
-        @lvl3 = new_lvl3(num_lvl2_tables, BSP.phys_table_struct_start_addr)
+        @lvl3 = new_lvl3(num_lvl2_tables, BSP.phys_addr_of_kernel_tables)
 
         @lvl2_phys_start_addr = @lvl3.phys_start_addr + @lvl3.size_in_byte
         @lvl2 = new_lvl2(num_lvl2_tables, @lvl2_phys_start_addr)
@@ -202,13 +197,13 @@ class TranslationTable
         populate_lvl2_entries
     end
 
-    def map_pages_at(virt_pages, phys_pages, attributes)
-        return if virt_pages.empty?
+    def map_at(virt_region, phys_region, attributes)
+        return if virt_region.empty?
 
-        raise if virt_pages.size != phys_pages.size
-        raise if phys_pages.last > BSP.phys_addr_space_end_page
+        raise if virt_region.size != phys_region.size
+        raise if phys_region.last > BSP.phys_addr_space_end_page
 
-        virt_pages.zip(phys_pages).each do |virt_page, phys_page|
+        virt_region.zip(phys_region).each do |virt_page, phys_page|
             desc = page_descriptor_from(virt_page)
             set_lvl3_entry(desc, phys_page, attributes)
         end
@@ -229,22 +224,9 @@ class TranslationTable
 
     private
 
-    def binary_with_mmio_clash?
-        BSP.rw_end_exclusive >= @virt_mmio_start_addr
-    end
-
     def do_sanity_checks
         raise unless BSP.kernel_granule::SIZE == Granule64KiB::SIZE
         raise unless (BSP.kernel_virt_addr_space_size % Granule512MiB::SIZE).zero?
-
-        # Need to ensure that that the kernel binary does not clash with the upmost 256 MiB of the
-        # virtual address space, which is reserved for runtime-remapping of MMIO.
-        return unless binary_with_mmio_clash?
-
-        puts format('__data_end_exclusive: 0x%16x', BSP.data_end_exclusive)
-        puts format('MMIO start:           0x%16x', @virt_mmio_start_addr)
-
-        raise 'Kernel virtual addresses clash with 256 MiB MMIO window'
     end
 
     def new_lvl3(num_lvl2_tables, start_addr)
@@ -309,13 +291,10 @@ class TranslationTable
 
                   end
 
-        desc.pxn = case attributes.execute_never
-                   when :XN
+        desc.pxn = if attributes.execute_never
                        Stage1PageDescriptor::PXN::TRUE
-                   when :X
-                       Stage1PageDescriptor::PXN::FALSE
                    else
-                       raise 'Invalid input'
+                       Stage1PageDescriptor::PXN::FALSE
                    end
 
         desc.uxn = Stage1PageDescriptor::UXN::TRUE

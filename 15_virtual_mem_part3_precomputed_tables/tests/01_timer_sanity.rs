@@ -11,12 +11,13 @@
 #![test_runner(libkernel::test_runner)]
 
 use core::time::Duration;
-use libkernel::{bsp, cpu, exception, time, time::interface::TimeManager};
+use libkernel::{bsp, cpu, exception, memory, time, time::interface::TimeManager};
 use test_macros::kernel_test;
 
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
     exception::handling_init();
+    memory::mmu::post_enable_init();
     bsp::console::qemu_bring_up_console();
 
     // Depending on CPU arch, some timer bring-up code could go here. Not needed for the RPi.
