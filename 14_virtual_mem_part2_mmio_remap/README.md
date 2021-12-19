@@ -1021,16 +1021,14 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2.rs
              handler_table: InitStateLock::new([None; Self::NUM_IRQS]),
          }
      }
-@@ -139,6 +152,22 @@
+@@ -139,6 +152,20 @@
      }
 
      unsafe fn init(&self) -> Result<(), &'static str> {
 +        let remapped = self.is_mmio_remapped.load(Ordering::Relaxed);
 +        if !remapped {
-+            let mut virt_addr;
-+
 +            // GICD
-+            virt_addr = memory::mmu::kernel_map_mmio("GICD", &self.gicd_mmio_descriptor)?;
++            let mut virt_addr = memory::mmu::kernel_map_mmio("GICD", &self.gicd_mmio_descriptor)?;
 +            self.gicd.set_mmio(virt_addr.as_usize());
 +
 +            // GICC
@@ -2137,19 +2135,18 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/driver.rs 14_virtual_mem_part2
 diff -uNr 13_exceptions_part2_peripheral_IRQs/src/lib.rs 14_virtual_mem_part2_mmio_remap/src/lib.rs
 --- 13_exceptions_part2_peripheral_IRQs/src/lib.rs
 +++ 14_virtual_mem_part2_mmio_remap/src/lib.rs
-@@ -113,9 +113,11 @@
+@@ -113,8 +113,10 @@
  #![feature(const_fn_trait_bound)]
  #![feature(core_intrinsics)]
  #![feature(format_args_nl)]
 +#![feature(generic_const_exprs)]
- #![feature(global_asm)]
  #![feature(linkage)]
  #![feature(panic_info_message)]
 +#![feature(step_trait)]
  #![feature(trait_alias)]
  #![no_std]
  // Testing
-@@ -128,6 +130,7 @@
+@@ -127,6 +129,7 @@
  mod synchronization;
 
  pub mod bsp;
@@ -2157,7 +2154,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/lib.rs 14_virtual_mem_part2_mm
  pub mod console;
  pub mod cpu;
  pub mod driver;
-@@ -180,6 +183,7 @@
+@@ -179,6 +182,7 @@
  #[no_mangle]
  unsafe fn kernel_init() -> ! {
      exception::handling_init();
@@ -3430,7 +3427,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu.rs 14_virtual_mem_p
 diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory.rs 14_virtual_mem_part2_mmio_remap/src/memory.rs
 --- 13_exceptions_part2_peripheral_IRQs/src/memory.rs
 +++ 14_virtual_mem_part2_mmio_remap/src/memory.rs
-@@ -5,3 +5,161 @@
+@@ -5,3 +5,163 @@
  //! Memory Management.
 
  pub mod mmu;
@@ -3486,6 +3483,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory.rs 14_virtual_mem_part2
 +    }
 +
 +    /// Align down to page size.
++    #[must_use]
 +    pub const fn align_down_page(self) -> Self {
 +        let aligned = common::align_down(self.value, bsp::memory::mmu::KernelGranule::SIZE);
 +
@@ -3493,6 +3491,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory.rs 14_virtual_mem_part2
 +    }
 +
 +    /// Align up to page size.
++    #[must_use]
 +    pub const fn align_up_page(self) -> Self {
 +        let aligned = common::align_up(self.value, bsp::memory::mmu::KernelGranule::SIZE);
 +

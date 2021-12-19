@@ -63,6 +63,7 @@ static PHYS_KERNEL_TABLES_BASE_ADDR: u64 = 0xCCCCAAAAFFFFEEEE;
 /// This is a hack for retrieving the value for the kernel's virtual address space size as a
 /// constant from a common place, since it is needed as a compile-time/link-time constant in both,
 /// the linker script and the Rust sources.
+#[allow(clippy::needless_late_init)]
 const fn kernel_virt_addr_space_size() -> usize {
     let __kernel_virt_addr_space_size;
 

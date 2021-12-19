@@ -456,15 +456,7 @@ diff -uNr 05_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs 06_uart_chainloader
 diff -uNr 05_drivers_gpio_uart/src/main.rs 06_uart_chainloader/src/main.rs
 --- 05_drivers_gpio_uart/src/main.rs
 +++ 06_uart_chainloader/src/main.rs
-@@ -105,6 +105,7 @@
- //! 2. Once finished with architectural setup, the arch code calls `kernel_init()`.
-
- #![allow(clippy::upper_case_acronyms)]
-+#![feature(asm)]
- #![feature(const_fn_fn_ptr_basics)]
- #![feature(format_args_nl)]
- #![feature(global_asm)]
-@@ -142,38 +143,56 @@
+@@ -141,38 +141,56 @@
      kernel_main()
  }
 
@@ -480,7 +472,7 @@ diff -uNr 05_drivers_gpio_uart/src/main.rs 06_uart_chainloader/src/main.rs
      use bsp::console::console;
      use console::interface::All;
 -    use driver::interface::DriverManager;
--
+
 -    println!(
 -        "[0] {} version {}",
 -        env!("CARGO_PKG_NAME"),
@@ -495,37 +487,36 @@ diff -uNr 05_drivers_gpio_uart/src/main.rs 06_uart_chainloader/src/main.rs
 -        .enumerate()
 -    {
 -        println!("      {}. {}", i + 1, driver.compatible());
--    }
++    println!("{}", MINILOAD_LOGO);
++    println!("{:^37}", bsp::board_name());
++    println!();
++    println!("[ML] Requesting binary");
++    console().flush();
++
++    // Discard any spurious received characters before starting with the loader protocol.
++    console().clear_rx();
++
++    // Notify `Minipush` to send the binary.
++    for _ in 0..3 {
++        console().write_char(3 as char);
+     }
 
 -    println!(
 -        "[3] Chars written: {}",
 -        bsp::console::console().chars_written()
 -    );
 -    println!("[4] Echoing input now");
-+    println!("{}", MINILOAD_LOGO);
-+    println!("{:^37}", bsp::board_name());
-+    println!();
-+    println!("[ML] Requesting binary");
-+    console().flush();
-
--    // Discard any spurious received characters before going into echo mode.
-+    // Discard any spurious received characters before starting with the loader protocol.
-     console().clear_rx();
--    loop {
--        let c = bsp::console::console().read_char();
--        bsp::console::console().write_char(c);
-+
-+    // Notify `Minipush` to send the binary.
-+    for _ in 0..3 {
-+        console().write_char(3 as char);
-     }
-+
 +    // Read the binary's size.
 +    let mut size: u32 = u32::from(console().read_char() as u8);
 +    size |= u32::from(console().read_char() as u8) << 8;
 +    size |= u32::from(console().read_char() as u8) << 16;
 +    size |= u32::from(console().read_char() as u8) << 24;
-+
+
+-    // Discard any spurious received characters before going into echo mode.
+-    console().clear_rx();
+-    loop {
+-        let c = bsp::console::console().read_char();
+-        bsp::console::console().write_char(c);
 +    // Trust it's not too big.
 +    console().write_char('O');
 +    console().write_char('K');
@@ -536,7 +527,7 @@ diff -uNr 05_drivers_gpio_uart/src/main.rs 06_uart_chainloader/src/main.rs
 +        for i in 0..size {
 +            core::ptr::write_volatile(kernel_addr.offset(i as isize), console().read_char() as u8)
 +        }
-+    }
+     }
 +
 +    println!("[ML] Loaded! Executing the payload now\n");
 +    console().flush();

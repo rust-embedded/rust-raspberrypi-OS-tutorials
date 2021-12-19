@@ -57,6 +57,7 @@ impl<ATYPE: AddressType> Address<ATYPE> {
     }
 
     /// Align down to page size.
+    #[must_use]
     pub const fn align_down_page(self) -> Self {
         let aligned = common::align_down(self.value, bsp::memory::mmu::KernelGranule::SIZE);
 
@@ -64,6 +65,7 @@ impl<ATYPE: AddressType> Address<ATYPE> {
     }
 
     /// Align up to page size.
+    #[must_use]
     pub const fn align_up_page(self) -> Self {
         let aligned = common::align_up(self.value, bsp::memory::mmu::KernelGranule::SIZE);
 

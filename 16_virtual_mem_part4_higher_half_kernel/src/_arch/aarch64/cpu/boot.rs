@@ -12,6 +12,7 @@
 //! crate::cpu::boot::arch_boot
 
 use crate::{memory, memory::Address};
+use core::arch::global_asm;
 use cortex_a::{asm, registers::*};
 use tock_registers::interfaces::Writeable;
 

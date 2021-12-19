@@ -211,17 +211,19 @@ diff -uNr 08_hw_debug_JTAG/Cargo.toml 09_privilege_level/Cargo.toml
 diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.rs 09_privilege_level/src/_arch/aarch64/cpu/boot.rs
 --- 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.rs
 +++ 09_privilege_level/src/_arch/aarch64/cpu/boot.rs
-@@ -11,17 +11,68 @@
+@@ -11,8 +11,53 @@
  //!
  //! crate::cpu::boot::arch_boot
 
++use core::arch::global_asm;
 +use cortex_a::{asm, registers::*};
 +use tock_registers::interfaces::Writeable;
 +
  // Assembly counterpart to this file.
- global_asm!(include_str!("boot.s"));
-
- //--------------------------------------------------------------------------------------------------
+-core::arch::global_asm!(include_str!("boot.s"));
++global_asm!(include_str!("boot.s"));
++
++//--------------------------------------------------------------------------------------------------
 +// Private Code
 +//--------------------------------------------------------------------------------------------------
 +
@@ -261,11 +263,10 @@ diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.rs 09_privilege_level/src/
 +    // are no plans to ever return to EL2, just re-use the same stack.
 +    SP_EL1.set(phys_boot_core_stack_end_exclusive_addr);
 +}
-+
-+//--------------------------------------------------------------------------------------------------
- // Public Code
- //--------------------------------------------------------------------------------------------------
 
+ //--------------------------------------------------------------------------------------------------
+ // Public Code
+@@ -21,7 +66,14 @@
  /// The Rust entry of the `kernel` binary.
  ///
  /// The function is called from the assembly `_start` function.
@@ -501,7 +502,7 @@ diff -uNr 08_hw_debug_JTAG/src/exception.rs 09_privilege_level/src/exception.rs
 diff -uNr 08_hw_debug_JTAG/src/main.rs 09_privilege_level/src/main.rs
 --- 08_hw_debug_JTAG/src/main.rs
 +++ 09_privilege_level/src/main.rs
-@@ -117,6 +117,7 @@
+@@ -116,6 +116,7 @@
  mod console;
  mod cpu;
  mod driver;
@@ -509,7 +510,7 @@ diff -uNr 08_hw_debug_JTAG/src/main.rs 09_privilege_level/src/main.rs
  mod panic_wait;
  mod print;
  mod synchronization;
-@@ -145,6 +146,8 @@
+@@ -144,6 +145,8 @@
 
  /// The main function running after the early init.
  fn kernel_main() -> ! {
@@ -518,7 +519,7 @@ diff -uNr 08_hw_debug_JTAG/src/main.rs 09_privilege_level/src/main.rs
      use core::time::Duration;
      use driver::interface::DriverManager;
      use time::interface::TimeManager;
-@@ -156,6 +159,12 @@
+@@ -155,6 +158,12 @@
      );
      info!("Booting on: {}", bsp::board_name());
 
@@ -531,7 +532,7 @@ diff -uNr 08_hw_debug_JTAG/src/main.rs 09_privilege_level/src/main.rs
      info!(
          "Architectural timer resolution: {} ns",
          time::time_manager().resolution().as_nanos()
-@@ -170,11 +179,15 @@
+@@ -169,11 +178,15 @@
          info!("      {}. {}", i + 1, driver.compatible());
      }
 

@@ -12,7 +12,7 @@
 //! crate::cpu::boot::arch_boot
 
 // Assembly counterpart to this file.
-global_asm!(include_str!("boot.s"));
+core::arch::global_asm!(include_str!("boot.s"));
 
 //--------------------------------------------------------------------------------------------------
 // Public Code

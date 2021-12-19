@@ -1089,9 +1089,9 @@ diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/s
  #![feature(const_fn_fn_ptr_basics)]
 +#![feature(core_intrinsics)]
  #![feature(format_args_nl)]
- #![feature(global_asm)]
  #![feature(panic_info_message)]
-@@ -118,6 +120,7 @@
+ #![feature(trait_alias)]
+@@ -117,6 +119,7 @@
  mod cpu;
  mod driver;
  mod exception;
@@ -1099,7 +1099,7 @@ diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/s
  mod panic_wait;
  mod print;
  mod synchronization;
-@@ -128,9 +131,17 @@
+@@ -127,9 +130,17 @@
  /// # Safety
  ///
  /// - Only a single core must be active and running this function.
@@ -1118,7 +1118,7 @@ diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/s
 
      for i in bsp::driver::driver_manager().all_device_drivers().iter() {
          if let Err(x) = i.init() {
-@@ -159,6 +170,9 @@
+@@ -158,6 +169,9 @@
      );
      info!("Booting on: {}", bsp::board_name());
 
@@ -1128,7 +1128,7 @@ diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/s
      let (_, privilege_level) = exception::current_privilege_level();
      info!("Current privilege level: {}", privilege_level);
 
-@@ -182,6 +196,13 @@
+@@ -181,6 +195,13 @@
      info!("Timer test, spinning for 1 second");
      time::time_manager().spin_for(Duration::from_secs(1));
 

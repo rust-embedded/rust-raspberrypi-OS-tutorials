@@ -107,7 +107,6 @@
 #![allow(clippy::upper_case_acronyms)]
 #![feature(const_fn_fn_ptr_basics)]
 #![feature(format_args_nl)]
-#![feature(global_asm)]
 #![feature(panic_info_message)]
 #![feature(trait_alias)]
 #![no_main]

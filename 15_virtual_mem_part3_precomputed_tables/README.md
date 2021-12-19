@@ -821,10 +821,10 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/cpu/boot.rs 15_virtu
  //! crate::cpu::boot::arch_boot
 
 +use crate::{memory, memory::Address};
+ use core::arch::global_asm;
  use cortex_a::{asm, registers::*};
  use tock_registers::interfaces::Writeable;
-
-@@ -70,9 +71,16 @@
+@@ -71,9 +72,16 @@
  ///
  /// - Exception return from EL2 must must continue execution in EL1 with `kernel_init()`.
  #[no_mangle]
@@ -1167,7 +1167,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs 15_v
 
  //--------------------------------------------------------------------------------------------------
  // Global instances
-@@ -43,13 +43,34 @@
+@@ -43,13 +43,35 @@
  ///
  /// That is, `size_of(InitStateLock<KernelTranslationTable>) == size_of(KernelTranslationTable)`.
  /// There is a unit tests that checks this porperty.
@@ -1192,6 +1192,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs 15_v
 +/// This is a hack for retrieving the value for the kernel's virtual address space size as a
 +/// constant from a common place, since it is needed as a compile-time/link-time constant in both,
 +/// the linker script and the Rust sources.
++#[allow(clippy::needless_late_init)]
 +const fn kernel_virt_addr_space_size() -> usize {
 +    let __kernel_virt_addr_space_size;
 +
@@ -1203,7 +1204,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs 15_v
  /// Helper function for calculating the number of pages the given parameter spans.
  const fn size_to_num_pages(size: usize) -> usize {
      assert!(size > 0);
-@@ -88,18 +109,22 @@
+@@ -88,18 +110,22 @@
      MemoryRegion::new(start_page_addr, end_exclusive_page_addr)
  }
 
@@ -1237,7 +1238,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs 15_v
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -121,109 +146,33 @@
+@@ -121,109 +147,33 @@
      MemoryRegion::new(start_page_addr, end_exclusive_page_addr)
  }
 

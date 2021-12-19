@@ -883,7 +883,7 @@ diff -uNr 11_exceptions_part1_groundwork/Cargo.toml 12_integrated_testing/Cargo.
  authors = ["Andre Richter <andre.o.richter@gmail.com>"]
  edition = "2021"
 
-@@ -11,21 +11,46 @@
+@@ -11,20 +11,46 @@
  default = []
  bsp_rpi3 = ["tock-registers"]
  bsp_rpi4 = ["tock-registers"]
@@ -902,12 +902,12 @@ diff -uNr 11_exceptions_part1_groundwork/Cargo.toml 12_integrated_testing/Cargo.
 
  # Optional dependencies
  tock-registers = { version = "0.7.x", default-features = false, features = ["register_types"], optional = true }
-+qemu-exit = { version = "2.x.x", optional = true }
++qemu-exit = { version = "3.x.x", optional = true }
 
  # Platform specific dependencies
  [target.'cfg(target_arch = "aarch64")'.dependencies]
- cortex-a = { version = "6.x.x" }
-
+ cortex-a = { version = "7.x.x" }
++
 +##--------------------------------------------------------------------------------------------------
 +## Testing
 +##--------------------------------------------------------------------------------------------------
@@ -1274,7 +1274,7 @@ diff -uNr 11_exceptions_part1_groundwork/src/exception.rs 12_integrated_testing/
 diff -uNr 11_exceptions_part1_groundwork/src/lib.rs 12_integrated_testing/src/lib.rs
 --- 11_exceptions_part1_groundwork/src/lib.rs
 +++ 12_integrated_testing/src/lib.rs
-@@ -0,0 +1,185 @@
+@@ -0,0 +1,184 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
@@ -1388,7 +1388,6 @@ diff -uNr 11_exceptions_part1_groundwork/src/lib.rs 12_integrated_testing/src/li
 +#![feature(const_fn_fn_ptr_basics)]
 +#![feature(core_intrinsics)]
 +#![feature(format_args_nl)]
-+#![feature(global_asm)]
 +#![feature(linkage)]
 +#![feature(panic_info_message)]
 +#![feature(trait_alias)]
@@ -1464,7 +1463,7 @@ diff -uNr 11_exceptions_part1_groundwork/src/lib.rs 12_integrated_testing/src/li
 diff -uNr 11_exceptions_part1_groundwork/src/main.rs 12_integrated_testing/src/main.rs
 --- 11_exceptions_part1_groundwork/src/main.rs
 +++ 12_integrated_testing/src/main.rs
-@@ -6,125 +6,12 @@
+@@ -6,124 +6,12 @@
  #![doc(html_logo_url = "https://git.io/JeGIp")]
 
  //! The `kernel` binary.
@@ -1572,7 +1571,6 @@ diff -uNr 11_exceptions_part1_groundwork/src/main.rs 12_integrated_testing/src/m
 -#![feature(core_intrinsics)]
 +
  #![feature(format_args_nl)]
--#![feature(global_asm)]
 -#![feature(panic_info_message)]
 -#![feature(trait_alias)]
  #![no_main]
@@ -1592,7 +1590,7 @@ diff -uNr 11_exceptions_part1_groundwork/src/main.rs 12_integrated_testing/src/m
 
  /// Early init code.
  ///
-@@ -135,6 +22,7 @@
+@@ -134,6 +22,7 @@
  ///     - MMU + Data caching must be activated at the earliest. Without it, any atomic operations,
  ///       e.g. the yet-to-be-introduced spinlocks in the device drivers (which currently employ
  ///       NullLocks instead of spinlocks), will fail to work (properly) on the RPi SoCs.
@@ -1600,7 +1598,7 @@ diff -uNr 11_exceptions_part1_groundwork/src/main.rs 12_integrated_testing/src/m
  unsafe fn kernel_init() -> ! {
      use driver::interface::DriverManager;
      use memory::mmu::interface::MMU;
-@@ -161,15 +49,9 @@
+@@ -160,15 +49,9 @@
  fn kernel_main() -> ! {
      use bsp::console::console;
      use console::interface::All;
@@ -1617,7 +1615,7 @@ diff -uNr 11_exceptions_part1_groundwork/src/main.rs 12_integrated_testing/src/m
      info!("Booting on: {}", bsp::board_name());
 
      info!("MMU online. Special regions:");
-@@ -195,31 +77,6 @@
+@@ -194,31 +77,6 @@
          info!("      {}. {}", i + 1, driver.compatible());
      }
 

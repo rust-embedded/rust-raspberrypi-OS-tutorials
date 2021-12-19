@@ -809,9 +809,11 @@ diff -uNr 12_integrated_testing/src/_arch/aarch64/cpu/smp.rs 13_exceptions_part2
 diff -uNr 12_integrated_testing/src/_arch/aarch64/exception/asynchronous.rs 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/exception/asynchronous.rs
 --- 12_integrated_testing/src/_arch/aarch64/exception/asynchronous.rs
 +++ 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/exception/asynchronous.rs
-@@ -12,12 +12,16 @@
+@@ -11,13 +11,18 @@
+ //!
  //! crate::exception::asynchronous::arch_asynchronous
 
++use core::arch::asm;
  use cortex_a::registers::*;
 -use tock_registers::interfaces::Readable;
 +use tock_registers::interfaces::{Readable, Writeable};
@@ -827,7 +829,7 @@ diff -uNr 12_integrated_testing/src/_arch/aarch64/exception/asynchronous.rs 13_e
  trait DaifField {
      fn daif_field() -> tock_registers::fields::Field<u64, DAIF::Register>;
  }
-@@ -66,6 +70,71 @@
+@@ -66,6 +71,71 @@
  // Public Code
  //--------------------------------------------------------------------------------------------------
 
@@ -908,7 +910,7 @@ diff -uNr 12_integrated_testing/src/_arch/aarch64/exception.rs 13_exceptions_par
  //! crate::exception::arch_exception
 
 +use crate::{bsp, exception};
- use core::{cell::UnsafeCell, fmt};
+ use core::{arch::global_asm, cell::UnsafeCell, fmt};
  use cortex_a::{asm::barrier, registers::*};
  use tock_registers::{
 @@ -91,8 +92,11 @@
@@ -2413,13 +2415,13 @@ diff -uNr 12_integrated_testing/src/lib.rs 13_exceptions_part2_peripheral_IRQs/s
 
  #![allow(clippy::upper_case_acronyms)]
  #![allow(incomplete_features)]
-+#![feature(asm)]
++#![feature(asm_const)]
  #![feature(const_fn_fn_ptr_basics)]
 +#![feature(const_fn_trait_bound)]
  #![feature(core_intrinsics)]
  #![feature(format_args_nl)]
- #![feature(global_asm)]
-@@ -132,6 +134,7 @@
+ #![feature(linkage)]
+@@ -131,6 +133,7 @@
  pub mod exception;
  pub mod memory;
  pub mod print;

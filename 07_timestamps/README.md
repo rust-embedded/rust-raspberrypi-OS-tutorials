@@ -536,15 +536,7 @@ diff -uNr 06_uart_chainloader/src/cpu.rs 07_timestamps/src/cpu.rs
 diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
 --- 06_uart_chainloader/src/main.rs
 +++ 07_timestamps/src/main.rs
-@@ -105,7 +105,6 @@
- //! 2. Once finished with architectural setup, the arch code calls `kernel_init()`.
-
- #![allow(clippy::upper_case_acronyms)]
--#![feature(asm)]
- #![feature(const_fn_fn_ptr_basics)]
- #![feature(format_args_nl)]
- #![feature(global_asm)]
-@@ -121,6 +120,7 @@
+@@ -119,6 +119,7 @@
  mod panic_wait;
  mod print;
  mod synchronization;
@@ -552,7 +544,7 @@ diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
 
  /// Early init code.
  ///
-@@ -143,56 +143,38 @@
+@@ -141,56 +142,38 @@
      kernel_main()
  }
 

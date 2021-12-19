@@ -154,10 +154,8 @@ impl driver::interface::DeviceDriver for GICv2 {
     unsafe fn init(&self) -> Result<(), &'static str> {
         let remapped = self.is_mmio_remapped.load(Ordering::Relaxed);
         if !remapped {
-            let mut virt_addr;
-
             // GICD
-            virt_addr = memory::mmu::kernel_map_mmio("GICD", &self.gicd_mmio_descriptor)?;
+            let mut virt_addr = memory::mmu::kernel_map_mmio("GICD", &self.gicd_mmio_descriptor)?;
             self.gicd.set_mmio(virt_addr.as_usize());
 
             // GICC

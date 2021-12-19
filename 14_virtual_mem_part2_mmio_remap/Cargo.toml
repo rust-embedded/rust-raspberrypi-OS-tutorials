@@ -22,11 +22,11 @@ test-types = { path = "test-types" }
 
 # Optional dependencies
 tock-registers = { version = "0.7.x", default-features = false, features = ["register_types"], optional = true }
-qemu-exit = { version = "2.x.x", optional = true }
+qemu-exit = { version = "3.x.x", optional = true }
 
 # Platform specific dependencies
 [target.'cfg(target_arch = "aarch64")'.dependencies]
-cortex-a = { version = "6.x.x" }
+cortex-a = { version = "7.x.x" }
 
 ##--------------------------------------------------------------------------------------------------
 ## Testing

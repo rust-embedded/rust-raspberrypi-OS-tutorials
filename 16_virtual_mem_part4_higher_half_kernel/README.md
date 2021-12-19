@@ -340,7 +340,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/Cargo.toml 16_virtual_mem_part
 diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.rs 16_virtual_mem_part4_higher_half_kernel/src/_arch/aarch64/cpu/boot.rs
 --- 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.rs
 +++ 16_virtual_mem_part4_higher_half_kernel/src/_arch/aarch64/cpu/boot.rs
-@@ -29,7 +29,10 @@
+@@ -30,7 +30,10 @@
  /// - The `bss` section is not initialized yet. The code must not use or reference it in any way.
  /// - The HW state of EL1 must be prepared in a sound way.
  #[inline(always)]
@@ -352,7 +352,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.rs 
      // Enable timer counter registers for EL1.
      CNTHCTL_EL2.write(CNTHCTL_EL2::EL1PCEN::SET + CNTHCTL_EL2::EL1PCTEN::SET);
 
-@@ -52,11 +55,11 @@
+@@ -53,11 +56,11 @@
      );
 
      // Second, let the link register point to kernel_init().
@@ -366,7 +366,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.rs 
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -73,14 +76,19 @@
+@@ -74,14 +77,19 @@
  #[no_mangle]
  pub unsafe extern "C" fn _start_rust(
      phys_kernel_tables_base_addr: u64,
@@ -731,7 +731,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/memory/mmu
 
  //--------------------------------------------------------------------------------------------------
  // Public Definitions
-@@ -152,14 +152,6 @@
+@@ -153,14 +153,6 @@
  /// `translation table tool` and patched into the kernel binary. This function just adds the mapping
  /// record entries.
  pub fn kernel_add_mapping_records_for_precomputed() {
@@ -746,7 +746,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/memory/mmu
      let virt_code_region = virt_code_region();
      generic_mmu::kernel_add_mapping_record(
          "Kernel code and RO data",
-@@ -175,4 +167,12 @@
+@@ -176,4 +168,12 @@
          &kernel_virt_to_phys_region(virt_data_region),
          &kernel_page_attributes(virt_data_region.start_page_addr()),
      );
@@ -799,7 +799,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/memory.rs 
 diff -uNr 15_virtual_mem_part3_precomputed_tables/src/lib.rs 16_virtual_mem_part4_higher_half_kernel/src/lib.rs
 --- 15_virtual_mem_part3_precomputed_tables/src/lib.rs
 +++ 16_virtual_mem_part4_higher_half_kernel/src/lib.rs
-@@ -153,11 +153,6 @@
+@@ -152,11 +152,6 @@
      )
  }
 

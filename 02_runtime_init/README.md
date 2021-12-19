@@ -40,15 +40,14 @@ diff -uNr 01_wait_forever/Cargo.toml 02_runtime_init/Cargo.toml
  authors = ["Andre Richter <andre.o.richter@gmail.com>"]
  edition = "2021"
 
-@@ -21,3 +21,8 @@
+@@ -21,3 +21,7 @@
  ##--------------------------------------------------------------------------------------------------
 
  [dependencies]
 +
 +# Platform specific dependencies
 +[target.'cfg(target_arch = "aarch64")'.dependencies]
-+cortex-a = { version = "6.x.x" }
-+
++cortex-a = { version = "7.x.x" }
 
 diff -uNr 01_wait_forever/Makefile 02_runtime_init/Makefile
 --- 01_wait_forever/Makefile
@@ -69,7 +68,7 @@ diff -uNr 01_wait_forever/src/_arch/aarch64/cpu/boot.rs 02_runtime_init/src/_arc
 @@ -13,3 +13,15 @@
 
  // Assembly counterpart to this file.
- global_asm!(include_str!("boot.s"));
+ core::arch::global_asm!(include_str!("boot.s"));
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Code
@@ -303,17 +302,15 @@ diff -uNr 01_wait_forever/src/cpu.rs 02_runtime_init/src/cpu.rs
 diff -uNr 01_wait_forever/src/main.rs 02_runtime_init/src/main.rs
 --- 01_wait_forever/src/main.rs
 +++ 02_runtime_init/src/main.rs
-@@ -102,8 +102,8 @@
+@@ -102,6 +102,7 @@
  //!
  //! 1. The kernel's entry point is the function `cpu::boot::arch_boot::_start()`.
  //!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.s`.
 +//! 2. Once finished with architectural setup, the arch code calls `kernel_init()`.
 
--#![feature(asm)]
- #![feature(global_asm)]
  #![no_main]
  #![no_std]
-@@ -112,4 +112,11 @@
+@@ -110,4 +111,11 @@
  mod cpu;
  mod panic_wait;
 

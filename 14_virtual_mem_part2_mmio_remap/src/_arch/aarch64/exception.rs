@@ -12,7 +12,7 @@
 //! crate::exception::arch_exception
 
 use crate::{bsp, exception};
-use core::{cell::UnsafeCell, fmt};
+use core::{arch::global_asm, cell::UnsafeCell, fmt};
 use cortex_a::{asm::barrier, registers::*};
 use tock_registers::{
     interfaces::{Readable, Writeable},

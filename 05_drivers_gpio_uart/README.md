@@ -140,7 +140,7 @@ diff -uNr 04_safe_globals/Cargo.toml 05_drivers_gpio_uart/Cargo.toml
 +
  # Platform specific dependencies
  [target.'cfg(target_arch = "aarch64")'.dependencies]
- cortex-a = { version = "6.x.x" }
+ cortex-a = { version = "7.x.x" }
 
 diff -uNr 04_safe_globals/Makefile 05_drivers_gpio_uart/Makefile
 --- 04_safe_globals/Makefile
@@ -1340,9 +1340,9 @@ diff -uNr 04_safe_globals/src/main.rs 05_drivers_gpio_uart/src/main.rs
 +#![allow(clippy::upper_case_acronyms)]
 +#![feature(const_fn_fn_ptr_basics)]
  #![feature(format_args_nl)]
- #![feature(global_asm)]
  #![feature(panic_info_message)]
-@@ -114,6 +116,7 @@
+ #![feature(trait_alias)]
+@@ -113,6 +115,7 @@
  mod bsp;
  mod console;
  mod cpu;
@@ -1350,7 +1350,7 @@ diff -uNr 04_safe_globals/src/main.rs 05_drivers_gpio_uart/src/main.rs
  mod panic_wait;
  mod print;
  mod synchronization;
-@@ -123,16 +126,54 @@
+@@ -122,16 +125,54 @@
  /// # Safety
  ///
  /// - Only a single core must be active and running this function.

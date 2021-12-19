@@ -109,7 +109,6 @@
 #![feature(const_fn_fn_ptr_basics)]
 #![feature(core_intrinsics)]
 #![feature(format_args_nl)]
-#![feature(global_asm)]
 #![feature(panic_info_message)]
 #![feature(trait_alias)]
 #![no_main]
