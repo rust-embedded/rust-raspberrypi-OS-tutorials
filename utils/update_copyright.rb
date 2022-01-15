@@ -5,8 +5,6 @@
 #
 # Copyright (c) 2021-2022 Andre Richter <andre.o.richter@gmail.com>
 
-require 'rubygems'
-require 'bundler/setup'
 require 'date'
 
 files = `git ls-files`.split("\n")
