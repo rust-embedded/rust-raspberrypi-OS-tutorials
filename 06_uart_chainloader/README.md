@@ -384,7 +384,7 @@ diff -uNr 05_drivers_gpio_uart/src/bsp/raspberrypi/link.ld 06_uart_chainloader/s
 --- 05_drivers_gpio_uart/src/bsp/raspberrypi/link.ld
 +++ 06_uart_chainloader/src/bsp/raspberrypi/link.ld
 @@ -3,8 +3,6 @@
-  * Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
+  * Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
   */
 
 -__rpi_phys_dram_start_addr = 0;
@@ -555,7 +555,7 @@ diff -uNr 05_drivers_gpio_uart/tests/chainboot_test.rb 06_uart_chainloader/tests
 +
 +# SPDX-License-Identifier: MIT OR Apache-2.0
 +#
-+# Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
++# Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +require_relative '../../common/serial/minipush'
 +require_relative '../../common/tests/boot_test'

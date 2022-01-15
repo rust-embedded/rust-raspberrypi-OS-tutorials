@@ -251,7 +251,7 @@ diff -uNr 06_uart_chainloader/src/_arch/aarch64/time.rs 07_timestamps/src/_arch/
 @@ -0,0 +1,119 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Architectural timer primitives.
 +//!
@@ -453,7 +453,7 @@ diff -uNr 06_uart_chainloader/src/bsp/raspberrypi/link.ld 07_timestamps/src/bsp/
 --- 06_uart_chainloader/src/bsp/raspberrypi/link.ld
 +++ 07_timestamps/src/bsp/raspberrypi/link.ld
 @@ -3,6 +3,8 @@
-  * Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
+  * Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
   */
 
 +__rpi_phys_dram_start_addr = 0;
@@ -712,7 +712,7 @@ diff -uNr 06_uart_chainloader/src/time.rs 07_timestamps/src/time.rs
 @@ -0,0 +1,37 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Timer primitives.
 +
@@ -764,7 +764,7 @@ diff -uNr 06_uart_chainloader/tests/chainboot_test.rb 07_timestamps/tests/chainb
 -
 -# SPDX-License-Identifier: MIT OR Apache-2.0
 -#
--# Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
+-# Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
 -
 -require_relative '../../common/serial/minipush'
 -require_relative '../../common/tests/boot_test'

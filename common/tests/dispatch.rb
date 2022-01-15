@@ -3,7 +3,7 @@
 
 # SPDX-License-Identifier: MIT OR Apache-2.0
 #
-# Copyright (c) 2019-2021 Andre Richter <andre.o.richter@gmail.com>
+# Copyright (c) 2019-2022 Andre Richter <andre.o.richter@gmail.com>
 
 require_relative 'boot_test'
 require_relative 'console_io_test'

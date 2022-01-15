@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: MIT OR Apache-2.0
  *
- * Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
+ * Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
  */
 
 INCLUDE src/bsp/raspberrypi/kernel_virt_addr_space_size.ld;

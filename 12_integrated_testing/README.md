@@ -1277,7 +1277,7 @@ diff -uNr 11_exceptions_part1_groundwork/src/lib.rs 12_integrated_testing/src/li
 @@ -0,0 +1,184 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +// Rust embedded logo for `make doc`.
 +#![doc(html_logo_url = "https://git.io/JeGIp")]
@@ -1730,7 +1730,7 @@ diff -uNr 11_exceptions_part1_groundwork/test-macros/src/lib.rs 12_integrated_te
 @@ -0,0 +1,29 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2019-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2019-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +use proc_macro::TokenStream;
 +use proc_macro2::Span;
@@ -1766,7 +1766,7 @@ diff -uNr 11_exceptions_part1_groundwork/tests/00_console_sanity.rb 12_integrate
 +
 +# SPDX-License-Identifier: MIT OR Apache-2.0
 +#
-+# Copyright (c) 2019-2021 Andre Richter <andre.o.richter@gmail.com>
++# Copyright (c) 2019-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +require 'expect'
 +
@@ -1826,7 +1826,7 @@ diff -uNr 11_exceptions_part1_groundwork/tests/00_console_sanity.rs 12_integrate
 @@ -0,0 +1,35 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2019-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2019-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Console sanity tests - RX, TX and statistics.
 +
@@ -1866,7 +1866,7 @@ diff -uNr 11_exceptions_part1_groundwork/tests/01_timer_sanity.rs 12_integrated_
 @@ -0,0 +1,49 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2019-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2019-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Timer sanity tests.
 +
@@ -1920,7 +1920,7 @@ diff -uNr 11_exceptions_part1_groundwork/tests/02_exception_sync_page_fault.rs 1
 @@ -0,0 +1,43 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2019-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2019-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Page faults must result in synchronous exceptions.
 +
@@ -1977,7 +1977,7 @@ diff -uNr 11_exceptions_part1_groundwork/tests/panic_exit_success/mod.rs 12_inte
 @@ -0,0 +1,9 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2019-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2019-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +/// Overwrites libkernel's `panic_wait::_panic_exit()` with the QEMU-exit version.
 +#[no_mangle]
@@ -2001,7 +2001,7 @@ diff -uNr 11_exceptions_part1_groundwork/test-types/src/lib.rs 12_integrated_tes
 @@ -0,0 +1,16 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2019-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2019-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Types for the `custom_test_frameworks` implementation.
 +

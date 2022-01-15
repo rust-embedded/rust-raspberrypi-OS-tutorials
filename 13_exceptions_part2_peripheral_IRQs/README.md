@@ -777,7 +777,7 @@ diff -uNr 12_integrated_testing/src/_arch/aarch64/cpu/smp.rs 13_exceptions_part2
 @@ -0,0 +1,30 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Architectural symmetric multiprocessing.
 +//!
@@ -934,7 +934,7 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/arm/gicv2/gicc.rs 13_excep
 @@ -0,0 +1,141 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! GICC Driver - GIC CPU interface.
 +
@@ -1080,7 +1080,7 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/arm/gicv2/gicd.rs 13_excep
 @@ -0,0 +1,199 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! GICD Driver - GIC Distributor.
 +//!
@@ -1284,7 +1284,7 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/arm/gicv2.rs 13_exceptions
 @@ -0,0 +1,219 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! GICv2 Driver - ARM Generic Interrupt Controller v2.
 +//!
@@ -1508,7 +1508,7 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/arm.rs 13_exceptions_part2
 @@ -0,0 +1,9 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! ARM driver top level.
 +
@@ -1553,7 +1553,7 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 @@ -0,0 +1,167 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Peripheral Interrupt Controller Driver.
 +
@@ -1725,7 +1725,7 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 @@ -0,0 +1,131 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Interrupt Controller Driver.
 +
@@ -2089,7 +2089,7 @@ diff -uNr 12_integrated_testing/src/bsp/raspberrypi/exception/asynchronous.rs 13
 @@ -0,0 +1,36 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! BSP asynchronous exception handling.
 +
@@ -2130,7 +2130,7 @@ diff -uNr 12_integrated_testing/src/bsp/raspberrypi/exception.rs 13_exceptions_p
 @@ -0,0 +1,7 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! BSP synchronous and asynchronous exception handling.
 +
@@ -2212,7 +2212,7 @@ diff -uNr 12_integrated_testing/src/cpu/smp.rs 13_exceptions_part2_peripheral_IR
 @@ -0,0 +1,14 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Symmetric multiprocessing.
 +
@@ -2527,7 +2527,7 @@ diff -uNr 12_integrated_testing/src/state.rs 13_exceptions_part2_peripheral_IRQs
 @@ -0,0 +1,92 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! State information about the kernel itself.
 +
@@ -2759,7 +2759,7 @@ diff -uNr 12_integrated_testing/tests/03_exception_irq_sanity.rs 13_exceptions_p
 @@ -0,0 +1,66 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! IRQ handling sanity tests.
 +

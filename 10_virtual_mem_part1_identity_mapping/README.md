@@ -367,7 +367,7 @@ diff -uNr 09_privilege_level/src/_arch/aarch64/memory/mmu/translation_table.rs 1
 @@ -0,0 +1,292 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2021-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Architectural translation table.
 +//!
@@ -664,7 +664,7 @@ diff -uNr 09_privilege_level/src/_arch/aarch64/memory/mmu.rs 10_virtual_mem_part
 @@ -0,0 +1,165 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Memory Management Unit Driver.
 +//!
@@ -832,7 +832,7 @@ diff -uNr 09_privilege_level/src/bsp/raspberrypi/link.ld 10_virtual_mem_part1_id
 --- 09_privilege_level/src/bsp/raspberrypi/link.ld
 +++ 10_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/link.ld
 @@ -3,6 +3,9 @@
-  * Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
+  * Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
   */
 
 +PAGE_SIZE = 64K;
@@ -871,7 +871,7 @@ diff -uNr 09_privilege_level/src/bsp/raspberrypi/memory/mmu.rs 10_virtual_mem_pa
 @@ -0,0 +1,86 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! BSP Memory Management Unit.
 +
@@ -960,7 +960,7 @@ diff -uNr 09_privilege_level/src/bsp/raspberrypi/memory.rs 10_virtual_mem_part1_
 --- 09_privilege_level/src/bsp/raspberrypi/memory.rs
 +++ 10_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/memory.rs
 @@ -3,6 +3,45 @@
- // Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
+ // Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
 
  //! BSP Memory Management.
 +//!
@@ -1149,7 +1149,7 @@ diff -uNr 09_privilege_level/src/memory/mmu/translation_table.rs 10_virtual_mem_
 @@ -0,0 +1,14 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2021-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Translation table.
 +
@@ -1168,7 +1168,7 @@ diff -uNr 09_privilege_level/src/memory/mmu.rs 10_virtual_mem_part1_identity_map
 @@ -0,0 +1,264 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Memory Management Unit.
 +//!
@@ -1437,7 +1437,7 @@ diff -uNr 09_privilege_level/src/memory.rs 10_virtual_mem_part1_identity_mapping
 @@ -0,0 +1,7 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Memory Management.
 +

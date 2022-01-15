@@ -1,6 +1,6 @@
 ## SPDX-License-Identifier: MIT OR Apache-2.0
 ##
-## Copyright (c) 2019-2021 Andre Richter <andre.o.richter@gmail.com>
+## Copyright (c) 2019-2022 Andre Richter <andre.o.richter@gmail.com>
 
 # Reference followed: https://www.docker.com/blog/getting-started-with-docker-for-arm-on-linux
 

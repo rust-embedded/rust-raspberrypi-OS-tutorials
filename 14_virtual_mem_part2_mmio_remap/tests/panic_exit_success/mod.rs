@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
-// Copyright (c) 2019-2021 Andre Richter <andre.o.richter@gmail.com>
+// Copyright (c) 2019-2022 Andre Richter <andre.o.richter@gmail.com>
 
 /// Overwrites libkernel's `panic_wait::_panic_exit()` with the QEMU-exit version.
 #[no_mangle]

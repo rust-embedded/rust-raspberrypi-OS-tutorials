@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
-// Copyright (c) 2019-2021 Andre Richter <andre.o.richter@gmail.com>
+// Copyright (c) 2019-2022 Andre Richter <andre.o.richter@gmail.com>
 
 use proc_macro::TokenStream;
 use proc_macro2::Span;

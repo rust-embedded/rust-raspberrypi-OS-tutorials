@@ -2060,7 +2060,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/common.rs 14_virtual_mem_part2
 @@ -0,0 +1,29 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! General purpose code.
 +
@@ -2232,7 +2232,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/alloc.rs 14_virtual
 @@ -0,0 +1,70 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2021-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Allocation.
 +
@@ -2307,7 +2307,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/mapping_record.rs 1
 @@ -0,0 +1,233 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! A record of mapped pages.
 +
@@ -2642,7 +2642,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/types.rs 14_virtual
 @@ -0,0 +1,373 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Memory Management Unit types.
 +
@@ -3018,7 +3018,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu.rs 14_virtual_mem_p
 --- 13_exceptions_part2_peripheral_IRQs/src/memory/mmu.rs
 +++ 14_virtual_mem_part2_mmio_remap/src/memory/mmu.rs
 @@ -3,29 +3,24 @@
- // Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
+ // Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
 
  //! Memory Management Unit.
 -//!

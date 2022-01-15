@@ -2,7 +2,7 @@
 
 # SPDX-License-Identifier: MIT OR Apache-2.0
 #
-# Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
+# Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
 
 require_relative '../../common/serial/minipush'
 require_relative '../../common/tests/boot_test'

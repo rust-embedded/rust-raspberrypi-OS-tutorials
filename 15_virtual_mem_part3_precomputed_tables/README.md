@@ -1135,7 +1135,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/link.ld 15_virtual
 --- 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/link.ld
 +++ 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/link.ld
 @@ -3,6 +3,8 @@
-  * Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
+  * Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
   */
 
 +INCLUDE src/bsp/raspberrypi/kernel_virt_addr_space_size.ld;
@@ -1796,7 +1796,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/arch.rb 15_virt
 +
 +# SPDX-License-Identifier: MIT OR Apache-2.0
 +#
-+# Copyright (c) 2021 Andre Richter <andre.o.richter@gmail.com>
++# Copyright (c) 2021-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +# Bitfield manipulation.
 +class BitField
@@ -2113,7 +2113,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/bsp.rb 15_virtu
 +
 +# SPDX-License-Identifier: MIT OR Apache-2.0
 +#
-+# Copyright (c) 2021 Andre Richter <andre.o.richter@gmail.com>
++# Copyright (c) 2021-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +# Raspberry Pi 3 + 4
 +class RaspberryPi
@@ -2167,7 +2167,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/generic.rb 15_v
 +
 +# SPDX-License-Identifier: MIT OR Apache-2.0
 +#
-+# Copyright (c) 2021 Andre Richter <andre.o.richter@gmail.com>
++# Copyright (c) 2021-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +module Granule64KiB
 +    SIZE = 64 * 1024
@@ -2351,7 +2351,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/kernel_elf.rb 1
 +
 +# SPDX-License-Identifier: MIT OR Apache-2.0
 +#
-+# Copyright (c) 2021 Andre Richter <andre.o.richter@gmail.com>
++# Copyright (c) 2021-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +# KernelELF
 +class KernelELF
@@ -2449,7 +2449,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/main.rb 15_virt
 +
 +# SPDX-License-Identifier: MIT OR Apache-2.0
 +#
-+# Copyright (c) 2021 Andre Richter <andre.o.richter@gmail.com>
++# Copyright (c) 2021-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +TARGET = ARGV[0].split('-').first.to_sym
 +BSP_TYPE = ARGV[1].to_sym

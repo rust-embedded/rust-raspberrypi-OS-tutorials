@@ -328,7 +328,7 @@ diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/exception/asynchronous.rs 09_privil
 @@ -0,0 +1,82 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Architectural asynchronous exception handling.
 +//!
@@ -415,7 +415,7 @@ diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/exception.rs 09_privilege_level/src
 @@ -0,0 +1,31 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Architectural synchronous and asynchronous exception handling.
 +//!
@@ -451,7 +451,7 @@ diff -uNr 08_hw_debug_JTAG/src/exception/asynchronous.rs 09_privilege_level/src/
 @@ -0,0 +1,14 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Asynchronous exception handling.
 +
@@ -470,7 +470,7 @@ diff -uNr 08_hw_debug_JTAG/src/exception.rs 09_privilege_level/src/exception.rs
 @@ -0,0 +1,30 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Synchronous and asynchronous exception handling.
 +

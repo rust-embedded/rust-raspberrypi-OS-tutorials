@@ -233,7 +233,7 @@ diff -uNr 04_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 05_drivers_g
 @@ -0,0 +1,225 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! GPIO Driver.
 +
@@ -463,7 +463,7 @@ diff -uNr 04_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 05_dri
 @@ -0,0 +1,402 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! PL011 UART driver.
 +//!
@@ -870,7 +870,7 @@ diff -uNr 04_safe_globals/src/bsp/device_driver/bcm.rs 05_drivers_gpio_uart/src/
 @@ -0,0 +1,11 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! BCM driver top level.
 +
@@ -886,7 +886,7 @@ diff -uNr 04_safe_globals/src/bsp/device_driver/common.rs 05_drivers_gpio_uart/s
 @@ -0,0 +1,38 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Common device driver code.
 +
@@ -929,7 +929,7 @@ diff -uNr 04_safe_globals/src/bsp/device_driver.rs 05_drivers_gpio_uart/src/bsp/
 @@ -0,0 +1,12 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Device driver.
 +
@@ -1082,7 +1082,7 @@ diff -uNr 04_safe_globals/src/bsp/raspberrypi/driver.rs 05_drivers_gpio_uart/src
 @@ -0,0 +1,49 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! BSP driver support.
 +
@@ -1136,7 +1136,7 @@ diff -uNr 04_safe_globals/src/bsp/raspberrypi/memory.rs 05_drivers_gpio_uart/src
 @@ -0,0 +1,37 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! BSP Memory Management.
 +
@@ -1287,7 +1287,7 @@ diff -uNr 04_safe_globals/src/driver.rs 05_drivers_gpio_uart/src/driver.rs
 @@ -0,0 +1,44 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Driver support.
 +

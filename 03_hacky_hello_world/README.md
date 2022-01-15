@@ -125,7 +125,7 @@ diff -uNr 02_runtime_init/src/bsp/raspberrypi/console.rs 03_hacky_hello_world/sr
 @@ -0,0 +1,47 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! BSP console facilities.
 +
@@ -187,7 +187,7 @@ diff -uNr 02_runtime_init/src/console.rs 03_hacky_hello_world/src/console.rs
 @@ -0,0 +1,19 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! System console.
 +
@@ -264,7 +264,7 @@ diff -uNr 02_runtime_init/src/print.rs 03_hacky_hello_world/src/print.rs
 @@ -0,0 +1,38 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2021 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Printing.
 +
