@@ -4,9 +4,9 @@ version = 3
 
 [[package]]
 name = "cortex-a"
-version = "7.0.0"
+version = "7.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b27f5d071b671f9799dfdf0c0afcec11de65195383d36e186639c83b00705e4f"
+checksum = "5bd95fd055d118f77d4e4d527201b6ceccd13586b19b4dac1270f7081fef0f98"
 dependencies = [
  "tock-registers",
 ]
