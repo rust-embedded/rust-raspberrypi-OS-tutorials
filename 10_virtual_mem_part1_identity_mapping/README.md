@@ -72,7 +72,7 @@ This file contains an instance of `KernelVirtualLayout`, which stores the descri
 previously. The `BSP` is the correct place to do this, because it has knowledge of the target
 board's memory map.
 
-The policy is to only describe regions that are **not** ordinary, normal chacheable DRAM. However,
+The policy is to only describe regions that are **not** ordinary, normal cacheable DRAM. However,
 nothing prevents you from defining those too if you wish to. Here is an example for the device MMIO
 region:
 
