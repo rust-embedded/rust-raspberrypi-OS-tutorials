@@ -102,7 +102,7 @@ It will be used by `_arch/aarch64`'s `MMU` code to request attributes for a virt
 translation, which delivers the physical output address (the `usize` in the return-tuple). The
 function scans for a descriptor that contains the queried address, and returns the respective
 findings for the first entry that is a hit. If no entry is found, it returns default attributes for
-normal chacheable DRAM and the input address, hence telling the `MMU` code that the requested
+normal cacheable DRAM and the input address, hence telling the `MMU` code that the requested
 address should be `identity mapped`.
 
 Due to this default behavior, it is not needed to define normal cacheable DRAM regions.
