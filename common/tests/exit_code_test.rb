@@ -6,6 +6,7 @@
 
 require 'English'
 require_relative 'test'
+require 'io/wait'
 
 # A test that only inspects the exit code of the QEMU binary.
 class ExitCodeTest < Test
@@ -37,7 +38,7 @@ class ExitCodeTest < Test
 
     def run_concrete_test
         Timeout.timeout(MAX_WAIT_SECS) do
-            @test_output << @qemu_serial.read_nonblock(1024) while IO.select([@qemu_serial])
+            @test_output << @qemu_serial.read_nonblock(1024) while @qemu_serial.wait_readable
         end
     rescue EOFError
         @qemu_serial.close

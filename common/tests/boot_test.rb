@@ -5,6 +5,7 @@
 # Copyright (c) 2021-2022 Andre Richter <andre.o.richter@gmail.com>
 
 require_relative 'test'
+require 'io/wait'
 require 'timeout'
 
 # Check for an expected string when booting the kernel in QEMU.
@@ -54,7 +55,7 @@ class BootTest < Test
     def run_concrete_test
         qemu_output = []
         Timeout.timeout(MAX_WAIT_SECS) do
-            while IO.select([@qemu_serial])
+            while @qemu_serial.wait_readable
                 qemu_output << @qemu_serial.read_nonblock(1024)
 
                 if expected_string_observed?(qemu_output)
