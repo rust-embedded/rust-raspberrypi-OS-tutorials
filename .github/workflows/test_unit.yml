@@ -26,9 +26,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Set up Ruby 2.x
-        uses: actions/setup-ruby@v1
-        with:
-          ruby-version: "2.7"
+        uses: ruby/setup-ruby@v1
       - name: Set up Rust nightly
         run: |
           cargo install cargo-binutils
