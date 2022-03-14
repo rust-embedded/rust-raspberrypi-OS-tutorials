@@ -16,6 +16,9 @@ Layout/IndentationWidth:
 Layout/LineLength:
   Max: 100
 
+Lint/UnusedMethodArgument:
+  AutoCorrect: False
+
 Metrics/AbcSize:
   Max: 25
 

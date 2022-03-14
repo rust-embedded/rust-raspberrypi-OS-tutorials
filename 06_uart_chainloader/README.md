@@ -550,7 +550,7 @@ diff -uNr 05_drivers_gpio_uart/tests/boot_test_string.rb 06_uart_chainloader/tes
 diff -uNr 05_drivers_gpio_uart/tests/chainboot_test.rb 06_uart_chainloader/tests/chainboot_test.rb
 --- 05_drivers_gpio_uart/tests/chainboot_test.rb
 +++ 06_uart_chainloader/tests/chainboot_test.rb
-@@ -0,0 +1,80 @@
+@@ -0,0 +1,78 @@
 +# frozen_string_literal: true
 +
 +# SPDX-License-Identifier: MIT OR Apache-2.0
@@ -564,11 +564,33 @@ diff -uNr 05_drivers_gpio_uart/tests/chainboot_test.rb 06_uart_chainloader/tests
 +# Match for the last print that 'demo_payload_rpiX.img' produces.
 +EXPECTED_PRINT = 'Echoing input now'
 +
++# Wait for request to power the target.
++class PowerTargetRequestTest < SubtestBase
++    MINIPUSH_POWER_TARGET_REQUEST = 'Please power the target now'
++
++    def initialize(qemu_cmd, pty_main)
++        super()
++        @qemu_cmd = qemu_cmd
++        @pty_main = pty_main
++    end
++
++    def name
++        'Waiting for request to power target'
++    end
++
++    def run(qemu_out, _qemu_in)
++        expect_or_raise(qemu_out, MINIPUSH_POWER_TARGET_REQUEST)
++
++        # Now is the time to start QEMU with the chainloader binary. QEMU's virtual tty connects to
++        # the MiniPush instance spawned on pty_main, so that the two processes talk to each other.
++        Process.spawn(@qemu_cmd, in: @pty_main, out: @pty_main, err: '/dev/null')
++    end
++end
++
 +# Extend BootTest so that it listens on the output of a MiniPush instance, which is itself connected
 +# to a QEMU instance instead of a real HW.
 +class ChainbootTest < BootTest
 +    MINIPUSH = '../common/serial/minipush.rb'
-+    MINIPUSH_POWER_TARGET_REQUEST = 'Please power the target now'
 +
 +    def initialize(qemu_cmd, payload_path)
 +        super(qemu_cmd, EXPECTED_PRINT)
@@ -581,46 +603,22 @@ diff -uNr 05_drivers_gpio_uart/tests/chainboot_test.rb 06_uart_chainloader/tests
 +    private
 +
 +    # override
-+    def post_process_and_add_output(output)
-+        temp = output.join.split("\r\n")
-+
-+        # Should a line have solo carriage returns, remove any overridden parts of the string.
-+        temp.map! { |x| x.gsub(/.*\r/, '') }
-+
-+        @test_output += temp
-+    end
-+
-+    def wait_for_minipush_power_request(mp_out)
-+        output = []
-+        Timeout.timeout(MAX_WAIT_SECS) do
-+            loop do
-+                output << mp_out.gets
-+                break if output.last.include?(MINIPUSH_POWER_TARGET_REQUEST)
-+            end
-+        end
-+    rescue Timeout::Error
-+        @test_error = 'Timed out waiting for power request'
-+    rescue StandardError => e
-+        @test_error = e.message
-+    ensure
-+        post_process_and_add_output(output)
-+    end
-+
-+    # override
 +    def setup
 +        pty_main, pty_secondary = PTY.open
 +        mp_out, _mp_in = PTY.spawn("ruby #{MINIPUSH} #{pty_secondary.path} #{@payload_path}")
 +
-+        # Wait until MiniPush asks for powering the target.
-+        wait_for_minipush_power_request(mp_out)
++        # The subtests (from this class and the parents) listen on @qemu_out_wrapped. Hence, point
++        # it to MiniPush's output.
++        @qemu_out_wrapped = PTYLoggerWrapper.new(mp_out, "\r\n")
 +
-+        # Now is the time to start QEMU with the chainloader binary. QEMU's virtual tty is connected
-+        # to the MiniPush instance spawned above, so that the two processes talk to each other.
-+        Process.spawn(@qemu_cmd, in: pty_main, out: pty_main)
++        # Important: Run this subtest before the one in the parent class.
++        @console_subtests.prepend(PowerTargetRequestTest.new(@qemu_cmd, pty_main))
++    end
 +
-+        # The remainder of the test is done by the parent class' run_concrete_test, which listens on
-+        # @qemu_serial. Hence, point it to MiniPush's output.
-+        @qemu_serial = mp_out
++    # override
++    def finish
++        super()
++        @test_output.map! { |x| x.gsub(/.*\r/, '  ') }
 +    end
 +end
 +

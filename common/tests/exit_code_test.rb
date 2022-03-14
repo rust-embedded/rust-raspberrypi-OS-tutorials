@@ -25,17 +25,19 @@ class ExitCodeTest < Test
 
     private
 
-    # Convert the recorded output to an array of lines, and extract the test description.
-    def post_process_output
-        @test_output = @test_output.join.split("\n")
-        @test_description = @test_output.shift
-    end
-
     # override
     def setup
         @qemu_serial = IO.popen(@qemu_cmd)
     end
 
+    # override
+    # Convert the recorded output to an array of lines, and extract the test description.
+    def finish
+        @test_output = @test_output.join.split("\n")
+        @test_description = @test_output.shift
+    end
+
+    # override
     def run_concrete_test
         Timeout.timeout(MAX_WAIT_SECS) do
             @test_output << @qemu_serial.read_nonblock(1024) while @qemu_serial.wait_readable
@@ -46,8 +48,6 @@ class ExitCodeTest < Test
     rescue Timeout::Error
         @test_error = 'Timed out waiting for test'
     rescue StandardError => e
-        @test_error = e.message
-    ensure
-        post_process_output
+        @test_error = e.inspect
     end
 end

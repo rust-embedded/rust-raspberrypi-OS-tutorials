@@ -52,7 +52,7 @@ class Test
     def setup; end
 
     # Template method.
-    def cleanup; end
+    def finish; end
 
     # Template method.
     def run_concrete_test
@@ -64,7 +64,7 @@ class Test
     def run
         setup
         run_concrete_test
-        cleanup
+        finish
 
         print_header
         print_output

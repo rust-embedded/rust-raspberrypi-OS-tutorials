@@ -4,48 +4,39 @@
 #
 # Copyright (c) 2019-2022 Andre Richter <andre.o.richter@gmail.com>
 
-require 'expect'
-
-TIMEOUT_SECS = 3
-
-# Error class for when expect times out.
-class ExpectTimeoutError < StandardError
-    def initialize
-        super('Timeout while expecting string')
-    end
-end
+require_relative '../../common/tests/console_io_test'
 
 # Verify sending and receiving works as expected.
-class TxRxHandshake
+class TxRxHandshakeTest < SubtestBase
     def name
         'Transmit and Receive handshake'
     end
 
     def run(qemu_out, qemu_in)
         qemu_in.write_nonblock('ABC')
-        raise ExpectTimeoutError if qemu_out.expect('OK1234', TIMEOUT_SECS).nil?
+        expect_or_raise(qemu_out, 'OK1234')
     end
 end
 
 # Check for correct TX statistics implementation. Depends on test 1 being run first.
-class TxStatistics
+class TxStatisticsTest < SubtestBase
     def name
         'Transmit statistics'
     end
 
     def run(qemu_out, _qemu_in)
-        raise ExpectTimeoutError if qemu_out.expect('6', TIMEOUT_SECS).nil?
+        expect_or_raise(qemu_out, '6')
     end
 end
 
 # Check for correct RX statistics implementation. Depends on test 1 being run first.
-class RxStatistics
+class RxStatisticsTest < SubtestBase
     def name
         'Receive statistics'
     end
 
     def run(qemu_out, _qemu_in)
-        raise ExpectTimeoutError if qemu_out.expect('3', TIMEOUT_SECS).nil?
+        expect_or_raise(qemu_out, '3')
     end
 end
 
@@ -53,5 +44,5 @@ end
 ## Test registration
 ##--------------------------------------------------------------------------------------------------
 def subtest_collection
-    [TxRxHandshake.new, TxStatistics.new, RxStatistics.new]
+    [TxRxHandshakeTest.new, TxStatisticsTest.new, RxStatisticsTest.new]
 end

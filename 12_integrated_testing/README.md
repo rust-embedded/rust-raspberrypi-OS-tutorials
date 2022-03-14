@@ -460,7 +460,7 @@ when 'libkernel'
     ExitCodeTest.new(qemu_cmd, 'Kernel library unit tests').run # Doesn't return
 ```
 
-The easy case is `QEMU` existing by itself by means of `aarch64::exit_success()` or
+The easy case is `QEMU` exiting by itself by means of `aarch64::exit_success()` or
 `aarch64::exit_failure()`. But the script can also catch the case of a test that gets stuck, e.g. in
 an unintentional busy loop or a crash. If `ExitCodeTest` does not observe any output of the test
 kernel for `MAX_WAIT_SECS`, it cancels the execution and marks the test as failed. Test success or
@@ -471,20 +471,16 @@ is thrown):
 
 ```ruby
 def run_concrete_test
-    io = IO.popen(@qemu_cmd)
-
     Timeout.timeout(MAX_WAIT_SECS) do
-        @test_output << io.read_nonblock(1024) while IO.select([io])
+        @test_output << @qemu_serial.read_nonblock(1024) while @qemu_serial.wait_readable
     end
 rescue EOFError
-    io.close
+    @qemu_serial.close
     @test_error = $CHILD_STATUS.to_i.zero? ? false : 'QEMU exit status != 0'
 rescue Timeout::Error
     @test_error = 'Timed out waiting for test'
 rescue StandardError => e
-    @test_error = e.message
-ensure
-    post_process_output
+    @test_error = e.inspect
 end
 ```
 
@@ -742,15 +738,17 @@ Here is an excerpt from `00_console_sanity.rb` showing a subtest that does a han
 kernel over the console:
 
 ```ruby
+require_relative '../../common/tests/console_io_test'
+
 # Verify sending and receiving works as expected.
-class TxRxHandshake
+class TxRxHandshakeTest < SubtestBase
     def name
         'Transmit and Receive handshake'
     end
 
     def run(qemu_out, qemu_in)
         qemu_in.write_nonblock('ABC')
-        raise ExpectTimeoutError if qemu_out.expect('OK1234', TIMEOUT_SECS).nil?
+        expect_or_raise(qemu_out, 'OK1234')
     end
 end
 ```
@@ -823,6 +821,9 @@ Compiling integration test(s) - rpi3
            1. Transmit and Receive handshake............................[ok]
            2. Transmit statistics.......................................[ok]
            3. Receive statistics........................................[ok]
+
+         Console log:
+           ABCOK123463
 
          -------------------------------------------------------------------
          ✅ Success: 00_console_sanity.rs
@@ -1761,55 +1762,46 @@ diff -uNr 11_exceptions_part1_groundwork/test-macros/src/lib.rs 12_integrated_te
 diff -uNr 11_exceptions_part1_groundwork/tests/00_console_sanity.rb 12_integrated_testing/tests/00_console_sanity.rb
 --- 11_exceptions_part1_groundwork/tests/00_console_sanity.rb
 +++ 12_integrated_testing/tests/00_console_sanity.rb
-@@ -0,0 +1,57 @@
+@@ -0,0 +1,48 @@
 +# frozen_string_literal: true
 +
 +# SPDX-License-Identifier: MIT OR Apache-2.0
 +#
 +# Copyright (c) 2019-2022 Andre Richter <andre.o.richter@gmail.com>
 +
-+require 'expect'
-+
-+TIMEOUT_SECS = 3
-+
-+# Error class for when expect times out.
-+class ExpectTimeoutError < StandardError
-+    def initialize
-+        super('Timeout while expecting string')
-+    end
-+end
++require_relative '../../common/tests/console_io_test'
 +
 +# Verify sending and receiving works as expected.
-+class TxRxHandshake
++class TxRxHandshakeTest < SubtestBase
 +    def name
 +        'Transmit and Receive handshake'
 +    end
 +
 +    def run(qemu_out, qemu_in)
 +        qemu_in.write_nonblock('ABC')
-+        raise ExpectTimeoutError if qemu_out.expect('OK1234', TIMEOUT_SECS).nil?
++        expect_or_raise(qemu_out, 'OK1234')
 +    end
 +end
 +
 +# Check for correct TX statistics implementation. Depends on test 1 being run first.
-+class TxStatistics
++class TxStatisticsTest < SubtestBase
 +    def name
 +        'Transmit statistics'
 +    end
 +
 +    def run(qemu_out, _qemu_in)
-+        raise ExpectTimeoutError if qemu_out.expect('6', TIMEOUT_SECS).nil?
++        expect_or_raise(qemu_out, '6')
 +    end
 +end
 +
 +# Check for correct RX statistics implementation. Depends on test 1 being run first.
-+class RxStatistics
++class RxStatisticsTest < SubtestBase
 +    def name
 +        'Receive statistics'
 +    end
 +
 +    def run(qemu_out, _qemu_in)
-+        raise ExpectTimeoutError if qemu_out.expect('3', TIMEOUT_SECS).nil?
++        expect_or_raise(qemu_out, '3')
 +    end
 +end
 +
@@ -1817,7 +1809,7 @@ diff -uNr 11_exceptions_part1_groundwork/tests/00_console_sanity.rb 12_integrate
 +## Test registration
 +##--------------------------------------------------------------------------------------------------
 +def subtest_collection
-+    [TxRxHandshake.new, TxStatistics.new, RxStatistics.new]
++    [TxRxHandshakeTest.new, TxStatisticsTest.new, RxStatisticsTest.new]
 +end
 
 diff -uNr 11_exceptions_part1_groundwork/tests/00_console_sanity.rs 12_integrated_testing/tests/00_console_sanity.rs
