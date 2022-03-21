@@ -11,58 +11,49 @@
 Esto es una serie de tutoriales para los desarrolladores aficionados a los Sistemas Operativos (OS) 
 que se están adentrando a la nueva arquitectura ARM de 64 bits [ARMv8-A
 architecture]. Los tutoriales darán una guía paso a paso en cómo escribir un Sistema Operativo 
-[monolitico] desde cero.
+[monolítico] desde cero.
 Estos tutoriales cubren la implementación común de diferentes tareas de Sistemas Operativos, como 
-escribir en una serial console, configurar la memoria virtual y manejar excepciones de hardware (HW). 
+escribir en una terminal serie, configurar la memoria virtual y manejar excepciones de hardware (HW). 
 Todo mientras usamos la seguridad y velocidad que `Rust` nos proporciona.
 
 ¡Divértanse!
 
 _Atentamente, <br>Andre ([@andre-richter])_
 
-P.S.: Las versiones chinas :cn: de los tutoriales fueron iniciadas por [@colachg] y [@readlnh].
-Las puedes encontrar como [`README.CN.md`](README.CN.md) en sus respectivas carpetas. Por el
-momento están un poco desactualizadas.
-
-La traducción de este [documento](README.ES.md) :mexico: :es: fue creada y enviada por [@zanezhub].
-De igual manera se traducirán los tutoriales que sean proporcionados por este repositorio.
+P.S.: Para otros lenguajes, por favor busquen los diferentes archivos README. Por ejemplo, [`README.CN.md`](README.CN.md) o [`README.ES.md`](README.ES.md). Muchas gracias a nuestros
+[traductores](#translations-of-this-repository) 🙌.
 
 [ARMv8-A architecture]: https://developer.arm.com/products/architecture/cpu-architecture/a-profile/docs
-[monolitico]: https://en.wikipedia.org/wiki/Monolithic_kernel
+[monolítico]: https://en.wikipedia.org/wiki/Monolithic_kernel
 [@andre-richter]: https://github.com/andre-richter
-[@colachg]: https://github.com/colachg
-[@readlnh]: https://github.com/readlnh
-[@zanezhub]: https://github.com/zanezhub
 
 ## 📑 Estructura
 
-- Cada tutorial contienen un solo binario booteable de la `kernel`.
+- Cada tutorial contiene un solo binario arrancable correspondiente al núcleo.
 - Cada tutorial nuevo extiende el tutorial anterior.
-- Cada tutorial tendrá un `README` y cada `README` tendrá un pequeña sección de [`tl;dr`](https://es.wikipedia.org/wiki/TL;DR) 
-  en donde se dará una pequeña recapitulación de las adiciones anteriores y se mostrará el código fuente `diff` del tutorial 
-  anterior para que se pueda inspeccionar los cambios/adiciones que han ocurrido.
-    - Algunos tutoriales además de tener un `tl;dr` también tendrán una sección en la que se dará una explicación con lujo de detalle.
-      El plan a largo plazo es que cada tutorial tenga una buena explicación en adición al `tl;dr` y al `diff`; pero por el momento los únicos tutoriales
+- Cada tutorial tendrá un `README` y cada `README` tendrá un pequeña sección de [`tl;dr`](https://es.wikipedia.org/wiki/TL;DR) en donde se dará una pequeña perspectiva general de los cambios y se mostrará el código fuente `diff` del tutorial anterior para que se puedan inspeccionar los cambios/adiciones que han ocurrido.
+    - Algunos tutoriales además de tener un `tl;dr` también tendrán una sección en la que se dará una explicación con todo lujo de detalle.
+       El plan a largo plazo es que cada tutorial tenga una buena explicación además del `tl;dr` y el `diff`; pero por el momento los únicos tutoriales
       que gozan de una son los tutoriales en los que creo que el `tl;dr` y el `diff` no son suficientes para comprender lo que está pasando.
 - El código que se escribió en este tutorial soporta y corre en la **Raspberry Pi 3** y en la **Raspberry 4**
   - Del tutorial 1 hasta el 5 son tutoriales "preparatorios", por lo que este código solo tendrá sentido ejecutarlo en [`QEMU`](https://www.qemu.org/).
-  - Cuando llegues al [tutorial 5](05_drivers_gpio_uart) podr comenzar a cargar y a ejecutar el kernel en una
-    Raspeberry de verdad, y observar el output en `UART`.
-- Aunque la Raspberry Pi 3 y 4 son las principales tarjetas este código está escrito en un estilo modular,
-  lo que permite una fácil portabilidad a otra arquitecturas de CPU o/y tarjetas.
-  - Me encantaría si alguien intenta implementar este código en una arquitectura **RISC-V**.
+  - Cuando llegues al [tutorial 5](05_drivers_gpio_uart) podrás comenzar a cargar y a ejecutar el núcleo en una
+    Raspeberry de verdad, y observar la salida serie (`UART`).
+- Aunque la Raspberry Pi 3 y 4 son las principales placas este código está escrito en un estilo modular,
+  lo que permite una fácil portabilidad a otras arquitecturas de CPU o/y placas.
+  - Me encantaría si alguien intentase adaptar este código en una arquitectura **RISC-V**.
 - Para la edición recomiendo [Visual Studio Code] con [Rust Analyzer].
-- En adición al texto que aparece en los tutoriales también sería recomendable de revisar 
+- En adición al texto que aparece en los tutoriales también sería recomendable revisar 
   el comando `make doc` en cada tutorial. Este comando te deja navegar el código documentado de una manera cómoda.
 
-### Output del comando `make doc`
+### Salida del comando `make doc`
 
 ![make doc](doc/make_doc.png)
 
 [Visual Studio Code]: https://code.visualstudio.com
 [Rust Analyzer]: https://rust-analyzer.github.io
 
-## 🛠 Requesitos del sistema
+## 🛠 Requisitos del sistema
 
 Estos tutoriales están dirigidos principalmente a distribuciones de **Linux**. 
 Muchas de las cosas vistas aquí también funcionan en **macOS**, pero esto solo es _experimental_.
@@ -70,8 +61,8 @@ Muchas de las cosas vistas aquí también funcionan en **macOS**, pero esto solo
 ### 🚀 La versión tl;dr
 
 1. [Instala Docker Desktop][install_docker].
-2. (**Solo para Linux**) Asegurate de que la cuenta de tu usuario están en el [docker group].
-3. Prepara la `Rust` toolchain. La mayor parte será manejada en el primer uso del archivo [rust-toolchain](rust-toolchain). 
+2. (**Solo para Linux**) Asegúrate de que la cuenta de tu usuario está en el [grupo `docker`][docker group].
+3. Prepara la `Rust` toolchain. La mayor parte se hará automáticamente durante el primer uso del archivo [rust-toolchain](rust-toolchain). 
    Todo lo que nos queda hacer a nosotros es: 
 
    i. Si ya tienes una versión de Rust instalada:
@@ -99,46 +90,45 @@ Muchas de las cosas vistas aquí también funcionan en **macOS**, pero esto solo
 [docker group]: https://docs.docker.com/engine/install/linux-postinstall/
 [Rust Analyzer extension]: https://marketplace.visualstudio.com/items?itemName=matklad.rust-analyzer
 
-### 🧰 Más detalles: Eliminando Toolchain Hassle
+### 🧰 Más detalles: Eliminando Lios con Toolchains
 
-Esta serie trata de enfocarse lo máximo posible en tener una experiencia amistosa con el usario.
+Esta serie trata de enfocarse lo máximo posible en tener una experiencia agradable para el usario.
 Por lo tanto, se han dirigido muchos esfuerzos a eliminar la parte más difícil del desarrollo de
-los sistemas incorporados (embedded) tanto como se pudo: `Toolchain hassle`.
+los sistemas incorporados (embedded) tanto como se pudo.
 
-Rust por sí mismo ya está ayudando mucho, porque tiene integrado el soporte para cross-compilation.
+Rust por sí mismo ya ayuda mucho, porque tiene integrado el soporte para compilación cruzada.
 Todo lo que necesitamos para compilar desde una máquina con una arquitectura `x86` a una Raspberry Pi
 con arquitectura `AArch64` será automáticamente instalado por `rustup`. Sin embargo, además de usar
-el compilador de Rust, también usaremos algunas otras herrameintas, entre las cuales están:
+el compilador de Rust, también usaremos algunas otras herramientas, entre las cuales están:
 
-- `QEMU` para emular nuestro kernel en nuestra máquina principal.
--  Una herramienta llamada `Minipush` para cargar el kernel en una Raspberry Pi on-demand usando `UART`.
-- `OpenOCD` y `GDB` para hacer "debugging" de la máquina a instalar.
+- `QEMU` para emular nuestro núcleo en nuestra máquina principal.
+-  Una herramienta llamada `Minipush` para cargar el núcleo en una Raspberry Pi cuando queramos usando `UART`.
+- `OpenOCD` y `GDB` para hacer depuración ("debugging") en la máquina a instalar.
 
 Hay muchas cosas que pueden salir mal mientras instalamos y/o compilamos las versiones correctas de cada
-herramienta en tu máquina. Por ejemplo, tu distribución tal vez podría no proporcionar las versiones más
-recientes que se necesiten. O tal vez te falten algunas dependencias para la compilar estas herramientas.
+herramienta en tu máquina. Por ejemplo, tu distribución de Linux tal vez podría no proporcionar las versiones más
+recientes de paquetes que se necesiten. O tal vez te falten algunas dependencias para la compilar estas herramientas.
 
-Esta es la razón por la cual usaremos [Docker][install_docker] en las circunstancias posibles. Te
+Esta es la razón por la cual usaremos [Docker][install_docker] mientras sea posible. Te
 estamos proporcionando un contenedor que tiene todas las herramientas o dependencias preinstaladas.
 Si quieres saber más acerca de Docker y revisar el contenedor proporcionado, por favor revisa la carpeta
 [docker](docker) del repositorio.
 
 [install_docker]: https://docs.docker.com/get-docker/
 
-## 📟 USB Serial Output
+## 📟 Puerto Serie USB
 
-Ya que el desarrollo de este kernel se está ejecutando en hardware real, se recomienda que tengas
-un USB serial cable para sentir la experiencia completa.
+Ya que el núcleo desarrollado en este tutorial se ejecuta en hardware real, se recomienda que tengas un adaptador de puerto serie USB cable para sentir la experiencia completa.
 
 - Puedes encontrar estos cables que deberían funcionar sin ningún problema en [\[1\]] [\[2\]], pero
-  hay muchos otros que pueden funcionar. Idealmente, tu cable está basado en el chip `CP2102`.
-- Lo conectas a los pines `GND` y GPIO `14/15` como se muestra en la parte inferior.  
+  hay muchos otros que pueden funcionar. Idealmente, tu cable estaría basado en el chip `CP2102`.
+- Lo conectas a los pines `GND` y `GPIO` `14/15` como se muestra en la parte inferior.  
 - [Tutorial 5](05_drivers_gpio_uart) es la primera vez en la que lo vas usar. Revisa las instrucciones
-  en cómo preparar una tarjeta SD para bootear en tu kernel desde ahí.
-- Empezando con el [tutorial 6](06_uart_chainloader), bootear kernels en tu Raspberry comienza a ser
-  más fácil. En este tutorial, un `chainloader` es desarrollado, que será el último archivo que necesitarás
-  copiar de manera manual a la tarjeta SD por un tiempo. Esto te permitirá cargar los kernels de los tutoriales
-  durante el boot on demand usando `UART`.
+  sobre cómo preparar una tarjeta SD para arrancar en tu núcleo desde ahí.
+- Empezando con el [tutorial 6](06_uart_chainloader), arrancar núcleos en tu Raspberry Pi comienza a ser
+  más fácil. En este tutorial se desarrolla un `chainloader`, que será el último archivo que necesitarás
+  copiar de manera manual a la tarjeta SD por el momento. Esto te permitirá cargar los núcleos de los tutoriales
+  durante el arranque usando `UART`.
 
 ![UART wiring diagram](doc/wiring.png)
 
@@ -151,6 +141,19 @@ La versión original de estos tutoriales empezó como un fork de los increíbles
 [tutoriales de programación en hardware en la RPi3](https://github.com/bztsrc/raspi3-tutorial) en `C`
 de [Zoltan Baldaszti](https://github.com/bztsrc). ¡Gracias por darme un punto de partida!
 
+### Traducciones de este repositorio
+
+ - **Chino:**
+   - [@colachg] y [@readlnh].
+   - Necesitan actualizaciones.
+ - **Español:**
+   -  [@zanezhub].
+   -  En el futuro habrán tutoriales traducidos al español. 
+
+[@colachg]: https://github.com/colachg
+[@readlnh]: https://github.com/readlnh
+[@zanezhub]: https://github.com/zanezhub
+
 ## Licencia
 
 Este proyecto está licenciado por cualquiera de las siguientes licencias como alguna de tus dos opciones
@@ -161,8 +164,8 @@ Este proyecto está licenciado por cualquiera de las siguientes licencias como a
 
 ### Contribución
 
-A menos de que lo menciones, cualquier contribución enviada por ti para su inclusión en este trabajó,
-caerá bajo la licencia de Apache-2.0, deberá tener doble licencias como se muestra en la parte superior, sin ninguna
-adición de términos o condiciones.
+A menos de que lo menciones, cualquier contribución enviada por ti para su inclusión en este trabajo,
+tal como se define en la licencia Apache-2.0, deberá tener doble licencia como se muestra en la parte superior, sin ningún
+cambio de términos o condiciones.
 
 
