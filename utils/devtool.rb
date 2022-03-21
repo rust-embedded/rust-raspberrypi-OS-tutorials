@@ -193,7 +193,12 @@ class DevTool
 
     def misspell
         puts 'Misspell'.light_blue
-        exit(1) unless system(".vendor/misspell -error #{tracked_files.join(' ')}")
+
+        translations = ['README.CN.md', 'README.ES.md']
+        files = tracked_files.reject { |f| translations.include?(File.basename(f)) }
+        files = files.join(' ')
+
+        exit(1) unless system(".vendor/misspell -error #{files}")
     end
 
     def rubocop
