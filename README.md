@@ -22,11 +22,15 @@ P.S.: Chinese :cn: versions of the tutorials were started by [@colachg] and [@re
 them as [`README.CN.md`](README.CN.md) in the respective folders. They are a bit out-of-date at the
 moment though.
 
+The [spanish version of this README.md file](README.ES.md) was created and commited by :mexico: :es: [@zanezhub].
+In the future there'll be tutorials translated in spanish.
+
 [ARMv8-A architecture]: https://developer.arm.com/products/architecture/cpu-architecture/a-profile/docs
 [monolithic]: https://en.wikipedia.org/wiki/Monolithic_kernel
 [@andre-richter]: https://github.com/andre-richter
 [@colachg]: https://github.com/colachg
 [@readlnh]: https://github.com/readlnh
+[@zanezhub]: https://github.com/zanezhub
 
 ## 📑 Organization
 
