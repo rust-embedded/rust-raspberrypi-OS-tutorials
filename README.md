@@ -18,15 +18,13 @@ Have fun!
 
 _Best regards,<br>Andre ([@andre-richter])_
 
-P.S.: Chinese :cn: versions of the tutorials were started by [@colachg] and [@readlnh]. You can find
-them as [`README.CN.md`](README.CN.md) in the respective folders. They are a bit out-of-date at the
-moment though.
+P.S.: For other languages, please look out for alternative README files. For example,
+[`README.CN.md`](README.CN.md) or [`README.ES.md`](README.ES.md). Many thanks to our
+[translators](#translations-of-this-repository) 🙌.
 
 [ARMv8-A architecture]: https://developer.arm.com/products/architecture/cpu-architecture/a-profile/docs
 [monolithic]: https://en.wikipedia.org/wiki/Monolithic_kernel
 [@andre-richter]: https://github.com/andre-richter
-[@colachg]: https://github.com/colachg
-[@readlnh]: https://github.com/readlnh
 
 ## 📑 Organization
 
@@ -142,6 +140,19 @@ get a USB serial cable to get the full experience.
 The original version of the tutorials started out as a fork of [Zoltan
 Baldaszti](https://github.com/bztsrc)'s awesome [tutorials on bare metal programming on
 RPi3](https://github.com/bztsrc/raspi3-tutorial) in `C`. Thanks for giving me a head start!
+
+### Translations of this repository
+
+ - **Chinese**
+   - [@colachg] and [@readlnh].
+   - Need updating.
+ - **Spanish**
+   -  [@zanezhub].
+   -  In the future there'll be tutorials translated to spanish.
+
+[@colachg]: https://github.com/colachg
+[@readlnh]: https://github.com/readlnh
+[@zanezhub]: https://github.com/zanezhub
 
 ## License
 
