@@ -21,7 +21,7 @@ Todo mientras usamos la seguridad y velocidad que `Rust` nos proporciona.
 _Atentamente, <br>Andre ([@andre-richter])_
 
 P.S.: Para otros lenguajes, por favor busquen los diferentes archivos README. Por ejemplo, [`README.CN.md`](README.CN.md) o [`README.ES.md`](README.ES.md). Muchas gracias a nuestros
-[traductores](#translations-of-this-repository) 🙌.
+[traductores](#traducciones-de-este-repositorio) 🙌.
 
 [ARMv8-A architecture]: https://developer.arm.com/products/architecture/cpu-architecture/a-profile/docs
 [monolítico]: https://en.wikipedia.org/wiki/Monolithic_kernel
