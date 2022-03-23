@@ -32,9 +32,9 @@ P.S.: Para otros lenguajes, por favor busquen los diferentes archivos README. Po
 - Cada tutorial contiene un solo binario arrancable correspondiente al núcleo.
 - Cada tutorial nuevo extiende el tutorial anterior.
 - Cada tutorial tendrá un `README` y cada `README` tendrá un pequeña sección de [`tl;dr`](https://es.wikipedia.org/wiki/TL;DR) en donde se dará una pequeña perspectiva general de los cambios y se mostrará el código fuente `diff` del tutorial anterior para que se puedan inspeccionar los cambios/adiciones que han ocurrido.
-    - Algunos tutoriales además de tener un `tl;dr` también tendrán una sección en la que se dará una explicación con todo lujo de detalle.
-       El plan a largo plazo es que cada tutorial tenga una buena explicación además del `tl;dr` y el `diff`; pero por el momento los únicos tutoriales
-      que gozan de una son los tutoriales en los que creo que el `tl;dr` y el `diff` no son suficientes para comprender lo que está pasando.
+  - Algunos tutoriales además de tener un `tl;dr` también tendrán una sección en la que se dará una explicación con todo lujo de detalle.
+     El plan a largo plazo es que cada tutorial tenga una buena explicación además del `tl;dr` y el `diff`; pero por el momento los únicos tutoriales
+    que gozan de una son los tutoriales en los que creo que el `tl;dr` y el `diff` no son suficientes para comprender lo que está pasando.
 - El código que se escribió en este tutorial soporta y corre en la **Raspberry Pi 3** y en la **Raspberry 4**
   - Del tutorial 1 hasta el 5 son tutoriales "preparatorios", por lo que este código solo tendrá sentido ejecutarlo en [`QEMU`](https://www.qemu.org/).
   - Cuando llegues al [tutorial 5](05_drivers_gpio_uart) podrás comenzar a cargar y a ejecutar el núcleo en una
@@ -61,28 +61,33 @@ Muchas de las cosas vistas aquí también funcionan en **macOS**, pero esto solo
 ### 🚀 La versión tl;dr
 
 1. [Instala Docker Desktop][install_docker].
+
 2. (**Solo para Linux**) Asegúrate de que la cuenta de tu usuario está en el [grupo `docker`][docker group].
+
 3. Prepara la `Rust` toolchain. La mayor parte se hará automáticamente durante el primer uso del archivo [rust-toolchain](rust-toolchain). 
    Todo lo que nos queda hacer a nosotros es: 
-
+   
    i. Si ya tienes una versión de Rust instalada:
-      ```bash
-      cargo install cargo-binutils rustfilt
-      ```
-
+   
+   ```bash
+   cargo install cargo-binutils rustfilt
+   ```
+   
    ii. Si necesitas instalar Rust desde cero:
-      ```bash
-      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-
-      source $HOME/.cargo/env
-      cargo install cargo-binutils rustfilt
-      ```
+   
+   ```bash
+   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+   
+   source $HOME/.cargo/env
+   cargo install cargo-binutils rustfilt
+   ```
 
 4. En caso de que uses `Visual Studio Code`, recomiendo que instales la extensión [Rust Analyzer extension].
+
 5. (**Solo para macOS**) Instala algunas `Ruby` gems.
-
+   
    Ejecuta esto en la carpeta root del repositorio:
-
+   
    ```bash
    bundle install --path .vendor/bundle --without development
    ```
@@ -92,7 +97,7 @@ Muchas de las cosas vistas aquí también funcionan en **macOS**, pero esto solo
 
 ### 🧰 Más detalles: Eliminando Lios con Toolchains
 
-Esta serie trata de enfocarse lo máximo posible en tener una experiencia agradable para el usario.
+Esta serie trata de enfocarse lo máximo posible en tener una experiencia agradable para el usuario.
 Por lo tanto, se han dirigido muchos esfuerzos a eliminar la parte más difícil del desarrollo de
 los sistemas incorporados (embedded) tanto como se pudo.
 
@@ -102,7 +107,7 @@ con arquitectura `AArch64` será automáticamente instalado por `rustup`. Sin em
 el compilador de Rust, también usaremos algunas otras herramientas, entre las cuales están:
 
 - `QEMU` para emular nuestro núcleo en nuestra máquina principal.
--  Una herramienta llamada `Minipush` para cargar el núcleo en una Raspberry Pi cuando queramos usando `UART`.
+- Una herramienta llamada `Minipush` para cargar el núcleo en una Raspberry Pi cuando queramos usando `UART`.
 - `OpenOCD` y `GDB` para hacer depuración ("debugging") en la máquina a instalar.
 
 Hay muchas cosas que pueden salir mal mientras instalamos y/o compilamos las versiones correctas de cada
@@ -143,12 +148,12 @@ de [Zoltan Baldaszti](https://github.com/bztsrc). ¡Gracias por darme un punto d
 
 ### Traducciones de este repositorio
 
- - **Chino:**
-   - [@colachg] y [@readlnh].
-   - Necesitan actualizaciones.
- - **Español:**
-   -  [@zanezhub].
-   -  En el futuro habrán tutoriales traducidos al español. 
+- **Chino:**
+  - [@colachg] y [@readlnh].
+  - Necesitan actualizaciones.
+- **Español:**
+  - [@zanezhub].
+  - En el futuro habrán tutoriales traducidos al español. 
 
 [@colachg]: https://github.com/colachg
 [@readlnh]: https://github.com/readlnh
@@ -158,14 +163,11 @@ de [Zoltan Baldaszti](https://github.com/bztsrc). ¡Gracias por darme un punto d
 
 Este proyecto está licenciado por cualquiera de las siguientes licencias como alguna de tus dos opciones
 
-- Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
-- MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
-
+- Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) o http://www.apache.org/licenses/LICENSE-2.0)
+- MIT license ([LICENSE-MIT](LICENSE-MIT) o http://opensource.org/licenses/MIT)
 
 ### Contribución
 
 A menos de que lo menciones, cualquier contribución enviada por ti para su inclusión en este trabajo,
 tal como se define en la licencia Apache-2.0, deberá tener doble licencia como se muestra en la parte superior, sin ningún
 cambio de términos o condiciones.
-
-
