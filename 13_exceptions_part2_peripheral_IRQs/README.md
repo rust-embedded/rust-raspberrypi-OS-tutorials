@@ -2511,15 +2511,15 @@ diff -uNr 12_integrated_testing/src/panic_wait.rs 13_exceptions_part2_peripheral
  use core::{fmt, panic::PanicInfo};
 
  //--------------------------------------------------------------------------------------------------
-@@ -46,6 +46,8 @@
-
- #[panic_handler]
+@@ -48,6 +48,8 @@
  fn panic(info: &PanicInfo) -> ! {
+     use crate::time::interface::TimeManager;
+
 +    unsafe { exception::asynchronous::local_irq_mask() };
 +
+     let timestamp = crate::time::time_manager().uptime();
+
      if let Some(args) = info.message() {
-         panic_println!("\nKernel panic: {}", args);
-     } else {
 
 diff -uNr 12_integrated_testing/src/state.rs 13_exceptions_part2_peripheral_IRQs/src/state.rs
 --- 12_integrated_testing/src/state.rs

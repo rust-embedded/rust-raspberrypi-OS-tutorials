@@ -17,7 +17,7 @@
 /// or indirectly.
 mod panic_exit_success;
 
-use libkernel::{bsp, cpu, exception, memory, println};
+use libkernel::{bsp, cpu, exception, info, memory, println};
 
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
@@ -28,7 +28,7 @@ unsafe fn kernel_init() -> ! {
     // This line will be printed as the test header.
     println!("Testing synchronous exception handling by causing a page fault");
 
-    println!("Writing to bottom of address space to address 1 GiB...");
+    info!("Writing to bottom of address space to address 1 GiB...");
     let big_addr: u64 = 1 * 1024 * 1024 * 1024;
     core::ptr::read_volatile(big_addr as *mut u64);
 

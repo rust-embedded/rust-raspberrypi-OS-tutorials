@@ -248,7 +248,7 @@ diff -uNr 06_uart_chainloader/src/_arch/aarch64/cpu.rs 07_timestamps/src/_arch/a
 diff -uNr 06_uart_chainloader/src/_arch/aarch64/time.rs 07_timestamps/src/_arch/aarch64/time.rs
 --- 06_uart_chainloader/src/_arch/aarch64/time.rs
 +++ 07_timestamps/src/_arch/aarch64/time.rs
-@@ -0,0 +1,119 @@
+@@ -0,0 +1,121 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
@@ -329,6 +329,7 @@ diff -uNr 06_uart_chainloader/src/_arch/aarch64/time.rs 07_timestamps/src/_arch/
 +        // Calculate the register compare value.
 +        let frq = CNTFRQ_EL0.get();
 +        let x = match frq.checked_mul(duration.as_nanos() as u64) {
++            #[allow(unused_imports)]
 +            None => {
 +                warn!("Spin duration too long, skipping");
 +                return;
@@ -347,6 +348,7 @@ diff -uNr 06_uart_chainloader/src/_arch/aarch64/time.rs 07_timestamps/src/_arch/
 +            None
 +        };
 +
++        #[allow(unused_imports)]
 +        if let Some(w) = warn {
 +            warn!(
 +                "Spin duration {} than architecturally supported, skipping",
@@ -630,10 +632,40 @@ diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
 +    }
  }
 
+diff -uNr 06_uart_chainloader/src/panic_wait.rs 07_timestamps/src/panic_wait.rs
+--- 06_uart_chainloader/src/panic_wait.rs
++++ 07_timestamps/src/panic_wait.rs
+@@ -29,10 +29,23 @@
+
+ #[panic_handler]
+ fn panic(info: &PanicInfo) -> ! {
++    use crate::time::interface::TimeManager;
++
++    let timestamp = crate::time::time_manager().uptime();
++
+     if let Some(args) = info.message() {
+-        panic_println!("\nKernel panic: {}", args);
++        panic_println!(
++            "[  {:>3}.{:06}] Kernel panic: {}",
++            timestamp.as_secs(),
++            timestamp.subsec_micros(),
++            args,
++        );
+     } else {
+-        panic_println!("\nKernel panic!");
++        panic_println!(
++            "[  {:>3}.{:06}] Kernel panic!",
++            timestamp.as_secs(),
++            timestamp.subsec_micros(),
++        );
+     }
+
+     cpu::wait_forever()
+
 diff -uNr 06_uart_chainloader/src/print.rs 07_timestamps/src/print.rs
 --- 06_uart_chainloader/src/print.rs
 +++ 07_timestamps/src/print.rs
-@@ -36,3 +36,71 @@
+@@ -36,3 +36,59 @@
          $crate::print::_print(format_args_nl!($($arg)*));
      })
  }
@@ -642,31 +674,25 @@ diff -uNr 06_uart_chainloader/src/print.rs 07_timestamps/src/print.rs
 +#[macro_export]
 +macro_rules! info {
 +    ($string:expr) => ({
-+        #[allow(unused_imports)]
-+        use crate::time::interface::TimeManager;
++        use $crate::time::interface::TimeManager;
 +
 +        let timestamp = $crate::time::time_manager().uptime();
-+        let timestamp_subsec_us = timestamp.subsec_micros();
 +
 +        $crate::print::_print(format_args_nl!(
-+            concat!("[  {:>3}.{:03}{:03}] ", $string),
++            concat!("[  {:>3}.{:06}] ", $string),
 +            timestamp.as_secs(),
-+            timestamp_subsec_us / 1_000,
-+            timestamp_subsec_us modulo 1_000
++            timestamp.subsec_micros(),
 +        ));
 +    });
 +    ($format_string:expr, $($arg:tt)*) => ({
-+        #[allow(unused_imports)]
-+        use crate::time::interface::TimeManager;
++        use $crate::time::interface::TimeManager;
 +
 +        let timestamp = $crate::time::time_manager().uptime();
-+        let timestamp_subsec_us = timestamp.subsec_micros();
 +
 +        $crate::print::_print(format_args_nl!(
-+            concat!("[  {:>3}.{:03}{:03}] ", $format_string),
++            concat!("[  {:>3}.{:06}] ", $format_string),
 +            timestamp.as_secs(),
-+            timestamp_subsec_us / 1_000,
-+            timestamp_subsec_us modulo 1_000,
++            timestamp.subsec_micros(),
 +            $($arg)*
 +        ));
 +    })
@@ -676,31 +702,25 @@ diff -uNr 06_uart_chainloader/src/print.rs 07_timestamps/src/print.rs
 +#[macro_export]
 +macro_rules! warn {
 +    ($string:expr) => ({
-+        #[allow(unused_imports)]
-+        use crate::time::interface::TimeManager;
++        use $crate::time::interface::TimeManager;
 +
 +        let timestamp = $crate::time::time_manager().uptime();
-+        let timestamp_subsec_us = timestamp.subsec_micros();
 +
 +        $crate::print::_print(format_args_nl!(
-+            concat!("[W {:>3}.{:03}{:03}] ", $string),
++            concat!("[W {:>3}.{:06}] ", $string),
 +            timestamp.as_secs(),
-+            timestamp_subsec_us / 1_000,
-+            timestamp_subsec_us modulo 1_000
++            timestamp.subsec_micros(),
 +        ));
 +    });
 +    ($format_string:expr, $($arg:tt)*) => ({
-+        #[allow(unused_imports)]
-+        use crate::time::interface::TimeManager;
++        use $crate::time::interface::TimeManager;
 +
 +        let timestamp = $crate::time::time_manager().uptime();
-+        let timestamp_subsec_us = timestamp.subsec_micros();
 +
 +        $crate::print::_print(format_args_nl!(
-+            concat!("[W {:>3}.{:03}{:03}] ", $format_string),
++            concat!("[W {:>3}.{:06}] ", $format_string),
 +            timestamp.as_secs(),
-+            timestamp_subsec_us / 1_000,
-+            timestamp_subsec_us modulo 1_000,
++            timestamp.subsec_micros(),
 +            $($arg)*
 +        ));
 +    })

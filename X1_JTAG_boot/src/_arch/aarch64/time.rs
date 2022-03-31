@@ -78,6 +78,7 @@ impl time::interface::TimeManager for GenericTimer {
         // Calculate the register compare value.
         let frq = CNTFRQ_EL0.get();
         let x = match frq.checked_mul(duration.as_nanos() as u64) {
+            #[allow(unused_imports)]
             None => {
                 warn!("Spin duration too long, skipping");
                 return;
@@ -96,6 +97,7 @@ impl time::interface::TimeManager for GenericTimer {
             None
         };
 
+        #[allow(unused_imports)]
         if let Some(w) = warn {
             warn!(
                 "Spin duration {} than architecturally supported, skipping",

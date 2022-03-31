@@ -41,31 +41,25 @@ macro_rules! println {
 #[macro_export]
 macro_rules! info {
     ($string:expr) => ({
-        #[allow(unused_imports)]
-        use crate::time::interface::TimeManager;
+        use $crate::time::interface::TimeManager;
 
         let timestamp = $crate::time::time_manager().uptime();
-        let timestamp_subsec_us = timestamp.subsec_micros();
 
         $crate::print::_print(format_args_nl!(
-            concat!("[  {:>3}.{:03}{:03}] ", $string),
+            concat!("[  {:>3}.{:06}] ", $string),
             timestamp.as_secs(),
-            timestamp_subsec_us / 1_000,
-            timestamp_subsec_us % 1_000
+            timestamp.subsec_micros(),
         ));
     });
     ($format_string:expr, $($arg:tt)*) => ({
-        #[allow(unused_imports)]
-        use crate::time::interface::TimeManager;
+        use $crate::time::interface::TimeManager;
 
         let timestamp = $crate::time::time_manager().uptime();
-        let timestamp_subsec_us = timestamp.subsec_micros();
 
         $crate::print::_print(format_args_nl!(
-            concat!("[  {:>3}.{:03}{:03}] ", $format_string),
+            concat!("[  {:>3}.{:06}] ", $format_string),
             timestamp.as_secs(),
-            timestamp_subsec_us / 1_000,
-            timestamp_subsec_us % 1_000,
+            timestamp.subsec_micros(),
             $($arg)*
         ));
     })
@@ -75,31 +69,25 @@ macro_rules! info {
 #[macro_export]
 macro_rules! warn {
     ($string:expr) => ({
-        #[allow(unused_imports)]
-        use crate::time::interface::TimeManager;
+        use $crate::time::interface::TimeManager;
 
         let timestamp = $crate::time::time_manager().uptime();
-        let timestamp_subsec_us = timestamp.subsec_micros();
 
         $crate::print::_print(format_args_nl!(
-            concat!("[W {:>3}.{:03}{:03}] ", $string),
+            concat!("[W {:>3}.{:06}] ", $string),
             timestamp.as_secs(),
-            timestamp_subsec_us / 1_000,
-            timestamp_subsec_us % 1_000
+            timestamp.subsec_micros(),
         ));
     });
     ($format_string:expr, $($arg:tt)*) => ({
-        #[allow(unused_imports)]
-        use crate::time::interface::TimeManager;
+        use $crate::time::interface::TimeManager;
 
         let timestamp = $crate::time::time_manager().uptime();
-        let timestamp_subsec_us = timestamp.subsec_micros();
 
         $crate::print::_print(format_args_nl!(
-            concat!("[W {:>3}.{:03}{:03}] ", $format_string),
+            concat!("[W {:>3}.{:06}] ", $format_string),
             timestamp.as_secs(),
-            timestamp_subsec_us / 1_000,
-            timestamp_subsec_us % 1_000,
+            timestamp.subsec_micros(),
             $($arg)*
         ));
     })

@@ -849,9 +849,8 @@ Compiling integration test(s) - rpi3
          🦀 Testing synchronous exception handling by causing a page fault
          -------------------------------------------------------------------
 
-         Writing beyond mapped area to address 9 GiB...
-
-         Kernel panic:
+         [    0.163030] Writing beyond mapped area to address 9 GiB...
+         [    0.164791] Kernel panic:
 
          CPU Exception!
          ESR_EL1: 0x96000004
@@ -1698,8 +1697,8 @@ diff -uNr 11_exceptions_part1_groundwork/src/panic_wait.rs 12_integrated_testing
  /// Prints with a newline - only use from the panic handler.
  ///
  /// Carbon copy from <https://doc.rust-lang.org/src/std/macros.rs.html>
-@@ -35,5 +52,5 @@
-         panic_println!("\nKernel panic!");
+@@ -48,5 +65,5 @@
+         );
      }
 
 -    cpu::wait_forever()
@@ -1929,7 +1928,7 @@ diff -uNr 11_exceptions_part1_groundwork/tests/02_exception_sync_page_fault.rs 1
 +/// or indirectly.
 +mod panic_exit_success;
 +
-+use libkernel::{bsp, cpu, exception, memory, println};
++use libkernel::{bsp, cpu, exception, info, memory, println};
 +
 +#[no_mangle]
 +unsafe fn kernel_init() -> ! {
@@ -1942,11 +1941,11 @@ diff -uNr 11_exceptions_part1_groundwork/tests/02_exception_sync_page_fault.rs 1
 +    println!("Testing synchronous exception handling by causing a page fault");
 +
 +    if let Err(string) = memory::mmu::mmu().enable_mmu_and_caching() {
-+        println!("MMU: {}", string);
++        info!("MMU: {}", string);
 +        cpu::qemu_exit_failure()
 +    }
 +
-+    println!("Writing beyond mapped area to address 9 GiB...");
++    info!("Writing beyond mapped area to address 9 GiB...");
 +    let big_addr: u64 = 9 * 1024 * 1024 * 1024;
 +    core::ptr::read_volatile(big_addr as *mut u64);
 +
