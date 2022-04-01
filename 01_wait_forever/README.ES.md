@@ -1,4 +1,4 @@
-# Tutorial 01 - Esperar para infinitamente
+# Tutorial 01 - Esperar infinitamente
 
 ## tl;dr
 
