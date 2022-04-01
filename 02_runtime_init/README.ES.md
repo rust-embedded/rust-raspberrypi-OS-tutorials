@@ -18,7 +18,7 @@
   
   1. Para todos los núcleos expecto el núcleo 0.
   
-  2. Inicializa la [`DRAM`](https://es.wikipedia.org/wiki/DRAM) poniendo a cero la sección de [`bss`](https://en.wikipedia.org/wiki/.bss).
+  2. Inicializa la [`DRAM`](https://es.wikipedia.org/wiki/DRAM) poniendo a cero la sección [`.bss`](https://en.wikipedia.org/wiki/.bss).
   
   3. Configura el `stack pointer` (puntero a la memoria [pila](https://es.wikipedia.org/wiki/Pila_(inform%C3%A1tica))).
   
