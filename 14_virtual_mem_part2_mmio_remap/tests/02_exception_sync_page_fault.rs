@@ -17,7 +17,7 @@
 /// or indirectly.
 mod panic_exit_success;
 
-use libkernel::{bsp, cpu, exception, memory, println};
+use libkernel::{bsp, cpu, exception, info, memory, println};
 
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
@@ -30,14 +30,14 @@ unsafe fn kernel_init() -> ! {
 
     let phys_kernel_tables_base_addr = match memory::mmu::kernel_map_binary() {
         Err(string) => {
-            println!("Error mapping kernel binary: {}", string);
+            info!("Error mapping kernel binary: {}", string);
             cpu::qemu_exit_failure()
         }
         Ok(addr) => addr,
     };
 
     if let Err(e) = memory::mmu::enable_mmu_and_caching(phys_kernel_tables_base_addr) {
-        println!("Enabling MMU failed: {}", e);
+        info!("Enabling MMU failed: {}", e);
         cpu::qemu_exit_failure()
     }
     // Printing will silently fail from here on, because the driver's MMIO is not remapped yet.
@@ -56,7 +56,7 @@ unsafe fn kernel_init() -> ! {
     bsp::driver::driver_manager().post_early_print_device_driver_init();
     // Printing available again from here on.
 
-    println!("Writing beyond mapped area to address 9 GiB...");
+    info!("Writing beyond mapped area to address 9 GiB...");
     let big_addr: u64 = 9 * 1024 * 1024 * 1024;
     core::ptr::read_volatile(big_addr as *mut u64);
 

@@ -1739,14 +1739,14 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/tests/02_exception_sync_page_fault.rs 
 -
 -    let phys_kernel_tables_base_addr = match memory::mmu::kernel_map_binary() {
 -        Err(string) => {
--            println!("Error mapping kernel binary: {}", string);
+-            info!("Error mapping kernel binary: {}", string);
 -            cpu::qemu_exit_failure()
 -        }
 -        Ok(addr) => addr,
 -    };
 -
 -    if let Err(e) = memory::mmu::enable_mmu_and_caching(phys_kernel_tables_base_addr) {
--        println!("Enabling MMU failed: {}", e);
+-        info!("Enabling MMU failed: {}", e);
 -        cpu::qemu_exit_failure()
 -    }
 -    // Printing will silently fail from here on, because the driver's MMIO is not remapped yet.
@@ -1767,7 +1767,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/tests/02_exception_sync_page_fault.rs 
 +    // This line will be printed as the test header.
 +    println!("Testing synchronous exception handling by causing a page fault");
 
-     println!("Writing beyond mapped area to address 9 GiB...");
+     info!("Writing beyond mapped area to address 9 GiB...");
      let big_addr: u64 = 9 * 1024 * 1024 * 1024;
 
 diff -uNr 14_virtual_mem_part2_mmio_remap/tests/03_exception_irq_sanity.rs 15_virtual_mem_part3_precomputed_tables/tests/03_exception_irq_sanity.rs

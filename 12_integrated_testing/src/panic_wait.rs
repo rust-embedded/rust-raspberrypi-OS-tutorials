@@ -46,10 +46,23 @@ macro_rules! panic_println {
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
+    use crate::time::interface::TimeManager;
+
+    let timestamp = crate::time::time_manager().uptime();
+
     if let Some(args) = info.message() {
-        panic_println!("\nKernel panic: {}", args);
+        panic_println!(
+            "[  {:>3}.{:06}] Kernel panic: {}",
+            timestamp.as_secs(),
+            timestamp.subsec_micros(),
+            args,
+        );
     } else {
-        panic_println!("\nKernel panic!");
+        panic_println!(
+            "[  {:>3}.{:06}] Kernel panic!",
+            timestamp.as_secs(),
+            timestamp.subsec_micros(),
+        );
     }
 
     _panic_exit()
