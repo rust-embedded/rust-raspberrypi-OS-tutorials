@@ -648,6 +648,10 @@ harness = false
 [[test]]
 name = "02_exception_sync_page_fault"
 harness = false
+
+[[test]]
+name = "03_exception_restore_sanity"
+harness = false
 ```
 
 #### Overriding Panic Behavior
@@ -703,11 +707,11 @@ unsafe fn kernel_init() -> ! {
     println!("Testing synchronous exception handling by causing a page fault");
 
     if let Err(string) = memory::mmu::mmu().enable_mmu_and_caching() {
-        println!("MMU: {}", string);
+        info!("MMU: {}", string);
         cpu::qemu_exit_failure()
     }
 
-    println!("Writing beyond mapped area to address 9 GiB...");
+    info!("Writing beyond mapped area to address 9 GiB...");
     let big_addr: u64 = 9 * 1024 * 1024 * 1024;
     core::ptr::read_volatile(big_addr as *mut u64);
 
@@ -761,7 +765,10 @@ The subtest first sends `"ABC"` over the console to the kernel, and then expects
 #![no_main]
 #![no_std]
 
-use libkernel::{bsp, console, exception, print};
+/// Console tests should time out on the I/O harness in case of panic.
+mod panic_wait_forever;
+
+use libkernel::{bsp, console, cpu, exception, print};
 
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
@@ -860,6 +867,24 @@ Compiling integration test(s) - rpi3
          -------------------------------------------------------------------
          ✅ Success: 02_exception_sync_page_fault.rs
          -------------------------------------------------------------------
+
+
+     Running tests/03_exception_restore_sanity.rs (target/aarch64-unknown-none-softfloat/release/deps/03_exception_restore_sanity-a56e14285bb26e0e)
+         -------------------------------------------------------------------
+         🦀 Running 1 console I/O tests
+         -------------------------------------------------------------------
+
+           1. Exception restore.........................................[ok]
+
+         Console log:
+           Testing exception restore
+           [    0.130757] Making a dummy system call
+           [    0.132592] Back from system call!
+
+         -------------------------------------------------------------------
+         ✅ Success: 03_exception_restore_sanity.rs
+         -------------------------------------------------------------------
+
 ```
 
 ## Diff to previous
@@ -883,7 +908,7 @@ diff -uNr 11_exceptions_part1_groundwork/Cargo.toml 12_integrated_testing/Cargo.
  authors = ["Andre Richter <andre.o.richter@gmail.com>"]
  edition = "2021"
 
-@@ -11,20 +11,46 @@
+@@ -11,20 +11,50 @@
  default = []
  bsp_rpi3 = ["tock-registers"]
  bsp_rpi4 = ["tock-registers"]
@@ -933,6 +958,10 @@ diff -uNr 11_exceptions_part1_groundwork/Cargo.toml 12_integrated_testing/Cargo.
 +
 +[[test]]
 +name = "02_exception_sync_page_fault"
++harness = false
++
++[[test]]
++name = "03_exception_restore_sanity"
 +harness = false
 
 diff -uNr 11_exceptions_part1_groundwork/Makefile 12_integrated_testing/Makefile
@@ -1070,7 +1099,7 @@ diff -uNr 11_exceptions_part1_groundwork/src/_arch/aarch64/cpu.rs 12_integrated_
 diff -uNr 11_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs 12_integrated_testing/src/_arch/aarch64/exception.rs
 --- 11_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs
 +++ 12_integrated_testing/src/_arch/aarch64/exception.rs
-@@ -87,18 +87,6 @@
+@@ -87,15 +87,14 @@
 
  #[no_mangle]
  unsafe extern "C" fn current_elx_synchronous(e: &mut ExceptionContext) {
@@ -1083,12 +1112,30 @@ diff -uNr 11_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs 12_integ
 -            e.elr_el1 += 4;
 -
 -            return;
--        }
--    }
--
-     default_exception_handler(e);
++    #[cfg(feature = "test_build")]
++    {
++        const TEST_SVC_ID: u64 = 0x1337;
++
++        if let Some(ESR_EL1::EC::Value::SVC64) = e.esr_el1.exception_class() {
++            if e.esr_el1.iss() == TEST_SVC_ID {
++                return;
++            }
+         }
+     }
+
+@@ -192,6 +191,12 @@
+     fn exception_class(&self) -> Option<ESR_EL1::EC::Value> {
+         self.0.read_as_enum(ESR_EL1::EC)
+     }
++
++    #[cfg(feature = "test_build")]
++    #[inline(always)]
++    fn iss(&self) -> u64 {
++        self.0.read(ESR_EL1::ISS)
++    }
  }
 
+ /// Human readable ESR_EL1.
 
 diff -uNr 11_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu/translation_table.rs 12_integrated_testing/src/_arch/aarch64/memory/mmu/translation_table.rs
 --- 11_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu/translation_table.rs
@@ -1814,7 +1861,7 @@ diff -uNr 11_exceptions_part1_groundwork/tests/00_console_sanity.rb 12_integrate
 diff -uNr 11_exceptions_part1_groundwork/tests/00_console_sanity.rs 12_integrated_testing/tests/00_console_sanity.rs
 --- 11_exceptions_part1_groundwork/tests/00_console_sanity.rs
 +++ 12_integrated_testing/tests/00_console_sanity.rs
-@@ -0,0 +1,35 @@
+@@ -0,0 +1,38 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2019-2022 Andre Richter <andre.o.richter@gmail.com>
@@ -1824,6 +1871,9 @@ diff -uNr 11_exceptions_part1_groundwork/tests/00_console_sanity.rs 12_integrate
 +#![feature(format_args_nl)]
 +#![no_main]
 +#![no_std]
++
++/// Console tests should time out on the I/O harness in case of panic.
++mod panic_wait_forever;
 +
 +use libkernel::{bsp, console, cpu, exception, print};
 +
@@ -1953,6 +2003,96 @@ diff -uNr 11_exceptions_part1_groundwork/tests/02_exception_sync_page_fault.rs 1
 +    cpu::qemu_exit_failure()
 +}
 
+diff -uNr 11_exceptions_part1_groundwork/tests/03_exception_restore_sanity.rb 12_integrated_testing/tests/03_exception_restore_sanity.rb
+--- 11_exceptions_part1_groundwork/tests/03_exception_restore_sanity.rb
++++ 12_integrated_testing/tests/03_exception_restore_sanity.rb
+@@ -0,0 +1,25 @@
++# frozen_string_literal: true
++
++# SPDX-License-Identifier: MIT OR Apache-2.0
++#
++# Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
++
++require_relative '../../common/tests/console_io_test'
++
++# Verify that exception restore works.
++class ExceptionRestoreTest < SubtestBase
++    def name
++        'Exception restore'
++    end
++
++    def run(qemu_out, _qemu_in)
++        expect_or_raise(qemu_out, 'Back from system call!')
++    end
++end
++
++##--------------------------------------------------------------------------------------------------
++## Test registration
++##--------------------------------------------------------------------------------------------------
++def subtest_collection
++    [ExceptionRestoreTest.new]
++end
+
+diff -uNr 11_exceptions_part1_groundwork/tests/03_exception_restore_sanity.rs 12_integrated_testing/tests/03_exception_restore_sanity.rs
+--- 11_exceptions_part1_groundwork/tests/03_exception_restore_sanity.rs
++++ 12_integrated_testing/tests/03_exception_restore_sanity.rs
+@@ -0,0 +1,55 @@
++// SPDX-License-Identifier: MIT OR Apache-2.0
++//
++// Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
++
++//! A simple sanity test to see if exception restore code works.
++
++#![feature(format_args_nl)]
++#![no_main]
++#![no_std]
++
++/// Console tests should time out on the I/O harness in case of panic.
++mod panic_wait_forever;
++
++use core::arch::asm;
++use libkernel::{bsp, cpu, exception, info, memory, println};
++
++#[inline(never)]
++fn nested_system_call() {
++    #[cfg(target_arch = "aarch64")]
++    unsafe {
++        asm!("svc #0x1337", options(nomem, nostack, preserves_flags));
++    }
++
++    #[cfg(not(target_arch = "aarch64"))]
++    {
++        info!("Not supported yet");
++        cpu::wait_forever();
++    }
++}
++
++#[no_mangle]
++unsafe fn kernel_init() -> ! {
++    use memory::mmu::interface::MMU;
++
++    exception::handling_init();
++    bsp::console::qemu_bring_up_console();
++
++    // This line will be printed as the test header.
++    println!("Testing exception restore");
++
++    if let Err(string) = memory::mmu::mmu().enable_mmu_and_caching() {
++        info!("MMU: {}", string);
++        cpu::qemu_exit_failure()
++    }
++
++    info!("Making a dummy system call");
++
++    // Calling this inside a function indirectly tests if the link register is restored properly.
++    nested_system_call();
++
++    info!("Back from system call!");
++
++    // The QEMU process running this test will be closed by the I/O test harness.
++    cpu::wait_forever();
++}
+
 diff -uNr 11_exceptions_part1_groundwork/tests/boot_test_string.rb 12_integrated_testing/tests/boot_test_string.rb
 --- 11_exceptions_part1_groundwork/tests/boot_test_string.rb
 +++ 12_integrated_testing/tests/boot_test_string.rb
@@ -1974,6 +2114,20 @@ diff -uNr 11_exceptions_part1_groundwork/tests/panic_exit_success/mod.rs 12_inte
 +#[no_mangle]
 +fn _panic_exit() -> ! {
 +    libkernel::cpu::qemu_exit_success()
++}
+
+diff -uNr 11_exceptions_part1_groundwork/tests/panic_wait_forever/mod.rs 12_integrated_testing/tests/panic_wait_forever/mod.rs
+--- 11_exceptions_part1_groundwork/tests/panic_wait_forever/mod.rs
++++ 12_integrated_testing/tests/panic_wait_forever/mod.rs
+@@ -0,0 +1,9 @@
++// SPDX-License-Identifier: MIT OR Apache-2.0
++//
++// Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
++
++/// Overwrites libkernel's `panic_wait::_panic_exit()` with wait_forever.
++#[no_mangle]
++fn _panic_exit() -> ! {
++    libkernel::cpu::wait_forever()
 +}
 
 diff -uNr 11_exceptions_part1_groundwork/test-types/Cargo.toml 12_integrated_testing/test-types/Cargo.toml

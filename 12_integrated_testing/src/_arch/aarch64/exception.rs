@@ -87,6 +87,17 @@ unsafe extern "C" fn current_el0_serror(_e: &mut ExceptionContext) {
 
 #[no_mangle]
 unsafe extern "C" fn current_elx_synchronous(e: &mut ExceptionContext) {
+    #[cfg(feature = "test_build")]
+    {
+        const TEST_SVC_ID: u64 = 0x1337;
+
+        if let Some(ESR_EL1::EC::Value::SVC64) = e.esr_el1.exception_class() {
+            if e.esr_el1.iss() == TEST_SVC_ID {
+                return;
+            }
+        }
+    }
+
     default_exception_handler(e);
 }
 
@@ -179,6 +190,12 @@ impl EsrEL1 {
     #[inline(always)]
     fn exception_class(&self) -> Option<ESR_EL1::EC::Value> {
         self.0.read_as_enum(ESR_EL1::EC)
+    }
+
+    #[cfg(feature = "test_build")]
+    #[inline(always)]
+    fn iss(&self) -> u64 {
+        self.0.read(ESR_EL1::ISS)
     }
 }
 

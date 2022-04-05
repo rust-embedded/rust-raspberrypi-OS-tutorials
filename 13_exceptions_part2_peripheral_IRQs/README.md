@@ -913,7 +913,7 @@ diff -uNr 12_integrated_testing/src/_arch/aarch64/exception.rs 13_exceptions_par
  use core::{arch::global_asm, cell::UnsafeCell, fmt};
  use cortex_a::{asm::barrier, registers::*};
  use tock_registers::{
-@@ -91,8 +92,11 @@
+@@ -102,8 +103,11 @@
  }
 
  #[no_mangle]
@@ -2753,9 +2753,9 @@ diff -uNr 12_integrated_testing/src/synchronization.rs 13_exceptions_part2_perip
 +    }
  }
 
-diff -uNr 12_integrated_testing/tests/03_exception_irq_sanity.rs 13_exceptions_part2_peripheral_IRQs/tests/03_exception_irq_sanity.rs
---- 12_integrated_testing/tests/03_exception_irq_sanity.rs
-+++ 13_exceptions_part2_peripheral_IRQs/tests/03_exception_irq_sanity.rs
+diff -uNr 12_integrated_testing/tests/04_exception_irq_sanity.rs 13_exceptions_part2_peripheral_IRQs/tests/04_exception_irq_sanity.rs
+--- 12_integrated_testing/tests/04_exception_irq_sanity.rs
++++ 13_exceptions_part2_peripheral_IRQs/tests/04_exception_irq_sanity.rs
 @@ -0,0 +1,66 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
