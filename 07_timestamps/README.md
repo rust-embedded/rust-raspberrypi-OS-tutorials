@@ -635,7 +635,7 @@ diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
 diff -uNr 06_uart_chainloader/src/panic_wait.rs 07_timestamps/src/panic_wait.rs
 --- 06_uart_chainloader/src/panic_wait.rs
 +++ 07_timestamps/src/panic_wait.rs
-@@ -58,13 +58,26 @@
+@@ -58,18 +58,23 @@
 
  #[panic_handler]
  fn panic(info: &PanicInfo) -> ! {
@@ -645,25 +645,21 @@ diff -uNr 06_uart_chainloader/src/panic_wait.rs 07_timestamps/src/panic_wait.rs
      panic_prevent_reenter();
 
 +    let timestamp = crate::time::time_manager().uptime();
-+
-     if let Some(args) = info.message() {
--        panic_println!("\nKernel panic: {}", args);
-+        panic_println!(
-+            "[  {:>3}.{:06}] Kernel panic: {}",
-+            timestamp.as_secs(),
-+            timestamp.subsec_micros(),
-+            args,
-+        );
-     } else {
--        panic_println!("\nKernel panic!");
-+        panic_println!(
-+            "[  {:>3}.{:06}] Kernel panic!",
-+            timestamp.as_secs(),
-+            timestamp.subsec_micros(),
-+        );
-     }
+     let (location, line, column) = match info.location() {
+         Some(loc) => (loc.file(), loc.line(), loc.column()),
+         _ => ("???", 0, 0),
+     };
 
-     cpu::wait_forever()
+     panic_println!(
+-        "Kernel panic!\n\n\
++        "[  {:>3}.{:06}] Kernel panic!\n\n\
+         Panic location:\n      File '{}', line {}, column {}\n\n\
+         {}",
++        timestamp.as_secs(),
++        timestamp.subsec_micros(),
+         location,
+         line,
+         column,
 
 diff -uNr 06_uart_chainloader/src/print.rs 07_timestamps/src/print.rs
 --- 06_uart_chainloader/src/print.rs

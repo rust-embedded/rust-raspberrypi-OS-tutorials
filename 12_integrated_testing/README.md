@@ -856,10 +856,14 @@ Compiling integration test(s) - rpi3
          🦀 Testing synchronous exception handling by causing a page fault
          -------------------------------------------------------------------
 
-         [    0.163030] Writing beyond mapped area to address 9 GiB...
-         [    0.164791] Kernel panic:
+         [    0.132792] Writing beyond mapped area to address 9 GiB...
+         [    0.134563] Kernel panic!
+
+         Panic location:
+               File 'src/_arch/aarch64/exception.rs', line 58, column 5
 
          CPU Exception!
+
          ESR_EL1: 0x96000004
                Exception Class         (EC) : 0x25 - Data Abort, current EL
          [...]
@@ -1753,9 +1757,9 @@ diff -uNr 11_exceptions_part1_groundwork/src/panic_wait.rs 12_integrated_testing
  }
 
  #[panic_handler]
-@@ -80,5 +97,5 @@
-         );
-     }
+@@ -81,5 +98,5 @@
+         info.message().unwrap_or(&format_args!("")),
+     );
 
 -    cpu::wait_forever()
 +    _panic_exit()

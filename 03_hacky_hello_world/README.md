@@ -24,9 +24,14 @@ QEMU is no longer running in assembly mode. It will from now on show the output 
 ```console
 $ make qemu
 [...]
-Hello from Rust!
 
-Kernel panic: Stopping here.
+Hello from Rust!
+Kernel panic!
+
+Panic location:
+      File 'src/main.rs', line 126, column 5
+
+Stopping here.
 ```
 
 ## Diff to previous
@@ -230,7 +235,7 @@ diff -uNr 02_runtime_init/src/main.rs 03_hacky_hello_world/src/main.rs
  /// - Only a single core must be active and running this function.
  unsafe fn kernel_init() -> ! {
 -    panic!()
-+    println!("[0] Hello from Rust!");
++    println!("Hello from Rust!");
 +
 +    panic!("Stopping here.")
  }
@@ -238,7 +243,7 @@ diff -uNr 02_runtime_init/src/main.rs 03_hacky_hello_world/src/main.rs
 diff -uNr 02_runtime_init/src/panic_wait.rs 03_hacky_hello_world/src/panic_wait.rs
 --- 02_runtime_init/src/panic_wait.rs
 +++ 03_hacky_hello_world/src/panic_wait.rs
-@@ -4,14 +4,52 @@
+@@ -4,14 +4,61 @@
 
  //! A panic handler that infinitely waits.
 
@@ -285,11 +290,20 @@ diff -uNr 02_runtime_init/src/panic_wait.rs 03_hacky_hello_world/src/panic_wait.
 +    // Protect against panic infinite loops if any of the following code panics itself.
 +    panic_prevent_reenter();
 +
-+    if let Some(args) = info.message() {
-+        println!("\nKernel panic: {}", args);
-+    } else {
-+        println!("\nKernel panic!");
-+    }
++    let (location, line, column) = match info.location() {
++        Some(loc) => (loc.file(), loc.line(), loc.column()),
++        _ => ("???", 0, 0),
++    };
++
++    println!(
++        "Kernel panic!\n\n\
++        Panic location:\n      File '{}', line {}, column {}\n\n\
++        {}",
++        location,
++        line,
++        column,
++        info.message().unwrap_or(&format_args!("")),
++    );
 +
      cpu::wait_forever()
  }

@@ -1446,18 +1446,15 @@ diff -uNr 04_safe_globals/src/panic_wait.rs 05_drivers_gpio_uart/src/panic_wait.
  /// Stop immediately if called a second time.
  ///
  /// # Note
-@@ -46,9 +62,9 @@
-     panic_prevent_reenter();
+@@ -50,7 +66,7 @@
+         _ => ("???", 0, 0),
+     };
 
-     if let Some(args) = info.message() {
--        println!("\nKernel panic: {}", args);
-+        panic_println!("\nKernel panic: {}", args);
-     } else {
--        println!("\nKernel panic!");
-+        panic_println!("\nKernel panic!");
-     }
-
-     cpu::wait_forever()
+-    println!(
++    panic_println!(
+         "Kernel panic!\n\n\
+         Panic location:\n      File '{}', line {}, column {}\n\n\
+         {}",
 
 diff -uNr 04_safe_globals/tests/boot_test_string.rb 05_drivers_gpio_uart/tests/boot_test_string.rb
 --- 04_safe_globals/tests/boot_test_string.rb

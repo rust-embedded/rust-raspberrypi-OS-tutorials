@@ -57,7 +57,7 @@ struct ExceptionContext {
 /// Prints verbose information about the exception and then panics.
 fn default_exception_handler(exc: &ExceptionContext) {
     panic!(
-        "\n\nCPU Exception!\n\
+        "CPU Exception!\n\n\
         {}",
         exc
     );

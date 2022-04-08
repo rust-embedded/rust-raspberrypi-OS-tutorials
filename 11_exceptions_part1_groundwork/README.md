@@ -313,7 +313,7 @@ for each exception yet, a default handler is provided:
 /// Prints verbose information about the exception and then panics.
 fn default_exception_handler(exc: &ExceptionContext) {
     panic!(
-        "\n\nCPU Exception!\n\
+        "CPU Exception!\n\n\
         {}",
         exc
     );
@@ -413,33 +413,37 @@ Minipush 1.0
 [MP] ⏩ Pushing 64 KiB =========================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
-[    0.789853] mingo version 0.11.0
-[    0.790060] Booting on: Raspberry Pi 3
-[    0.790515] MMU online. Special regions:
-[    0.790992]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
-[    0.792010]       0x3f000000 - 0x4000ffff |  16 MiB | Dev RW PXN | Device MMIO
-[    0.792899] Current privilege level: EL1
-[    0.793375] Exception handling state:
-[    0.793819]       Debug:  Masked
-[    0.794209]       SError: Masked
-[    0.794599]       IRQ:    Masked
-[    0.794989]       FIQ:    Masked
-[    0.795379] Architectural timer resolution: 52 ns
-[    0.795954] Drivers loaded:
-[    0.796289]       1. BCM GPIO
-[    0.796647]       2. BCM PL011 UART
-[    0.797070] Timer test, spinning for 1 second
-[    1.797600]
-[    1.797604] Trying to read from address 8 GiB...
-[    1.798154] ************************************************
-[    1.798846] Whoa! We recovered from a synchronous exception!
-[    1.799539] ************************************************
-[    1.800233]
-[    1.800406] Let's try again
-[    1.800742] Trying to read from address 9 GiB...
-[    1.801306] Kernel panic:
+[    0.787414] mingo version 0.11.0
+[    0.787621] Booting on: Raspberry Pi 3
+[    0.788076] MMU online. Special regions:
+[    0.788553]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
+[    0.789571]       0x3f000000 - 0x4000ffff |  16 MiB | Dev RW PXN | Device MMIO
+[    0.790460] Current privilege level: EL1
+[    0.790936] Exception handling state:
+[    0.791380]       Debug:  Masked
+[    0.791770]       SError: Masked
+[    0.792160]       IRQ:    Masked
+[    0.792550]       FIQ:    Masked
+[    0.792940] Architectural timer resolution: 52 ns
+[    0.793514] Drivers loaded:
+[    0.793850]       1. BCM GPIO
+[    0.794208]       2. BCM PL011 UART
+[    0.794630] Timer test, spinning for 1 second
+[    1.795161]
+[    1.795165] Trying to read from address 8 GiB...
+[    1.795715] ************************************************
+[    1.796407] Whoa! We recovered from a synchronous exception!
+[    1.797100] ************************************************
+[    1.797794]
+[    1.797967] Let's try again
+[    1.798303] Trying to read from address 9 GiB...
+[    1.798867] Kernel panic!
+
+Panic location:
+      File 'src/_arch/aarch64/exception.rs', line 58, column 5
 
 CPU Exception!
+
 ESR_EL1: 0x96000004
       Exception Class         (EC) : 0x25 - Data Abort, current EL
       Instr Specific Syndrome (ISS): 0x4
@@ -459,21 +463,21 @@ SPSR_EL1: 0x600003c5
 ELR_EL1: 0x0000000000082194
 
 General purpose register:
-      x0 : 0x0000000000000000         x1 : 0x000000000008555f
-      x2 : 0x0000000000000027         x3 : 0x000000000008435c
-      x4 : 0x0000000000000006         x5 : 0x3f27329c00000000
-      x6 : 0x0000000000000000         x7 : 0xd3d1b900228f0241
-      x8 : 0x0000000240000000         x9 : 0x000000000008555f
+      x0 : 0x0000000000000000         x1 : 0x0000000000085517
+      x2 : 0x0000000000000027         x3 : 0x0000000000084380
+      x4 : 0x0000000000000006         x5 : 0xfb5f341800000000
+      x6 : 0x0000000000000000         x7 : 0x7f91bc012b2b0209
+      x8 : 0x0000000240000000         x9 : 0x0000000000085517
       x10: 0x0000000000000443         x11: 0x000000003f201000
       x12: 0x0000000000000019         x13: 0x00000000ffffd8f0
       x14: 0x000000000000147b         x15: 0x00000000ffffff9c
       x16: 0x000000000007fd38         x17: 0x0000000005f5e0ff
-      x18: 0x0000000000000034         x19: 0x0000000000090008
-      x20: 0x0000000000085398         x21: 0x000000003b9aca00
-      x22: 0x0000000000082e30         x23: 0x0000000000082308
+      x18: 0x0000000000000030         x19: 0x0000000000090008
+      x20: 0x0000000000085350         x21: 0x000000003b9aca00
+      x22: 0x0000000000082e4c         x23: 0x0000000000082308
       x24: 0x0000000010624dd3         x25: 0xffffffffc4653600
-      x26: 0x00000000000866b8         x27: 0x0000000000085458
-      x28: 0x0000000000084fe0         x29: 0x0000000000086770
+      x26: 0x0000000000086638         x27: 0x0000000000085410
+      x28: 0x0000000000084f90         x29: 0x0000000000086538
       lr : 0x0000000000082188
 ```
 
@@ -546,7 +550,7 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
 +/// Prints verbose information about the exception and then panics.
 +fn default_exception_handler(exc: &ExceptionContext) {
 +    panic!(
-+        "\n\nCPU Exception!\n\
++        "CPU Exception!\n\n\
 +        {}",
 +        exc
 +    );

@@ -61,11 +61,20 @@ fn panic(info: &PanicInfo) -> ! {
     // Protect against panic infinite loops if any of the following code panics itself.
     panic_prevent_reenter();
 
-    if let Some(args) = info.message() {
-        panic_println!("\nKernel panic: {}", args);
-    } else {
-        panic_println!("\nKernel panic!");
-    }
+    let (location, line, column) = match info.location() {
+        Some(loc) => (loc.file(), loc.line(), loc.column()),
+        _ => ("???", 0, 0),
+    };
+
+    panic_println!(
+        "Kernel panic!\n\n\
+        Panic location:\n      File '{}', line {}, column {}\n\n\
+        {}",
+        location,
+        line,
+        column,
+        info.message().unwrap_or(&format_args!("")),
+    );
 
     cpu::wait_forever()
 }

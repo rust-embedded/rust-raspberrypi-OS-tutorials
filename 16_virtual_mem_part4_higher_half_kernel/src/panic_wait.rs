@@ -83,21 +83,22 @@ fn panic(info: &PanicInfo) -> ! {
     panic_prevent_reenter();
 
     let timestamp = crate::time::time_manager().uptime();
+    let (location, line, column) = match info.location() {
+        Some(loc) => (loc.file(), loc.line(), loc.column()),
+        _ => ("???", 0, 0),
+    };
 
-    if let Some(args) = info.message() {
-        panic_println!(
-            "[  {:>3}.{:06}] Kernel panic: {}",
-            timestamp.as_secs(),
-            timestamp.subsec_micros(),
-            args,
-        );
-    } else {
-        panic_println!(
-            "[  {:>3}.{:06}] Kernel panic!",
-            timestamp.as_secs(),
-            timestamp.subsec_micros(),
-        );
-    }
+    panic_println!(
+        "[  {:>3}.{:06}] Kernel panic!\n\n\
+        Panic location:\n      File '{}', line {}, column {}\n\n\
+        {}",
+        timestamp.as_secs(),
+        timestamp.subsec_micros(),
+        location,
+        line,
+        column,
+        info.message().unwrap_or(&format_args!("")),
+    );
 
     _panic_exit()
 }
