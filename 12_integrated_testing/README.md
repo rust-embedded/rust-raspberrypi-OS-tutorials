@@ -1744,7 +1744,16 @@ diff -uNr 11_exceptions_part1_groundwork/src/panic_wait.rs 12_integrated_testing
  /// Prints with a newline - only use from the panic handler.
  ///
  /// Carbon copy from <https://doc.rust-lang.org/src/std/macros.rs.html>
-@@ -48,5 +65,5 @@
+@@ -53,7 +70,7 @@
+         return;
+     }
+
+-    cpu::wait_forever()
++    _panic_exit()
+ }
+
+ #[panic_handler]
+@@ -80,5 +97,5 @@
          );
      }
 

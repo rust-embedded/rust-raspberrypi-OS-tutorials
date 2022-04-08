@@ -635,12 +635,15 @@ diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
 diff -uNr 06_uart_chainloader/src/panic_wait.rs 07_timestamps/src/panic_wait.rs
 --- 06_uart_chainloader/src/panic_wait.rs
 +++ 07_timestamps/src/panic_wait.rs
-@@ -29,10 +29,23 @@
+@@ -58,13 +58,26 @@
 
  #[panic_handler]
  fn panic(info: &PanicInfo) -> ! {
 +    use crate::time::interface::TimeManager;
 +
+     // Protect against panic infinite loops if any of the following code panics itself.
+     panic_prevent_reenter();
+
 +    let timestamp = crate::time::time_manager().uptime();
 +
      if let Some(args) = info.message() {
