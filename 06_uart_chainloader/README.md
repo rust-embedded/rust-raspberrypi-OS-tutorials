@@ -27,7 +27,8 @@ from SD card all along.
 
 Please bear with me until I find the time to write it all down here elaborately. For the time being,
 please see this tutorial as an enabler for a convenience feature that allows booting the following
-tutorials in a quick manner.
+tutorials in a quick manner. _For those keen to get a deeper understanding, it could make sense to skip forward to [Chapter 15](../15_virtual_mem_part3_precomputed_tables) and read the first half of the README,
+where `Load Address != Link Address` is discussed_.
 
 [position independent code]: https://en.wikipedia.org/wiki/Position-independent_code
 

@@ -8,6 +8,9 @@
 #![no_main]
 #![no_std]
 
+/// Console tests should time out on the I/O harness in case of panic.
+mod panic_wait_forever;
+
 use libkernel::{bsp, console, cpu, exception, print};
 
 #[no_mangle]

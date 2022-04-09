@@ -244,11 +244,12 @@ diff -uNr 03_hacky_hello_world/src/main.rs 04_safe_globals/src/main.rs
  ///
  /// - Only a single core must be active and running this function.
  unsafe fn kernel_init() -> ! {
+-    println!("Hello from Rust!");
 +    use console::interface::Statistics;
-+
-     println!("[0] Hello from Rust!");
 
 -    panic!("Stopping here.")
++    println!("[0] Hello from Rust!");
++
 +    println!(
 +        "[1] Chars written: {}",
 +        bsp::console::console().chars_written()

@@ -1414,7 +1414,7 @@ diff -uNr 04_safe_globals/src/main.rs 05_drivers_gpio_uart/src/main.rs
 diff -uNr 04_safe_globals/src/panic_wait.rs 05_drivers_gpio_uart/src/panic_wait.rs
 --- 04_safe_globals/src/panic_wait.rs
 +++ 05_drivers_gpio_uart/src/panic_wait.rs
-@@ -4,15 +4,35 @@
+@@ -4,13 +4,29 @@
 
  //! A panic handler that infinitely waits.
 
@@ -1422,11 +1422,11 @@ diff -uNr 04_safe_globals/src/panic_wait.rs 05_drivers_gpio_uart/src/panic_wait.
 -use core::panic::PanicInfo;
 +use crate::{bsp, cpu};
 +use core::{fmt, panic::PanicInfo};
-+
-+//--------------------------------------------------------------------------------------------------
-+// Private Code
-+//--------------------------------------------------------------------------------------------------
-+
+
+ //--------------------------------------------------------------------------------------------------
+ // Private Code
+ //--------------------------------------------------------------------------------------------------
+
 +fn _panic_print(args: fmt::Arguments) {
 +    use fmt::Write;
 +
@@ -1442,18 +1442,19 @@ diff -uNr 04_safe_globals/src/panic_wait.rs 05_drivers_gpio_uart/src/panic_wait.
 +        _panic_print(format_args_nl!($($arg)*));
 +    })
 +}
++
+ /// Stop immediately if called a second time.
+ ///
+ /// # Note
+@@ -50,7 +66,7 @@
+         _ => ("???", 0, 0),
+     };
 
- #[panic_handler]
- fn panic(info: &PanicInfo) -> ! {
-     if let Some(args) = info.message() {
--        println!("\nKernel panic: {}", args);
-+        panic_println!("\nKernel panic: {}", args);
-     } else {
--        println!("\nKernel panic!");
-+        panic_println!("\nKernel panic!");
-     }
-
-     cpu::wait_forever()
+-    println!(
++    panic_println!(
+         "Kernel panic!\n\n\
+         Panic location:\n      File '{}', line {}, column {}\n\n\
+         {}",
 
 diff -uNr 04_safe_globals/tests/boot_test_string.rb 05_drivers_gpio_uart/tests/boot_test_string.rb
 --- 04_safe_globals/tests/boot_test_string.rb

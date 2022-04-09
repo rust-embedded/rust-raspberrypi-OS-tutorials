@@ -327,12 +327,15 @@ diff -uNr 01_wait_forever/src/main.rs 02_runtime_init/src/main.rs
 diff -uNr 01_wait_forever/src/panic_wait.rs 02_runtime_init/src/panic_wait.rs
 --- 01_wait_forever/src/panic_wait.rs
 +++ 02_runtime_init/src/panic_wait.rs
-@@ -4,9 +4,10 @@
+@@ -4,6 +4,7 @@
 
  //! A panic handler that infinitely waits.
 
 +use crate::cpu;
  use core::panic::PanicInfo;
+
+ //--------------------------------------------------------------------------------------------------
+@@ -12,5 +13,5 @@
 
  #[panic_handler]
  fn panic(_info: &PanicInfo) -> ! {

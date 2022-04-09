@@ -1686,16 +1686,16 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/memory/mmu.rs 15_virtual_mem_part3
 diff -uNr 14_virtual_mem_part2_mmio_remap/tests/00_console_sanity.rs 15_virtual_mem_part3_precomputed_tables/tests/00_console_sanity.rs
 --- 14_virtual_mem_part2_mmio_remap/tests/00_console_sanity.rs
 +++ 15_virtual_mem_part3_precomputed_tables/tests/00_console_sanity.rs
-@@ -8,7 +8,7 @@
- #![no_main]
- #![no_std]
+@@ -11,7 +11,7 @@
+ /// Console tests should time out on the I/O harness in case of panic.
+ mod panic_wait_forever;
 
 -use libkernel::{bsp, console, cpu, exception, print};
 +use libkernel::{bsp, console, cpu, exception, memory, print};
 
  #[no_mangle]
  unsafe fn kernel_init() -> ! {
-@@ -16,6 +16,7 @@
+@@ -19,6 +19,7 @@
      use console::interface::*;
 
      exception::handling_init();
@@ -1770,9 +1770,56 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/tests/02_exception_sync_page_fault.rs 
      info!("Writing beyond mapped area to address 9 GiB...");
      let big_addr: u64 = 9 * 1024 * 1024 * 1024;
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/tests/03_exception_irq_sanity.rs 15_virtual_mem_part3_precomputed_tables/tests/03_exception_irq_sanity.rs
---- 14_virtual_mem_part2_mmio_remap/tests/03_exception_irq_sanity.rs
-+++ 15_virtual_mem_part3_precomputed_tables/tests/03_exception_irq_sanity.rs
+diff -uNr 14_virtual_mem_part2_mmio_remap/tests/03_exception_restore_sanity.rs 15_virtual_mem_part3_precomputed_tables/tests/03_exception_restore_sanity.rs
+--- 14_virtual_mem_part2_mmio_remap/tests/03_exception_restore_sanity.rs
++++ 15_virtual_mem_part3_precomputed_tables/tests/03_exception_restore_sanity.rs
+@@ -30,40 +30,12 @@
+
+ #[no_mangle]
+ unsafe fn kernel_init() -> ! {
+-    use libkernel::driver::interface::DriverManager;
+-
+     exception::handling_init();
+-
+-    // This line will be printed as the test header.
+-    println!("Testing exception restore");
+-
+-    let phys_kernel_tables_base_addr = match memory::mmu::kernel_map_binary() {
+-        Err(string) => {
+-            info!("Error mapping kernel binary: {}", string);
+-            cpu::qemu_exit_failure()
+-        }
+-        Ok(addr) => addr,
+-    };
+-
+-    if let Err(e) = memory::mmu::enable_mmu_and_caching(phys_kernel_tables_base_addr) {
+-        info!("Enabling MMU failed: {}", e);
+-        cpu::qemu_exit_failure()
+-    }
+-    // Printing will silently fail from here on, because the driver's MMIO is not remapped yet.
+-
+     memory::mmu::post_enable_init();
+     bsp::console::qemu_bring_up_console();
+
+-    // Bring up the drivers needed for printing first.
+-    for i in bsp::driver::driver_manager()
+-        .early_print_device_drivers()
+-        .iter()
+-    {
+-        // Any encountered errors cannot be printed yet, obviously, so just safely park the CPU.
+-        i.init().unwrap_or_else(|_| cpu::qemu_exit_failure());
+-    }
+-    bsp::driver::driver_manager().post_early_print_device_driver_init();
+-    // Printing available again from here on.
++    // This line will be printed as the test header.
++    println!("Testing exception restore");
+
+     info!("Making a dummy system call");
+
+
+diff -uNr 14_virtual_mem_part2_mmio_remap/tests/04_exception_irq_sanity.rs 15_virtual_mem_part3_precomputed_tables/tests/04_exception_irq_sanity.rs
+--- 14_virtual_mem_part2_mmio_remap/tests/04_exception_irq_sanity.rs
++++ 15_virtual_mem_part3_precomputed_tables/tests/04_exception_irq_sanity.rs
 @@ -10,11 +10,12 @@
  #![reexport_test_harness_main = "test_main"]
  #![test_runner(libkernel::test_runner)]
