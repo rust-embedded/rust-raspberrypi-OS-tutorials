@@ -2,39 +2,45 @@
 
 ## tl;dr
 
-- Introducing global `print!()` macros to enable "printf debugging" at the earliest.
-- To keep tutorial length reasonable, printing functions for now "abuse" a QEMU property that lets
-  us use the Raspberry's `UART` without setting it up properly.
-- Using the real hardware `UART` is enabled step-by-step in following tutorials.
+* Se añade la macro global `print!()` para habilitar la "depuración basada en printf" ("printf debugging") lo más pronto posible.
+* Para mantener una duración razonable en este tutorial, las funciones de impresión por el momento "abusan" una propiedad de QEMU que nos permite hacer uso del `UART` de la Raspberry sin haberla configurado apropiadamente.
+* El uso del hardware real de `UART` se habilitará paso por paso en los siguientes tutoriales.
 
-## Notable additions
+## Adiciones notables
 
-- `src/console.rs` introduces interface `Traits` for console commands.
-- `src/bsp/raspberrypi/console.rs` implements the interface for QEMU's emulated UART.
-- The panic handler makes use of the new `print!()` to display user error messages.
-- There is a new Makefile target, `make test`, intended for automated testing. It boots the compiled
-  kernel in `QEMU`, and checks for an expected output string produced by the kernel.
-  - In this tutorial, it checks for the string `Stopping here`, which is emitted by the `panic!()`
-    at the end of `main.rs`.
+* `src/console.rs` introduce una interfaz con `Trait`s para comandos de consola.
+* `src/bsp/raspberrypi/console.rs` implementa la interfaz para que QEMU pueda crear una emulación de UART.
+* El *panic handler* (manejador de pánico) hace uso de la nueva macro `print!()` para mostrar mensajes de error del usuario.
+* Hay un nuevo objetivo en el Makefile: `make test`, destinado a la automatización de pruebas. Este comando inicia el kernel (núcleo) compilado en `QEMU`, y busca una cadena de  texto específica en la salida que ha sido producida por el kernel (núcleo).
+  * En este tutorial, se buscará la cadena `Stopping here`, que es creada por la macro `panic!()` al final del archivo `main.rs`.
 
-## Test it
+## Pruébalo
 
-QEMU is no longer running in assembly mode. It will from now on show the output of the `console`.
+QEMU ya no está siendo ejecutado en modo ensamblador. Desde ahora en adelante mostrará la salida de la `consola`.
 
 ```console
 $ make qemu
 [...]
-
 Hello from Rust!
-Kernel panic!
 
-Panic location:
-      File 'src/main.rs', line 126, column 5
-
-Stopping here.
+Kernel panic: Stopping here.
 ```
 
-## Diff to previous
+### Diccionario
+
+* *Hacky:* Solución torpe o poco elegante para un problema.
+
+* *Debugging:* Proceso para identificar y corregir errores de programación.
+  
+  * *printf debugging:* Usado para describir el trabajo de depuración (*debugging*) poniendo comandos que dan una salida en consola, como el de "printf", en diferentes lugares del programa; observando la información y tratando de deducir qué está mal en el programa basándose en la información que nos dan nuestros comandos.
+
+* *Traits:* Un *trait* le hace saber al compilador de Rust acerca de una funcionalidad que tiene un tipo de dato particular y que puede compartir con otros tipos de datos.
+  
+  > NOTA: Los *traits* son similares a una característica que se le conoce comúnmente como *interfaces* en otros lenguajes, aunque con algunas diferencias.
+  
+  Si deseas aprender más acerca de esto, por favor lee este capítulo del libro de Rust: [Traits: Defining Shared Behavior - The Rust Programming Language](https://doc.rust-lang.org/book/ch10-02-traits.html)
+
+## Diferencias con el archivo anterior
 
 ```diff
 diff -uNr 02_runtime_init/Cargo.toml 03_hacky_hello_world/Cargo.toml
@@ -235,7 +241,7 @@ diff -uNr 02_runtime_init/src/main.rs 03_hacky_hello_world/src/main.rs
  /// - Only a single core must be active and running this function.
  unsafe fn kernel_init() -> ! {
 -    panic!()
-+    println!("Hello from Rust!");
++    println!("[0] Hello from Rust!");
 +
 +    panic!("Stopping here.")
  }
@@ -243,7 +249,7 @@ diff -uNr 02_runtime_init/src/main.rs 03_hacky_hello_world/src/main.rs
 diff -uNr 02_runtime_init/src/panic_wait.rs 03_hacky_hello_world/src/panic_wait.rs
 --- 02_runtime_init/src/panic_wait.rs
 +++ 03_hacky_hello_world/src/panic_wait.rs
-@@ -4,14 +4,61 @@
+@@ -4,10 +4,16 @@
 
  //! A panic handler that infinitely waits.
 
@@ -251,59 +257,14 @@ diff -uNr 02_runtime_init/src/panic_wait.rs 03_hacky_hello_world/src/panic_wait.
 +use crate::{cpu, println};
  use core::panic::PanicInfo;
 
- //--------------------------------------------------------------------------------------------------
- // Private Code
- //--------------------------------------------------------------------------------------------------
-
-+/// Stop immediately if called a second time.
-+///
-+/// # Note
-+///
-+/// Using atomics here relieves us from needing to use `unsafe` for the static variable.
-+///
-+/// On `AArch64`, which is the only implemented architecture at the time of writing this,
-+/// [`AtomicBool::load`] and [`AtomicBool::store`] are lowered to ordinary load and store
-+/// instructions. They are therefore safe to use even with MMU + caching deactivated.
-+///
-+/// [`AtomicBool::load`]: core::sync::atomic::AtomicBool::load
-+/// [`AtomicBool::store`]: core::sync::atomic::AtomicBool::store
-+fn panic_prevent_reenter() {
-+    use core::sync::atomic::{AtomicBool, Ordering};
-+
-+    #[cfg(not(target_arch = "aarch64"))]
-+    compile_error!("Add the target_arch to above's check if the following code is safe to use");
-+
-+    static PANIC_IN_PROGRESS: AtomicBool = AtomicBool::new(false);
-+
-+    if !PANIC_IN_PROGRESS.load(Ordering::Relaxed) {
-+        PANIC_IN_PROGRESS.store(true, Ordering::Relaxed);
-+
-+        return;
-+    }
-+
-+    cpu::wait_forever()
-+}
-+
  #[panic_handler]
 -fn panic(_info: &PanicInfo) -> ! {
 +fn panic(info: &PanicInfo) -> ! {
-+    // Protect against panic infinite loops if any of the following code panics itself.
-+    panic_prevent_reenter();
-+
-+    let (location, line, column) = match info.location() {
-+        Some(loc) => (loc.file(), loc.line(), loc.column()),
-+        _ => ("???", 0, 0),
-+    };
-+
-+    println!(
-+        "Kernel panic!\n\n\
-+        Panic location:\n      File '{}', line {}, column {}\n\n\
-+        {}",
-+        location,
-+        line,
-+        column,
-+        info.message().unwrap_or(&format_args!("")),
-+    );
++    if let Some(args) = info.message() {
++        println!("\nKernel panic: {}", args);
++    } else {
++        println!("\nKernel panic!");
++    }
 +
      cpu::wait_forever()
  }
