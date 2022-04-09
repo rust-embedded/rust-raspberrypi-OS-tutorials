@@ -14,8 +14,8 @@
 - The panic handler makes use of the new `print!()` to display user error messages.
 - There is a new Makefile target, `make test`, intended for automated testing. It boots the compiled
   kernel in `QEMU`, and checks for an expected output string produced by the kernel.
-    - In this tutorial, it checks for the string `Stopping here`, which is emitted by the `panic!()`
-      at the end of `main.rs`.
+  - In this tutorial, it checks for the string `Stopping here`, which is emitted by the `panic!()`
+    at the end of `main.rs`.
 
 ## Test it
 
@@ -35,8 +35,8 @@ Stopping here.
 ```
 
 ## Diff to previous
-```diff
 
+```diff
 diff -uNr 02_runtime_init/Cargo.toml 03_hacky_hello_world/Cargo.toml
 --- 02_runtime_init/Cargo.toml
 +++ 03_hacky_hello_world/Cargo.toml
@@ -97,7 +97,7 @@ diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
 @@ -169,3 +172,28 @@
  ##------------------------------------------------------------------------------
  check:
- 	@RUSTFLAGS="$(RUSTFLAGS)" $(CHECK_CMD) --message-format=json
+     @RUSTFLAGS="$(RUSTFLAGS)" $(CHECK_CMD) --message-format=json
 +
 +
 +
@@ -109,7 +109,7 @@ diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
 +ifeq ($(QEMU_MACHINE_TYPE),) # QEMU is not supported for the board.
 +
 +test_boot test :
-+	$(call colorecho, "\n$(QEMU_MISSING_STRING)")
++    $(call colorecho, "\n$(QEMU_MISSING_STRING)")
 +
 +else # QEMU is supported.
 +
@@ -117,8 +117,8 @@ diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
 +## Run boot test
 +##------------------------------------------------------------------------------
 +test_boot: $(KERNEL_BIN)
-+	$(call colorecho, "\nBoot test - $(BSP)")
-+	@$(DOCKER_TEST) $(EXEC_TEST_DISPATCH) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
++    $(call colorecho, "\nBoot test - $(BSP)")
++    @$(DOCKER_TEST) $(EXEC_TEST_DISPATCH) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
 +
 +test: test_boot
 +
@@ -358,5 +358,4 @@ diff -uNr 02_runtime_init/tests/boot_test_string.rb 03_hacky_hello_world/tests/b
 +# frozen_string_literal: true
 +
 +EXPECTED_PRINT = 'Stopping here'
-
 ```
