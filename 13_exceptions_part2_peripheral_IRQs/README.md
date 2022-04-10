@@ -2376,7 +2376,7 @@ diff -uNr 12_integrated_testing/src/exception/asynchronous.rs 13_exceptions_part
 +    pub const fn new(number: usize) -> Self {
 +        assert!(number <= MAX_INCLUSIVE);
 +
-+        Self { 0: number }
++        Self(number)
 +    }
 +
 +    /// Return the wrapped number.
@@ -2411,17 +2411,15 @@ diff -uNr 12_integrated_testing/src/exception/asynchronous.rs 13_exceptions_part
 diff -uNr 12_integrated_testing/src/lib.rs 13_exceptions_part2_peripheral_IRQs/src/lib.rs
 --- 12_integrated_testing/src/lib.rs
 +++ 13_exceptions_part2_peripheral_IRQs/src/lib.rs
-@@ -108,7 +108,9 @@
+@@ -108,6 +108,7 @@
 
  #![allow(clippy::upper_case_acronyms)]
  #![allow(incomplete_features)]
 +#![feature(asm_const)]
- #![feature(const_fn_fn_ptr_basics)]
-+#![feature(const_fn_trait_bound)]
  #![feature(core_intrinsics)]
  #![feature(format_args_nl)]
  #![feature(linkage)]
-@@ -131,6 +133,7 @@
+@@ -130,6 +131,7 @@
  pub mod exception;
  pub mod memory;
  pub mod print;

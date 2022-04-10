@@ -109,8 +109,6 @@
 #![allow(clippy::upper_case_acronyms)]
 #![allow(incomplete_features)]
 #![feature(asm_const)]
-#![feature(const_fn_fn_ptr_basics)]
-#![feature(const_fn_trait_bound)]
 #![feature(core_intrinsics)]
 #![feature(format_args_nl)]
 #![feature(linkage)]

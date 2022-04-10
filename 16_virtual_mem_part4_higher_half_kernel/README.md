@@ -799,7 +799,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/memory.rs 
 diff -uNr 15_virtual_mem_part3_precomputed_tables/src/lib.rs 16_virtual_mem_part4_higher_half_kernel/src/lib.rs
 --- 15_virtual_mem_part3_precomputed_tables/src/lib.rs
 +++ 16_virtual_mem_part4_higher_half_kernel/src/lib.rs
-@@ -152,11 +152,6 @@
+@@ -150,11 +150,6 @@
      )
  }
 

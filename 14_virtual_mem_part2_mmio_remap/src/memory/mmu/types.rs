@@ -81,7 +81,9 @@ impl<ATYPE: AddressType> PageAddress<ATYPE> {
             return Some(self);
         }
 
-        let delta = (count.abs() as usize).checked_mul(bsp::memory::mmu::KernelGranule::SIZE)?;
+        let delta = count
+            .unsigned_abs()
+            .checked_mul(bsp::memory::mmu::KernelGranule::SIZE)?;
         let result = if count.is_positive() {
             self.inner.as_usize().checked_add(delta)?
         } else {

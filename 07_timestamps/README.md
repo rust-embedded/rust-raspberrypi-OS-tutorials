@@ -538,7 +538,7 @@ diff -uNr 06_uart_chainloader/src/cpu.rs 07_timestamps/src/cpu.rs
 diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
 --- 06_uart_chainloader/src/main.rs
 +++ 07_timestamps/src/main.rs
-@@ -119,6 +119,7 @@
+@@ -118,6 +118,7 @@
  mod panic_wait;
  mod print;
  mod synchronization;
@@ -546,7 +546,7 @@ diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
 
  /// Early init code.
  ///
-@@ -141,56 +142,38 @@
+@@ -140,56 +141,38 @@
      kernel_main()
  }
 

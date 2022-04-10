@@ -2135,8 +2135,8 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/driver.rs 14_virtual_mem_part2
 diff -uNr 13_exceptions_part2_peripheral_IRQs/src/lib.rs 14_virtual_mem_part2_mmio_remap/src/lib.rs
 --- 13_exceptions_part2_peripheral_IRQs/src/lib.rs
 +++ 14_virtual_mem_part2_mmio_remap/src/lib.rs
-@@ -113,8 +113,10 @@
- #![feature(const_fn_trait_bound)]
+@@ -111,8 +111,10 @@
+ #![feature(asm_const)]
  #![feature(core_intrinsics)]
  #![feature(format_args_nl)]
 +#![feature(generic_const_exprs)]
@@ -2146,7 +2146,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/lib.rs 14_virtual_mem_part2_mm
  #![feature(trait_alias)]
  #![no_std]
  // Testing
-@@ -127,6 +129,7 @@
+@@ -125,6 +127,7 @@
  mod synchronization;
 
  pub mod bsp;
@@ -2154,7 +2154,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/lib.rs 14_virtual_mem_part2_mm
  pub mod console;
  pub mod cpu;
  pub mod driver;
-@@ -179,6 +182,7 @@
+@@ -177,6 +180,7 @@
  #[no_mangle]
  unsafe fn kernel_init() -> ! {
      exception::handling_init();
@@ -2639,7 +2639,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/translation_table.r
 diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/types.rs 14_virtual_mem_part2_mmio_remap/src/memory/mmu/types.rs
 --- 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/types.rs
 +++ 14_virtual_mem_part2_mmio_remap/src/memory/mmu/types.rs
-@@ -0,0 +1,373 @@
+@@ -0,0 +1,375 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
@@ -2723,7 +2723,9 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/types.rs 14_virtual
 +            return Some(self);
 +        }
 +
-+        let delta = (count.abs() as usize).checked_mul(bsp::memory::mmu::KernelGranule::SIZE)?;
++        let delta = count
++            .unsigned_abs()
++            .checked_mul(bsp::memory::mmu::KernelGranule::SIZE)?;
 +        let result = if count.is_positive() {
 +            self.inner.as_usize().checked_add(delta)?
 +        } else {

@@ -35,8 +35,8 @@ Stopping here.
 ```
 
 ## Diff to previous
-
 ```diff
+
 diff -uNr 02_runtime_init/Cargo.toml 03_hacky_hello_world/Cargo.toml
 --- 02_runtime_init/Cargo.toml
 +++ 03_hacky_hello_world/Cargo.toml
@@ -97,7 +97,7 @@ diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
 @@ -169,3 +172,28 @@
  ##------------------------------------------------------------------------------
  check:
-     @RUSTFLAGS="$(RUSTFLAGS)" $(CHECK_CMD) --message-format=json
+ 	@RUSTFLAGS="$(RUSTFLAGS)" $(CHECK_CMD) --message-format=json
 +
 +
 +
@@ -109,7 +109,7 @@ diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
 +ifeq ($(QEMU_MACHINE_TYPE),) # QEMU is not supported for the board.
 +
 +test_boot test :
-+    $(call colorecho, "\n$(QEMU_MISSING_STRING)")
++	$(call colorecho, "\n$(QEMU_MISSING_STRING)")
 +
 +else # QEMU is supported.
 +
@@ -117,8 +117,8 @@ diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
 +## Run boot test
 +##------------------------------------------------------------------------------
 +test_boot: $(KERNEL_BIN)
-+    $(call colorecho, "\nBoot test - $(BSP)")
-+    @$(DOCKER_TEST) $(EXEC_TEST_DISPATCH) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
++	$(call colorecho, "\nBoot test - $(BSP)")
++	@$(DOCKER_TEST) $(EXEC_TEST_DISPATCH) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
 +
 +test: test_boot
 +
@@ -358,4 +358,5 @@ diff -uNr 02_runtime_init/tests/boot_test_string.rb 03_hacky_hello_world/tests/b
 +# frozen_string_literal: true
 +
 +EXPECTED_PRINT = 'Stopping here'
+
 ```

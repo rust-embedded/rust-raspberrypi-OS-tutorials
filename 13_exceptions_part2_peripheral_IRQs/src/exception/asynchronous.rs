@@ -119,7 +119,7 @@ impl<const MAX_INCLUSIVE: usize> IRQNumber<{ MAX_INCLUSIVE }> {
     pub const fn new(number: usize) -> Self {
         assert!(number <= MAX_INCLUSIVE);
 
-        Self { 0: number }
+        Self(number)
     }
 
     /// Return the wrapped number.

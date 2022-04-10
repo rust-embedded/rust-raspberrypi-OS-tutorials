@@ -1081,17 +1081,16 @@ diff -uNr 09_privilege_level/src/bsp.rs 10_virtual_mem_part1_identity_mapping/sr
 diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/src/main.rs
 --- 09_privilege_level/src/main.rs
 +++ 10_virtual_mem_part1_identity_mapping/src/main.rs
-@@ -105,7 +105,9 @@
+@@ -105,6 +105,8 @@
  //! 2. Once finished with architectural setup, the arch code calls `kernel_init()`.
 
  #![allow(clippy::upper_case_acronyms)]
 +#![allow(incomplete_features)]
- #![feature(const_fn_fn_ptr_basics)]
 +#![feature(core_intrinsics)]
  #![feature(format_args_nl)]
  #![feature(panic_info_message)]
  #![feature(trait_alias)]
-@@ -117,6 +119,7 @@
+@@ -116,6 +118,7 @@
  mod cpu;
  mod driver;
  mod exception;
@@ -1099,7 +1098,7 @@ diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/s
  mod panic_wait;
  mod print;
  mod synchronization;
-@@ -127,9 +130,17 @@
+@@ -126,9 +129,17 @@
  /// # Safety
  ///
  /// - Only a single core must be active and running this function.
@@ -1118,7 +1117,7 @@ diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/s
 
      for i in bsp::driver::driver_manager().all_device_drivers().iter() {
          if let Err(x) = i.init() {
-@@ -158,6 +169,9 @@
+@@ -157,6 +168,9 @@
      );
      info!("Booting on: {}", bsp::board_name());
 
@@ -1128,7 +1127,7 @@ diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/s
      let (_, privilege_level) = exception::current_privilege_level();
      info!("Current privilege level: {}", privilege_level);
 
-@@ -181,6 +195,13 @@
+@@ -180,6 +194,13 @@
      info!("Timer test, spinning for 1 second");
      time::time_manager().spin_for(Duration::from_secs(1));
 
