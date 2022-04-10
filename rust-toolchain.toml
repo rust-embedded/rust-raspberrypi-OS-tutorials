@@ -1,4 +1,4 @@
 [toolchain]
 channel = "nightly-2022-04-10"
-components = ["llvm-tools-preview"]
+components = ["llvm-tools-preview", "rustfmt"]
 targets = ["aarch64-unknown-none-softfloat"]
