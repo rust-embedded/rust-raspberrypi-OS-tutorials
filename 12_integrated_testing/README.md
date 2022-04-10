@@ -324,7 +324,7 @@ pub fn qemu_exit_success() -> ! {
 [Click here] in case you are interested in the implementation. Note that for the functions to work,
 the `-semihosting` flag must be added to the `QEMU` invocation.
 
-You might have also noted the `#[cfg(feature = "test_build")]`. In the `Makefile`, we ensure that
+You might have also noted the `#[cfg(feature = "test_build")]`. In `Cargo.toml`, we ensure that
 this feature is only enabled when `cargo test` runs. This way, it is ensured that testing-specific
 code is conditionally compiled only for testing.
 
@@ -410,8 +410,6 @@ define test_prepare
     @echo "$$KERNEL_TEST_RUNNER" > target/kernel_test_runner.sh
     @chmod +x target/kernel_test_runner.sh
 endef
-
-test_unit test_integration: FEATURES += --features test_build
 
 ##------------------------------------------------------------------------------
 ## Run unit test(s)
@@ -912,7 +910,7 @@ diff -uNr 11_exceptions_part1_groundwork/Cargo.toml 12_integrated_testing/Cargo.
  authors = ["Andre Richter <andre.o.richter@gmail.com>"]
  edition = "2021"
 
-@@ -11,20 +11,50 @@
+@@ -11,20 +11,57 @@
  default = []
  bsp_rpi3 = ["tock-registers"]
  bsp_rpi4 = ["tock-registers"]
@@ -943,6 +941,13 @@ diff -uNr 11_exceptions_part1_groundwork/Cargo.toml 12_integrated_testing/Cargo.
 +
 +[dev-dependencies]
 +test-macros = { path = "test-macros" }
++
++# The following line is a workaround, as suggested in [1], to enable a feature in test-builds only.
++# This allows building the library part of the kernel with specialized code for testing.
++#
++#
++# [1] https://github.com/rust-lang/cargo/issues/2911#issuecomment-749580481
++mingo = { path = ".", features = ["test_build"] }
 +
 +# Unit tests are done in the library part of the kernel.
 +[lib]
@@ -1023,7 +1028,7 @@ diff -uNr 11_exceptions_part1_groundwork/Makefile 12_integrated_testing/Makefile
  	$(call colorecho, "\n$(QEMU_MISSING_STRING)")
 
  else # QEMU is supported.
-@@ -253,6 +263,45 @@
+@@ -253,6 +263,43 @@
  	$(call colorecho, "\nBoot test - $(BSP)")
  	@$(DOCKER_TEST) $(EXEC_TEST_DISPATCH) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
 
@@ -1049,15 +1054,13 @@ diff -uNr 11_exceptions_part1_groundwork/Makefile 12_integrated_testing/Makefile
 +    @chmod +x target/kernel_test_runner.sh
 +endef
 +
-+test_unit test_integration: FEATURES += --features test_build
-+
 +##------------------------------------------------------------------------------
 +## Run unit test(s)
 +##------------------------------------------------------------------------------
 +test_unit:
 +	$(call colorecho, "\nCompiling unit test(s) - $(BSP)")
 +	$(call test_prepare)
-+	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(TEST_CMD) --lib
++	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(TEST_CMD) --lib
 +
 +##------------------------------------------------------------------------------
 +## Run integration test(s)

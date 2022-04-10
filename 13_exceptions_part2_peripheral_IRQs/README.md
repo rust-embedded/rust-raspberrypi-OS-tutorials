@@ -758,19 +758,6 @@ diff -uNr 12_integrated_testing/Cargo.toml 13_exceptions_part2_peripheral_IRQs/C
  edition = "2021"
 
 
-diff -uNr 12_integrated_testing/Makefile 13_exceptions_part2_peripheral_IRQs/Makefile
---- 12_integrated_testing/Makefile
-+++ 13_exceptions_part2_peripheral_IRQs/Makefile
-@@ -292,7 +292,7 @@
- test_unit:
- 	$(call colorecho, "\nCompiling unit test(s) - $(BSP)")
- 	$(call test_prepare)
--	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(TEST_CMD) --lib
-+	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(TEST_CMD) --lib
-
- ##------------------------------------------------------------------------------
- ## Run integration test(s)
-
 diff -uNr 12_integrated_testing/src/_arch/aarch64/cpu/smp.rs 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/cpu/smp.rs
 --- 12_integrated_testing/src/_arch/aarch64/cpu/smp.rs
 +++ 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/cpu/smp.rs

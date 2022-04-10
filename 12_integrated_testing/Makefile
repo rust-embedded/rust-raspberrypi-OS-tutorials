@@ -284,15 +284,13 @@ define test_prepare
     @chmod +x target/kernel_test_runner.sh
 endef
 
-test_unit test_integration: FEATURES += --features test_build
-
 ##------------------------------------------------------------------------------
 ## Run unit test(s)
 ##------------------------------------------------------------------------------
 test_unit:
 	$(call colorecho, "\nCompiling unit test(s) - $(BSP)")
 	$(call test_prepare)
-	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(TEST_CMD) --lib
+	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(TEST_CMD) --lib
 
 ##------------------------------------------------------------------------------
 ## Run integration test(s)

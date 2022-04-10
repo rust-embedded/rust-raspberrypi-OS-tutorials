@@ -287,8 +287,6 @@ define test_prepare
     @chmod +x target/kernel_test_runner.sh
 endef
 
-test_unit test_integration: FEATURES += --features test_build
-
 ##------------------------------------------------------------------------------
 ## Run unit test(s)
 ##------------------------------------------------------------------------------
