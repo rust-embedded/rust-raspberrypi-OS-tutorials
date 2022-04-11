@@ -1,8 +1,17 @@
-use std::env;
+use std::{env, fs};
 
 fn main() {
-    let linker_file = env::var("LINKER_FILE").unwrap_or_default();
+    let ld_script_path = env::var("LD_SCRIPT_PATH").unwrap_or_default();
 
-    println!("cargo:rerun-if-changed={}", linker_file);
-    println!("cargo:rerun-if-changed=build.rs");
+    let files = fs::read_dir(ld_script_path).unwrap();
+    files
+        .filter_map(Result::ok)
+        .filter(|d| {
+            if let Some(e) = d.path().extension() {
+                e == "ld"
+            } else {
+                false
+            }
+        })
+        .for_each(|f| println!("cargo:rerun-if-changed={}", f.path().display()));
 }

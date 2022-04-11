@@ -1006,7 +1006,7 @@ diff -uNr 11_exceptions_part1_groundwork/Makefile 12_integrated_testing/Makefile
      OBJDUMP_BINARY    = aarch64-none-elf-objdump
      NM_BINARY         = aarch64-none-elf-nm
      READELF_BINARY    = aarch64-none-elf-readelf
-@@ -74,6 +83,7 @@
+@@ -83,6 +92,7 @@
  DOC_CMD     = cargo doc $(COMPILER_ARGS)
  CLIPPY_CMD  = cargo clippy $(COMPILER_ARGS)
  CHECK_CMD   = cargo check $(COMPILER_ARGS)
@@ -1014,7 +1014,7 @@ diff -uNr 11_exceptions_part1_groundwork/Makefile 12_integrated_testing/Makefile
  OBJCOPY_CMD = rust-objcopy \
      --strip-all            \
      -O binary
-@@ -237,11 +247,11 @@
+@@ -246,11 +256,11 @@
  ##--------------------------------------------------------------------------------------------------
  ## Testing targets
  ##--------------------------------------------------------------------------------------------------
@@ -1028,7 +1028,7 @@ diff -uNr 11_exceptions_part1_groundwork/Makefile 12_integrated_testing/Makefile
  	$(call colorecho, "\n$(QEMU_MISSING_STRING)")
 
  else # QEMU is supported.
-@@ -253,6 +263,43 @@
+@@ -262,6 +272,43 @@
  	$(call colorecho, "\nBoot test - $(BSP)")
  	@$(DOCKER_TEST) $(EXEC_TEST_DISPATCH) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
 

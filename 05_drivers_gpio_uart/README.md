@@ -155,7 +155,7 @@ diff -uNr 04_safe_globals/Makefile 05_drivers_gpio_uart/Makefile
 
 
  ##--------------------------------------------------------------------------------------------------
-@@ -73,6 +76,7 @@
+@@ -82,6 +85,7 @@
 
  EXEC_QEMU          = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
  EXEC_TEST_DISPATCH = ruby ../common/tests/dispatch.rb
@@ -163,7 +163,7 @@ diff -uNr 04_safe_globals/Makefile 05_drivers_gpio_uart/Makefile
 
  ##------------------------------------------------------------------------------
  ## Dockerization
-@@ -80,18 +84,26 @@
+@@ -89,18 +93,26 @@
  DOCKER_CMD            = docker run -t --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
  DOCKER_CMD_INTERACT   = $(DOCKER_CMD) -i
  DOCKER_ARG_DIR_COMMON = -v $(shell pwd)/../common:/work/common
@@ -191,7 +191,7 @@ diff -uNr 04_safe_globals/Makefile 05_drivers_gpio_uart/Makefile
 
  all: $(KERNEL_BIN)
 
-@@ -131,6 +143,12 @@
+@@ -140,6 +152,12 @@
  endif
 
  ##------------------------------------------------------------------------------

@@ -3,7 +3,7 @@
  * Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
  */
 
-INCLUDE src/bsp/raspberrypi/kernel_virt_addr_space_size.ld;
+INCLUDE kernel_virt_addr_space_size.ld;
 
 PAGE_SIZE = 64K;
 PAGE_MASK = PAGE_SIZE - 1;

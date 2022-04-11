@@ -70,7 +70,7 @@ diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
      OBJDUMP_BINARY    = aarch64-none-elf-objdump
      NM_BINARY         = aarch64-none-elf-nm
      READELF_BINARY    = aarch64-none-elf-readelf
-@@ -71,17 +71,20 @@
+@@ -80,17 +80,20 @@
      --strip-all            \
      -O binary
 
@@ -94,7 +94,7 @@ diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
 
 
 
-@@ -169,3 +172,28 @@
+@@ -178,3 +181,28 @@
  ##------------------------------------------------------------------------------
  check:
  	@RUSTFLAGS="$(RUSTFLAGS)" $(CHECK_CMD) --message-format=json

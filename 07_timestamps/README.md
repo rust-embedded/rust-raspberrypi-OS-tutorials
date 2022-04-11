@@ -63,8 +63,8 @@ diff -uNr 06_uart_chainloader/Makefile 07_timestamps/Makefile
 --- 06_uart_chainloader/Makefile
 +++ 07_timestamps/Makefile
 @@ -23,29 +23,27 @@
+ QEMU_MISSING_STRING = "This board is not yet supported for QEMU."
 
- # BSP-specific arguments.
  ifeq ($(BSP),rpi3)
 -    TARGET                 = aarch64-unknown-none-softfloat
 -    KERNEL_BIN             = kernel8.img
@@ -74,9 +74,6 @@ diff -uNr 06_uart_chainloader/Makefile 07_timestamps/Makefile
 -    OBJDUMP_BINARY         = aarch64-none-elf-objdump
 -    NM_BINARY              = aarch64-none-elf-nm
 -    READELF_BINARY         = aarch64-none-elf-readelf
--    LINKER_FILE            = src/bsp/raspberrypi/link.ld
--    RUSTC_MISC_ARGS        = -C target-cpu=cortex-a53
--    CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi3.img
 +    TARGET            = aarch64-unknown-none-softfloat
 +    KERNEL_BIN        = kernel8.img
 +    QEMU_BINARY       = qemu-system-aarch64
@@ -85,7 +82,9 @@ diff -uNr 06_uart_chainloader/Makefile 07_timestamps/Makefile
 +    OBJDUMP_BINARY    = aarch64-none-elf-objdump
 +    NM_BINARY         = aarch64-none-elf-nm
 +    READELF_BINARY    = aarch64-none-elf-readelf
-+    LINKER_FILE       = src/bsp/raspberrypi/link.ld
+     LD_SCRIPT_PATH    = src/bsp/raspberrypi
+-    RUSTC_MISC_ARGS        = -C target-cpu=cortex-a53
+-    CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi3.img
 +    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
  else ifeq ($(BSP),rpi4)
 -    TARGET                 = aarch64-unknown-none-softfloat
@@ -96,9 +95,6 @@ diff -uNr 06_uart_chainloader/Makefile 07_timestamps/Makefile
 -    OBJDUMP_BINARY         = aarch64-none-elf-objdump
 -    NM_BINARY              = aarch64-none-elf-nm
 -    READELF_BINARY         = aarch64-none-elf-readelf
--    LINKER_FILE            = src/bsp/raspberrypi/link.ld
--    RUSTC_MISC_ARGS        = -C target-cpu=cortex-a72
--    CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi4.img
 +    TARGET            = aarch64-unknown-none-softfloat
 +    KERNEL_BIN        = kernel8.img
 +    QEMU_BINARY       = qemu-system-aarch64
@@ -107,12 +103,14 @@ diff -uNr 06_uart_chainloader/Makefile 07_timestamps/Makefile
 +    OBJDUMP_BINARY    = aarch64-none-elf-objdump
 +    NM_BINARY         = aarch64-none-elf-nm
 +    READELF_BINARY    = aarch64-none-elf-readelf
-+    LINKER_FILE       = src/bsp/raspberrypi/link.ld
+     LD_SCRIPT_PATH    = src/bsp/raspberrypi
+-    RUSTC_MISC_ARGS        = -C target-cpu=cortex-a72
+-    CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi4.img
 +    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
  endif
 
- QEMU_MISSING_STRING = "This board is not yet supported for QEMU."
-@@ -77,7 +75,7 @@
+ # Export for build.rs.
+@@ -86,7 +84,7 @@
      -O binary
 
  EXEC_QEMU          = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
@@ -121,7 +119,7 @@ diff -uNr 06_uart_chainloader/Makefile 07_timestamps/Makefile
  EXEC_MINIPUSH      = ruby ../common/serial/minipush.rb
 
  ##------------------------------------------------------------------------------
-@@ -134,7 +132,7 @@
+@@ -143,7 +141,7 @@
  ##------------------------------------------------------------------------------
  ifeq ($(QEMU_MACHINE_TYPE),) # QEMU is not supported for the board.
 
@@ -130,7 +128,7 @@ diff -uNr 06_uart_chainloader/Makefile 07_timestamps/Makefile
  	$(call colorecho, "\n$(QEMU_MISSING_STRING)")
 
  else # QEMU is supported.
-@@ -143,17 +141,13 @@
+@@ -152,17 +150,13 @@
  	$(call colorecho, "\nLaunching QEMU")
  	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
 
@@ -149,7 +147,7 @@ diff -uNr 06_uart_chainloader/Makefile 07_timestamps/Makefile
 
  ##------------------------------------------------------------------------------
  ## Run clippy
-@@ -217,8 +211,7 @@
+@@ -226,8 +220,7 @@
  ##------------------------------------------------------------------------------
  test_boot: $(KERNEL_BIN)
  	$(call colorecho, "\nBoot test - $(BSP)")

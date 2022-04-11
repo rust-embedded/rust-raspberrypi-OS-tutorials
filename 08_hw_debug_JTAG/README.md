@@ -326,7 +326,7 @@ diff -uNr 07_timestamps/Makefile 08_hw_debug_JTAG/Makefile
      READELF_BINARY    = aarch64-none-elf-readelf
 +    OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi3.cfg
 +    JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi3.img
-     LINKER_FILE       = src/bsp/raspberrypi/link.ld
+     LD_SCRIPT_PATH    = src/bsp/raspberrypi
      RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
  else ifeq ($(BSP),rpi4)
 @@ -42,6 +44,8 @@
@@ -335,10 +335,10 @@ diff -uNr 07_timestamps/Makefile 08_hw_debug_JTAG/Makefile
      READELF_BINARY    = aarch64-none-elf-readelf
 +    OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi4.cfg
 +    JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi4.img
-     LINKER_FILE       = src/bsp/raspberrypi/link.ld
+     LD_SCRIPT_PATH    = src/bsp/raspberrypi
      RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
  endif
-@@ -84,18 +88,25 @@
+@@ -93,18 +97,25 @@
  DOCKER_CMD            = docker run -t --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
  DOCKER_CMD_INTERACT   = $(DOCKER_CMD) -i
  DOCKER_ARG_DIR_COMMON = -v $(shell pwd)/../common:/work/common
@@ -364,7 +364,7 @@ diff -uNr 07_timestamps/Makefile 08_hw_debug_JTAG/Makefile
  endif
 
 
-@@ -194,6 +205,35 @@
+@@ -203,6 +214,35 @@
 
 
 

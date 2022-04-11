@@ -788,7 +788,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/Cargo.toml 15_virtual_mem_part3_precom
 diff -uNr 14_virtual_mem_part2_mmio_remap/Makefile 15_virtual_mem_part3_precomputed_tables/Makefile
 --- 14_virtual_mem_part2_mmio_remap/Makefile
 +++ 15_virtual_mem_part3_precomputed_tables/Makefile
-@@ -89,6 +89,7 @@
+@@ -98,6 +98,7 @@
      -O binary
 
  EXEC_QEMU          = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
@@ -796,7 +796,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/Makefile 15_virtual_mem_part3_precompu
  EXEC_TEST_DISPATCH = ruby ../common/tests/dispatch.rb
  EXEC_MINIPUSH      = ruby ../common/serial/minipush.rb
 
-@@ -134,6 +135,7 @@
+@@ -143,6 +144,7 @@
  $(KERNEL_ELF):
  	$(call colorecho, "\nCompiling kernel - $(BSP)")
  	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(RUSTC_CMD)
@@ -804,7 +804,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/Makefile 15_virtual_mem_part3_precompu
 
  ##------------------------------------------------------------------------------
  ## Build the stripped kernel binary
-@@ -272,6 +274,7 @@
+@@ -281,6 +283,7 @@
      TEST_ELF=$$(echo $$1 | sed -e 's/.*target/target/g')
      TEST_BINARY=$$(echo $$1.img | sed -e 's/.*target/target/g')
 
@@ -1138,7 +1138,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/link.ld 15_virtual
   * Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
   */
 
-+INCLUDE src/bsp/raspberrypi/kernel_virt_addr_space_size.ld;
++INCLUDE kernel_virt_addr_space_size.ld;
 +
  PAGE_SIZE = 64K;
  PAGE_MASK = PAGE_SIZE - 1;

@@ -139,8 +139,8 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
 --- 05_drivers_gpio_uart/Makefile
 +++ 06_uart_chainloader/Makefile
 @@ -23,27 +23,29 @@
+ QEMU_MISSING_STRING = "This board is not yet supported for QEMU."
 
- # BSP-specific arguments.
  ifeq ($(BSP),rpi3)
 -    TARGET            = aarch64-unknown-none-softfloat
 -    KERNEL_BIN        = kernel8.img
@@ -150,8 +150,6 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
 -    OBJDUMP_BINARY    = aarch64-none-elf-objdump
 -    NM_BINARY         = aarch64-none-elf-nm
 -    READELF_BINARY    = aarch64-none-elf-readelf
--    LINKER_FILE       = src/bsp/raspberrypi/link.ld
--    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
 +    TARGET                 = aarch64-unknown-none-softfloat
 +    KERNEL_BIN             = kernel8.img
 +    QEMU_BINARY            = qemu-system-aarch64
@@ -160,7 +158,8 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
 +    OBJDUMP_BINARY         = aarch64-none-elf-objdump
 +    NM_BINARY              = aarch64-none-elf-nm
 +    READELF_BINARY         = aarch64-none-elf-readelf
-+    LINKER_FILE            = src/bsp/raspberrypi/link.ld
+     LD_SCRIPT_PATH    = src/bsp/raspberrypi
+-    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
 +    RUSTC_MISC_ARGS        = -C target-cpu=cortex-a53
 +    CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi3.img
  else ifeq ($(BSP),rpi4)
@@ -172,8 +171,6 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
 -    OBJDUMP_BINARY    = aarch64-none-elf-objdump
 -    NM_BINARY         = aarch64-none-elf-nm
 -    READELF_BINARY    = aarch64-none-elf-readelf
--    LINKER_FILE       = src/bsp/raspberrypi/link.ld
--    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
 +    TARGET                 = aarch64-unknown-none-softfloat
 +    KERNEL_BIN             = kernel8.img
 +    QEMU_BINARY            = qemu-system-aarch64
@@ -182,13 +179,14 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
 +    OBJDUMP_BINARY         = aarch64-none-elf-objdump
 +    NM_BINARY              = aarch64-none-elf-nm
 +    READELF_BINARY         = aarch64-none-elf-readelf
-+    LINKER_FILE            = src/bsp/raspberrypi/link.ld
+     LD_SCRIPT_PATH    = src/bsp/raspberrypi
+-    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
 +    RUSTC_MISC_ARGS        = -C target-cpu=cortex-a72
 +    CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi4.img
  endif
 
- QEMU_MISSING_STRING = "This board is not yet supported for QEMU."
-@@ -75,8 +77,8 @@
+ # Export for build.rs.
+@@ -84,8 +86,8 @@
      -O binary
 
  EXEC_QEMU          = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
@@ -199,7 +197,7 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
 
  ##------------------------------------------------------------------------------
  ## Dockerization
-@@ -95,7 +97,7 @@
+@@ -104,7 +106,7 @@
  ifeq ($(shell uname -s),Linux)
      DOCKER_CMD_DEV = $(DOCKER_CMD_INTERACT) $(DOCKER_ARG_DEV)
 
@@ -208,7 +206,7 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
  endif
 
 
-@@ -103,7 +105,7 @@
+@@ -112,7 +114,7 @@
  ##--------------------------------------------------------------------------------------------------
  ## Targets
  ##--------------------------------------------------------------------------------------------------
@@ -217,7 +215,7 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
 
  all: $(KERNEL_BIN)
 
-@@ -132,7 +134,7 @@
+@@ -141,7 +143,7 @@
  ##------------------------------------------------------------------------------
  ifeq ($(QEMU_MACHINE_TYPE),) # QEMU is not supported for the board.
 
@@ -226,7 +224,7 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
  	$(call colorecho, "\n$(QEMU_MISSING_STRING)")
 
  else # QEMU is supported.
-@@ -140,13 +142,18 @@
+@@ -149,13 +151,18 @@
  qemu: $(KERNEL_BIN)
  	$(call colorecho, "\nLaunching QEMU")
  	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
@@ -248,7 +246,7 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
 
  ##------------------------------------------------------------------------------
  ## Run clippy
-@@ -210,7 +217,8 @@
+@@ -219,7 +226,8 @@
  ##------------------------------------------------------------------------------
  test_boot: $(KERNEL_BIN)
  	$(call colorecho, "\nBoot test - $(BSP)")

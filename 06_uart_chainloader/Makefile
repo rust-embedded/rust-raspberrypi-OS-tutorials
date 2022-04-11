@@ -18,10 +18,10 @@ DEV_SERIAL ?= /dev/ttyUSB0
 
 
 ##--------------------------------------------------------------------------------------------------
-## Hardcoded configuration values
+## BSP-specific configuration values
 ##--------------------------------------------------------------------------------------------------
+QEMU_MISSING_STRING = "This board is not yet supported for QEMU."
 
-# BSP-specific arguments.
 ifeq ($(BSP),rpi3)
     TARGET                 = aarch64-unknown-none-softfloat
     KERNEL_BIN             = kernel8.img
@@ -31,7 +31,7 @@ ifeq ($(BSP),rpi3)
     OBJDUMP_BINARY         = aarch64-none-elf-objdump
     NM_BINARY              = aarch64-none-elf-nm
     READELF_BINARY         = aarch64-none-elf-readelf
-    LINKER_FILE            = src/bsp/raspberrypi/link.ld
+    LD_SCRIPT_PATH    = src/bsp/raspberrypi
     RUSTC_MISC_ARGS        = -C target-cpu=cortex-a53
     CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi3.img
 else ifeq ($(BSP),rpi4)
@@ -43,25 +43,34 @@ else ifeq ($(BSP),rpi4)
     OBJDUMP_BINARY         = aarch64-none-elf-objdump
     NM_BINARY              = aarch64-none-elf-nm
     READELF_BINARY         = aarch64-none-elf-readelf
-    LINKER_FILE            = src/bsp/raspberrypi/link.ld
+    LD_SCRIPT_PATH    = src/bsp/raspberrypi
     RUSTC_MISC_ARGS        = -C target-cpu=cortex-a72
     CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi4.img
 endif
 
-QEMU_MISSING_STRING = "This board is not yet supported for QEMU."
-
 # Export for build.rs.
-export LINKER_FILE
+export LD_SCRIPT_PATH
 
-KERNEL_ELF = target/$(TARGET)/release/kernel
+
+
+##--------------------------------------------------------------------------------------------------
+## Generic configuration values
+##--------------------------------------------------------------------------------------------------
+KERNEL_LINKER_SCRIPT = link.ld
+KERNEL_ELF           = target/$(TARGET)/release/kernel
 
 
 
 ##--------------------------------------------------------------------------------------------------
 ## Command building blocks
 ##--------------------------------------------------------------------------------------------------
-RUSTFLAGS          = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
-RUSTFLAGS_PEDANTIC = $(RUSTFLAGS) -D warnings -D missing_docs
+RUSTFLAGS = $(RUSTC_MISC_ARGS)                   \
+    -C link-arg=--library-path=$(LD_SCRIPT_PATH) \
+    -C link-arg=--script=$(KERNEL_LINKER_SCRIPT)
+
+RUSTFLAGS_PEDANTIC = $(RUSTFLAGS) \
+    -D warnings                   \
+    -D missing_docs
 
 FEATURES      = --features bsp_$(BSP)
 COMPILER_ARGS = --target=$(TARGET) \
