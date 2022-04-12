@@ -110,7 +110,7 @@ diff -uNr 06_uart_chainloader/Makefile 07_timestamps/Makefile
  endif
 
  # Export for build.rs.
-@@ -86,7 +84,7 @@
+@@ -92,7 +90,7 @@
      -O binary
 
  EXEC_QEMU          = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
@@ -119,21 +119,21 @@ diff -uNr 06_uart_chainloader/Makefile 07_timestamps/Makefile
  EXEC_MINIPUSH      = ruby ../common/serial/minipush.rb
 
  ##------------------------------------------------------------------------------
-@@ -143,7 +141,7 @@
+@@ -162,7 +160,7 @@
  ##------------------------------------------------------------------------------
  ifeq ($(QEMU_MACHINE_TYPE),) # QEMU is not supported for the board.
 
 -qemu qemuasm:
 +qemu:
- 	$(call colorecho, "\n$(QEMU_MISSING_STRING)")
+ 	$(call color_header, "$(QEMU_MISSING_STRING)")
 
  else # QEMU is supported.
-@@ -152,17 +150,13 @@
- 	$(call colorecho, "\nLaunching QEMU")
+@@ -171,17 +169,13 @@
+ 	$(call color_header, "Launching QEMU")
  	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
 
 -qemuasm: $(KERNEL_BIN)
--	$(call colorecho, "\nLaunching QEMU with ASM output")
+-	$(call color_header, "Launching QEMU with ASM output")
 -	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN) -d in_asm
 -
  endif
@@ -147,10 +147,10 @@ diff -uNr 06_uart_chainloader/Makefile 07_timestamps/Makefile
 
  ##------------------------------------------------------------------------------
  ## Run clippy
-@@ -226,8 +220,7 @@
+@@ -245,8 +239,7 @@
  ##------------------------------------------------------------------------------
  test_boot: $(KERNEL_BIN)
- 	$(call colorecho, "\nBoot test - $(BSP)")
+ 	$(call color_header, "Boot test - $(BSP)")
 -	@$(DOCKER_TEST) $(EXEC_TEST_MINIPUSH) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) \
 -		-kernel $(KERNEL_BIN) $(CHAINBOOT_DEMO_PAYLOAD)
 +	@$(DOCKER_TEST) $(EXEC_TEST_DISPATCH) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)

@@ -415,7 +415,7 @@ endef
 ## Run unit test(s)
 ##------------------------------------------------------------------------------
 test_unit:
-	$(call colorecho, "\nCompiling unit test(s) - $(BSP)")
+	$(call color_header, "Compiling unit test(s) - $(BSP)")
 	$(call test_prepare)
 	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(TEST_CMD) --lib
 ```
@@ -1006,7 +1006,7 @@ diff -uNr 11_exceptions_part1_groundwork/Makefile 12_integrated_testing/Makefile
      OBJDUMP_BINARY    = aarch64-none-elf-objdump
      NM_BINARY         = aarch64-none-elf-nm
      READELF_BINARY    = aarch64-none-elf-readelf
-@@ -83,6 +92,7 @@
+@@ -89,6 +98,7 @@
  DOC_CMD     = cargo doc $(COMPILER_ARGS)
  CLIPPY_CMD  = cargo clippy $(COMPILER_ARGS)
  CHECK_CMD   = cargo check $(COMPILER_ARGS)
@@ -1014,7 +1014,7 @@ diff -uNr 11_exceptions_part1_groundwork/Makefile 12_integrated_testing/Makefile
  OBJCOPY_CMD = rust-objcopy \
      --strip-all            \
      -O binary
-@@ -246,11 +256,11 @@
+@@ -265,11 +275,11 @@
  ##--------------------------------------------------------------------------------------------------
  ## Testing targets
  ##--------------------------------------------------------------------------------------------------
@@ -1023,13 +1023,13 @@ diff -uNr 11_exceptions_part1_groundwork/Makefile 12_integrated_testing/Makefile
 
  ifeq ($(QEMU_MACHINE_TYPE),) # QEMU is not supported for the board.
 
--test_boot test :
+-test_boot test:
 +test_boot test_unit test_integration test:
- 	$(call colorecho, "\n$(QEMU_MISSING_STRING)")
+ 	$(call color_header, "$(QEMU_MISSING_STRING)")
 
  else # QEMU is supported.
-@@ -262,6 +272,43 @@
- 	$(call colorecho, "\nBoot test - $(BSP)")
+@@ -281,6 +291,43 @@
+ 	$(call color_header, "Boot test - $(BSP)")
  	@$(DOCKER_TEST) $(EXEC_TEST_DISPATCH) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
 
 -test: test_boot
@@ -1058,7 +1058,7 @@ diff -uNr 11_exceptions_part1_groundwork/Makefile 12_integrated_testing/Makefile
 +## Run unit test(s)
 +##------------------------------------------------------------------------------
 +test_unit:
-+	$(call colorecho, "\nCompiling unit test(s) - $(BSP)")
++	$(call color_header, "Compiling unit test(s) - $(BSP)")
 +	$(call test_prepare)
 +	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(TEST_CMD) --lib
 +
@@ -1066,7 +1066,7 @@ diff -uNr 11_exceptions_part1_groundwork/Makefile 12_integrated_testing/Makefile
 +## Run integration test(s)
 +##------------------------------------------------------------------------------
 +test_integration:
-+	$(call colorecho, "\nCompiling integration test(s) - $(BSP)")
++	$(call color_header, "Compiling integration test(s) - $(BSP)")
 +	$(call test_prepare)
 +	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(TEST_CMD) $(TEST_ARG)
 +

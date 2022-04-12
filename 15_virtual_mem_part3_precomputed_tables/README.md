@@ -564,19 +564,42 @@ might have been possible to write this tool in Rust as well, and borrow/share th
 with the kernel. But in the end, I found it not worth the effort for the few lines of code.
 
 In the `Makefile`, the tool is invoked after compiling and linking the kernel, and before the
-`objcopy`. It's command line arguments are the target `BSP` type and the path to the kernel's `ELF`
-file:
+`stripped binary` is generated. It's command line arguments are the target `BSP` type and the path
+to the kernel's `ELF` file:
 
 ```Makefile
-all: $(KERNEL_BIN)
+TT_TOOL_PATH = translation_table_tool
 
-$(KERNEL_ELF):
-	$(call colorecho, "\nCompiling kernel - $(BSP)")
+KERNEL_ELF_RAW      = target/$(TARGET)/release/kernel
+# [...]
+
+KERNEL_ELF_TTABLES      = target/$(TARGET)/release/kernel+ttables
+# [...]
+
+EXEC_TT_TOOL       = ruby $(TT_TOOL_PATH)/main.rb
+# [...]
+
+##------------------------------------------------------------------------------
+## Compile the kernel ELF
+##------------------------------------------------------------------------------
+$(KERNEL_ELF_RAW): $(KERNEL_ELF_RAW_DEPS)
+	$(call color_header, "Compiling kernel ELF - $(BSP)")
 	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(RUSTC_CMD)
-	@$(DOCKER_TOOLS) ruby translation_table_tool/main.rb $(TARGET) $(BSP) $(KERNEL_ELF)
 
-$(KERNEL_BIN): $(KERNEL_ELF)
-	@$(OBJCOPY_CMD) $(KERNEL_ELF) $(KERNEL_BIN)
+##------------------------------------------------------------------------------
+## Precompute the kernel translation tables and patch them into the kernel ELF
+##------------------------------------------------------------------------------
+$(KERNEL_ELF_TTABLES): $(KERNEL_ELF_TTABLES_DEPS)
+	$(call color_header, "Precomputing kernel translation tables and patching kernel ELF")
+	@cp $(KERNEL_ELF_RAW) $(KERNEL_ELF_TTABLES)
+	@$(DOCKER_TOOLS) $(EXEC_TT_TOOL) $(TARGET) $(BSP) $(KERNEL_ELF_TTABLES)
+
+##------------------------------------------------------------------------------
+## Generate the stripped kernel binary
+##------------------------------------------------------------------------------
+$(KERNEL_BIN): $(KERNEL_ELF_TTABLES)
+	$(call color_header, "Generating stripped binary")
+	@$(OBJCOPY_CMD) $(KERNEL_ELF_TTABLES) $(KERNEL_BIN)
 ```
 
 In `main.rb`, the `KERNEL_ELF` instance for handling the `ELF` file is created first, followed by
@@ -788,23 +811,65 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/Cargo.toml 15_virtual_mem_part3_precom
 diff -uNr 14_virtual_mem_part2_mmio_remap/Makefile 15_virtual_mem_part3_precomputed_tables/Makefile
 --- 14_virtual_mem_part2_mmio_remap/Makefile
 +++ 15_virtual_mem_part3_precomputed_tables/Makefile
-@@ -98,6 +98,7 @@
+@@ -69,12 +69,19 @@
+ ##--------------------------------------------------------------------------------------------------
+ KERNEL_LINKER_SCRIPT = link.ld
+
++TT_TOOL_PATH = translation_table_tool
++
+ LAST_BUILD_CONFIG = target/$(BSP).build_config
+
+-KERNEL_ELF      = target/$(TARGET)/release/kernel
++KERNEL_ELF_RAW      = target/$(TARGET)/release/kernel
+ # This parses cargo's dep-info file.
+ # https://doc.rust-lang.org/cargo/guide/build-cache.html#dep-info-files
+-KERNEL_ELF_DEPS = $(filter-out modulo: ,$(file < $(KERNEL_ELF_RAW).d)) $(LAST_BUILD_CONFIG)
++KERNEL_ELF_RAW_DEPS = $(filter-out modulo: ,$(file < $(KERNEL_ELF_RAW).d)) $(LAST_BUILD_CONFIG)
++
++KERNEL_ELF_TTABLES      = target/$(TARGET)/release/kernel+ttables
++KERNEL_ELF_TTABLES_DEPS = $(KERNEL_ELF_RAW) $(wildcard $(TT_TOOL_PATH)/*)
++
++KERNEL_ELF = $(KERNEL_ELF_TTABLES)
+
+
+
+@@ -104,6 +111,7 @@
      -O binary
 
  EXEC_QEMU          = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
-+EXEC_TT_TOOL       = ruby translation_table_tool/main.rb
++EXEC_TT_TOOL       = ruby $(TT_TOOL_PATH)/main.rb
  EXEC_TEST_DISPATCH = ruby ../common/tests/dispatch.rb
  EXEC_MINIPUSH      = ruby ../common/serial/minipush.rb
 
-@@ -143,6 +144,7 @@
- $(KERNEL_ELF):
- 	$(call colorecho, "\nCompiling kernel - $(BSP)")
+@@ -154,16 +162,24 @@
+ ##------------------------------------------------------------------------------
+ ## Compile the kernel ELF
+ ##------------------------------------------------------------------------------
+-$(KERNEL_ELF): $(KERNEL_ELF_DEPS)
++$(KERNEL_ELF_RAW): $(KERNEL_ELF_RAW_DEPS)
+ 	$(call color_header, "Compiling kernel ELF - $(BSP)")
  	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(RUSTC_CMD)
-+	@$(DOCKER_TOOLS) $(EXEC_TT_TOOL) $(TARGET) $(BSP) $(KERNEL_ELF)
 
  ##------------------------------------------------------------------------------
- ## Build the stripped kernel binary
-@@ -281,6 +283,7 @@
++## Precompute the kernel translation tables and patch them into the kernel ELF
++##------------------------------------------------------------------------------
++$(KERNEL_ELF_TTABLES): $(KERNEL_ELF_TTABLES_DEPS)
++	$(call color_header, "Precomputing kernel translation tables and patching kernel ELF")
++	@cp $(KERNEL_ELF_RAW) $(KERNEL_ELF_TTABLES)
++	@$(DOCKER_TOOLS) $(EXEC_TT_TOOL) $(TARGET) $(BSP) $(KERNEL_ELF_TTABLES)
++
++##------------------------------------------------------------------------------
+ ## Generate the stripped kernel binary
+ ##------------------------------------------------------------------------------
+-$(KERNEL_BIN): $(KERNEL_ELF)
++$(KERNEL_BIN): $(KERNEL_ELF_TTABLES)
+ 	$(call color_header, "Generating stripped binary")
+-	@$(OBJCOPY_CMD) $(KERNEL_ELF) $(KERNEL_BIN)
++	@$(OBJCOPY_CMD) $(KERNEL_ELF_TTABLES) $(KERNEL_BIN)
+ 	$(call color_progress_prefix, "Name")
+ 	@echo $(KERNEL_BIN)
+ 	$(call color_progress_prefix, "Size")
+@@ -300,6 +316,7 @@
      TEST_ELF=$$(echo $$1 | sed -e 's/.*target/target/g')
      TEST_BINARY=$$(echo $$1.img | sed -e 's/.*target/target/g')
 
@@ -2490,7 +2555,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/kernel_elf.rb 1
 diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/main.rb 15_virtual_mem_part3_precomputed_tables/translation_table_tool/main.rb
 --- 14_virtual_mem_part2_mmio_remap/translation_table_tool/main.rb
 +++ 15_virtual_mem_part3_precomputed_tables/translation_table_tool/main.rb
-@@ -0,0 +1,50 @@
+@@ -0,0 +1,47 @@
 +#!/usr/bin/env ruby
 +# frozen_string_literal: true
 +
@@ -2511,9 +2576,6 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/main.rb 15_virt
 +require_relative 'kernel_elf'
 +require_relative 'bsp'
 +require_relative 'arch'
-+
-+puts
-+puts 'Precomputing kernel translation tables and patching kernel ELF'.cyan
 +
 +start = Time.now
 +

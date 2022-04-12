@@ -2,7 +2,7 @@
 ##
 ## Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
 
-include ../common/color.mk
+include ../common/format.mk
 include ../common/docker.mk
 
 ##--------------------------------------------------------------------------------------------------
@@ -49,10 +49,16 @@ export LD_SCRIPT_PATH
 
 
 ##--------------------------------------------------------------------------------------------------
-## Generic configuration values
+## Targets and Prerequisites
 ##--------------------------------------------------------------------------------------------------
 KERNEL_LINKER_SCRIPT = link.ld
-KERNEL_ELF           = target/$(TARGET)/release/kernel
+
+LAST_BUILD_CONFIG = target/$(BSP).build_config
+
+KERNEL_ELF      = target/$(TARGET)/release/kernel
+# This parses cargo's dep-info file.
+# https://doc.rust-lang.org/cargo/guide/build-cache.html#dep-info-files
+KERNEL_ELF_DEPS = $(filter-out %: ,$(file < $(KERNEL_ELF_RAW).d)) $(LAST_BUILD_CONFIG)
 
 
 
@@ -97,28 +103,41 @@ DOCKER_TOOLS = $(DOCKER_CMD) $(DOCKER_IMAGE)
 ##--------------------------------------------------------------------------------------------------
 ## Targets
 ##--------------------------------------------------------------------------------------------------
-.PHONY: all $(KERNEL_ELF) $(KERNEL_BIN) doc qemu clippy clean readelf objdump nm check
+.PHONY: all doc qemu clippy clean readelf objdump nm check
 
 all: $(KERNEL_BIN)
 
 ##------------------------------------------------------------------------------
-## Build the kernel ELF
+## Save the configuration as a file, so make understands if it changed.
 ##------------------------------------------------------------------------------
-$(KERNEL_ELF):
-	$(call colorecho, "\nCompiling kernel - $(BSP)")
+$(LAST_BUILD_CONFIG):
+	@rm -f target/*.build_config
+	@mkdir -p target
+	@touch $(LAST_BUILD_CONFIG)
+
+##------------------------------------------------------------------------------
+## Compile the kernel ELF
+##------------------------------------------------------------------------------
+$(KERNEL_ELF): $(KERNEL_ELF_DEPS)
+	$(call color_header, "Compiling kernel ELF - $(BSP)")
 	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(RUSTC_CMD)
 
 ##------------------------------------------------------------------------------
-## Build the stripped kernel binary
+## Generate the stripped kernel binary
 ##------------------------------------------------------------------------------
 $(KERNEL_BIN): $(KERNEL_ELF)
+	$(call color_header, "Generating stripped binary")
 	@$(OBJCOPY_CMD) $(KERNEL_ELF) $(KERNEL_BIN)
+	$(call color_progress_prefix, "Name")
+	@echo $(KERNEL_BIN)
+	$(call color_progress_prefix, "Size")
+	@printf '%s KiB\n' `du -k $(KERNEL_BIN) | cut -f1`
 
 ##------------------------------------------------------------------------------
-## Build the documentation
+## Generate the documentation
 ##------------------------------------------------------------------------------
 doc:
-	$(call colorecho, "\nGenerating docs")
+	$(call color_header, "Generating docs")
 	@$(DOC_CMD) --document-private-items --open
 
 ##------------------------------------------------------------------------------
@@ -127,12 +146,12 @@ doc:
 ifeq ($(QEMU_MACHINE_TYPE),) # QEMU is not supported for the board.
 
 qemu:
-	$(call colorecho, "\n$(QEMU_MISSING_STRING)")
+	$(call color_header, "$(QEMU_MISSING_STRING)")
 
 else # QEMU is supported.
 
 qemu: $(KERNEL_BIN)
-	$(call colorecho, "\nLaunching QEMU")
+	$(call color_header, "Launching QEMU")
 	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
 endif
 
@@ -152,14 +171,14 @@ clean:
 ## Run readelf
 ##------------------------------------------------------------------------------
 readelf: $(KERNEL_ELF)
-	$(call colorecho, "\nLaunching readelf")
+	$(call color_header, "Launching readelf")
 	@$(DOCKER_TOOLS) $(READELF_BINARY) --headers $(KERNEL_ELF)
 
 ##------------------------------------------------------------------------------
 ## Run objdump
 ##------------------------------------------------------------------------------
 objdump: $(KERNEL_ELF)
-	$(call colorecho, "\nLaunching objdump")
+	$(call color_header, "Launching objdump")
 	@$(DOCKER_TOOLS) $(OBJDUMP_BINARY) --disassemble --demangle \
                 --section .text   \
                 --section .rodata \
@@ -170,7 +189,7 @@ objdump: $(KERNEL_ELF)
 ## Run nm
 ##------------------------------------------------------------------------------
 nm: $(KERNEL_ELF)
-	$(call colorecho, "\nLaunching nm")
+	$(call color_header, "Launching nm")
 	@$(DOCKER_TOOLS) $(NM_BINARY) --demangle --print-size $(KERNEL_ELF) | sort | rustfilt
 
 ##------------------------------------------------------------------------------

@@ -155,7 +155,7 @@ diff -uNr 04_safe_globals/Makefile 05_drivers_gpio_uart/Makefile
 
 
  ##--------------------------------------------------------------------------------------------------
-@@ -82,6 +85,7 @@
+@@ -88,6 +91,7 @@
 
  EXEC_QEMU          = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
  EXEC_TEST_DISPATCH = ruby ../common/tests/dispatch.rb
@@ -163,7 +163,7 @@ diff -uNr 04_safe_globals/Makefile 05_drivers_gpio_uart/Makefile
 
  ##------------------------------------------------------------------------------
  ## Dockerization
-@@ -89,18 +93,26 @@
+@@ -95,18 +99,26 @@
  DOCKER_CMD            = docker run -t --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
  DOCKER_CMD_INTERACT   = $(DOCKER_CMD) -i
  DOCKER_ARG_DIR_COMMON = -v $(shell pwd)/../common:/work/common
@@ -186,12 +186,16 @@ diff -uNr 04_safe_globals/Makefile 05_drivers_gpio_uart/Makefile
  ##--------------------------------------------------------------------------------------------------
  ## Targets
  ##--------------------------------------------------------------------------------------------------
--.PHONY: all $(KERNEL_ELF) $(KERNEL_BIN) doc qemu clippy clean readelf objdump nm check
-+.PHONY: all $(KERNEL_ELF) $(KERNEL_BIN) doc qemu miniterm clippy clean readelf objdump nm check
+-.PHONY: all doc qemu clippy clean readelf objdump nm check
++.PHONY: all doc qemu miniterm clippy clean readelf objdump nm check
 
  all: $(KERNEL_BIN)
 
-@@ -140,6 +152,12 @@
+@@ -156,9 +168,16 @@
+ qemu: $(KERNEL_BIN)
+ 	$(call color_header, "Launching QEMU")
+ 	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
++
  endif
 
  ##------------------------------------------------------------------------------

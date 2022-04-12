@@ -186,7 +186,7 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
  endif
 
  # Export for build.rs.
-@@ -84,8 +86,8 @@
+@@ -90,8 +92,8 @@
      -O binary
 
  EXEC_QEMU          = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
@@ -197,7 +197,7 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
 
  ##------------------------------------------------------------------------------
  ## Dockerization
-@@ -104,7 +106,7 @@
+@@ -110,7 +112,7 @@
  ifeq ($(shell uname -s),Linux)
      DOCKER_CMD_DEV = $(DOCKER_CMD_INTERACT) $(DOCKER_ARG_DEV)
 
@@ -206,31 +206,30 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
  endif
 
 
-@@ -112,7 +114,7 @@
+@@ -118,7 +120,7 @@
  ##--------------------------------------------------------------------------------------------------
  ## Targets
  ##--------------------------------------------------------------------------------------------------
--.PHONY: all $(KERNEL_ELF) $(KERNEL_BIN) doc qemu miniterm clippy clean readelf objdump nm check
-+.PHONY: all $(KERNEL_ELF) $(KERNEL_BIN) doc qemu chainboot clippy clean readelf objdump nm check
+-.PHONY: all doc qemu miniterm clippy clean readelf objdump nm check
++.PHONY: all doc qemu chainboot clippy clean readelf objdump nm check
 
  all: $(KERNEL_BIN)
 
-@@ -141,7 +143,7 @@
+@@ -160,7 +162,7 @@
  ##------------------------------------------------------------------------------
  ifeq ($(QEMU_MACHINE_TYPE),) # QEMU is not supported for the board.
 
 -qemu:
 +qemu qemuasm:
- 	$(call colorecho, "\n$(QEMU_MISSING_STRING)")
+ 	$(call color_header, "$(QEMU_MISSING_STRING)")
 
  else # QEMU is supported.
-@@ -149,13 +151,18 @@
- qemu: $(KERNEL_BIN)
- 	$(call colorecho, "\nLaunching QEMU")
+@@ -169,13 +171,17 @@
+ 	$(call color_header, "Launching QEMU")
  	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
-+
+
 +qemuasm: $(KERNEL_BIN)
-+	$(call colorecho, "\nLaunching QEMU with ASM output")
++	$(call color_header, "Launching QEMU with ASM output")
 +	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN) -d in_asm
 +
  endif
@@ -246,10 +245,10 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
 
  ##------------------------------------------------------------------------------
  ## Run clippy
-@@ -219,7 +226,8 @@
+@@ -239,7 +245,8 @@
  ##------------------------------------------------------------------------------
  test_boot: $(KERNEL_BIN)
- 	$(call colorecho, "\nBoot test - $(BSP)")
+ 	$(call color_header, "Boot test - $(BSP)")
 -	@$(DOCKER_TEST) $(EXEC_TEST_DISPATCH) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
 +	@$(DOCKER_TEST) $(EXEC_TEST_MINIPUSH) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) \
 +		-kernel $(KERNEL_BIN) $(CHAINBOOT_DEMO_PAYLOAD)

@@ -70,7 +70,7 @@ diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
      OBJDUMP_BINARY    = aarch64-none-elf-objdump
      NM_BINARY         = aarch64-none-elf-nm
      READELF_BINARY    = aarch64-none-elf-readelf
-@@ -80,17 +80,20 @@
+@@ -86,17 +86,20 @@
      --strip-all            \
      -O binary
 
@@ -94,7 +94,7 @@ diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
 
 
 
-@@ -178,3 +181,28 @@
+@@ -197,3 +200,28 @@
  ##------------------------------------------------------------------------------
  check:
  	@RUSTFLAGS="$(RUSTFLAGS)" $(CHECK_CMD) --message-format=json
@@ -108,8 +108,8 @@ diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
 +
 +ifeq ($(QEMU_MACHINE_TYPE),) # QEMU is not supported for the board.
 +
-+test_boot test :
-+	$(call colorecho, "\n$(QEMU_MISSING_STRING)")
++test_boot test:
++	$(call color_header, "$(QEMU_MISSING_STRING)")
 +
 +else # QEMU is supported.
 +
@@ -117,7 +117,7 @@ diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
 +## Run boot test
 +##------------------------------------------------------------------------------
 +test_boot: $(KERNEL_BIN)
-+	$(call colorecho, "\nBoot test - $(BSP)")
++	$(call color_header, "Boot test - $(BSP)")
 +	@$(DOCKER_TEST) $(EXEC_TEST_DISPATCH) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
 +
 +test: test_boot

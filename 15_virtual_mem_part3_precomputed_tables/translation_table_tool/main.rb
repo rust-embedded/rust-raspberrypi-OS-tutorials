@@ -19,9 +19,6 @@ require_relative 'kernel_elf'
 require_relative 'bsp'
 require_relative 'arch'
 
-puts
-puts 'Precomputing kernel translation tables and patching kernel ELF'.cyan
-
 start = Time.now
 
 KERNEL_ELF = KernelELF.new(kernel_elf_path)
