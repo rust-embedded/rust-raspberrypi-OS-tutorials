@@ -615,8 +615,8 @@ BSP = case BSP_TYPE
           raise
       end
 
-TRANSLATION_TABLES = case TARGET
-                     when :aarch64
+TRANSLATION_TABLES = case KERNEL_ELF.machine
+                     when :AArch64
                          Arch::ARMv8::TranslationTable.new
                      else
                          raise
@@ -856,7 +856,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/Makefile 15_virtual_mem_part3_precompu
 +$(KERNEL_ELF_TTABLES): $(KERNEL_ELF_TTABLES_DEPS)
 +	$(call color_header, "Precomputing kernel translation tables and patching kernel ELF")
 +	@cp $(KERNEL_ELF_RAW) $(KERNEL_ELF_TTABLES)
-+	@$(DOCKER_TOOLS) $(EXEC_TT_TOOL) $(TARGET) $(BSP) $(KERNEL_ELF_TTABLES)
++	@$(DOCKER_TOOLS) $(EXEC_TT_TOOL) $(BSP) $(KERNEL_ELF_TTABLES)
 +
 +##------------------------------------------------------------------------------
  ## Generate the stripped kernel binary
@@ -873,7 +873,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/Makefile 15_virtual_mem_part3_precompu
      TEST_ELF=$$(echo $$1 | sed -e 's/.*target/target/g')
      TEST_BINARY=$$(echo $$1.img | sed -e 's/.*target/target/g')
 
-+    $(DOCKER_TOOLS) $(EXEC_TT_TOOL) $(TARGET) $(BSP) $$TEST_ELF > /dev/null
++    $(DOCKER_TOOLS) $(EXEC_TT_TOOL) $(BSP) $$TEST_ELF > /dev/null
      $(OBJCOPY_CMD) $$TEST_ELF $$TEST_BINARY
      $(DOCKER_TEST) $(EXEC_TEST_DISPATCH) $(EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
  endef
@@ -2458,7 +2458,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/generic.rb 15_v
 diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/kernel_elf.rb 15_virtual_mem_part3_precomputed_tables/translation_table_tool/kernel_elf.rb
 --- 14_virtual_mem_part2_mmio_remap/translation_table_tool/kernel_elf.rb
 +++ 15_virtual_mem_part3_precomputed_tables/translation_table_tool/kernel_elf.rb
-@@ -0,0 +1,92 @@
+@@ -0,0 +1,96 @@
 +# frozen_string_literal: true
 +
 +# SPDX-License-Identifier: MIT OR Apache-2.0
@@ -2472,6 +2472,10 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/kernel_elf.rb 1
 +    def initialize(kernel_elf_path)
 +        @elf = ELFTools::ELFFile.new(File.open(kernel_elf_path))
 +        @symtab_section = @elf.section_by_name('.symtab')
++    end
++
++    def machine
++        @elf.machine.to_sym
 +    end
 +
 +    def symbol_value(symbol_name)
@@ -2555,17 +2559,13 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/kernel_elf.rb 1
 diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/main.rb 15_virtual_mem_part3_precomputed_tables/translation_table_tool/main.rb
 --- 14_virtual_mem_part2_mmio_remap/translation_table_tool/main.rb
 +++ 15_virtual_mem_part3_precomputed_tables/translation_table_tool/main.rb
-@@ -0,0 +1,47 @@
+@@ -0,0 +1,46 @@
 +#!/usr/bin/env ruby
 +# frozen_string_literal: true
 +
 +# SPDX-License-Identifier: MIT OR Apache-2.0
 +#
 +# Copyright (c) 2021-2022 Andre Richter <andre.o.richter@gmail.com>
-+
-+TARGET = ARGV[0].split('-').first.to_sym
-+BSP_TYPE = ARGV[1].to_sym
-+kernel_elf_path = ARGV[2]
 +
 +require 'rubygems'
 +require 'bundler/setup'
@@ -2576,6 +2576,9 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/main.rb 15_virt
 +require_relative 'kernel_elf'
 +require_relative 'bsp'
 +require_relative 'arch'
++
++BSP_TYPE = ARGV[0].to_sym
++kernel_elf_path = ARGV[1]
 +
 +start = Time.now
 +
@@ -2588,8 +2591,8 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/main.rb 15_virt
 +          raise
 +      end
 +
-+TRANSLATION_TABLES = case TARGET
-+                     when :aarch64
++TRANSLATION_TABLES = case KERNEL_ELF.machine
++                     when :AArch64
 +                         Arch::ARMv8::TranslationTable.new
 +                     else
 +                         raise

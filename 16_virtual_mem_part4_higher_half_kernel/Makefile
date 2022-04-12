@@ -172,7 +172,7 @@ $(KERNEL_ELF_RAW): $(KERNEL_ELF_RAW_DEPS)
 $(KERNEL_ELF_TTABLES): $(KERNEL_ELF_TTABLES_DEPS)
 	$(call color_header, "Precomputing kernel translation tables and patching kernel ELF")
 	@cp $(KERNEL_ELF_RAW) $(KERNEL_ELF_TTABLES)
-	@$(DOCKER_TOOLS) $(EXEC_TT_TOOL) $(TARGET) $(BSP) $(KERNEL_ELF_TTABLES)
+	@$(DOCKER_TOOLS) $(EXEC_TT_TOOL) $(BSP) $(KERNEL_ELF_TTABLES)
 
 ##------------------------------------------------------------------------------
 ## Generate the stripped kernel binary
@@ -316,7 +316,7 @@ define KERNEL_TEST_RUNNER
     TEST_ELF=$$(echo $$1 | sed -e 's/.*target/target/g')
     TEST_BINARY=$$(echo $$1.img | sed -e 's/.*target/target/g')
 
-    $(DOCKER_TOOLS) $(EXEC_TT_TOOL) $(TARGET) $(BSP) $$TEST_ELF > /dev/null
+    $(DOCKER_TOOLS) $(EXEC_TT_TOOL) $(BSP) $$TEST_ELF > /dev/null
     $(OBJCOPY_CMD) $$TEST_ELF $$TEST_BINARY
     $(DOCKER_TEST) $(EXEC_TEST_DISPATCH) $(EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
 endef

@@ -5,10 +5,6 @@
 #
 # Copyright (c) 2021-2022 Andre Richter <andre.o.richter@gmail.com>
 
-TARGET = ARGV[0].split('-').first.to_sym
-BSP_TYPE = ARGV[1].to_sym
-kernel_elf_path = ARGV[2]
-
 require 'rubygems'
 require 'bundler/setup'
 require 'colorize'
@@ -18,6 +14,9 @@ require_relative 'generic'
 require_relative 'kernel_elf'
 require_relative 'bsp'
 require_relative 'arch'
+
+BSP_TYPE = ARGV[0].to_sym
+kernel_elf_path = ARGV[1]
 
 start = Time.now
 
@@ -30,8 +29,8 @@ BSP = case BSP_TYPE
           raise
       end
 
-TRANSLATION_TABLES = case TARGET
-                     when :aarch64
+TRANSLATION_TABLES = case KERNEL_ELF.machine
+                     when :AArch64
                          Arch::ARMv8::TranslationTable.new
                      else
                          raise

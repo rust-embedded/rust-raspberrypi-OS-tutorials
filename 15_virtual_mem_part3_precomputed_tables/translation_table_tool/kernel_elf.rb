@@ -13,6 +13,10 @@ class KernelELF
         @symtab_section = @elf.section_by_name('.symtab')
     end
 
+    def machine
+        @elf.machine.to_sym
+    end
+
     def symbol_value(symbol_name)
         @symtab_section.symbol_by_name(symbol_name).header.st_value
     end
