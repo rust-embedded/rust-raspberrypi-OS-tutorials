@@ -150,6 +150,8 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
 -    OBJDUMP_BINARY    = aarch64-none-elf-objdump
 -    NM_BINARY         = aarch64-none-elf-nm
 -    READELF_BINARY    = aarch64-none-elf-readelf
+-    LD_SCRIPT_PATH    = $(shell pwd)/src/bsp/raspberrypi
+-    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
 +    TARGET                 = aarch64-unknown-none-softfloat
 +    KERNEL_BIN             = kernel8.img
 +    QEMU_BINARY            = qemu-system-aarch64
@@ -158,8 +160,7 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
 +    OBJDUMP_BINARY         = aarch64-none-elf-objdump
 +    NM_BINARY              = aarch64-none-elf-nm
 +    READELF_BINARY         = aarch64-none-elf-readelf
-     LD_SCRIPT_PATH    = src/bsp/raspberrypi
--    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
++    LD_SCRIPT_PATH         = $(shell pwd)/src/bsp/raspberrypi
 +    RUSTC_MISC_ARGS        = -C target-cpu=cortex-a53
 +    CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi3.img
  else ifeq ($(BSP),rpi4)
@@ -171,6 +172,8 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
 -    OBJDUMP_BINARY    = aarch64-none-elf-objdump
 -    NM_BINARY         = aarch64-none-elf-nm
 -    READELF_BINARY    = aarch64-none-elf-readelf
+-    LD_SCRIPT_PATH    = $(shell pwd)/src/bsp/raspberrypi
+-    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
 +    TARGET                 = aarch64-unknown-none-softfloat
 +    KERNEL_BIN             = kernel8.img
 +    QEMU_BINARY            = qemu-system-aarch64
@@ -179,8 +182,7 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
 +    OBJDUMP_BINARY         = aarch64-none-elf-objdump
 +    NM_BINARY              = aarch64-none-elf-nm
 +    READELF_BINARY         = aarch64-none-elf-readelf
-     LD_SCRIPT_PATH    = src/bsp/raspberrypi
--    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
++    LD_SCRIPT_PATH         = $(shell pwd)/src/bsp/raspberrypi
 +    RUSTC_MISC_ARGS        = -C target-cpu=cortex-a72
 +    CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi4.img
  endif

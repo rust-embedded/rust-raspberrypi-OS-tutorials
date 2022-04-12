@@ -74,6 +74,9 @@ diff -uNr 06_uart_chainloader/Makefile 07_timestamps/Makefile
 -    OBJDUMP_BINARY         = aarch64-none-elf-objdump
 -    NM_BINARY              = aarch64-none-elf-nm
 -    READELF_BINARY         = aarch64-none-elf-readelf
+-    LD_SCRIPT_PATH         = $(shell pwd)/src/bsp/raspberrypi
+-    RUSTC_MISC_ARGS        = -C target-cpu=cortex-a53
+-    CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi3.img
 +    TARGET            = aarch64-unknown-none-softfloat
 +    KERNEL_BIN        = kernel8.img
 +    QEMU_BINARY       = qemu-system-aarch64
@@ -82,9 +85,7 @@ diff -uNr 06_uart_chainloader/Makefile 07_timestamps/Makefile
 +    OBJDUMP_BINARY    = aarch64-none-elf-objdump
 +    NM_BINARY         = aarch64-none-elf-nm
 +    READELF_BINARY    = aarch64-none-elf-readelf
-     LD_SCRIPT_PATH    = src/bsp/raspberrypi
--    RUSTC_MISC_ARGS        = -C target-cpu=cortex-a53
--    CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi3.img
++    LD_SCRIPT_PATH    = $(shell pwd)/src/bsp/raspberrypi
 +    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
  else ifeq ($(BSP),rpi4)
 -    TARGET                 = aarch64-unknown-none-softfloat
@@ -95,6 +96,9 @@ diff -uNr 06_uart_chainloader/Makefile 07_timestamps/Makefile
 -    OBJDUMP_BINARY         = aarch64-none-elf-objdump
 -    NM_BINARY              = aarch64-none-elf-nm
 -    READELF_BINARY         = aarch64-none-elf-readelf
+-    LD_SCRIPT_PATH         = $(shell pwd)/src/bsp/raspberrypi
+-    RUSTC_MISC_ARGS        = -C target-cpu=cortex-a72
+-    CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi4.img
 +    TARGET            = aarch64-unknown-none-softfloat
 +    KERNEL_BIN        = kernel8.img
 +    QEMU_BINARY       = qemu-system-aarch64
@@ -103,9 +107,7 @@ diff -uNr 06_uart_chainloader/Makefile 07_timestamps/Makefile
 +    OBJDUMP_BINARY    = aarch64-none-elf-objdump
 +    NM_BINARY         = aarch64-none-elf-nm
 +    READELF_BINARY    = aarch64-none-elf-readelf
-     LD_SCRIPT_PATH    = src/bsp/raspberrypi
--    RUSTC_MISC_ARGS        = -C target-cpu=cortex-a72
--    CHAINBOOT_DEMO_PAYLOAD = demo_payload_rpi4.img
++    LD_SCRIPT_PATH    = $(shell pwd)/src/bsp/raspberrypi
 +    RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
  endif
 

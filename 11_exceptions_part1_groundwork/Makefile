@@ -33,7 +33,7 @@ ifeq ($(BSP),rpi3)
     READELF_BINARY    = aarch64-none-elf-readelf
     OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi3.cfg
     JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi3.img
-    LD_SCRIPT_PATH    = src/bsp/raspberrypi
+    LD_SCRIPT_PATH    = $(shell pwd)/src/bsp/raspberrypi
     RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
 else ifeq ($(BSP),rpi4)
     TARGET            = aarch64-unknown-none-softfloat
@@ -46,7 +46,7 @@ else ifeq ($(BSP),rpi4)
     READELF_BINARY    = aarch64-none-elf-readelf
     OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi4.cfg
     JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi4.img
-    LD_SCRIPT_PATH    = src/bsp/raspberrypi
+    LD_SCRIPT_PATH    = $(shell pwd)/src/bsp/raspberrypi
     RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
 endif
 

@@ -31,7 +31,7 @@ ifeq ($(BSP),rpi3)
     OBJDUMP_BINARY    = aarch64-none-elf-objdump
     NM_BINARY         = aarch64-none-elf-nm
     READELF_BINARY    = aarch64-none-elf-readelf
-    LD_SCRIPT_PATH    = src/bsp/raspberrypi
+    LD_SCRIPT_PATH    = $(shell pwd)/src/bsp/raspberrypi
     RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
 else ifeq ($(BSP),rpi4)
     TARGET            = aarch64-unknown-none-softfloat
@@ -42,7 +42,7 @@ else ifeq ($(BSP),rpi4)
     OBJDUMP_BINARY    = aarch64-none-elf-objdump
     NM_BINARY         = aarch64-none-elf-nm
     READELF_BINARY    = aarch64-none-elf-readelf
-    LD_SCRIPT_PATH    = src/bsp/raspberrypi
+    LD_SCRIPT_PATH    = $(shell pwd)/src/bsp/raspberrypi
     RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
 endif
 

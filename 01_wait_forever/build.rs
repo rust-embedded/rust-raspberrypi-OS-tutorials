@@ -1,7 +1,10 @@
-use std::{env, fs};
+use std::{env, fs, process};
 
 fn main() {
-    let ld_script_path = env::var("LD_SCRIPT_PATH").unwrap_or_default();
+    let ld_script_path = match env::var("LD_SCRIPT_PATH") {
+        Ok(var) => var,
+        _ => process::exit(0),
+    };
 
     let files = fs::read_dir(ld_script_path).unwrap();
     files
