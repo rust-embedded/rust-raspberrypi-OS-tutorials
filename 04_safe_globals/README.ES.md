@@ -4,6 +4,7 @@
 
 * Se añade un pseudo-bloqueo.
 * Esta es la primera vez que se muestra primitivas de sincronización del sistema operativo y habilita el acceso seguro a una estructura de datos global.
+  * Primitivas de sincronización: Mecanismos de software proporcionados por la plataforma (p. ej. sistema operativo) a sus usuarios con el propósito de dar soporte a los hilos o procesos de sincronización.
 
 ## Variables globales mutables en Rust
 
