@@ -118,7 +118,7 @@ Here are the compilation steps and the corresponding `objdump` for `AArch64`:
 
 ```console
 $ clang --target=aarch64-none-elf -Iinclude -Wall -c start.c -o start.o
-$ ld.lld start.o -T link.ld -o example.elf
+$ ld.lld start.o -T kernel.ld -o example.elf
 ```
 
 ```c-objdump
@@ -326,7 +326,7 @@ space:
 
 ```console
 $ clang --target=aarch64-none-elf -Iinclude -Wall -fpic -c start.c -o start.o
-$ ld.lld start.o -T link.ld -o example.elf
+$ ld.lld start.o -T kernel.ld -o example.elf
 ```
 
 ```c-objdump
@@ -473,7 +473,7 @@ the precompute use-case. The additional `#[no_mangle]` is added because we will 
 symbol from the `translation table tool`, and this is easier with unmangled names.
 
 In the `BSP` code, there is also a new file called `kernel_virt_addr_space_size.ld`, which contains
-the kernel's virtual address space size. This file gets included in both, the `link.ld` linker
+the kernel's virtual address space size. This file gets included in both, the `kernel.ld` linker
 script and `mmu.rs`. We need this value both as a symbol in the kernel's ELF (for the `translation
 table tool` to parse it later) and as a constant in the `Rust` code. This inclusion approach is just
 a convenience hack that turned out working well.

@@ -14,7 +14,7 @@
     - `nm`: 检查符号。
 - 代码按照 `kernel`， `arch` 和 `BSP` （板级支持包）的形式组织。
     - 条件编译会根据用户提供的参数编译各自的  `arch` 和  `BSP` 的内容。
-- 自定义 `link.ld` 链接脚本.
+- 自定义 `kernel.ld` 链接脚本.
     - 载入地址为 `0x80_000`
     - 目前仅有 `.text` 小节（section）。
 - `main.rs`: 重要的 [inner attributes]:

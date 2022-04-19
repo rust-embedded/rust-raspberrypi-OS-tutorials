@@ -14,7 +14,7 @@
   * [Generic Kernel code: `memory/mmu.rs`](#generic-kernel-code-memorymmurs)
   * [BSP: `bsp/raspberrypi/memory/mmu.rs`](#bsp-bspraspberrypimemorymmurs)
   * [AArch64: `_arch/aarch64/memory/*`](#aarch64-_archaarch64memory)
-  * [`link.ld`](#linkld)
+  * [`kernel.ld`](#kernelld)
 - [Address translation examples](#address-translation-examples)
   * [Address translation using a 64 KiB page descriptor](#address-translation-using-a-64-kib-page-descriptor)
 - [Zero-cost abstraction](#zero-cost-abstraction)
@@ -222,7 +222,7 @@ enables caching for data and instructions.
 [Translation Control Register - EL1]: https://docs.rs/crate/cortex-a/5.1.2/source/src/regs/tcr_el1.rs
 [System Control Register - EL1]: https://docs.rs/crate/cortex-a/5.1.2/source/src/regs/sctlr_el1.rs
 
-### `link.ld`
+### `kernel.ld`
 
 We need to align the `code` segment to `64 KiB` so that it doesn't overlap with the next section
 that needs read/write attributes instead of read/execute attributes:

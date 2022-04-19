@@ -8,7 +8,7 @@
 
 ## Adiciones importantes
 
-* Adiciones importantes al script `link.ld`:
+* Adiciones importantes al script `kernel.ld`:
 
   * Nuevas secciones: `.rodata`, `.got`, `.data`, `.bss`.
 

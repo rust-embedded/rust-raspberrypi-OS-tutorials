@@ -17,8 +17,8 @@ at the source code changes.
 
 The gist of it is that in `boot.s`, we are writing a piece of [position independent code] which
 automatically determines where the firmware has loaded the binary (`0x8_0000`), and where it was
-linked to (`0x200_0000`, see `link.ld`). The binary then copies itself from loaded to linked address
-(aka  "relocating" itself), and then jumps to the relocated version of `_start_rust()`.
+linked to (`0x200_0000`, see `kernel.ld`). The binary then copies itself from loaded to linked
+address (aka  "relocating" itself), and then jumps to the relocated version of `_start_rust()`.
 
 Since the chainloader has put itself "out of the way" now, it can now receive another kernel binary
 from the `UART` and copy it to the standard load address of the RPi firmware at `0x8_0000`. Finally,
@@ -27,8 +27,9 @@ from SD card all along.
 
 Please bear with me until I find the time to write it all down here elaborately. For the time being,
 please see this tutorial as an enabler for a convenience feature that allows booting the following
-tutorials in a quick manner. _For those keen to get a deeper understanding, it could make sense to skip forward to [Chapter 15](../15_virtual_mem_part3_precomputed_tables) and read the first half of the README,
-where `Load Address != Link Address` is discussed_.
+tutorials in a quick manner. _For those keen to get a deeper understanding, it could make sense to
+skip forward to [Chapter 15](../15_virtual_mem_part3_precomputed_tables) and read the first half of
+the README, where `Load Address != Link Address` is discussed_.
 
 [position independent code]: https://en.wikipedia.org/wiki/Position-independent_code
 
