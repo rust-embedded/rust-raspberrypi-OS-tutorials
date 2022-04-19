@@ -617,7 +617,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/console.rs
          .unwrap_or_else(|_| cpu::wait_forever());
 
      panic_uart
-@@ -51,13 +56,14 @@
+@@ -55,13 +60,14 @@
  pub unsafe fn panic_console_out() -> impl fmt::Write {
      use driver::interface::DeviceDriver;
 
@@ -880,7 +880,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/tests/02_exception_sync_page_f
 -    info!("Writing beyond mapped area to address 9 GiB...");
 -    let big_addr: u64 = 9 * 1024 * 1024 * 1024;
 +    info!("Writing to bottom of address space to address 1 GiB...");
-+    let big_addr: u64 = 1 * 1024 * 1024 * 1024;
++    let big_addr: u64 = 1024 * 1024 * 1024;
      core::ptr::read_volatile(big_addr as *mut u64);
 
      // If execution reaches here, the memory access above did not cause a page fault exception.

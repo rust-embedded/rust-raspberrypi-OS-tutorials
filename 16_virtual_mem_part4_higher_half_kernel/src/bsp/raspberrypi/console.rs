@@ -52,6 +52,10 @@ pub unsafe fn panic_console_out() -> impl fmt::Write {
 }
 
 /// Reduced version for test builds.
+///
+/// # Safety
+///
+/// - Use only for printing during a panic.
 #[cfg(feature = "test_build")]
 pub unsafe fn panic_console_out() -> impl fmt::Write {
     use driver::interface::DeviceDriver;

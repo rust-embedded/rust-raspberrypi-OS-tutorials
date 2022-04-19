@@ -2639,7 +2639,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/translation_table.r
 diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/types.rs 14_virtual_mem_part2_mmio_remap/src/memory/mmu/types.rs
 --- 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/types.rs
 +++ 14_virtual_mem_part2_mmio_remap/src/memory/mmu/types.rs
-@@ -0,0 +1,375 @@
+@@ -0,0 +1,373 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
@@ -3005,13 +3005,11 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/types.rs 14_virtual
 +        assert_eq!(allocation.num_pages(), 2);
 +        assert_eq!(three_region.num_pages(), 1);
 +
-+        let mut count = 0;
-+        for i in allocation.into_iter() {
++        for (i, alloc) in allocation.into_iter().enumerate() {
 +            assert_eq!(
-+                i.into_inner().as_usize(),
-+                count * bsp::memory::mmu::KernelGranule::SIZE
++                alloc.into_inner().as_usize(),
++                i * bsp::memory::mmu::KernelGranule::SIZE
 +            );
-+            count = count + 1;
 +        }
 +    }
 +}
@@ -3588,7 +3586,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory.rs 14_virtual_mem_part2
 +            bsp::memory::mmu::KernelGranule::SIZE * 2
 +        );
 +
-+        assert_eq!(addr.is_page_aligned(), false);
++        assert!(!addr.is_page_aligned());
 +
 +        assert_eq!(addr.offset_into_page(), 100);
 +    }

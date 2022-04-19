@@ -29,7 +29,7 @@ unsafe fn kernel_init() -> ! {
     println!("Testing synchronous exception handling by causing a page fault");
 
     info!("Writing to bottom of address space to address 1 GiB...");
-    let big_addr: u64 = 1 * 1024 * 1024 * 1024;
+    let big_addr: u64 = 1024 * 1024 * 1024;
     core::ptr::read_volatile(big_addr as *mut u64);
 
     // If execution reaches here, the memory access above did not cause a page fault exception.

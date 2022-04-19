@@ -363,13 +363,11 @@ mod tests {
         assert_eq!(allocation.num_pages(), 2);
         assert_eq!(three_region.num_pages(), 1);
 
-        let mut count = 0;
-        for i in allocation.into_iter() {
+        for (i, alloc) in allocation.into_iter().enumerate() {
             assert_eq!(
-                i.into_inner().as_usize(),
-                count * bsp::memory::mmu::KernelGranule::SIZE
+                alloc.into_inner().as_usize(),
+                i * bsp::memory::mmu::KernelGranule::SIZE
             );
-            count = count + 1;
         }
     }
 }

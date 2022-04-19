@@ -11,7 +11,7 @@ use syn::{parse_macro_input, Ident, ItemFn};
 pub fn kernel_test(_attr: TokenStream, input: TokenStream) -> TokenStream {
     let f = parse_macro_input!(input as ItemFn);
 
-    let test_name = &format!("{}", f.sig.ident.to_string());
+    let test_name = &format!("{}", f.sig.ident);
     let test_ident = Ident::new(
         &format!("{}_TEST_CONTAINER", f.sig.ident.to_string().to_uppercase()),
         Span::call_site(),

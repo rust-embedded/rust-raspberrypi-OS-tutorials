@@ -160,7 +160,7 @@ mod tests {
             bsp::memory::mmu::KernelGranule::SIZE * 2
         );
 
-        assert_eq!(addr.is_page_aligned(), false);
+        assert!(!addr.is_page_aligned());
 
         assert_eq!(addr.offset_into_page(), 100);
     }
