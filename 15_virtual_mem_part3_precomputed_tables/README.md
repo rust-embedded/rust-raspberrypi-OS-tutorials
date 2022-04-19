@@ -540,15 +540,15 @@ already, the only missing piece that's left is the offline computation of the tr
 
 ### The Translation Table Tool
 
-The tool for translation table computation is located in the folder `translation_table_tool` in the
-root directory. For ease of use, it is written in `Ruby` 💎. The code is organized into `BSP` and
-`arch` parts just like the kernel's `Rust` code, and also has a class for processing the kernel
-`ELF` file:
+The tool for translation table computation is located in the folder
+`$ROOT/tools/translation_table_tool`. For ease of use, it is written in `Ruby` 💎. The code is
+organized into `BSP` and `arch` parts just like the kernel's `Rust` code, and also has a class for
+processing the kernel `ELF` file:
 
 ```console
-$ tree translation_table_tool
+$ tree tools/translation_table_tool
 
-translation_table_tool
+tools/translation_table_tool
 ├── arch.rb
 ├── bsp.rb
 ├── generic.rb
@@ -568,7 +568,7 @@ In the `Makefile`, the tool is invoked after compiling and linking the kernel, a
 to the kernel's `ELF` file:
 
 ```Makefile
-TT_TOOL_PATH = translation_table_tool
+TT_TOOL_PATH = tools/translation_table_tool
 
 KERNEL_ELF_RAW      = target/$(TARGET)/release/kernel
 # [...]
@@ -796,9 +796,9 @@ Minipush 1.0
 ## Diff to previous
 ```diff
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/Cargo.toml 15_virtual_mem_part3_precomputed_tables/Cargo.toml
---- 14_virtual_mem_part2_mmio_remap/Cargo.toml
-+++ 15_virtual_mem_part3_precomputed_tables/Cargo.toml
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/Cargo.toml 15_virtual_mem_part3_precomputed_tables/kernel/Cargo.toml
+--- 14_virtual_mem_part2_mmio_remap/kernel/Cargo.toml
++++ 15_virtual_mem_part3_precomputed_tables/kernel/Cargo.toml
 @@ -1,6 +1,6 @@
  [package]
  name = "mingo"
@@ -808,79 +808,9 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/Cargo.toml 15_virtual_mem_part3_precom
  edition = "2021"
 
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/Makefile 15_virtual_mem_part3_precomputed_tables/Makefile
---- 14_virtual_mem_part2_mmio_remap/Makefile
-+++ 15_virtual_mem_part3_precomputed_tables/Makefile
-@@ -69,12 +69,19 @@
- ##--------------------------------------------------------------------------------------------------
- KERNEL_LINKER_SCRIPT = kernel.ld
-
-+TT_TOOL_PATH = translation_table_tool
-+
- LAST_BUILD_CONFIG = target/$(BSP).build_config
-
--KERNEL_ELF      = target/$(TARGET)/release/kernel
-+KERNEL_ELF_RAW      = target/$(TARGET)/release/kernel
- # This parses cargo's dep-info file.
- # https://doc.rust-lang.org/cargo/guide/build-cache.html#dep-info-files
--KERNEL_ELF_DEPS = $(filter-out modulo: ,$(file < $(KERNEL_ELF_RAW).d)) $(LAST_BUILD_CONFIG)
-+KERNEL_ELF_RAW_DEPS = $(filter-out modulo: ,$(file < $(KERNEL_ELF_RAW).d)) $(LAST_BUILD_CONFIG)
-+
-+KERNEL_ELF_TTABLES      = target/$(TARGET)/release/kernel+ttables
-+KERNEL_ELF_TTABLES_DEPS = $(KERNEL_ELF_RAW) $(wildcard $(TT_TOOL_PATH)/*)
-+
-+KERNEL_ELF = $(KERNEL_ELF_TTABLES)
-
-
-
-@@ -104,6 +111,7 @@
-     -O binary
-
- EXEC_QEMU          = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
-+EXEC_TT_TOOL       = ruby $(TT_TOOL_PATH)/main.rb
- EXEC_TEST_DISPATCH = ruby ../common/tests/dispatch.rb
- EXEC_MINIPUSH      = ruby ../common/serial/minipush.rb
-
-@@ -154,16 +162,24 @@
- ##------------------------------------------------------------------------------
- ## Compile the kernel ELF
- ##------------------------------------------------------------------------------
--$(KERNEL_ELF): $(KERNEL_ELF_DEPS)
-+$(KERNEL_ELF_RAW): $(KERNEL_ELF_RAW_DEPS)
- 	$(call color_header, "Compiling kernel ELF - $(BSP)")
- 	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(RUSTC_CMD)
-
- ##------------------------------------------------------------------------------
-+## Precompute the kernel translation tables and patch them into the kernel ELF
-+##------------------------------------------------------------------------------
-+$(KERNEL_ELF_TTABLES): $(KERNEL_ELF_TTABLES_DEPS)
-+	$(call color_header, "Precomputing kernel translation tables and patching kernel ELF")
-+	@cp $(KERNEL_ELF_RAW) $(KERNEL_ELF_TTABLES)
-+	@$(DOCKER_TOOLS) $(EXEC_TT_TOOL) $(BSP) $(KERNEL_ELF_TTABLES)
-+
-+##------------------------------------------------------------------------------
- ## Generate the stripped kernel binary
- ##------------------------------------------------------------------------------
--$(KERNEL_BIN): $(KERNEL_ELF)
-+$(KERNEL_BIN): $(KERNEL_ELF_TTABLES)
- 	$(call color_header, "Generating stripped binary")
--	@$(OBJCOPY_CMD) $(KERNEL_ELF) $(KERNEL_BIN)
-+	@$(OBJCOPY_CMD) $(KERNEL_ELF_TTABLES) $(KERNEL_BIN)
- 	$(call color_progress_prefix, "Name")
- 	@echo $(KERNEL_BIN)
- 	$(call color_progress_prefix, "Size")
-@@ -302,6 +318,7 @@
-     TEST_ELF=$$(echo $$1 | sed -e 's/.*target/target/g')
-     TEST_BINARY=$$(echo $$1.img | sed -e 's/.*target/target/g')
-
-+    $(DOCKER_TOOLS) $(EXEC_TT_TOOL) $(BSP) $$TEST_ELF > /dev/null
-     $(OBJCOPY_CMD) $$TEST_ELF $$TEST_BINARY
-     $(DOCKER_TEST) $(EXEC_TEST_DISPATCH) $(EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
- endef
-
-diff -uNr 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/cpu/boot.rs 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.rs
---- 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/cpu/boot.rs
-+++ 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.rs
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/_arch/aarch64/cpu/boot.rs 15_virtual_mem_part3_precomputed_tables/kernel/src/_arch/aarch64/cpu/boot.rs
+--- 14_virtual_mem_part2_mmio_remap/kernel/src/_arch/aarch64/cpu/boot.rs
++++ 15_virtual_mem_part3_precomputed_tables/kernel/src/_arch/aarch64/cpu/boot.rs
 @@ -11,6 +11,7 @@
  //!
  //! crate::cpu::boot::arch_boot
@@ -908,9 +838,9 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/cpu/boot.rs 15_virtu
      asm::eret()
  }
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/cpu/boot.s 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.s
---- 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/cpu/boot.s
-+++ 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.s
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/_arch/aarch64/cpu/boot.s 15_virtual_mem_part3_precomputed_tables/kernel/src/_arch/aarch64/cpu/boot.s
+--- 14_virtual_mem_part2_mmio_remap/kernel/src/_arch/aarch64/cpu/boot.s
++++ 15_virtual_mem_part3_precomputed_tables/kernel/src/_arch/aarch64/cpu/boot.s
 @@ -56,11 +56,14 @@
 
  	// Prepare the jump to Rust code.
@@ -930,9 +860,9 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/cpu/boot.s 15_virtua
 
  	// Infinitely wait for events (aka "park the core").
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/memory/mmu/translation_table.rs 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu/translation_table.rs
---- 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/memory/mmu/translation_table.rs
-+++ 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu/translation_table.rs
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/_arch/aarch64/memory/mmu/translation_table.rs 15_virtual_mem_part3_precomputed_tables/kernel/src/_arch/aarch64/memory/mmu/translation_table.rs
+--- 14_virtual_mem_part2_mmio_remap/kernel/src/_arch/aarch64/memory/mmu/translation_table.rs
++++ 15_virtual_mem_part3_precomputed_tables/kernel/src/_arch/aarch64/memory/mmu/translation_table.rs
 @@ -125,7 +125,7 @@
  }
 
@@ -1135,9 +1065,9 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/memory/mmu/translati
 
  //--------------------------------------------------------------------------------------------------
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/console.rs 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/console.rs
---- 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/console.rs
-+++ 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/console.rs
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/console.rs 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/console.rs
+--- 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/console.rs
++++ 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/console.rs
 @@ -22,6 +22,7 @@
  /// # Safety
  ///
@@ -1194,9 +1124,9 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/console.rs 15_virt
 +    }
 +}
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/kernel.ld 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/kernel.ld
---- 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/kernel.ld
-+++ 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/kernel.ld
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/kernel.ld 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/kernel.ld
+--- 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/kernel.ld
++++ 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/kernel.ld
 @@ -3,6 +3,8 @@
   * Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
   */
@@ -1207,15 +1137,15 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/kernel.ld 15_virtu
  PAGE_MASK = PAGE_SIZE - 1;
 
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/kernel_virt_addr_space_size.ld 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/kernel_virt_addr_space_size.ld
---- 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/kernel_virt_addr_space_size.ld
-+++ 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/kernel_virt_addr_space_size.ld
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/kernel_virt_addr_space_size.ld 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/kernel_virt_addr_space_size.ld
+--- 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/kernel_virt_addr_space_size.ld
++++ 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/kernel_virt_addr_space_size.ld
 @@ -0,0 +1 @@
 +__kernel_virt_addr_space_size = 1024 * 1024 * 1024
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/memory/mmu.rs
---- 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs
-+++ 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/memory/mmu.rs
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/memory/mmu.rs 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/memory/mmu.rs
+--- 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/memory/mmu.rs
++++ 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/memory/mmu.rs
 @@ -7,8 +7,8 @@
  use crate::{
      memory::{
@@ -1441,9 +1371,9 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs 15_v
 +    );
  }
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/src/main.rs 15_virtual_mem_part3_precomputed_tables/src/main.rs
---- 14_virtual_mem_part2_mmio_remap/src/main.rs
-+++ 15_virtual_mem_part3_precomputed_tables/src/main.rs
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/main.rs 15_virtual_mem_part3_precomputed_tables/kernel/src/main.rs
+--- 14_virtual_mem_part2_mmio_remap/kernel/src/main.rs
++++ 15_virtual_mem_part3_precomputed_tables/kernel/src/main.rs
 @@ -15,31 +15,23 @@
 
  /// Early init code.
@@ -1493,9 +1423,9 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/main.rs 15_virtual_mem_part3_preco
      // Now bring up the remaining drivers.
      for i in bsp::driver::driver_manager()
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/src/memory/mmu/translation_table.rs 15_virtual_mem_part3_precomputed_tables/src/memory/mmu/translation_table.rs
---- 14_virtual_mem_part2_mmio_remap/src/memory/mmu/translation_table.rs
-+++ 15_virtual_mem_part3_precomputed_tables/src/memory/mmu/translation_table.rs
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu/translation_table.rs 15_virtual_mem_part3_precomputed_tables/kernel/src/memory/mmu/translation_table.rs
+--- 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu/translation_table.rs
++++ 15_virtual_mem_part3_precomputed_tables/kernel/src/memory/mmu/translation_table.rs
 @@ -23,6 +23,8 @@
 
  /// Translation table interfaces.
@@ -1583,9 +1513,9 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/memory/mmu/translation_table.rs 15
      }
  }
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/src/memory/mmu.rs 15_virtual_mem_part3_precomputed_tables/src/memory/mmu.rs
---- 14_virtual_mem_part2_mmio_remap/src/memory/mmu.rs
-+++ 15_virtual_mem_part3_precomputed_tables/src/memory/mmu.rs
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu.rs 15_virtual_mem_part3_precomputed_tables/kernel/src/memory/mmu.rs
+--- 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu.rs
++++ 15_virtual_mem_part3_precomputed_tables/kernel/src/memory/mmu.rs
 @@ -16,7 +16,8 @@
  use crate::{
      bsp,
@@ -1752,9 +1682,9 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/memory/mmu.rs 15_virtual_mem_part3
 -    }
 -}
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/tests/00_console_sanity.rs 15_virtual_mem_part3_precomputed_tables/tests/00_console_sanity.rs
---- 14_virtual_mem_part2_mmio_remap/tests/00_console_sanity.rs
-+++ 15_virtual_mem_part3_precomputed_tables/tests/00_console_sanity.rs
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/00_console_sanity.rs 15_virtual_mem_part3_precomputed_tables/kernel/tests/00_console_sanity.rs
+--- 14_virtual_mem_part2_mmio_remap/kernel/tests/00_console_sanity.rs
++++ 15_virtual_mem_part3_precomputed_tables/kernel/tests/00_console_sanity.rs
 @@ -11,7 +11,7 @@
  /// Console tests should time out on the I/O harness in case of panic.
  mod panic_wait_forever;
@@ -1773,9 +1703,9 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/tests/00_console_sanity.rs 15_virtual_
 
      // Handshake
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/tests/01_timer_sanity.rs 15_virtual_mem_part3_precomputed_tables/tests/01_timer_sanity.rs
---- 14_virtual_mem_part2_mmio_remap/tests/01_timer_sanity.rs
-+++ 15_virtual_mem_part3_precomputed_tables/tests/01_timer_sanity.rs
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/01_timer_sanity.rs 15_virtual_mem_part3_precomputed_tables/kernel/tests/01_timer_sanity.rs
+--- 14_virtual_mem_part2_mmio_remap/kernel/tests/01_timer_sanity.rs
++++ 15_virtual_mem_part3_precomputed_tables/kernel/tests/01_timer_sanity.rs
 @@ -11,12 +11,13 @@
  #![test_runner(libkernel::test_runner)]
 
@@ -1792,9 +1722,9 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/tests/01_timer_sanity.rs 15_virtual_me
 
      // Depending on CPU arch, some timer bring-up code could go here. Not needed for the RPi.
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/tests/02_exception_sync_page_fault.rs 15_virtual_mem_part3_precomputed_tables/tests/02_exception_sync_page_fault.rs
---- 14_virtual_mem_part2_mmio_remap/tests/02_exception_sync_page_fault.rs
-+++ 15_virtual_mem_part3_precomputed_tables/tests/02_exception_sync_page_fault.rs
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/02_exception_sync_page_fault.rs 15_virtual_mem_part3_precomputed_tables/kernel/tests/02_exception_sync_page_fault.rs
+--- 14_virtual_mem_part2_mmio_remap/kernel/tests/02_exception_sync_page_fault.rs
++++ 15_virtual_mem_part3_precomputed_tables/kernel/tests/02_exception_sync_page_fault.rs
 @@ -21,40 +21,12 @@
 
  #[no_mangle]
@@ -1839,9 +1769,9 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/tests/02_exception_sync_page_fault.rs 
      info!("Writing beyond mapped area to address 9 GiB...");
      let big_addr: u64 = 9 * 1024 * 1024 * 1024;
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/tests/03_exception_restore_sanity.rs 15_virtual_mem_part3_precomputed_tables/tests/03_exception_restore_sanity.rs
---- 14_virtual_mem_part2_mmio_remap/tests/03_exception_restore_sanity.rs
-+++ 15_virtual_mem_part3_precomputed_tables/tests/03_exception_restore_sanity.rs
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/03_exception_restore_sanity.rs 15_virtual_mem_part3_precomputed_tables/kernel/tests/03_exception_restore_sanity.rs
+--- 14_virtual_mem_part2_mmio_remap/kernel/tests/03_exception_restore_sanity.rs
++++ 15_virtual_mem_part3_precomputed_tables/kernel/tests/03_exception_restore_sanity.rs
 @@ -30,40 +30,12 @@
 
  #[no_mangle]
@@ -1886,9 +1816,9 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/tests/03_exception_restore_sanity.rs 1
      info!("Making a dummy system call");
 
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/tests/04_exception_irq_sanity.rs 15_virtual_mem_part3_precomputed_tables/tests/04_exception_irq_sanity.rs
---- 14_virtual_mem_part2_mmio_remap/tests/04_exception_irq_sanity.rs
-+++ 15_virtual_mem_part3_precomputed_tables/tests/04_exception_irq_sanity.rs
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/04_exception_irq_sanity.rs 15_virtual_mem_part3_precomputed_tables/kernel/tests/04_exception_irq_sanity.rs
+--- 14_virtual_mem_part2_mmio_remap/kernel/tests/04_exception_irq_sanity.rs
++++ 15_virtual_mem_part3_precomputed_tables/kernel/tests/04_exception_irq_sanity.rs
 @@ -10,11 +10,12 @@
  #![reexport_test_harness_main = "test_main"]
  #![test_runner(libkernel::test_runner)]
@@ -1904,9 +1834,77 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/tests/04_exception_irq_sanity.rs 15_vi
 
      exception::handling_init();
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/arch.rb 15_virtual_mem_part3_precomputed_tables/translation_table_tool/arch.rb
---- 14_virtual_mem_part2_mmio_remap/translation_table_tool/arch.rb
-+++ 15_virtual_mem_part3_precomputed_tables/translation_table_tool/arch.rb
+diff -uNr 14_virtual_mem_part2_mmio_remap/Makefile 15_virtual_mem_part3_precomputed_tables/Makefile
+--- 14_virtual_mem_part2_mmio_remap/Makefile
++++ 15_virtual_mem_part3_precomputed_tables/Makefile
+@@ -71,10 +71,17 @@
+ KERNEL_LINKER_SCRIPT = kernel.ld
+ LAST_BUILD_CONFIG    = target/$(BSP).build_config
+
+-KERNEL_ELF      = target/$(TARGET)/release/kernel
++TT_TOOL_PATH = tools/translation_table_tool
++
++KERNEL_ELF_RAW      = target/$(TARGET)/release/kernel
+ # This parses cargo's dep-info file.
+ # https://doc.rust-lang.org/cargo/guide/build-cache.html#dep-info-files
+-KERNEL_ELF_DEPS = $(filter-out modulo: ,$(file < $(KERNEL_ELF_RAW).d)) $(LAST_BUILD_CONFIG)
++KERNEL_ELF_RAW_DEPS = $(filter-out modulo: ,$(file < $(KERNEL_ELF_RAW).d)) $(LAST_BUILD_CONFIG)
++
++KERNEL_ELF_TTABLES      = target/$(TARGET)/release/kernel+ttables
++KERNEL_ELF_TTABLES_DEPS = $(KERNEL_ELF_RAW) $(wildcard $(TT_TOOL_PATH)/*)
++
++KERNEL_ELF = $(KERNEL_ELF_TTABLES)
+
+
+
+@@ -104,6 +111,7 @@
+     -O binary
+
+ EXEC_QEMU          = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
++EXEC_TT_TOOL       = ruby $(TT_TOOL_PATH)/main.rb
+ EXEC_TEST_DISPATCH = ruby ../common/tests/dispatch.rb
+ EXEC_MINIPUSH      = ruby ../common/serial/minipush.rb
+
+@@ -154,16 +162,24 @@
+ ##------------------------------------------------------------------------------
+ ## Compile the kernel ELF
+ ##------------------------------------------------------------------------------
+-$(KERNEL_ELF): $(KERNEL_ELF_DEPS)
++$(KERNEL_ELF_RAW): $(KERNEL_ELF_RAW_DEPS)
+ 	$(call color_header, "Compiling kernel ELF - $(BSP)")
+ 	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(RUSTC_CMD)
+
+ ##------------------------------------------------------------------------------
++## Precompute the kernel translation tables and patch them into the kernel ELF
++##------------------------------------------------------------------------------
++$(KERNEL_ELF_TTABLES): $(KERNEL_ELF_TTABLES_DEPS)
++	$(call color_header, "Precomputing kernel translation tables and patching kernel ELF")
++	@cp $(KERNEL_ELF_RAW) $(KERNEL_ELF_TTABLES)
++	@$(DOCKER_TOOLS) $(EXEC_TT_TOOL) $(BSP) $(KERNEL_ELF_TTABLES)
++
++##------------------------------------------------------------------------------
+ ## Generate the stripped kernel binary
+ ##------------------------------------------------------------------------------
+-$(KERNEL_BIN): $(KERNEL_ELF)
++$(KERNEL_BIN): $(KERNEL_ELF_TTABLES)
+ 	$(call color_header, "Generating stripped binary")
+-	@$(OBJCOPY_CMD) $(KERNEL_ELF) $(KERNEL_BIN)
++	@$(OBJCOPY_CMD) $(KERNEL_ELF_TTABLES) $(KERNEL_BIN)
+ 	$(call color_progress_prefix, "Name")
+ 	@echo $(KERNEL_BIN)
+ 	$(call color_progress_prefix, "Size")
+@@ -308,6 +324,7 @@
+     TEST_ELF=$$(echo $$1 | sed -e 's/.*target/target/g')
+     TEST_BINARY=$$(echo $$1.img | sed -e 's/.*target/target/g')
+
++    $(DOCKER_TOOLS) $(EXEC_TT_TOOL) $(BSP) $$TEST_ELF > /dev/null
+     $(OBJCOPY_CMD) $$TEST_ELF $$TEST_BINARY
+     $(DOCKER_TEST) $(EXEC_TEST_DISPATCH) $(EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
+ endef
+
+diff -uNr 14_virtual_mem_part2_mmio_remap/tools/translation_table_tool/arch.rb 15_virtual_mem_part3_precomputed_tables/tools/translation_table_tool/arch.rb
+--- 14_virtual_mem_part2_mmio_remap/tools/translation_table_tool/arch.rb
++++ 15_virtual_mem_part3_precomputed_tables/tools/translation_table_tool/arch.rb
 @@ -0,0 +1,312 @@
 +# frozen_string_literal: true
 +
@@ -2221,9 +2219,9 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/arch.rb 15_virt
 +end
 +end
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/bsp.rb 15_virtual_mem_part3_precomputed_tables/translation_table_tool/bsp.rb
---- 14_virtual_mem_part2_mmio_remap/translation_table_tool/bsp.rb
-+++ 15_virtual_mem_part3_precomputed_tables/translation_table_tool/bsp.rb
+diff -uNr 14_virtual_mem_part2_mmio_remap/tools/translation_table_tool/bsp.rb 15_virtual_mem_part3_precomputed_tables/tools/translation_table_tool/bsp.rb
+--- 14_virtual_mem_part2_mmio_remap/tools/translation_table_tool/bsp.rb
++++ 15_virtual_mem_part3_precomputed_tables/tools/translation_table_tool/bsp.rb
 @@ -0,0 +1,49 @@
 +# frozen_string_literal: true
 +
@@ -2235,7 +2233,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/bsp.rb 15_virtu
 +class RaspberryPi
 +    attr_reader :kernel_granule, :kernel_virt_addr_space_size
 +
-+    MEMORY_SRC = File.read('src/bsp/raspberrypi/memory.rs').split("\n")
++    MEMORY_SRC = File.read('kernel/src/bsp/raspberrypi/memory.rs').split("\n")
 +
 +    def initialize
 +        @kernel_granule = Granule64KiB
@@ -2275,9 +2273,9 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/bsp.rb 15_virtu
 +    end
 +end
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/generic.rb 15_virtual_mem_part3_precomputed_tables/translation_table_tool/generic.rb
---- 14_virtual_mem_part2_mmio_remap/translation_table_tool/generic.rb
-+++ 15_virtual_mem_part3_precomputed_tables/translation_table_tool/generic.rb
+diff -uNr 14_virtual_mem_part2_mmio_remap/tools/translation_table_tool/generic.rb 15_virtual_mem_part3_precomputed_tables/tools/translation_table_tool/generic.rb
+--- 14_virtual_mem_part2_mmio_remap/tools/translation_table_tool/generic.rb
++++ 15_virtual_mem_part3_precomputed_tables/tools/translation_table_tool/generic.rb
 @@ -0,0 +1,179 @@
 +# frozen_string_literal: true
 +
@@ -2459,9 +2457,9 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/generic.rb 15_v
 +                  BSP.phys_kernel_tables_base_addr_offset_in_file)
 +end
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/kernel_elf.rb 15_virtual_mem_part3_precomputed_tables/translation_table_tool/kernel_elf.rb
---- 14_virtual_mem_part2_mmio_remap/translation_table_tool/kernel_elf.rb
-+++ 15_virtual_mem_part3_precomputed_tables/translation_table_tool/kernel_elf.rb
+diff -uNr 14_virtual_mem_part2_mmio_remap/tools/translation_table_tool/kernel_elf.rb 15_virtual_mem_part3_precomputed_tables/tools/translation_table_tool/kernel_elf.rb
+--- 14_virtual_mem_part2_mmio_remap/tools/translation_table_tool/kernel_elf.rb
++++ 15_virtual_mem_part3_precomputed_tables/tools/translation_table_tool/kernel_elf.rb
 @@ -0,0 +1,96 @@
 +# frozen_string_literal: true
 +
@@ -2560,9 +2558,9 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/kernel_elf.rb 1
 +    end
 +end
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/main.rb 15_virtual_mem_part3_precomputed_tables/translation_table_tool/main.rb
---- 14_virtual_mem_part2_mmio_remap/translation_table_tool/main.rb
-+++ 15_virtual_mem_part3_precomputed_tables/translation_table_tool/main.rb
+diff -uNr 14_virtual_mem_part2_mmio_remap/tools/translation_table_tool/main.rb 15_virtual_mem_part3_precomputed_tables/tools/translation_table_tool/main.rb
+--- 14_virtual_mem_part2_mmio_remap/tools/translation_table_tool/main.rb
++++ 15_virtual_mem_part3_precomputed_tables/tools/translation_table_tool/main.rb
 @@ -0,0 +1,46 @@
 +#!/usr/bin/env ruby
 +# frozen_string_literal: true

@@ -298,8 +298,8 @@ pub unsafe fn kernel_map_mmio(
 
 This allocator is defined and implemented in the added file `src/memory/mmu/alloc.rs`. Like other
 parts of the mapping code, its implementation makes use of the newly introduced `PageAddress<ATYPE>`
-and `MemoryRegion<ATYPE>` types (in [`src/memory/mmu/types.rs`](src/memory/mmu/types.rs)), but apart
-from that is rather straight forward. Therefore, it won't be covered in details here.
+and `MemoryRegion<ATYPE>` types (in [`src/memory/mmu/types.rs`](kernel/src/memory/mmu/types.rs)),
+but apart from that is rather straight forward. Therefore, it won't be covered in details here.
 
 The more interesting question is: How does the allocator get to learn which VAs it can use?
 
@@ -341,13 +341,14 @@ the VA range.
 There's a couple of changes not covered in this tutorial text, but the reader should ideally skim
 through them:
 
-- [`src/memory.rs`](src/memory.rs) and [`src/memory/mmu/types.rs`](src/memory/mmu/types.rs)
-  introduce a couple of supporting types, like`Address<ATYPE>`, `PageAddress<ATYPE>` and
-  `MemoryRegion<ATYPE>`. It is worth reading their implementations.
-- [`src/memory/mmu/mapping_record.rs`](src/memory/mmu/mapping_record.rs) provides the generic kernel
-  code's way of tracking previous memory mappings for use cases such as reusing existing mappings
-  (in case of drivers that have their MMIO ranges in the same `64 KiB` page) or printing mappings
-  statistics.
+- [`src/memory.rs`](kernel/src/memory.rs) and
+  [`src/memory/mmu/types.rs`](kernel/src/memory/mmu/types.rs) introduce a couple of supporting
+  types, like`Address<ATYPE>`, `PageAddress<ATYPE>` and `MemoryRegion<ATYPE>`. It is worth reading
+  their implementations.
+- [`src/memory/mmu/mapping_record.rs`](kernel/src/memory/mmu/mapping_record.rs) provides the generic
+  kernel code's way of tracking previous memory mappings for use cases such as reusing existing
+  mappings (in case of drivers that have their MMIO ranges in the same `64 KiB` page) or printing
+  mappings statistics.
 
 ## Test it
 
@@ -433,9 +434,9 @@ Minipush 1.0
 ## Diff to previous
 ```diff
 
-diff -uNr 13_exceptions_part2_peripheral_IRQs/Cargo.toml 14_virtual_mem_part2_mmio_remap/Cargo.toml
---- 13_exceptions_part2_peripheral_IRQs/Cargo.toml
-+++ 14_virtual_mem_part2_mmio_remap/Cargo.toml
+diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/Cargo.toml 14_virtual_mem_part2_mmio_remap/kernel/Cargo.toml
+--- 13_exceptions_part2_peripheral_IRQs/kernel/Cargo.toml
++++ 14_virtual_mem_part2_mmio_remap/kernel/Cargo.toml
 @@ -1,6 +1,6 @@
  [package]
  name = "mingo"
@@ -445,9 +446,9 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/Cargo.toml 14_virtual_mem_part2_mm
  edition = "2021"
 
 
-diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu/translation_table.rs 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/memory/mmu/translation_table.rs
---- 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu/translation_table.rs
-+++ 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/memory/mmu/translation_table.rs
+diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/_arch/aarch64/memory/mmu/translation_table.rs 14_virtual_mem_part2_mmio_remap/kernel/src/_arch/aarch64/memory/mmu/translation_table.rs
+--- 13_exceptions_part2_peripheral_IRQs/kernel/src/_arch/aarch64/memory/mmu/translation_table.rs
++++ 14_virtual_mem_part2_mmio_remap/kernel/src/_arch/aarch64/memory/mmu/translation_table.rs
 @@ -14,10 +14,14 @@
  //! crate::memory::mmu::translation_table::arch_translation_table
 
@@ -705,9 +706,9 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu/trans
      use super::*;
      use test_macros::kernel_test;
 
-diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/memory/mmu.rs
---- 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs
-+++ 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/memory/mmu.rs
+diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/_arch/aarch64/memory/mmu.rs 14_virtual_mem_part2_mmio_remap/kernel/src/_arch/aarch64/memory/mmu.rs
+--- 13_exceptions_part2_peripheral_IRQs/kernel/src/_arch/aarch64/memory/mmu.rs
++++ 14_virtual_mem_part2_mmio_remap/kernel/src/_arch/aarch64/memory/mmu.rs
 @@ -15,7 +15,7 @@
 
  use crate::{
@@ -802,9 +803,9 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/memory/mmu.rs 14
 -    }
 -}
 
-diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gicc.rs 14_virtual_mem_part2_mmio_remap/src/bsp/device_driver/arm/gicv2/gicc.rs
---- 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gicc.rs
-+++ 14_virtual_mem_part2_mmio_remap/src/bsp/device_driver/arm/gicv2/gicc.rs
+diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/arm/gicv2/gicc.rs 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/device_driver/arm/gicv2/gicc.rs
+--- 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/arm/gicv2/gicc.rs
++++ 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/device_driver/arm/gicv2/gicc.rs
 @@ -4,7 +4,9 @@
 
  //! GICC Driver - GIC CPU interface.
@@ -891,9 +892,9 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gi
      }
  }
 
-diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gicd.rs 14_virtual_mem_part2_mmio_remap/src/bsp/device_driver/arm/gicv2/gicd.rs
---- 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gicd.rs
-+++ 14_virtual_mem_part2_mmio_remap/src/bsp/device_driver/arm/gicv2/gicd.rs
+diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/arm/gicv2/gicd.rs 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/device_driver/arm/gicv2/gicd.rs
+--- 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/arm/gicv2/gicd.rs
++++ 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/device_driver/arm/gicv2/gicd.rs
 @@ -8,8 +8,9 @@
  //!   - SPI - Shared Peripheral Interrupt.
 
@@ -967,9 +968,9 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gi
              _ => {
                  let enable_reg_index_shared = enable_reg_index - 1;
 
-diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2.rs 14_virtual_mem_part2_mmio_remap/src/bsp/device_driver/arm/gicv2.rs
---- 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2.rs
-+++ 14_virtual_mem_part2_mmio_remap/src/bsp/device_driver/arm/gicv2.rs
+diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/arm/gicv2.rs 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/device_driver/arm/gicv2.rs
+--- 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/arm/gicv2.rs
++++ 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/device_driver/arm/gicv2.rs
 @@ -79,7 +79,8 @@
  mod gicc;
  mod gicd;
@@ -1043,9 +1044,9 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2.rs
              self.gicd.boot_core_init();
          }
 
-diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 14_virtual_mem_part2_mmio_remap/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
---- 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
-+++ 14_virtual_mem_part2_mmio_remap/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
+diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
+--- 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
++++ 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
 @@ -5,9 +5,10 @@
  //! GPIO Driver.
 
@@ -1131,9 +1132,9 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
 +    }
  }
 
-diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs 14_virtual_mem_part2_mmio_remap/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
---- 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
-+++ 14_virtual_mem_part2_mmio_remap/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
+diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
+--- 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
++++ 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
 @@ -7,7 +7,7 @@
  use super::{InterruptController, PendingIRQs, PeripheralIRQ};
  use crate::{
@@ -1218,9 +1219,9 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
      type IRQNumberType = PeripheralIRQ;
 
 
-diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs 14_virtual_mem_part2_mmio_remap/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs
---- 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs
-+++ 14_virtual_mem_part2_mmio_remap/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs
+diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs
+--- 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs
++++ 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs
 @@ -6,7 +6,7 @@
 
  mod peripheral_ic;
@@ -1259,9 +1260,9 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
 
  impl exception::asynchronous::interface::IRQManager for InterruptController {
 
-diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 14_virtual_mem_part2_mmio_remap/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
---- 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-+++ 14_virtual_mem_part2_mmio_remap/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
+diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
+--- 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
++++ 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 @@ -10,10 +10,13 @@
  //! - <https://developer.arm.com/documentation/ddi0183/latest>
 
@@ -1368,9 +1369,9 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_
 
  impl console::interface::Write for PL011Uart {
 
-diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/console.rs 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/console.rs
---- 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/console.rs
-+++ 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/console.rs
+diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/console.rs 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/console.rs
+--- 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/console.rs
++++ 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/console.rs
 @@ -5,7 +5,7 @@
  //! BSP console facilities.
 
@@ -1410,9 +1411,9 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/console.rs 14_
  }
 
 
-diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/driver.rs 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/driver.rs
---- 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/driver.rs
-+++ 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/driver.rs
+diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/driver.rs 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/driver.rs
+--- 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/driver.rs
++++ 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/driver.rs
 @@ -46,7 +46,15 @@
          &self.device_drivers[..]
      }
@@ -1431,9 +1432,9 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/driver.rs 14_v
          super::GPIO.map_pl011_uart();
      }
 
-diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/kernel.ld 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/kernel.ld
---- 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/kernel.ld
-+++ 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/kernel.ld
+diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/kernel.ld 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/kernel.ld
+--- 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/kernel.ld
++++ 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/kernel.ld
 @@ -38,7 +38,7 @@
      ***********************************************************************************************/
      .boot_core_stack (NOLOAD) :
@@ -1469,9 +1470,9 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/kernel.ld 14_v
 +    ASSERT((. & PAGE_MASK) == 0, "MMIO remap reservation is not page aligned")
  }
 
-diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs
---- 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs
-+++ 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs
+diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/memory/mmu.rs 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/memory/mmu.rs
+--- 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/memory/mmu.rs
++++ 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/memory/mmu.rs
 @@ -4,70 +4,163 @@
 
  //! BSP Memory Management Unit.
@@ -1761,9 +1762,9 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory/mmu.rs 
 +    }
  }
 
-diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory.rs
---- 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs
-+++ 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory.rs
+diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/memory.rs 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/memory.rs
+--- 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/memory.rs
++++ 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/memory.rs
 @@ -10,27 +10,59 @@
  //! as the boot core's stack.
  //!
@@ -2005,9 +2006,9 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs 14_v
 +    PageAddress::from(map::END)
  }
 
-diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi.rs 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi.rs
---- 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi.rs
-+++ 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi.rs
+diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi.rs 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi.rs
+--- 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi.rs
++++ 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi.rs
 @@ -10,17 +10,20 @@
  pub mod exception;
  pub mod memory;
@@ -2054,9 +2055,9 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi.rs 14_virtual_
 
  //--------------------------------------------------------------------------------------------------
 
-diff -uNr 13_exceptions_part2_peripheral_IRQs/src/common.rs 14_virtual_mem_part2_mmio_remap/src/common.rs
---- 13_exceptions_part2_peripheral_IRQs/src/common.rs
-+++ 14_virtual_mem_part2_mmio_remap/src/common.rs
+diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/common.rs 14_virtual_mem_part2_mmio_remap/kernel/src/common.rs
+--- 13_exceptions_part2_peripheral_IRQs/kernel/src/common.rs
++++ 14_virtual_mem_part2_mmio_remap/kernel/src/common.rs
 @@ -0,0 +1,29 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -2088,9 +2089,9 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/common.rs 14_virtual_mem_part2
 +    (value + alignment - 1) & !(alignment - 1)
 +}
 
-diff -uNr 13_exceptions_part2_peripheral_IRQs/src/driver.rs 14_virtual_mem_part2_mmio_remap/src/driver.rs
---- 13_exceptions_part2_peripheral_IRQs/src/driver.rs
-+++ 14_virtual_mem_part2_mmio_remap/src/driver.rs
+diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/driver.rs 14_virtual_mem_part2_mmio_remap/kernel/src/driver.rs
+--- 13_exceptions_part2_peripheral_IRQs/kernel/src/driver.rs
++++ 14_virtual_mem_part2_mmio_remap/kernel/src/driver.rs
 @@ -31,6 +31,14 @@
          fn register_and_enable_irq_handler(&'static self) -> Result<(), &'static str> {
              Ok(())
@@ -2132,9 +2133,9 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/driver.rs 14_virtual_mem_part2
      }
  }
 
-diff -uNr 13_exceptions_part2_peripheral_IRQs/src/lib.rs 14_virtual_mem_part2_mmio_remap/src/lib.rs
---- 13_exceptions_part2_peripheral_IRQs/src/lib.rs
-+++ 14_virtual_mem_part2_mmio_remap/src/lib.rs
+diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/lib.rs 14_virtual_mem_part2_mmio_remap/kernel/src/lib.rs
+--- 13_exceptions_part2_peripheral_IRQs/kernel/src/lib.rs
++++ 14_virtual_mem_part2_mmio_remap/kernel/src/lib.rs
 @@ -111,8 +111,10 @@
  #![feature(asm_const)]
  #![feature(core_intrinsics)]
@@ -2163,9 +2164,9 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/lib.rs 14_virtual_mem_part2_mm
 
      test_main();
 
-diff -uNr 13_exceptions_part2_peripheral_IRQs/src/main.rs 14_virtual_mem_part2_mmio_remap/src/main.rs
---- 13_exceptions_part2_peripheral_IRQs/src/main.rs
-+++ 14_virtual_mem_part2_mmio_remap/src/main.rs
+diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/main.rs 14_virtual_mem_part2_mmio_remap/kernel/src/main.rs
+--- 13_exceptions_part2_peripheral_IRQs/kernel/src/main.rs
++++ 14_virtual_mem_part2_mmio_remap/kernel/src/main.rs
 @@ -25,21 +25,41 @@
  #[no_mangle]
  unsafe fn kernel_init() -> ! {
@@ -2226,9 +2227,9 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/main.rs 14_virtual_mem_part2_m
      let (_, privilege_level) = exception::current_privilege_level();
      info!("Current privilege level: {}", privilege_level);
 
-diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/alloc.rs 14_virtual_mem_part2_mmio_remap/src/memory/mmu/alloc.rs
---- 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/alloc.rs
-+++ 14_virtual_mem_part2_mmio_remap/src/memory/mmu/alloc.rs
+diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/memory/mmu/alloc.rs 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu/alloc.rs
+--- 13_exceptions_part2_peripheral_IRQs/kernel/src/memory/mmu/alloc.rs
++++ 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu/alloc.rs
 @@ -0,0 +1,70 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -2301,9 +2302,9 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/alloc.rs 14_virtual
 +    }
 +}
 
-diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/mapping_record.rs 14_virtual_mem_part2_mmio_remap/src/memory/mmu/mapping_record.rs
---- 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/mapping_record.rs
-+++ 14_virtual_mem_part2_mmio_remap/src/memory/mmu/mapping_record.rs
+diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/memory/mmu/mapping_record.rs 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu/mapping_record.rs
+--- 13_exceptions_part2_peripheral_IRQs/kernel/src/memory/mmu/mapping_record.rs
++++ 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu/mapping_record.rs
 @@ -0,0 +1,233 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -2539,9 +2540,9 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/mapping_record.rs 1
 +    KERNEL_MAPPING_RECORD.read(|mr| mr.print());
 +}
 
-diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/translation_table.rs 14_virtual_mem_part2_mmio_remap/src/memory/mmu/translation_table.rs
---- 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/translation_table.rs
-+++ 14_virtual_mem_part2_mmio_remap/src/memory/mmu/translation_table.rs
+diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/memory/mmu/translation_table.rs 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu/translation_table.rs
+--- 13_exceptions_part2_peripheral_IRQs/kernel/src/memory/mmu/translation_table.rs
++++ 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu/translation_table.rs
 @@ -8,7 +8,91 @@
  #[path = "../../_arch/aarch64/memory/mmu/translation_table.rs"]
  mod arch_translation_table;
@@ -2636,9 +2637,9 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/translation_table.r
 +    }
 +}
 
-diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/types.rs 14_virtual_mem_part2_mmio_remap/src/memory/mmu/types.rs
---- 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/types.rs
-+++ 14_virtual_mem_part2_mmio_remap/src/memory/mmu/types.rs
+diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/memory/mmu/types.rs 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu/types.rs
+--- 13_exceptions_part2_peripheral_IRQs/kernel/src/memory/mmu/types.rs
++++ 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu/types.rs
 @@ -0,0 +1,373 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -3014,9 +3015,9 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu/types.rs 14_virtual
 +    }
 +}
 
-diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu.rs 14_virtual_mem_part2_mmio_remap/src/memory/mmu.rs
---- 13_exceptions_part2_peripheral_IRQs/src/memory/mmu.rs
-+++ 14_virtual_mem_part2_mmio_remap/src/memory/mmu.rs
+diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/memory/mmu.rs 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu.rs
+--- 13_exceptions_part2_peripheral_IRQs/kernel/src/memory/mmu.rs
++++ 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu.rs
 @@ -3,29 +3,24 @@
  // Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
 
@@ -3424,9 +3425,9 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory/mmu.rs 14_virtual_mem_p
      }
  }
 
-diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory.rs 14_virtual_mem_part2_mmio_remap/src/memory.rs
---- 13_exceptions_part2_peripheral_IRQs/src/memory.rs
-+++ 14_virtual_mem_part2_mmio_remap/src/memory.rs
+diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/memory.rs 14_virtual_mem_part2_mmio_remap/kernel/src/memory.rs
+--- 13_exceptions_part2_peripheral_IRQs/kernel/src/memory.rs
++++ 14_virtual_mem_part2_mmio_remap/kernel/src/memory.rs
 @@ -5,3 +5,163 @@
  //! Memory Management.
 
@@ -3592,9 +3593,9 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/memory.rs 14_virtual_mem_part2
 +    }
 +}
 
-diff -uNr 13_exceptions_part2_peripheral_IRQs/tests/02_exception_sync_page_fault.rs 14_virtual_mem_part2_mmio_remap/tests/02_exception_sync_page_fault.rs
---- 13_exceptions_part2_peripheral_IRQs/tests/02_exception_sync_page_fault.rs
-+++ 14_virtual_mem_part2_mmio_remap/tests/02_exception_sync_page_fault.rs
+diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/tests/02_exception_sync_page_fault.rs 14_virtual_mem_part2_mmio_remap/kernel/tests/02_exception_sync_page_fault.rs
+--- 13_exceptions_part2_peripheral_IRQs/kernel/tests/02_exception_sync_page_fault.rs
++++ 14_virtual_mem_part2_mmio_remap/kernel/tests/02_exception_sync_page_fault.rs
 @@ -21,18 +21,40 @@
 
  #[no_mangle]
@@ -3641,9 +3642,9 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/tests/02_exception_sync_page_fault
      info!("Writing beyond mapped area to address 9 GiB...");
      let big_addr: u64 = 9 * 1024 * 1024 * 1024;
 
-diff -uNr 13_exceptions_part2_peripheral_IRQs/tests/03_exception_restore_sanity.rs 14_virtual_mem_part2_mmio_remap/tests/03_exception_restore_sanity.rs
---- 13_exceptions_part2_peripheral_IRQs/tests/03_exception_restore_sanity.rs
-+++ 14_virtual_mem_part2_mmio_remap/tests/03_exception_restore_sanity.rs
+diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/tests/03_exception_restore_sanity.rs 14_virtual_mem_part2_mmio_remap/kernel/tests/03_exception_restore_sanity.rs
+--- 13_exceptions_part2_peripheral_IRQs/kernel/tests/03_exception_restore_sanity.rs
++++ 14_virtual_mem_part2_mmio_remap/kernel/tests/03_exception_restore_sanity.rs
 @@ -30,18 +30,40 @@
 
  #[no_mangle]

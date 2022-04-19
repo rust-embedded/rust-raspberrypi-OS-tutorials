@@ -489,7 +489,7 @@ sequences might be needed.
 Since nothing complex is happening in the implementation, it is not covered in detail here. Please
 refer to [the source of the **peripheral** controller] to check it out.
 
-[the source of the **peripheral** controller]: src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
+[the source of the **peripheral** controller]: kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
 
 ##### The IRQ Handler Table
 
@@ -639,7 +639,7 @@ As with the implementation of the BCM interrupt controller driver, we won't cove
 parts in exhaustive detail. For that, please refer to [this folder] folder which contains all the
 sources.
 
-[this folder]: src/bsp/device_driver/arm
+[this folder]: kernel/src/bsp/device_driver/arm
 
 ## Test it
 
@@ -746,9 +746,9 @@ Minipush 1.0
 ## Diff to previous
 ```diff
 
-diff -uNr 12_integrated_testing/Cargo.toml 13_exceptions_part2_peripheral_IRQs/Cargo.toml
---- 12_integrated_testing/Cargo.toml
-+++ 13_exceptions_part2_peripheral_IRQs/Cargo.toml
+diff -uNr 12_integrated_testing/kernel/Cargo.toml 13_exceptions_part2_peripheral_IRQs/kernel/Cargo.toml
+--- 12_integrated_testing/kernel/Cargo.toml
++++ 13_exceptions_part2_peripheral_IRQs/kernel/Cargo.toml
 @@ -1,6 +1,6 @@
  [package]
  name = "mingo"
@@ -758,9 +758,9 @@ diff -uNr 12_integrated_testing/Cargo.toml 13_exceptions_part2_peripheral_IRQs/C
  edition = "2021"
 
 
-diff -uNr 12_integrated_testing/src/_arch/aarch64/cpu/smp.rs 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/cpu/smp.rs
---- 12_integrated_testing/src/_arch/aarch64/cpu/smp.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/cpu/smp.rs
+diff -uNr 12_integrated_testing/kernel/src/_arch/aarch64/cpu/smp.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/_arch/aarch64/cpu/smp.rs
+--- 12_integrated_testing/kernel/src/_arch/aarch64/cpu/smp.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/_arch/aarch64/cpu/smp.rs
 @@ -0,0 +1,30 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -793,9 +793,9 @@ diff -uNr 12_integrated_testing/src/_arch/aarch64/cpu/smp.rs 13_exceptions_part2
 +    T::from((MPIDR_EL1.get() & CORE_MASK) as u8)
 +}
 
-diff -uNr 12_integrated_testing/src/_arch/aarch64/exception/asynchronous.rs 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/exception/asynchronous.rs
---- 12_integrated_testing/src/_arch/aarch64/exception/asynchronous.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/exception/asynchronous.rs
+diff -uNr 12_integrated_testing/kernel/src/_arch/aarch64/exception/asynchronous.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/_arch/aarch64/exception/asynchronous.rs
+--- 12_integrated_testing/kernel/src/_arch/aarch64/exception/asynchronous.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/_arch/aarch64/exception/asynchronous.rs
 @@ -11,13 +11,18 @@
  //!
  //! crate::exception::asynchronous::arch_asynchronous
@@ -889,9 +889,9 @@ diff -uNr 12_integrated_testing/src/_arch/aarch64/exception/asynchronous.rs 13_e
  #[rustfmt::skip]
  pub fn print_state() {
 
-diff -uNr 12_integrated_testing/src/_arch/aarch64/exception.rs 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/exception.rs
---- 12_integrated_testing/src/_arch/aarch64/exception.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/exception.rs
+diff -uNr 12_integrated_testing/kernel/src/_arch/aarch64/exception.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/_arch/aarch64/exception.rs
+--- 12_integrated_testing/kernel/src/_arch/aarch64/exception.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/_arch/aarch64/exception.rs
 @@ -11,6 +11,7 @@
  //!
  //! crate::exception::arch_exception
@@ -915,9 +915,9 @@ diff -uNr 12_integrated_testing/src/_arch/aarch64/exception.rs 13_exceptions_par
 
  #[no_mangle]
 
-diff -uNr 12_integrated_testing/src/bsp/device_driver/arm/gicv2/gicc.rs 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gicc.rs
---- 12_integrated_testing/src/bsp/device_driver/arm/gicv2/gicc.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gicc.rs
+diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/arm/gicv2/gicc.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/arm/gicv2/gicc.rs
+--- 12_integrated_testing/kernel/src/bsp/device_driver/arm/gicv2/gicc.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/arm/gicv2/gicc.rs
 @@ -0,0 +1,141 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -1061,9 +1061,9 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/arm/gicv2/gicc.rs 13_excep
 +    }
 +}
 
-diff -uNr 12_integrated_testing/src/bsp/device_driver/arm/gicv2/gicd.rs 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gicd.rs
---- 12_integrated_testing/src/bsp/device_driver/arm/gicv2/gicd.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gicd.rs
+diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/arm/gicv2/gicd.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/arm/gicv2/gicd.rs
+--- 12_integrated_testing/kernel/src/bsp/device_driver/arm/gicv2/gicd.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/arm/gicv2/gicd.rs
 @@ -0,0 +1,199 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -1265,9 +1265,9 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/arm/gicv2/gicd.rs 13_excep
 +    }
 +}
 
-diff -uNr 12_integrated_testing/src/bsp/device_driver/arm/gicv2.rs 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2.rs
---- 12_integrated_testing/src/bsp/device_driver/arm/gicv2.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2.rs
+diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/arm/gicv2.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/arm/gicv2.rs
+--- 12_integrated_testing/kernel/src/bsp/device_driver/arm/gicv2.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/arm/gicv2.rs
 @@ -0,0 +1,219 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -1489,9 +1489,9 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/arm/gicv2.rs 13_exceptions
 +    }
 +}
 
-diff -uNr 12_integrated_testing/src/bsp/device_driver/arm.rs 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm.rs
---- 12_integrated_testing/src/bsp/device_driver/arm.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm.rs
+diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/arm.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/arm.rs
+--- 12_integrated_testing/kernel/src/bsp/device_driver/arm.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/arm.rs
 @@ -0,0 +1,9 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -1503,9 +1503,9 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/arm.rs 13_exceptions_part2
 +
 +pub use gicv2::*;
 
-diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
---- 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
+diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
+--- 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
 @@ -6,7 +6,7 @@
 
  use crate::{
@@ -1534,9 +1534,9 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 13_exc
      }
 
 
-diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
---- 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
+diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
+--- 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
 @@ -0,0 +1,167 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -1706,9 +1706,9 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 +    }
 +}
 
-diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs
---- 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs
+diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs
+--- 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs
 @@ -0,0 +1,131 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -1842,9 +1842,9 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 +    }
 +}
 
-diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
---- 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
+diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
+--- 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 @@ -10,8 +10,8 @@
  //! - <https://developer.arm.com/documentation/ddi0183/latest>
 
@@ -2010,9 +2010,9 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
 +    }
 +}
 
-diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm.rs 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm.rs
---- 12_integrated_testing/src/bsp/device_driver/bcm.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm.rs
+diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/bcm.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm.rs
+--- 12_integrated_testing/kernel/src/bsp/device_driver/bcm.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm.rs
 @@ -5,7 +5,11 @@
  //! BCM driver top level.
 
@@ -2026,9 +2026,9 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm.rs 13_exceptions_part2
 +pub use bcm2xxx_interrupt_controller::*;
  pub use bcm2xxx_pl011_uart::*;
 
-diff -uNr 12_integrated_testing/src/bsp/device_driver.rs 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver.rs
---- 12_integrated_testing/src/bsp/device_driver.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver.rs
+diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver.rs
+--- 12_integrated_testing/kernel/src/bsp/device_driver.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver.rs
 @@ -4,9 +4,13 @@
 
  //! Device driver.
@@ -2044,9 +2044,9 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver.rs 13_exceptions_part2_per
  #[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
  pub use bcm::*;
 
-diff -uNr 12_integrated_testing/src/bsp/raspberrypi/driver.rs 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/driver.rs
---- 12_integrated_testing/src/bsp/raspberrypi/driver.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/driver.rs
+diff -uNr 12_integrated_testing/kernel/src/bsp/raspberrypi/driver.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/driver.rs
+--- 12_integrated_testing/kernel/src/bsp/raspberrypi/driver.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/driver.rs
 @@ -12,7 +12,7 @@
 
  /// Device Driver Manager type.
@@ -2070,9 +2070,9 @@ diff -uNr 12_integrated_testing/src/bsp/raspberrypi/driver.rs 13_exceptions_part
 
  //--------------------------------------------------------------------------------------------------
 
-diff -uNr 12_integrated_testing/src/bsp/raspberrypi/exception/asynchronous.rs 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/exception/asynchronous.rs
---- 12_integrated_testing/src/bsp/raspberrypi/exception/asynchronous.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/exception/asynchronous.rs
+diff -uNr 12_integrated_testing/kernel/src/bsp/raspberrypi/exception/asynchronous.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/exception/asynchronous.rs
+--- 12_integrated_testing/kernel/src/bsp/raspberrypi/exception/asynchronous.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/exception/asynchronous.rs
 @@ -0,0 +1,36 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -2111,9 +2111,9 @@ diff -uNr 12_integrated_testing/src/bsp/raspberrypi/exception/asynchronous.rs 13
 +    &super::super::INTERRUPT_CONTROLLER
 +}
 
-diff -uNr 12_integrated_testing/src/bsp/raspberrypi/exception.rs 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/exception.rs
---- 12_integrated_testing/src/bsp/raspberrypi/exception.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/exception.rs
+diff -uNr 12_integrated_testing/kernel/src/bsp/raspberrypi/exception.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/exception.rs
+--- 12_integrated_testing/kernel/src/bsp/raspberrypi/exception.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/exception.rs
 @@ -0,0 +1,7 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -2123,9 +2123,9 @@ diff -uNr 12_integrated_testing/src/bsp/raspberrypi/exception.rs 13_exceptions_p
 +
 +pub mod asynchronous;
 
-diff -uNr 12_integrated_testing/src/bsp/raspberrypi/memory.rs 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs
---- 12_integrated_testing/src/bsp/raspberrypi/memory.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs
+diff -uNr 12_integrated_testing/kernel/src/bsp/raspberrypi/memory.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/memory.rs
+--- 12_integrated_testing/kernel/src/bsp/raspberrypi/memory.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/memory.rs
 @@ -73,10 +73,12 @@
      pub mod mmio {
          use super::*;
@@ -2153,9 +2153,9 @@ diff -uNr 12_integrated_testing/src/bsp/raspberrypi/memory.rs 13_exceptions_part
      }
  }
 
-diff -uNr 12_integrated_testing/src/bsp/raspberrypi.rs 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi.rs
---- 12_integrated_testing/src/bsp/raspberrypi.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi.rs
+diff -uNr 12_integrated_testing/kernel/src/bsp/raspberrypi.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi.rs
+--- 12_integrated_testing/kernel/src/bsp/raspberrypi.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi.rs
 @@ -7,6 +7,7 @@
  pub mod console;
  pub mod cpu;
@@ -2193,9 +2193,9 @@ diff -uNr 12_integrated_testing/src/bsp/raspberrypi.rs 13_exceptions_part2_perip
  //--------------------------------------------------------------------------------------------------
  // Public Code
 
-diff -uNr 12_integrated_testing/src/cpu/smp.rs 13_exceptions_part2_peripheral_IRQs/src/cpu/smp.rs
---- 12_integrated_testing/src/cpu/smp.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/cpu/smp.rs
+diff -uNr 12_integrated_testing/kernel/src/cpu/smp.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/cpu/smp.rs
+--- 12_integrated_testing/kernel/src/cpu/smp.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/cpu/smp.rs
 @@ -0,0 +1,14 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -2212,9 +2212,9 @@ diff -uNr 12_integrated_testing/src/cpu/smp.rs 13_exceptions_part2_peripheral_IR
 +//--------------------------------------------------------------------------------------------------
 +pub use arch_smp::core_id;
 
-diff -uNr 12_integrated_testing/src/cpu.rs 13_exceptions_part2_peripheral_IRQs/src/cpu.rs
---- 12_integrated_testing/src/cpu.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/cpu.rs
+diff -uNr 12_integrated_testing/kernel/src/cpu.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/cpu.rs
+--- 12_integrated_testing/kernel/src/cpu.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/cpu.rs
 @@ -10,6 +10,8 @@
 
  mod boot;
@@ -2225,9 +2225,9 @@ diff -uNr 12_integrated_testing/src/cpu.rs 13_exceptions_part2_peripheral_IRQs/s
  // Architectural Public Reexports
  //--------------------------------------------------------------------------------------------------
 
-diff -uNr 12_integrated_testing/src/driver.rs 13_exceptions_part2_peripheral_IRQs/src/driver.rs
---- 12_integrated_testing/src/driver.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/driver.rs
+diff -uNr 12_integrated_testing/kernel/src/driver.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/driver.rs
+--- 12_integrated_testing/kernel/src/driver.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/driver.rs
 @@ -23,6 +23,14 @@
          unsafe fn init(&self) -> Result<(), &'static str> {
              Ok(())
@@ -2244,9 +2244,9 @@ diff -uNr 12_integrated_testing/src/driver.rs 13_exceptions_part2_peripheral_IRQ
 
      /// Device driver management functions.
 
-diff -uNr 12_integrated_testing/src/exception/asynchronous.rs 13_exceptions_part2_peripheral_IRQs/src/exception/asynchronous.rs
---- 12_integrated_testing/src/exception/asynchronous.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/exception/asynchronous.rs
+diff -uNr 12_integrated_testing/kernel/src/exception/asynchronous.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/exception/asynchronous.rs
+--- 12_integrated_testing/kernel/src/exception/asynchronous.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/exception/asynchronous.rs
 @@ -8,7 +8,145 @@
  #[path = "../_arch/aarch64/exception/asynchronous.rs"]
  mod arch_asynchronous;
@@ -2395,9 +2395,9 @@ diff -uNr 12_integrated_testing/src/exception/asynchronous.rs 13_exceptions_part
 +    ret
 +}
 
-diff -uNr 12_integrated_testing/src/lib.rs 13_exceptions_part2_peripheral_IRQs/src/lib.rs
---- 12_integrated_testing/src/lib.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/lib.rs
+diff -uNr 12_integrated_testing/kernel/src/lib.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/lib.rs
+--- 12_integrated_testing/kernel/src/lib.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/lib.rs
 @@ -108,6 +108,7 @@
 
  #![allow(clippy::upper_case_acronyms)]
@@ -2415,9 +2415,9 @@ diff -uNr 12_integrated_testing/src/lib.rs 13_exceptions_part2_peripheral_IRQs/s
 
  //--------------------------------------------------------------------------------------------------
 
-diff -uNr 12_integrated_testing/src/main.rs 13_exceptions_part2_peripheral_IRQs/src/main.rs
---- 12_integrated_testing/src/main.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/main.rs
+diff -uNr 12_integrated_testing/kernel/src/main.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/main.rs
+--- 12_integrated_testing/kernel/src/main.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/main.rs
 @@ -11,7 +11,7 @@
  #![no_main]
  #![no_std]
@@ -2484,9 +2484,9 @@ diff -uNr 12_integrated_testing/src/main.rs 13_exceptions_part2_peripheral_IRQs/
 +    cpu::wait_forever();
  }
 
-diff -uNr 12_integrated_testing/src/panic_wait.rs 13_exceptions_part2_peripheral_IRQs/src/panic_wait.rs
---- 12_integrated_testing/src/panic_wait.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/panic_wait.rs
+diff -uNr 12_integrated_testing/kernel/src/panic_wait.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/panic_wait.rs
+--- 12_integrated_testing/kernel/src/panic_wait.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/panic_wait.rs
 @@ -4,7 +4,7 @@
 
  //! A panic handler that infinitely waits.
@@ -2506,9 +2506,9 @@ diff -uNr 12_integrated_testing/src/panic_wait.rs 13_exceptions_part2_peripheral
      panic_prevent_reenter();
 
 
-diff -uNr 12_integrated_testing/src/state.rs 13_exceptions_part2_peripheral_IRQs/src/state.rs
---- 12_integrated_testing/src/state.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/state.rs
+diff -uNr 12_integrated_testing/kernel/src/state.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/state.rs
+--- 12_integrated_testing/kernel/src/state.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/state.rs
 @@ -0,0 +1,92 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
@@ -2603,9 +2603,9 @@ diff -uNr 12_integrated_testing/src/state.rs 13_exceptions_part2_peripheral_IRQs
 +    }
 +}
 
-diff -uNr 12_integrated_testing/src/synchronization.rs 13_exceptions_part2_peripheral_IRQs/src/synchronization.rs
---- 12_integrated_testing/src/synchronization.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/synchronization.rs
+diff -uNr 12_integrated_testing/kernel/src/synchronization.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/synchronization.rs
+--- 12_integrated_testing/kernel/src/synchronization.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/synchronization.rs
 @@ -28,6 +28,21 @@
          /// Locks the mutex and grants the closure temporary mutable access to the wrapped data.
          fn lock<R>(&self, f: impl FnOnce(&mut Self::Data) -> R) -> R;
@@ -2738,9 +2738,9 @@ diff -uNr 12_integrated_testing/src/synchronization.rs 13_exceptions_part2_perip
 +    }
  }
 
-diff -uNr 12_integrated_testing/tests/04_exception_irq_sanity.rs 13_exceptions_part2_peripheral_IRQs/tests/04_exception_irq_sanity.rs
---- 12_integrated_testing/tests/04_exception_irq_sanity.rs
-+++ 13_exceptions_part2_peripheral_IRQs/tests/04_exception_irq_sanity.rs
+diff -uNr 12_integrated_testing/kernel/tests/04_exception_irq_sanity.rs 13_exceptions_part2_peripheral_IRQs/kernel/tests/04_exception_irq_sanity.rs
+--- 12_integrated_testing/kernel/tests/04_exception_irq_sanity.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/tests/04_exception_irq_sanity.rs
 @@ -0,0 +1,66 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//

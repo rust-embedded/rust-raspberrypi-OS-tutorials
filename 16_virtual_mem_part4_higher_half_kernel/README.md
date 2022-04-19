@@ -78,8 +78,8 @@ type KernelTranslationTable =
 
 ### Linking Changes
 
-In the `link.ld` linker script, we define a new symbol `__kernel_virt_start_addr` now, which is the
-start address of the kernel's virtual address space, calculated as `(u64::MAX -
+In the `kernel.ld` linker script, we define a new symbol `__kernel_virt_start_addr` now, which is
+the start address of the kernel's virtual address space, calculated as `(u64::MAX -
 __kernel_virt_addr_space_size) + 1`. Before the first section definition, we set the linker script's
 location counter to this address:
 
@@ -325,9 +325,9 @@ Minipush 1.0
 ## Diff to previous
 ```diff
 
-diff -uNr 15_virtual_mem_part3_precomputed_tables/Cargo.toml 16_virtual_mem_part4_higher_half_kernel/Cargo.toml
---- 15_virtual_mem_part3_precomputed_tables/Cargo.toml
-+++ 16_virtual_mem_part4_higher_half_kernel/Cargo.toml
+diff -uNr 15_virtual_mem_part3_precomputed_tables/kernel/Cargo.toml 16_virtual_mem_part4_higher_half_kernel/kernel/Cargo.toml
+--- 15_virtual_mem_part3_precomputed_tables/kernel/Cargo.toml
++++ 16_virtual_mem_part4_higher_half_kernel/kernel/Cargo.toml
 @@ -1,6 +1,6 @@
  [package]
  name = "mingo"
@@ -337,9 +337,9 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/Cargo.toml 16_virtual_mem_part
  edition = "2021"
 
 
-diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.rs 16_virtual_mem_part4_higher_half_kernel/src/_arch/aarch64/cpu/boot.rs
---- 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.rs
-+++ 16_virtual_mem_part4_higher_half_kernel/src/_arch/aarch64/cpu/boot.rs
+diff -uNr 15_virtual_mem_part3_precomputed_tables/kernel/src/_arch/aarch64/cpu/boot.rs 16_virtual_mem_part4_higher_half_kernel/kernel/src/_arch/aarch64/cpu/boot.rs
+--- 15_virtual_mem_part3_precomputed_tables/kernel/src/_arch/aarch64/cpu/boot.rs
++++ 16_virtual_mem_part4_higher_half_kernel/kernel/src/_arch/aarch64/cpu/boot.rs
 @@ -30,7 +30,10 @@
  /// - The `bss` section is not initialized yet. The code must not use or reference it in any way.
  /// - The HW state of EL1 must be prepared in a sound way.
@@ -390,9 +390,9 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.rs 
      asm::eret()
  }
 
-diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.s 16_virtual_mem_part4_higher_half_kernel/src/_arch/aarch64/cpu/boot.s
---- 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.s
-+++ 16_virtual_mem_part4_higher_half_kernel/src/_arch/aarch64/cpu/boot.s
+diff -uNr 15_virtual_mem_part3_precomputed_tables/kernel/src/_arch/aarch64/cpu/boot.s 16_virtual_mem_part4_higher_half_kernel/kernel/src/_arch/aarch64/cpu/boot.s
+--- 15_virtual_mem_part3_precomputed_tables/kernel/src/_arch/aarch64/cpu/boot.s
++++ 16_virtual_mem_part4_higher_half_kernel/kernel/src/_arch/aarch64/cpu/boot.s
 @@ -18,6 +18,18 @@
  	add	\register, \register, #:lo12:\symbol
  .endm
@@ -441,9 +441,9 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.s 1
 
  	// Infinitely wait for events (aka "park the core").
 
-diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu/translation_table.rs 16_virtual_mem_part4_higher_half_kernel/src/_arch/aarch64/memory/mmu/translation_table.rs
---- 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu/translation_table.rs
-+++ 16_virtual_mem_part4_higher_half_kernel/src/_arch/aarch64/memory/mmu/translation_table.rs
+diff -uNr 15_virtual_mem_part3_precomputed_tables/kernel/src/_arch/aarch64/memory/mmu/translation_table.rs 16_virtual_mem_part4_higher_half_kernel/kernel/src/_arch/aarch64/memory/mmu/translation_table.rs
+--- 15_virtual_mem_part3_precomputed_tables/kernel/src/_arch/aarch64/memory/mmu/translation_table.rs
++++ 16_virtual_mem_part4_higher_half_kernel/kernel/src/_arch/aarch64/memory/mmu/translation_table.rs
 @@ -136,7 +136,7 @@
  /// aligned, so the lvl3 is put first.
  #[repr(C)]
@@ -515,9 +515,9 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu/t
  #[cfg(test)]
  mod tests {
 
-diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu.rs 16_virtual_mem_part4_higher_half_kernel/src/_arch/aarch64/memory/mmu.rs
---- 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu.rs
-+++ 16_virtual_mem_part4_higher_half_kernel/src/_arch/aarch64/memory/mmu.rs
+diff -uNr 15_virtual_mem_part3_precomputed_tables/kernel/src/_arch/aarch64/memory/mmu.rs 16_virtual_mem_part4_higher_half_kernel/kernel/src/_arch/aarch64/memory/mmu.rs
+--- 15_virtual_mem_part3_precomputed_tables/kernel/src/_arch/aarch64/memory/mmu.rs
++++ 16_virtual_mem_part4_higher_half_kernel/kernel/src/_arch/aarch64/memory/mmu.rs
 @@ -66,6 +66,7 @@
 
  impl MemoryManagementUnit {
@@ -568,9 +568,9 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu.r
          self.configure_translation_control();
 
 
-diff -uNr 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/console.rs 16_virtual_mem_part4_higher_half_kernel/src/bsp/raspberrypi/console.rs
---- 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/console.rs
-+++ 16_virtual_mem_part4_higher_half_kernel/src/bsp/raspberrypi/console.rs
+diff -uNr 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/console.rs 16_virtual_mem_part4_higher_half_kernel/kernel/src/bsp/raspberrypi/console.rs
+--- 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/console.rs
++++ 16_virtual_mem_part4_higher_half_kernel/kernel/src/bsp/raspberrypi/console.rs
 @@ -4,7 +4,6 @@
 
  //! BSP console facilities.
@@ -638,9 +638,9 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/console.rs
 
      panic_uart
 
-diff -uNr 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/kernel.ld 16_virtual_mem_part4_higher_half_kernel/src/bsp/raspberrypi/kernel.ld
---- 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/kernel.ld
-+++ 16_virtual_mem_part4_higher_half_kernel/src/bsp/raspberrypi/kernel.ld
+diff -uNr 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/kernel.ld 16_virtual_mem_part4_higher_half_kernel/kernel/src/bsp/raspberrypi/kernel.ld
+--- 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/kernel.ld
++++ 16_virtual_mem_part4_higher_half_kernel/kernel/src/bsp/raspberrypi/kernel.ld
 @@ -8,6 +8,13 @@
  PAGE_SIZE = 64K;
  PAGE_MASK = PAGE_SIZE - 1;
@@ -719,9 +719,9 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/kernel.ld 
 +    ASSERT((. & PAGE_MASK) == 0, "End of boot core stack is not page aligned")
  }
 
-diff -uNr 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/memory/mmu.rs 16_virtual_mem_part4_higher_half_kernel/src/bsp/raspberrypi/memory/mmu.rs
---- 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/memory/mmu.rs
-+++ 16_virtual_mem_part4_higher_half_kernel/src/bsp/raspberrypi/memory/mmu.rs
+diff -uNr 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/memory/mmu.rs 16_virtual_mem_part4_higher_half_kernel/kernel/src/bsp/raspberrypi/memory/mmu.rs
+--- 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/memory/mmu.rs
++++ 16_virtual_mem_part4_higher_half_kernel/kernel/src/bsp/raspberrypi/memory/mmu.rs
 @@ -20,7 +20,7 @@
  //--------------------------------------------------------------------------------------------------
 
@@ -760,9 +760,9 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/memory/mmu
 +    );
  }
 
-diff -uNr 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/memory.rs 16_virtual_mem_part4_higher_half_kernel/src/bsp/raspberrypi/memory.rs
---- 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/memory.rs
-+++ 16_virtual_mem_part4_higher_half_kernel/src/bsp/raspberrypi/memory.rs
+diff -uNr 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/memory.rs 16_virtual_mem_part4_higher_half_kernel/kernel/src/bsp/raspberrypi/memory.rs
+--- 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/memory.rs
++++ 16_virtual_mem_part4_higher_half_kernel/kernel/src/bsp/raspberrypi/memory.rs
 @@ -37,13 +37,7 @@
  //! The virtual memory layout is as follows:
  //!
@@ -796,9 +796,9 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/memory.rs 
  pub mod mmu;
 
 
-diff -uNr 15_virtual_mem_part3_precomputed_tables/src/lib.rs 16_virtual_mem_part4_higher_half_kernel/src/lib.rs
---- 15_virtual_mem_part3_precomputed_tables/src/lib.rs
-+++ 16_virtual_mem_part4_higher_half_kernel/src/lib.rs
+diff -uNr 15_virtual_mem_part3_precomputed_tables/kernel/src/lib.rs 16_virtual_mem_part4_higher_half_kernel/kernel/src/lib.rs
+--- 15_virtual_mem_part3_precomputed_tables/kernel/src/lib.rs
++++ 16_virtual_mem_part4_higher_half_kernel/kernel/src/lib.rs
 @@ -150,11 +150,6 @@
      )
  }
@@ -812,9 +812,9 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/lib.rs 16_virtual_mem_part
  // Testing
  //--------------------------------------------------------------------------------------------------
 
-diff -uNr 15_virtual_mem_part3_precomputed_tables/src/memory/mmu/translation_table.rs 16_virtual_mem_part4_higher_half_kernel/src/memory/mmu/translation_table.rs
---- 15_virtual_mem_part3_precomputed_tables/src/memory/mmu/translation_table.rs
-+++ 16_virtual_mem_part4_higher_half_kernel/src/memory/mmu/translation_table.rs
+diff -uNr 15_virtual_mem_part3_precomputed_tables/kernel/src/memory/mmu/translation_table.rs 16_virtual_mem_part4_higher_half_kernel/kernel/src/memory/mmu/translation_table.rs
+--- 15_virtual_mem_part3_precomputed_tables/kernel/src/memory/mmu/translation_table.rs
++++ 16_virtual_mem_part4_higher_half_kernel/kernel/src/memory/mmu/translation_table.rs
 @@ -99,9 +99,9 @@
 
          assert!(tables.init().is_ok());
@@ -838,9 +838,9 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/memory/mmu/translation_tab
          );
 
 
-diff -uNr 15_virtual_mem_part3_precomputed_tables/src/memory/mmu/types.rs 16_virtual_mem_part4_higher_half_kernel/src/memory/mmu/types.rs
---- 15_virtual_mem_part3_precomputed_tables/src/memory/mmu/types.rs
-+++ 16_virtual_mem_part4_higher_half_kernel/src/memory/mmu/types.rs
+diff -uNr 15_virtual_mem_part3_precomputed_tables/kernel/src/memory/mmu/types.rs 16_virtual_mem_part4_higher_half_kernel/kernel/src/memory/mmu/types.rs
+--- 15_virtual_mem_part3_precomputed_tables/kernel/src/memory/mmu/types.rs
++++ 16_virtual_mem_part4_higher_half_kernel/kernel/src/memory/mmu/types.rs
 @@ -67,6 +67,11 @@
  // PageAddress
  //------------------------------------------------------------------------------
@@ -854,9 +854,9 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/memory/mmu/types.rs 16_vir
      pub fn into_inner(self) -> Address<ATYPE> {
          self.inner
 
-diff -uNr 15_virtual_mem_part3_precomputed_tables/src/memory/mmu.rs 16_virtual_mem_part4_higher_half_kernel/src/memory/mmu.rs
---- 15_virtual_mem_part3_precomputed_tables/src/memory/mmu.rs
-+++ 16_virtual_mem_part4_higher_half_kernel/src/memory/mmu.rs
+diff -uNr 15_virtual_mem_part3_precomputed_tables/kernel/src/memory/mmu.rs 16_virtual_mem_part4_higher_half_kernel/kernel/src/memory/mmu.rs
+--- 15_virtual_mem_part3_precomputed_tables/kernel/src/memory/mmu.rs
++++ 16_virtual_mem_part4_higher_half_kernel/kernel/src/memory/mmu.rs
 @@ -66,6 +66,11 @@
  pub trait AssociatedTranslationTable {
      /// A translation table whose address range is:
@@ -870,9 +870,9 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/memory/mmu.rs 16_virtual_m
      type TableStartFromBottom;
  }
 
-diff -uNr 15_virtual_mem_part3_precomputed_tables/tests/02_exception_sync_page_fault.rs 16_virtual_mem_part4_higher_half_kernel/tests/02_exception_sync_page_fault.rs
---- 15_virtual_mem_part3_precomputed_tables/tests/02_exception_sync_page_fault.rs
-+++ 16_virtual_mem_part4_higher_half_kernel/tests/02_exception_sync_page_fault.rs
+diff -uNr 15_virtual_mem_part3_precomputed_tables/kernel/tests/02_exception_sync_page_fault.rs 16_virtual_mem_part4_higher_half_kernel/kernel/tests/02_exception_sync_page_fault.rs
+--- 15_virtual_mem_part3_precomputed_tables/kernel/tests/02_exception_sync_page_fault.rs
++++ 16_virtual_mem_part4_higher_half_kernel/kernel/tests/02_exception_sync_page_fault.rs
 @@ -28,8 +28,8 @@
      // This line will be printed as the test header.
      println!("Testing synchronous exception handling by causing a page fault");
@@ -885,9 +885,9 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/tests/02_exception_sync_page_f
 
      // If execution reaches here, the memory access above did not cause a page fault exception.
 
-diff -uNr 15_virtual_mem_part3_precomputed_tables/translation_table_tool/arch.rb 16_virtual_mem_part4_higher_half_kernel/translation_table_tool/arch.rb
---- 15_virtual_mem_part3_precomputed_tables/translation_table_tool/arch.rb
-+++ 16_virtual_mem_part4_higher_half_kernel/translation_table_tool/arch.rb
+diff -uNr 15_virtual_mem_part3_precomputed_tables/tools/translation_table_tool/arch.rb 16_virtual_mem_part4_higher_half_kernel/tools/translation_table_tool/arch.rb
+--- 15_virtual_mem_part3_precomputed_tables/tools/translation_table_tool/arch.rb
++++ 16_virtual_mem_part4_higher_half_kernel/tools/translation_table_tool/arch.rb
 @@ -255,6 +255,8 @@
      end
 
@@ -898,9 +898,9 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/translation_table_tool/arch.rb
          lvl3_index = (addr & Granule512MiB::MASK) >> Granule64KiB::SHIFT
 
 
-diff -uNr 15_virtual_mem_part3_precomputed_tables/translation_table_tool/bsp.rb 16_virtual_mem_part4_higher_half_kernel/translation_table_tool/bsp.rb
---- 15_virtual_mem_part3_precomputed_tables/translation_table_tool/bsp.rb
-+++ 16_virtual_mem_part4_higher_half_kernel/translation_table_tool/bsp.rb
+diff -uNr 15_virtual_mem_part3_precomputed_tables/tools/translation_table_tool/bsp.rb 16_virtual_mem_part4_higher_half_kernel/tools/translation_table_tool/bsp.rb
+--- 15_virtual_mem_part3_precomputed_tables/tools/translation_table_tool/bsp.rb
++++ 16_virtual_mem_part4_higher_half_kernel/tools/translation_table_tool/bsp.rb
 @@ -6,7 +6,7 @@
 
  # Raspberry Pi 3 + 4
@@ -908,7 +908,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/translation_table_tool/bsp.rb 
 -    attr_reader :kernel_granule, :kernel_virt_addr_space_size
 +    attr_reader :kernel_granule, :kernel_virt_addr_space_size, :kernel_virt_start_addr
 
-     MEMORY_SRC = File.read('src/bsp/raspberrypi/memory.rs').split("\n")
+     MEMORY_SRC = File.read('kernel/src/bsp/raspberrypi/memory.rs').split("\n")
 
 @@ -14,6 +14,7 @@
          @kernel_granule = Granule64KiB

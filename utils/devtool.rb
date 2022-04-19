@@ -301,7 +301,15 @@ class DevTool
         # Only diff adjacent tutorials. This checks the numbers of the tutorial folders.
         return unless original[0..1].to_i + 1 == update[0..1].to_i
 
-        puts 'Diffing '.light_blue + original.ljust(padding) + " -> #{update}"
+        # Skip for tutorial 11. Due to the change to virtual manifest, the diff is rather
+        # unreadable.
+        if original[0..1].to_i == 11
+            puts 'Skipping '.light_yellow +
+                 "#{original}: Too noisy due to change to virtual manifest"
+            return
+        end
+
+        puts 'Diffing  '.light_blue + original.ljust(padding) + " -> #{update}"
         system("bash utils/diff_tut_folders.bash #{original} #{update}")
     end
 

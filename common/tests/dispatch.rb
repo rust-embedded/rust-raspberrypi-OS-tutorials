@@ -16,16 +16,19 @@ qemu_cmd = ARGV.join(' ')
 binary = ARGV.last
 test_name = binary.gsub(%r{.*deps/}, '').split('-')[0]
 
+# Check if virtual manifest (tutorial 12 or later) or not
+path_prefix = File.exist?('kernel/Cargo.toml') ? 'kernel/' : ''
+
 case test_name
 when 'kernel8.img'
-    load 'tests/boot_test_string.rb' # provides 'EXPECTED_PRINT'
+    load "#{path_prefix}tests/boot_test_string.rb" # provides 'EXPECTED_PRINT'
     BootTest.new(qemu_cmd, EXPECTED_PRINT).run # Doesn't return
 
 when 'libkernel'
     ExitCodeTest.new(qemu_cmd, 'Kernel library unit tests').run # Doesn't return
 
 else
-    console_test_file = "tests/#{test_name}.rb"
+    console_test_file = "#{path_prefix}tests/#{test_name}.rb"
     test_name.concat('.rs')
     test = if File.exist?(console_test_file)
                load console_test_file # provides 'subtest_collection'

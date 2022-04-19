@@ -9,7 +9,6 @@ DIFF=$(
 	 -x README.md \
 	 -x README.CN.md \
 	 -x README.ES.md \
-	 -x kernel \
 	 -x kernel8.img \
 	 -x Cargo.lock \
 	 -x target \
@@ -17,7 +16,7 @@ DIFF=$(
 	| sed -r "s/[12][90][127][0-9]-[0-9][0-9]-[0-9][0-9] .*//g" \
 	| sed -r "s/[[:space:]]*$//g" \
 	| sed -r "s/%/modulo/g" \
-        | sed -r "s/diff -uNr -x README.md -x README.CN.md -x README.ES.md -x kernel -x kernel8.img -x Cargo.lock -x target/\ndiff -uNr/g"
+        | sed -r "s/diff -uNr -x README.md -x README.CN.md -x README.ES.md -x kernel8.img -x Cargo.lock -x target/\ndiff -uNr/g"
      )
 
 HEADER="## Diff to previous"

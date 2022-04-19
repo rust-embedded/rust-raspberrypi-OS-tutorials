@@ -8,7 +8,7 @@
 class RaspberryPi
     attr_reader :kernel_granule, :kernel_virt_addr_space_size
 
-    MEMORY_SRC = File.read('src/bsp/raspberrypi/memory.rs').split("\n")
+    MEMORY_SRC = File.read('kernel/src/bsp/raspberrypi/memory.rs').split("\n")
 
     def initialize
         @kernel_granule = Granule64KiB
