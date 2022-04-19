@@ -35,13 +35,6 @@ cortex-a = { version = "7.x.x" }
 [dev-dependencies]
 test-macros = { path = "test-macros" }
 
-# The following line is a workaround, as suggested in [1], to enable a feature in test-builds only.
-# This allows building the library part of the kernel with specialized code for testing.
-#
-#
-# [1] https://github.com/rust-lang/cargo/issues/2911#issuecomment-749580481
-mingo = { path = ".", features = ["test_build"] }
-
 # Unit tests are done in the library part of the kernel.
 [lib]
 name = "libkernel"

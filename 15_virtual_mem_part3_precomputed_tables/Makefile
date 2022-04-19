@@ -293,6 +293,8 @@ gdb gdb-opt0: $(KERNEL_ELF)
 ##--------------------------------------------------------------------------------------------------
 .PHONY: test test_boot test_unit test_integration
 
+test_unit test_integration: FEATURES += --features test_build
+
 ifeq ($(QEMU_MACHINE_TYPE),) # QEMU is not supported for the board.
 
 test_boot test_unit test_integration test:
