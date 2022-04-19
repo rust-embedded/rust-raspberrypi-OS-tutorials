@@ -4,7 +4,7 @@
 #
 # Copyright (c) 2019-2022 Andre Richter <andre.o.richter@gmail.com>
 
-require_relative '../../common/tests/console_io_test'
+require 'console_io_test'
 
 # Verify sending and receiving works as expected.
 class TxRxHandshakeTest < SubtestBase

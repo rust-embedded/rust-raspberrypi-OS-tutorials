@@ -5,9 +5,12 @@
 #
 # Copyright (c) 2019-2022 Andre Richter <andre.o.richter@gmail.com>
 
-require_relative 'boot_test'
-require_relative 'console_io_test'
-require_relative 'exit_code_test'
+file_dir = File.dirname(__FILE__)
+$LOAD_PATH.unshift(file_dir) unless $LOAD_PATH.include?(file_dir)
+
+require 'boot_test'
+require 'console_io_test'
+require 'exit_code_test'
 
 qemu_cmd = ARGV.join(' ')
 binary = ARGV.last

@@ -4,7 +4,7 @@
 #
 # Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
 
-require_relative '../../common/tests/console_io_test'
+require 'console_io_test'
 
 # Verify that exception restore works.
 class ExceptionRestoreTest < SubtestBase

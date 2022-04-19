@@ -1824,7 +1824,7 @@ diff -uNr 11_exceptions_part1_groundwork/tests/00_console_sanity.rb 12_integrate
 +#
 +# Copyright (c) 2019-2022 Andre Richter <andre.o.richter@gmail.com>
 +
-+require_relative '../../common/tests/console_io_test'
++require 'console_io_test'
 +
 +# Verify sending and receiving works as expected.
 +class TxRxHandshakeTest < SubtestBase
@@ -2022,7 +2022,7 @@ diff -uNr 11_exceptions_part1_groundwork/tests/03_exception_restore_sanity.rb 12
 +#
 +# Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
 +
-+require_relative '../../common/tests/console_io_test'
++require 'console_io_test'
 +
 +# Verify that exception restore works.
 +class ExceptionRestoreTest < SubtestBase
