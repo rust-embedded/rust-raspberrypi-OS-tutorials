@@ -67,7 +67,7 @@ export LD_SCRIPT_PATH
 ##--------------------------------------------------------------------------------------------------
 ## Targets and Prerequisites
 ##--------------------------------------------------------------------------------------------------
-KERNEL_LINKER_SCRIPT = link.ld
+KERNEL_LINKER_SCRIPT = kernel.ld
 
 TT_TOOL_PATH = translation_table_tool
 

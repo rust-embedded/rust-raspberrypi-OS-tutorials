@@ -196,9 +196,9 @@ diff -uNr 01_wait_forever/src/bsp/raspberrypi/cpu.rs 02_runtime_init/src/bsp/ras
 +#[link_section = ".text._start_arguments"]
 +pub static BOOT_CORE_ID: u64 = 0;
 
-diff -uNr 01_wait_forever/src/bsp/raspberrypi/link.ld 02_runtime_init/src/bsp/raspberrypi/link.ld
---- 01_wait_forever/src/bsp/raspberrypi/link.ld
-+++ 02_runtime_init/src/bsp/raspberrypi/link.ld
+diff -uNr 01_wait_forever/src/bsp/raspberrypi/kernel.ld 02_runtime_init/src/bsp/raspberrypi/kernel.ld
+--- 01_wait_forever/src/bsp/raspberrypi/kernel.ld
++++ 02_runtime_init/src/bsp/raspberrypi/kernel.ld
 @@ -3,6 +3,8 @@
   * Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
   */

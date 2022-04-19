@@ -380,9 +380,9 @@ diff -uNr 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 0
          {}
      }
 
-diff -uNr 05_drivers_gpio_uart/src/bsp/raspberrypi/link.ld 06_uart_chainloader/src/bsp/raspberrypi/link.ld
---- 05_drivers_gpio_uart/src/bsp/raspberrypi/link.ld
-+++ 06_uart_chainloader/src/bsp/raspberrypi/link.ld
+diff -uNr 05_drivers_gpio_uart/src/bsp/raspberrypi/kernel.ld 06_uart_chainloader/src/bsp/raspberrypi/kernel.ld
+--- 05_drivers_gpio_uart/src/bsp/raspberrypi/kernel.ld
++++ 06_uart_chainloader/src/bsp/raspberrypi/kernel.ld
 @@ -3,8 +3,6 @@
   * Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
   */

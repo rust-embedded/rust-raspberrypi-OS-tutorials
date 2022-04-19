@@ -813,7 +813,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/Makefile 15_virtual_mem_part3_precompu
 +++ 15_virtual_mem_part3_precomputed_tables/Makefile
 @@ -69,12 +69,19 @@
  ##--------------------------------------------------------------------------------------------------
- KERNEL_LINKER_SCRIPT = link.ld
+ KERNEL_LINKER_SCRIPT = kernel.ld
 
 +TT_TOOL_PATH = translation_table_tool
 +
@@ -1190,15 +1190,9 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/console.rs 15_virt
 +    }
 +}
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/kernel_virt_addr_space_size.ld 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/kernel_virt_addr_space_size.ld
---- 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/kernel_virt_addr_space_size.ld
-+++ 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/kernel_virt_addr_space_size.ld
-@@ -0,0 +1 @@
-+__kernel_virt_addr_space_size = 1024 * 1024 * 1024
-
-diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/link.ld 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/link.ld
---- 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/link.ld
-+++ 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/link.ld
+diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/kernel.ld 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/kernel.ld
+--- 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/kernel.ld
++++ 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/kernel.ld
 @@ -3,6 +3,8 @@
   * Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
   */
@@ -1208,6 +1202,12 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/link.ld 15_virtual
  PAGE_SIZE = 64K;
  PAGE_MASK = PAGE_SIZE - 1;
 
+
+diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/kernel_virt_addr_space_size.ld 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/kernel_virt_addr_space_size.ld
+--- 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/kernel_virt_addr_space_size.ld
++++ 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/kernel_virt_addr_space_size.ld
+@@ -0,0 +1 @@
++__kernel_virt_addr_space_size = 1024 * 1024 * 1024
 
 diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/memory/mmu.rs
 --- 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs

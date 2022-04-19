@@ -638,9 +638,9 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/console.rs
 
      panic_uart
 
-diff -uNr 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/link.ld 16_virtual_mem_part4_higher_half_kernel/src/bsp/raspberrypi/link.ld
---- 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/link.ld
-+++ 16_virtual_mem_part4_higher_half_kernel/src/bsp/raspberrypi/link.ld
+diff -uNr 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/kernel.ld 16_virtual_mem_part4_higher_half_kernel/src/bsp/raspberrypi/kernel.ld
+--- 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/kernel.ld
++++ 16_virtual_mem_part4_higher_half_kernel/src/bsp/raspberrypi/kernel.ld
 @@ -8,6 +8,13 @@
  PAGE_SIZE = 64K;
  PAGE_MASK = PAGE_SIZE - 1;

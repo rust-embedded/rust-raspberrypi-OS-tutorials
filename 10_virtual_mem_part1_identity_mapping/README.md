@@ -828,9 +828,9 @@ diff -uNr 09_privilege_level/src/_arch/aarch64/memory/mmu.rs 10_virtual_mem_part
 +    }
 +}
 
-diff -uNr 09_privilege_level/src/bsp/raspberrypi/link.ld 10_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/link.ld
---- 09_privilege_level/src/bsp/raspberrypi/link.ld
-+++ 10_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/link.ld
+diff -uNr 09_privilege_level/src/bsp/raspberrypi/kernel.ld 10_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/kernel.ld
+--- 09_privilege_level/src/bsp/raspberrypi/kernel.ld
++++ 10_virtual_mem_part1_identity_mapping/src/bsp/raspberrypi/kernel.ld
 @@ -3,6 +3,9 @@
   * Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
   */

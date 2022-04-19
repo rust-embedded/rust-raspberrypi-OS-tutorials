@@ -1431,9 +1431,9 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/driver.rs 14_v
          super::GPIO.map_pl011_uart();
      }
 
-diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/link.ld 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/link.ld
---- 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/link.ld
-+++ 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/link.ld
+diff -uNr 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/kernel.ld 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/kernel.ld
+--- 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/kernel.ld
++++ 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/kernel.ld
 @@ -38,7 +38,7 @@
      ***********************************************************************************************/
      .boot_core_stack (NOLOAD) :

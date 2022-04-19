@@ -58,7 +58,7 @@ export LD_SCRIPT_PATH
 ##--------------------------------------------------------------------------------------------------
 ## Targets and Prerequisites
 ##--------------------------------------------------------------------------------------------------
-KERNEL_LINKER_SCRIPT = link.ld
+KERNEL_LINKER_SCRIPT = kernel.ld
 
 LAST_BUILD_CONFIG = target/$(BSP).build_config
 
