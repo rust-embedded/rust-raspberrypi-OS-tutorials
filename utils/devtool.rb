@@ -94,11 +94,11 @@ class TutorialCrate
     private
 
     def boot_test?
-        Dir.exist?("#{@folder}/tests")
+        Dir.exist?("#{@folder}/kernel/tests")
     end
 
     def unit_integration_tests?
-        !Dir.glob("#{@folder}/tests/00_*.rs").empty?
+        !Dir.glob("#{@folder}/kernel/tests/00_*.rs").empty?
     end
 end
 
@@ -233,7 +233,7 @@ class DevTool
     SUPPORTED_BSPS = %w[rpi3 rpi4].freeze
 
     def bsp_from_env
-        bsp = ENV['BSP']
+        bsp = ENV.fetch('BSP', nil)
 
         return bsp if SUPPORTED_BSPS.include?(bsp)
 

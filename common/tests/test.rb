@@ -8,7 +8,6 @@
 class Test
     INDENT = '         '
 
-    # rubocop:disable Style/RedundantInitialize
     def initialize
         # Template instance variables.
         # @test_name
@@ -16,7 +15,6 @@ class Test
         # @test_output
         # @test_error
     end
-    # rubocop:enable Style/RedundantInitialize
 
     private
 
