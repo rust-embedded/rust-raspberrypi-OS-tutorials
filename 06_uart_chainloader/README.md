@@ -248,7 +248,7 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
 
  ##------------------------------------------------------------------------------
  ## Run clippy
-@@ -239,7 +245,8 @@
+@@ -233,7 +239,8 @@
  ##------------------------------------------------------------------------------
  test_boot: $(KERNEL_BIN)
  	$(call color_header, "Boot test - $(BSP)")

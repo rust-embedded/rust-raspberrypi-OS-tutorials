@@ -364,7 +364,7 @@ diff -uNr 07_timestamps/Makefile 08_hw_debug_JTAG/Makefile
  endif
 
 
-@@ -222,6 +233,35 @@
+@@ -216,6 +227,35 @@
 
 
 

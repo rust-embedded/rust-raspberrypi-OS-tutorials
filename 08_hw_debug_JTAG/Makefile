@@ -225,12 +225,6 @@ nm: $(KERNEL_ELF)
 	$(call color_header, "Launching nm")
 	@$(DOCKER_TOOLS) $(NM_BINARY) --demangle --print-size $(KERNEL_ELF) | sort | rustfilt
 
-##------------------------------------------------------------------------------
-## Helper target for rust-analyzer
-##------------------------------------------------------------------------------
-check:
-	@RUSTFLAGS="$(RUSTFLAGS)" $(CHECK_CMD) --message-format=json
-
 
 
 ##--------------------------------------------------------------------------------------------------

@@ -94,11 +94,10 @@ diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
 
 
 
-@@ -197,3 +200,28 @@
- ##------------------------------------------------------------------------------
- check:
- 	@RUSTFLAGS="$(RUSTFLAGS)" $(CHECK_CMD) --message-format=json
-+
+@@ -192,3 +195,27 @@
+ 	$(call color_header, "Launching nm")
+ 	@$(DOCKER_TOOLS) $(NM_BINARY) --demangle --print-size $(KERNEL_ELF) | sort | rustfilt
+
 +
 +
 +##--------------------------------------------------------------------------------------------------
