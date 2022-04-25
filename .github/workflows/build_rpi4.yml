@@ -29,7 +29,7 @@ jobs:
         uses: ruby/setup-ruby@v1
       - name: Set up Rust nightly
         run: |
-          cargo install cargo-binutils
+          cargo install cargo-binutils rustfilt
       - name: Set up Ruby
         run: |
           gem install bundler

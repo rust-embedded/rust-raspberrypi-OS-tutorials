@@ -343,4 +343,5 @@ else
     puts
     puts 'Commands:'
     commands.each { |m| puts "  #{m}" }
+    exit(1)
 end
