@@ -4,7 +4,6 @@ version = "0.16.0"
 authors = ["Andre Richter <andre.o.richter@gmail.com>"]
 edition = "2021"
 
-
 [features]
 default = []
 bsp_rpi3 = ["tock-registers"]

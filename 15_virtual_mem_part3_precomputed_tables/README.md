@@ -1837,18 +1837,21 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/04_exception_irq_sanity.r
 diff -uNr 14_virtual_mem_part2_mmio_remap/Makefile 15_virtual_mem_part3_precomputed_tables/Makefile
 --- 14_virtual_mem_part2_mmio_remap/Makefile
 +++ 15_virtual_mem_part3_precomputed_tables/Makefile
-@@ -71,10 +71,17 @@
+@@ -71,10 +71,20 @@
  KERNEL_LINKER_SCRIPT = kernel.ld
  LAST_BUILD_CONFIG    = target/$(BSP).build_config
 
 -KERNEL_ELF      = target/$(TARGET)/release/kernel
-+TT_TOOL_PATH = tools/translation_table_tool
-+
 +KERNEL_ELF_RAW      = target/$(TARGET)/release/kernel
  # This parses cargo's dep-info file.
  # https://doc.rust-lang.org/cargo/guide/build-cache.html#dep-info-files
 -KERNEL_ELF_DEPS = $(filter-out modulo: ,$(file < $(KERNEL_ELF_RAW).d)) $(LAST_BUILD_CONFIG)
 +KERNEL_ELF_RAW_DEPS = $(filter-out modulo: ,$(file < $(KERNEL_ELF_RAW).d)) $(LAST_BUILD_CONFIG)
++
++##------------------------------------------------------------------------------
++## Translation tables
++##------------------------------------------------------------------------------
++TT_TOOL_PATH = tools/translation_table_tool
 +
 +KERNEL_ELF_TTABLES      = target/$(TARGET)/release/kernel+ttables
 +KERNEL_ELF_TTABLES_DEPS = $(KERNEL_ELF_RAW) $(wildcard $(TT_TOOL_PATH)/*)
@@ -1857,7 +1860,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/Makefile 15_virtual_mem_part3_precompu
 
 
 
-@@ -104,6 +111,7 @@
+@@ -104,6 +114,7 @@
      -O binary
 
  EXEC_QEMU          = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
@@ -1865,7 +1868,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/Makefile 15_virtual_mem_part3_precompu
  EXEC_TEST_DISPATCH = ruby ../common/tests/dispatch.rb
  EXEC_MINIPUSH      = ruby ../common/serial/minipush.rb
 
-@@ -154,16 +162,24 @@
+@@ -154,16 +165,24 @@
  ##------------------------------------------------------------------------------
  ## Compile the kernel ELF
  ##------------------------------------------------------------------------------
@@ -1893,7 +1896,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/Makefile 15_virtual_mem_part3_precompu
  	$(call color_progress_prefix, "Name")
  	@echo $(KERNEL_BIN)
  	$(call color_progress_prefix, "Size")
-@@ -302,6 +318,7 @@
+@@ -302,6 +321,7 @@
      TEST_ELF=$$(echo $$1 | sed -e 's/.*target/target/g')
      TEST_BINARY=$$(echo $$1.img | sed -e 's/.*target/target/g')
 
