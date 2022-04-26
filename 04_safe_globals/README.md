@@ -177,7 +177,7 @@ diff -uNr 03_hacky_hello_world/src/bsp/raspberrypi/console.rs 04_safe_globals/sr
 +/// serialize access.
 +impl console::interface::Write for QEMUOutput {
 +    fn write_fmt(&self, args: core::fmt::Arguments) -> fmt::Result {
-+        // Fully qualified syntax for the call to `core::fmt::Write::write:fmt()` to increase
++        // Fully qualified syntax for the call to `core::fmt::Write::write_fmt()` to increase
 +        // readability.
 +        self.inner.lock(|inner| fmt::Write::write_fmt(inner, args))
 +    }
