@@ -477,7 +477,7 @@ impl console::interface::Write for PL011Uart {
     }
 
     fn write_fmt(&self, args: core::fmt::Arguments) -> fmt::Result {
-        // Fully qualified syntax for the call to `core::fmt::Write::write:fmt()` to increase
+        // Fully qualified syntax for the call to `core::fmt::Write::write_fmt()` to increase
         // readability.
         self.inner.lock(|inner| fmt::Write::write_fmt(inner, args))
     }
