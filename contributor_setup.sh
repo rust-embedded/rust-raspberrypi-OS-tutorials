@@ -31,6 +31,6 @@ then
     echo "'curl' could not be found. Please install it."
     exit
 fi
-curl -L -o ./install-misspell.sh https://git.io/misspell
+curl -L -o ./install-misspell.sh https://raw.githubusercontent.com/client9/misspell/master/install-misspell.sh
 sh ./install-misspell.sh -b .vendor
 rm install-misspell.sh
