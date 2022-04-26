@@ -831,7 +831,7 @@ diff -uNr 04_safe_globals/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 05_dri
 +    }
 +
 +    fn write_fmt(&self, args: core::fmt::Arguments) -> fmt::Result {
-+        // Fully qualified syntax for the call to `core::fmt::Write::write:fmt()` to increase
++        // Fully qualified syntax for the call to `core::fmt::Write::write_fmt()` to increase
 +        // readability.
 +        self.inner.lock(|inner| fmt::Write::write_fmt(inner, args))
 +    }
@@ -1067,7 +1067,7 @@ diff -uNr 04_safe_globals/src/bsp/raspberrypi/console.rs 05_drivers_gpio_uart/sr
 -/// serialize access.
 -impl console::interface::Write for QEMUOutput {
 -    fn write_fmt(&self, args: core::fmt::Arguments) -> fmt::Result {
--        // Fully qualified syntax for the call to `core::fmt::Write::write:fmt()` to increase
+-        // Fully qualified syntax for the call to `core::fmt::Write::write_fmt()` to increase
 -        // readability.
 -        self.inner.lock(|inner| fmt::Write::write_fmt(inner, args))
 -    }
