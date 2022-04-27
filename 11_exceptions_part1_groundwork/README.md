@@ -183,6 +183,7 @@ some hand-crafted assembly. Introducing `exception.s`:
 /// Call the function provided by parameter `\handler` after saving the exception context. Provide
 /// the context as the first parameter to '\handler'.
 .macro CALL_WITH_CONTEXT handler
+__vector_\handler:
 	// Make room on the stack for the exception context.
 	sub	sp,  sp,  #16 * 17
 
@@ -221,6 +222,9 @@ some hand-crafted assembly. Introducing `exception.s`:
 	// After returning from exception handling code, replay the saved context and return via
 	// `eret`.
 	b	__exception_restore_context
+
+.size	__vector_\handler, . - __vector_\handler
+.type	__vector_\handler, function
 .endm
 ```
 
@@ -539,7 +543,7 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
 +    /// Saved program status.
 +    spsr_el1: SpsrEL1,
 +
-+    // Exception syndrome register.
++    /// Exception syndrome register.
 +    esr_el1: EsrEL1,
 +}
 +
@@ -793,7 +797,7 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
 diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.s 11_exceptions_part1_groundwork/src/_arch/aarch64/exception.s
 --- 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.s
 +++ 11_exceptions_part1_groundwork/src/_arch/aarch64/exception.s
-@@ -0,0 +1,150 @@
+@@ -0,0 +1,154 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
@@ -805,6 +809,7 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.s 11
 +/// Call the function provided by parameter `\handler` after saving the exception context. Provide
 +/// the context as the first parameter to '\handler'.
 +.macro CALL_WITH_CONTEXT handler
++__vector_\handler:
 +	// Make room on the stack for the exception context.
 +	sub	sp,  sp,  #16 * 17
 +
@@ -843,6 +848,9 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.s 11
 +	// After returning from exception handling code, replay the saved context and return via
 +	// `eret`.
 +	b	__exception_restore_context
++
++.size	__vector_\handler, . - __vector_\handler
++.type	__vector_\handler, function
 +.endm
 +
 +.macro FIQ_SUSPEND
@@ -1016,7 +1024,7 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/exception.rs 11_exceptions_p
 diff -uNr 10_virtual_mem_part1_identity_mapping/src/main.rs 11_exceptions_part1_groundwork/src/main.rs
 --- 10_virtual_mem_part1_identity_mapping/src/main.rs
 +++ 11_exceptions_part1_groundwork/src/main.rs
-@@ -137,6 +137,8 @@
+@@ -139,6 +139,8 @@
      use driver::interface::DriverManager;
      use memory::mmu::interface::MMU;
 
@@ -1025,7 +1033,7 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/main.rs 11_exceptions_part1_
      if let Err(string) = memory::mmu::mmu().enable_mmu_and_caching() {
          panic!("MMU: {}", string);
      }
-@@ -194,13 +196,28 @@
+@@ -196,13 +198,28 @@
      info!("Timer test, spinning for 1 second");
      time::time_manager().spin_for(Duration::from_secs(1));
 

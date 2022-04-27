@@ -9,6 +9,7 @@
 /// Call the function provided by parameter `\handler` after saving the exception context. Provide
 /// the context as the first parameter to '\handler'.
 .macro CALL_WITH_CONTEXT handler
+__vector_\handler:
 	// Make room on the stack for the exception context.
 	sub	sp,  sp,  #16 * 17
 
@@ -47,6 +48,9 @@
 	// After returning from exception handling code, replay the saved context and return via
 	// `eret`.
 	b	__exception_restore_context
+
+.size	__vector_\handler, . - __vector_\handler
+.type	__vector_\handler, function
 .endm
 
 .macro FIQ_SUSPEND

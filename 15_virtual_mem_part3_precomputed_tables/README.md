@@ -1374,7 +1374,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/memory/mmu.
 diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/main.rs 15_virtual_mem_part3_precomputed_tables/kernel/src/main.rs
 --- 14_virtual_mem_part2_mmio_remap/kernel/src/main.rs
 +++ 15_virtual_mem_part3_precomputed_tables/kernel/src/main.rs
-@@ -15,31 +15,23 @@
+@@ -17,31 +17,23 @@
 
  /// Early init code.
  ///
@@ -1413,7 +1413,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/main.rs 15_virtual_mem_part
      // Bring up the drivers needed for printing first.
      for i in bsp::driver::driver_manager()
          .early_print_device_drivers()
-@@ -49,7 +41,7 @@
+@@ -51,7 +43,7 @@
          i.init().unwrap_or_else(|_| cpu::wait_forever());
      }
      bsp::driver::driver_manager().post_early_print_device_driver_init();
@@ -1860,7 +1860,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/Makefile 15_virtual_mem_part3_precompu
 
 
 
-@@ -104,6 +114,7 @@
+@@ -103,6 +113,7 @@
      -O binary
 
  EXEC_QEMU          = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
@@ -1868,7 +1868,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/Makefile 15_virtual_mem_part3_precompu
  EXEC_TEST_DISPATCH = ruby ../common/tests/dispatch.rb
  EXEC_MINIPUSH      = ruby ../common/serial/minipush.rb
 
-@@ -154,16 +165,24 @@
+@@ -153,16 +164,24 @@
  ##------------------------------------------------------------------------------
  ## Compile the kernel ELF
  ##------------------------------------------------------------------------------
@@ -1896,7 +1896,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/Makefile 15_virtual_mem_part3_precompu
  	$(call color_progress_prefix, "Name")
  	@echo $(KERNEL_BIN)
  	$(call color_progress_prefix, "Size")
-@@ -302,6 +321,7 @@
+@@ -301,6 +320,7 @@
      TEST_ELF=$$(echo $$1 | sed -e 's/.*target/target/g')
      TEST_BINARY=$$(echo $$1.img | sed -e 's/.*target/target/g')
 

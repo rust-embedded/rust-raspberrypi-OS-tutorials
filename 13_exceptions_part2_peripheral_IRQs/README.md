@@ -2398,7 +2398,7 @@ diff -uNr 12_integrated_testing/kernel/src/exception/asynchronous.rs 13_exceptio
 diff -uNr 12_integrated_testing/kernel/src/lib.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/lib.rs
 --- 12_integrated_testing/kernel/src/lib.rs
 +++ 13_exceptions_part2_peripheral_IRQs/kernel/src/lib.rs
-@@ -108,6 +108,7 @@
+@@ -110,6 +110,7 @@
 
  #![allow(clippy::upper_case_acronyms)]
  #![allow(incomplete_features)]
@@ -2406,7 +2406,7 @@ diff -uNr 12_integrated_testing/kernel/src/lib.rs 13_exceptions_part2_peripheral
  #![feature(core_intrinsics)]
  #![feature(format_args_nl)]
  #![feature(linkage)]
-@@ -130,6 +131,7 @@
+@@ -132,6 +133,7 @@
  pub mod exception;
  pub mod memory;
  pub mod print;
@@ -2418,7 +2418,7 @@ diff -uNr 12_integrated_testing/kernel/src/lib.rs 13_exceptions_part2_peripheral
 diff -uNr 12_integrated_testing/kernel/src/main.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/main.rs
 --- 12_integrated_testing/kernel/src/main.rs
 +++ 13_exceptions_part2_peripheral_IRQs/kernel/src/main.rs
-@@ -11,7 +11,7 @@
+@@ -13,7 +13,7 @@
  #![no_main]
  #![no_std]
 
@@ -2427,7 +2427,7 @@ diff -uNr 12_integrated_testing/kernel/src/main.rs 13_exceptions_part2_periphera
 
  /// Early init code.
  ///
-@@ -21,7 +21,7 @@
+@@ -23,7 +23,7 @@
  /// - The init calls in this function must appear in the correct order:
  ///     - MMU + Data caching must be activated at the earliest. Without it, any atomic operations,
  ///       e.g. the yet-to-be-introduced spinlocks in the device drivers (which currently employ
@@ -2436,7 +2436,7 @@ diff -uNr 12_integrated_testing/kernel/src/main.rs 13_exceptions_part2_periphera
  #[no_mangle]
  unsafe fn kernel_init() -> ! {
      use driver::interface::DriverManager;
-@@ -41,15 +41,27 @@
+@@ -43,15 +43,27 @@
      bsp::driver::driver_manager().post_device_driver_init();
      // println! is usable from here on.
 
@@ -2466,7 +2466,7 @@ diff -uNr 12_integrated_testing/kernel/src/main.rs 13_exceptions_part2_periphera
 
      info!("{}", libkernel::version());
      info!("Booting on: {}", bsp::board_name());
-@@ -77,12 +89,9 @@
+@@ -79,12 +91,9 @@
          info!("      {}. {}", i + 1, driver.compatible());
      }
 

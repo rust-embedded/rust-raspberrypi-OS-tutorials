@@ -46,7 +46,7 @@ struct ExceptionContext {
     /// Saved program status.
     spsr_el1: SpsrEL1,
 
-    // Exception syndrome register.
+    /// Exception syndrome register.
     esr_el1: EsrEL1,
 }
 
@@ -265,8 +265,10 @@ impl fmt::Display for ExceptionContext {
         writeln!(
             f,
             "      Symbol: {}",
-            symbols::lookup_symbol(memory::Address::new(self.elr_el1 as usize))
-                .unwrap_or("Symbol not found")
+            match symbols::lookup_symbol(memory::Address::new(self.elr_el1 as usize)) {
+                Some(sym) => sym.name(),
+                _ => "Symbol not found",
+            }
         )?;
         writeln!(f)?;
         writeln!(f, "General purpose register:")?;

@@ -112,7 +112,7 @@ diff -uNr 06_uart_chainloader/Makefile 07_timestamps/Makefile
  endif
 
  # Export for build.rs.
-@@ -92,7 +90,7 @@
+@@ -91,7 +89,7 @@
      -O binary
 
  EXEC_QEMU          = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
@@ -121,7 +121,7 @@ diff -uNr 06_uart_chainloader/Makefile 07_timestamps/Makefile
  EXEC_MINIPUSH      = ruby ../common/serial/minipush.rb
 
  ##------------------------------------------------------------------------------
-@@ -162,7 +160,7 @@
+@@ -161,7 +159,7 @@
  ##------------------------------------------------------------------------------
  ifeq ($(QEMU_MACHINE_TYPE),) # QEMU is not supported for the board.
 
@@ -130,7 +130,7 @@ diff -uNr 06_uart_chainloader/Makefile 07_timestamps/Makefile
  	$(call color_header, "$(QEMU_MISSING_STRING)")
 
  else # QEMU is supported.
-@@ -171,17 +169,13 @@
+@@ -170,17 +168,13 @@
  	$(call color_header, "Launching QEMU")
  	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
 
@@ -149,7 +149,7 @@ diff -uNr 06_uart_chainloader/Makefile 07_timestamps/Makefile
 
  ##------------------------------------------------------------------------------
  ## Run clippy
-@@ -239,8 +233,7 @@
+@@ -238,8 +232,7 @@
  ##------------------------------------------------------------------------------
  test_boot: $(KERNEL_BIN)
  	$(call color_header, "Boot test - $(BSP)")
@@ -538,7 +538,7 @@ diff -uNr 06_uart_chainloader/src/cpu.rs 07_timestamps/src/cpu.rs
 diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
 --- 06_uart_chainloader/src/main.rs
 +++ 07_timestamps/src/main.rs
-@@ -118,6 +118,7 @@
+@@ -120,6 +120,7 @@
  mod panic_wait;
  mod print;
  mod synchronization;
@@ -546,7 +546,7 @@ diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
 
  /// Early init code.
  ///
-@@ -140,56 +141,38 @@
+@@ -142,56 +143,38 @@
      kernel_main()
  }
 

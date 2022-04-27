@@ -2136,7 +2136,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/driver.rs 14_virtual_me
 diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/lib.rs 14_virtual_mem_part2_mmio_remap/kernel/src/lib.rs
 --- 13_exceptions_part2_peripheral_IRQs/kernel/src/lib.rs
 +++ 14_virtual_mem_part2_mmio_remap/kernel/src/lib.rs
-@@ -111,8 +111,10 @@
+@@ -113,8 +113,10 @@
  #![feature(asm_const)]
  #![feature(core_intrinsics)]
  #![feature(format_args_nl)]
@@ -2147,7 +2147,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/lib.rs 14_virtual_mem_p
  #![feature(trait_alias)]
  #![no_std]
  // Testing
-@@ -125,6 +127,7 @@
+@@ -127,6 +129,7 @@
  mod synchronization;
 
  pub mod bsp;
@@ -2155,7 +2155,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/lib.rs 14_virtual_mem_p
  pub mod console;
  pub mod cpu;
  pub mod driver;
-@@ -177,6 +180,7 @@
+@@ -179,6 +182,7 @@
  #[no_mangle]
  unsafe fn kernel_init() -> ! {
      exception::handling_init();
@@ -2167,7 +2167,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/lib.rs 14_virtual_mem_p
 diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/main.rs 14_virtual_mem_part2_mmio_remap/kernel/src/main.rs
 --- 13_exceptions_part2_peripheral_IRQs/kernel/src/main.rs
 +++ 14_virtual_mem_part2_mmio_remap/kernel/src/main.rs
-@@ -25,21 +25,41 @@
+@@ -27,21 +27,41 @@
  #[no_mangle]
  unsafe fn kernel_init() -> ! {
      use driver::interface::DriverManager;
@@ -2215,7 +2215,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/main.rs 14_virtual_mem_
 
      // Let device drivers register and enable their handlers with the interrupt controller.
      for i in bsp::driver::driver_manager().all_device_drivers() {
-@@ -66,8 +86,8 @@
+@@ -68,8 +88,8 @@
      info!("{}", libkernel::version());
      info!("Booting on: {}", bsp::board_name());
 

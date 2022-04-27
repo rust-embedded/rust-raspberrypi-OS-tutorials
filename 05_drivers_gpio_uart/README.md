@@ -155,7 +155,7 @@ diff -uNr 04_safe_globals/Makefile 05_drivers_gpio_uart/Makefile
 
 
  ##--------------------------------------------------------------------------------------------------
-@@ -88,6 +91,7 @@
+@@ -87,6 +90,7 @@
 
  EXEC_QEMU          = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
  EXEC_TEST_DISPATCH = ruby ../common/tests/dispatch.rb
@@ -163,7 +163,7 @@ diff -uNr 04_safe_globals/Makefile 05_drivers_gpio_uart/Makefile
 
  ##------------------------------------------------------------------------------
  ## Dockerization
-@@ -95,18 +99,26 @@
+@@ -94,18 +98,26 @@
  DOCKER_CMD            = docker run -t --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
  DOCKER_CMD_INTERACT   = $(DOCKER_CMD) -i
  DOCKER_ARG_DIR_COMMON = -v $(shell pwd)/../common:/work/common
@@ -191,7 +191,7 @@ diff -uNr 04_safe_globals/Makefile 05_drivers_gpio_uart/Makefile
 
  all: $(KERNEL_BIN)
 
-@@ -156,9 +168,16 @@
+@@ -155,9 +167,16 @@
  qemu: $(KERNEL_BIN)
  	$(call color_header, "Launching QEMU")
  	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
@@ -1337,7 +1337,7 @@ diff -uNr 04_safe_globals/src/driver.rs 05_drivers_gpio_uart/src/driver.rs
 diff -uNr 04_safe_globals/src/main.rs 05_drivers_gpio_uart/src/main.rs
 --- 04_safe_globals/src/main.rs
 +++ 05_drivers_gpio_uart/src/main.rs
-@@ -104,6 +104,7 @@
+@@ -106,6 +106,7 @@
  //!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.s`.
  //! 2. Once finished with architectural setup, the arch code calls `kernel_init()`.
 
@@ -1345,7 +1345,7 @@ diff -uNr 04_safe_globals/src/main.rs 05_drivers_gpio_uart/src/main.rs
  #![feature(format_args_nl)]
  #![feature(panic_info_message)]
  #![feature(trait_alias)]
-@@ -113,6 +114,7 @@
+@@ -115,6 +116,7 @@
  mod bsp;
  mod console;
  mod cpu;
@@ -1353,7 +1353,7 @@ diff -uNr 04_safe_globals/src/main.rs 05_drivers_gpio_uart/src/main.rs
  mod panic_wait;
  mod print;
  mod synchronization;
-@@ -122,16 +124,54 @@
+@@ -124,16 +126,54 @@
  /// # Safety
  ///
  /// - Only a single core must be active and running this function.

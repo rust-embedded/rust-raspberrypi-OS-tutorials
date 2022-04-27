@@ -49,9 +49,6 @@ pub struct Symbol {
 }
 ```
 
-The implementation of the struct furthermore defines the two public functions `name()` and
-`contains()`, which will be used to query information.
-
 To enable the kernel to lookup symbol names, we will add an `array` to the kernel binary that
 contains all the kernel symbols. Because we can query the final symbol names and addresses only
 _after_ the kernel has been `linked`, the same approach as for the `translation tables` will be
@@ -184,11 +181,11 @@ fn kernel_symbols_slice() -> &'static [Symbol] {
 Lookup is done by just iterating over the slice:
 
 ```rust
-/// Retrieve the symbol name corresponding to a virtual address, if any.
-pub fn lookup_symbol(addr: Address<Virtual>) -> Option<&'static str> {
+/// Retrieve the symbol corresponding to a virtual address, if any.
+pub fn lookup_symbol(addr: Address<Virtual>) -> Option<&'static Symbol> {
     for i in kernel_symbols_slice() {
         if i.contains(addr.as_usize()) {
-            return Some(i.name());
+            return Some(i);
         }
     }
 
@@ -277,15 +274,17 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel/src/_arch/aarch64/excep
  use core::{arch::global_asm, cell::UnsafeCell, fmt};
  use cortex_a::{asm::barrier, registers::*};
  use tock_registers::{
-@@ -262,6 +262,12 @@
+@@ -262,6 +262,14 @@
 
          writeln!(f, "{}", self.spsr_el1)?;
          writeln!(f, "ELR_EL1: {:#018x}", self.elr_el1)?;
 +        writeln!(
 +            f,
 +            "      Symbol: {}",
-+            symbols::lookup_symbol(memory::Address::new(self.elr_el1 as usize))
-+                .unwrap_or("Symbol not found")
++            match symbols::lookup_symbol(memory::Address::new(self.elr_el1 as usize)) {
++                Some(sym) => sym.name(),
++                _ => "Symbol not found",
++            }
 +        )?;
          writeln!(f)?;
          writeln!(f, "General purpose register:")?;
@@ -333,7 +332,7 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel/src/bsp/raspberrypi/mem
 diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel/src/lib.rs 17_kernel_symbols/kernel/src/lib.rs
 --- 16_virtual_mem_part4_higher_half_kernel/kernel/src/lib.rs
 +++ 17_kernel_symbols/kernel/src/lib.rs
-@@ -135,6 +135,7 @@
+@@ -137,6 +137,7 @@
  pub mod memory;
  pub mod print;
  pub mod state;
@@ -345,7 +344,7 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel/src/lib.rs 17_kernel_sy
 diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel/src/symbols.rs 17_kernel_symbols/kernel/src/symbols.rs
 --- 16_virtual_mem_part4_higher_half_kernel/kernel/src/symbols.rs
 +++ 17_kernel_symbols/kernel/src/symbols.rs
-@@ -0,0 +1,85 @@
+@@ -0,0 +1,87 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
@@ -395,11 +394,11 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel/src/symbols.rs 17_kerne
 +// Public Code
 +//--------------------------------------------------------------------------------------------------
 +
-+/// Retrieve the symbol name corresponding to a virtual address, if any.
-+pub fn lookup_symbol(addr: Address<Virtual>) -> Option<&'static str> {
++/// Retrieve the symbol corresponding to a virtual address, if any.
++pub fn lookup_symbol(addr: Address<Virtual>) -> Option<&'static Symbol> {
 +    for i in kernel_symbols_slice() {
 +        if i.contains(addr.as_usize()) {
-+            return Some(i.name());
++            return Some(i);
 +        }
 +    }
 +
@@ -421,12 +420,14 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel/src/symbols.rs 17_kerne
 +        let first_sym = lookup_symbol(Address::new(
 +            crate::common::is_aligned as *const usize as usize,
 +        ))
-+        .unwrap();
++        .unwrap()
++        .name();
 +
 +        assert_eq!(first_sym, "libkernel::common::is_aligned");
 +
-+        let second_sym =
-+            lookup_symbol(Address::new(crate::version as *const usize as usize)).unwrap();
++        let second_sym = lookup_symbol(Address::new(crate::version as *const usize as usize))
++            .unwrap()
++            .name();
 +
 +        assert_eq!(second_sym, "libkernel::version");
 +    }
@@ -515,7 +516,7 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel_symbols/src/main.rs 17_
 diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel_symbols.mk 17_kernel_symbols/kernel_symbols.mk
 --- 16_virtual_mem_part4_higher_half_kernel/kernel_symbols.mk
 +++ 17_kernel_symbols/kernel_symbols.mk
-@@ -0,0 +1,101 @@
+@@ -0,0 +1,103 @@
 +## SPDX-License-Identifier: MIT OR Apache-2.0
 +##
 +## Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
@@ -617,6 +618,8 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel_symbols.mk 17_kernel_sy
 +
 +	@$(DOCKER_TOOLS) $(EXEC_SYMBOLS_TOOL) --patch_data $(KERNEL_SYMBOLS_OUTPUT_ELF) \
 +                $(KERNEL_SYMBOLS_STRIPPED)
++
++	$(call color_progress_prefix, "Finished")
 
 diff -uNr 16_virtual_mem_part4_higher_half_kernel/libraries/debug-symbol-types/Cargo.toml 17_kernel_symbols/libraries/debug-symbol-types/Cargo.toml
 --- 16_virtual_mem_part4_higher_half_kernel/libraries/debug-symbol-types/Cargo.toml
@@ -630,7 +633,7 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/libraries/debug-symbol-types/C
 diff -uNr 16_virtual_mem_part4_higher_half_kernel/libraries/debug-symbol-types/src/lib.rs 17_kernel_symbols/libraries/debug-symbol-types/src/lib.rs
 --- 16_virtual_mem_part4_higher_half_kernel/libraries/debug-symbol-types/src/lib.rs
 +++ 17_kernel_symbols/libraries/debug-symbol-types/src/lib.rs
-@@ -0,0 +1,39 @@
+@@ -0,0 +1,45 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
@@ -643,6 +646,7 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/libraries/debug-symbol-types/s
 +
 +/// A symbol containing a size.
 +#[repr(C)]
++#[derive(Clone)]
 +pub struct Symbol {
 +    addr_range: Range<usize>,
 +    name: &'static str,
@@ -668,6 +672,11 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/libraries/debug-symbol-types/s
 +    /// Returns the symbol's name.
 +    pub fn name(&self) -> &'static str {
 +        self.name
++    }
++
++    /// Returns the symbol's size.
++    pub fn size(&self) -> usize {
++        self.addr_range.end - self.addr_range.start
 +    }
 +}
 
@@ -700,7 +709,7 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/Makefile 17_kernel_symbols/Mak
 
 
 
-@@ -178,11 +195,18 @@
+@@ -177,11 +194,19 @@
  	@$(DOCKER_TOOLS) $(EXEC_TT_TOOL) $(BSP) $(KERNEL_ELF_TTABLES)
 
  ##------------------------------------------------------------------------------
@@ -708,7 +717,8 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/Makefile 17_kernel_symbols/Mak
 +##------------------------------------------------------------------------------
 +$(KERNEL_ELF_TTABLES_SYMS): $(KERNEL_ELF_TTABLES_SYMS_DEPS)
 +	$(call color_header, "Generating kernel symbols and patching kernel ELF")
-+	@$(MAKE) --no-print-directory -f kernel_symbols.mk
++	@time -f "in moduloes" \
++                $(MAKE) --no-print-directory -f kernel_symbols.mk
 +
 +##------------------------------------------------------------------------------
  ## Generate the stripped kernel binary
@@ -721,7 +731,7 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/Makefile 17_kernel_symbols/Mak
  	$(call color_progress_prefix, "Name")
  	@echo $(KERNEL_BIN)
  	$(call color_progress_prefix, "Size")
-@@ -319,10 +343,19 @@
+@@ -318,10 +343,19 @@
      cd $(shell pwd)
 
      TEST_ELF=$$(echo $$1 | sed -e 's/.*target/target/g')
@@ -736,7 +746,7 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/Makefile 17_kernel_symbols/Mak
 +    # started by the same.
 +    KERNEL_SYMBOLS_INPUT_ELF=$$TEST_ELF           \
 +        KERNEL_SYMBOLS_OUTPUT_ELF=$$TEST_ELF_SYMS \
-+	$(MAKE) --no-print-directory -f kernel_symbols.mk
++        $(MAKE) --no-print-directory -f kernel_symbols.mk > /dev/null 2>&1
 +
 +    $(OBJCOPY_CMD) $$TEST_ELF_SYMS $$TEST_BINARY
      $(DOCKER_TEST) $(EXEC_TEST_DISPATCH) $(EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY

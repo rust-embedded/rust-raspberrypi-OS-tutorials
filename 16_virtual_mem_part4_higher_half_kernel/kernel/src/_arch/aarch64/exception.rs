@@ -46,7 +46,7 @@ struct ExceptionContext {
     /// Saved program status.
     spsr_el1: SpsrEL1,
 
-    // Exception syndrome register.
+    /// Exception syndrome register.
     esr_el1: EsrEL1,
 }
 

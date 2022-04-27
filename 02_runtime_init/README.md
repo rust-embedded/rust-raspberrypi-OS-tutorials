@@ -52,7 +52,7 @@ diff -uNr 01_wait_forever/Cargo.toml 02_runtime_init/Cargo.toml
 diff -uNr 01_wait_forever/Makefile 02_runtime_init/Makefile
 --- 01_wait_forever/Makefile
 +++ 02_runtime_init/Makefile
-@@ -181,6 +181,8 @@
+@@ -180,6 +180,8 @@
  	$(call color_header, "Launching objdump")
  	@$(DOCKER_TOOLS) $(OBJDUMP_BINARY) --disassemble --demangle \
                  --section .text   \
@@ -302,7 +302,7 @@ diff -uNr 01_wait_forever/src/cpu.rs 02_runtime_init/src/cpu.rs
 diff -uNr 01_wait_forever/src/main.rs 02_runtime_init/src/main.rs
 --- 01_wait_forever/src/main.rs
 +++ 02_runtime_init/src/main.rs
-@@ -102,6 +102,7 @@
+@@ -104,6 +104,7 @@
  //!
  //! 1. The kernel's entry point is the function `cpu::boot::arch_boot::_start()`.
  //!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.s`.
@@ -310,7 +310,7 @@ diff -uNr 01_wait_forever/src/main.rs 02_runtime_init/src/main.rs
 
  #![no_main]
  #![no_std]
-@@ -110,4 +111,11 @@
+@@ -112,4 +113,11 @@
  mod cpu;
  mod panic_wait;
 

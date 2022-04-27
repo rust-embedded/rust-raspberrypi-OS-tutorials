@@ -502,7 +502,7 @@ diff -uNr 08_hw_debug_JTAG/src/exception.rs 09_privilege_level/src/exception.rs
 diff -uNr 08_hw_debug_JTAG/src/main.rs 09_privilege_level/src/main.rs
 --- 08_hw_debug_JTAG/src/main.rs
 +++ 09_privilege_level/src/main.rs
-@@ -115,6 +115,7 @@
+@@ -117,6 +117,7 @@
  mod console;
  mod cpu;
  mod driver;
@@ -510,7 +510,7 @@ diff -uNr 08_hw_debug_JTAG/src/main.rs 09_privilege_level/src/main.rs
  mod panic_wait;
  mod print;
  mod synchronization;
-@@ -143,6 +144,8 @@
+@@ -145,6 +146,8 @@
 
  /// The main function running after the early init.
  fn kernel_main() -> ! {
@@ -519,7 +519,7 @@ diff -uNr 08_hw_debug_JTAG/src/main.rs 09_privilege_level/src/main.rs
      use core::time::Duration;
      use driver::interface::DriverManager;
      use time::interface::TimeManager;
-@@ -154,6 +157,12 @@
+@@ -156,6 +159,12 @@
      );
      info!("Booting on: {}", bsp::board_name());
 
@@ -532,7 +532,7 @@ diff -uNr 08_hw_debug_JTAG/src/main.rs 09_privilege_level/src/main.rs
      info!(
          "Architectural timer resolution: {} ns",
          time::time_manager().resolution().as_nanos()
-@@ -168,11 +177,15 @@
+@@ -170,11 +179,15 @@
          info!("      {}. {}", i + 1, driver.compatible());
      }
 

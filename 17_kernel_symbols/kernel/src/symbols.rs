@@ -47,11 +47,11 @@ fn kernel_symbols_slice() -> &'static [Symbol] {
 // Public Code
 //--------------------------------------------------------------------------------------------------
 
-/// Retrieve the symbol name corresponding to a virtual address, if any.
-pub fn lookup_symbol(addr: Address<Virtual>) -> Option<&'static str> {
+/// Retrieve the symbol corresponding to a virtual address, if any.
+pub fn lookup_symbol(addr: Address<Virtual>) -> Option<&'static Symbol> {
     for i in kernel_symbols_slice() {
         if i.contains(addr.as_usize()) {
-            return Some(i.name());
+            return Some(i);
         }
     }
 
@@ -73,12 +73,14 @@ mod tests {
         let first_sym = lookup_symbol(Address::new(
             crate::common::is_aligned as *const usize as usize,
         ))
-        .unwrap();
+        .unwrap()
+        .name();
 
         assert_eq!(first_sym, "libkernel::common::is_aligned");
 
-        let second_sym =
-            lookup_symbol(Address::new(crate::version as *const usize as usize)).unwrap();
+        let second_sym = lookup_symbol(Address::new(crate::version as *const usize as usize))
+            .unwrap()
+            .name();
 
         assert_eq!(second_sym, "libkernel::version");
     }

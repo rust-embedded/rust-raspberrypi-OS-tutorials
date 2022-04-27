@@ -10,6 +10,7 @@ use core::ops::Range;
 
 /// A symbol containing a size.
 #[repr(C)]
+#[derive(Clone)]
 pub struct Symbol {
     addr_range: Range<usize>,
     name: &'static str,
@@ -35,5 +36,10 @@ impl Symbol {
     /// Returns the symbol's name.
     pub fn name(&self) -> &'static str {
         self.name
+    }
+
+    /// Returns the symbol's size.
+    pub fn size(&self) -> usize {
+        self.addr_range.end - self.addr_range.start
     }
 }

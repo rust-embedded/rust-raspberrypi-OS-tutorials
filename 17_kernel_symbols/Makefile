@@ -124,7 +124,6 @@ COMPILER_ARGS = --target=$(TARGET) \
 RUSTC_CMD   = cargo rustc $(COMPILER_ARGS) --manifest-path $(KERNEL_MANIFEST)
 DOC_CMD     = cargo doc $(COMPILER_ARGS)
 CLIPPY_CMD  = cargo clippy $(COMPILER_ARGS)
-CHECK_CMD   = cargo check $(COMPILER_ARGS)
 TEST_CMD    = cargo test $(COMPILER_ARGS) --manifest-path $(KERNEL_MANIFEST)
 OBJCOPY_CMD = rust-objcopy \
     --strip-all            \
@@ -354,7 +353,7 @@ define KERNEL_TEST_RUNNER
     # started by the same.
     KERNEL_SYMBOLS_INPUT_ELF=$$TEST_ELF           \
         KERNEL_SYMBOLS_OUTPUT_ELF=$$TEST_ELF_SYMS \
-	$(MAKE) --no-print-directory -f kernel_symbols.mk > /dev/null 2>&1
+        $(MAKE) --no-print-directory -f kernel_symbols.mk > /dev/null 2>&1
 
     $(OBJCOPY_CMD) $$TEST_ELF_SYMS $$TEST_BINARY
     $(DOCKER_TEST) $(EXEC_TEST_DISPATCH) $(EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
