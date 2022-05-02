@@ -227,7 +227,7 @@ match backtrace_res {
 
 Finally, we add printing of a backtrace to `panic!`:
 
-```
+```rust
 panic_println!(
     "[  {:>3}.{:06}] Kernel panic!\n\n\
     Panic location:\n      File '{}', line {}, column {}\n\n\
