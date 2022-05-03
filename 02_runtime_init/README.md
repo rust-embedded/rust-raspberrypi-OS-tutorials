@@ -65,10 +65,15 @@ diff -uNr 01_wait_forever/Makefile 02_runtime_init/Makefile
 diff -uNr 01_wait_forever/src/_arch/aarch64/cpu/boot.rs 02_runtime_init/src/_arch/aarch64/cpu/boot.rs
 --- 01_wait_forever/src/_arch/aarch64/cpu/boot.rs
 +++ 02_runtime_init/src/_arch/aarch64/cpu/boot.rs
-@@ -13,3 +13,15 @@
+@@ -14,4 +14,19 @@
+ use core::arch::global_asm;
 
  // Assembly counterpart to this file.
- core::arch::global_asm!(include_str!("boot.s"));
+-global_asm!(include_str!("boot.s"));
++global_asm!(
++    include_str!("boot.s"),
++    CONST_CORE_ID_MASK = const 0b11
++);
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Code
@@ -85,7 +90,7 @@ diff -uNr 01_wait_forever/src/_arch/aarch64/cpu/boot.rs 02_runtime_init/src/_arc
 diff -uNr 01_wait_forever/src/_arch/aarch64/cpu/boot.s 02_runtime_init/src/_arch/aarch64/cpu/boot.s
 --- 01_wait_forever/src/_arch/aarch64/cpu/boot.s
 +++ 02_runtime_init/src/_arch/aarch64/cpu/boot.s
-@@ -3,6 +3,24 @@
+@@ -3,6 +3,22 @@
  // Copyright (c) 2021-2022 Andre Richter <andre.o.richter@gmail.com>
 
  //--------------------------------------------------------------------------------------------------
@@ -104,19 +109,17 @@ diff -uNr 01_wait_forever/src/_arch/aarch64/cpu/boot.s 02_runtime_init/src/_arch
 +	add	\register, \register, #:lo12:\symbol
 +.endm
 +
-+.equ _core_id_mask, 0b11
-+
 +//--------------------------------------------------------------------------------------------------
  // Public Code
  //--------------------------------------------------------------------------------------------------
  .section .text._start
-@@ -11,6 +29,34 @@
+@@ -11,6 +27,34 @@
  // fn _start()
  //------------------------------------------------------------------------------
  _start:
 +	// Only proceed on the boot core. Park it otherwise.
 +	mrs	x1, MPIDR_EL1
-+	and	x1, x1, _core_id_mask
++	and	x1, x1, {CONST_CORE_ID_MASK}
 +	ldr	x2, BOOT_CORE_ID      // provided by bsp/__board_name__/cpu.rs
 +	cmp	x1, x2
 +	b.ne	.L_parking_loop
@@ -302,15 +305,17 @@ diff -uNr 01_wait_forever/src/cpu.rs 02_runtime_init/src/cpu.rs
 diff -uNr 01_wait_forever/src/main.rs 02_runtime_init/src/main.rs
 --- 01_wait_forever/src/main.rs
 +++ 02_runtime_init/src/main.rs
-@@ -104,6 +104,7 @@
+@@ -104,7 +104,9 @@
  //!
  //! 1. The kernel's entry point is the function `cpu::boot::arch_boot::_start()`.
  //!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.s`.
 +//! 2. Once finished with architectural setup, the arch code calls `kernel_init()`.
 
++#![feature(asm_const)]
  #![no_main]
  #![no_std]
-@@ -112,4 +113,11 @@
+
+@@ -112,4 +114,11 @@
  mod cpu;
  mod panic_wait;
 

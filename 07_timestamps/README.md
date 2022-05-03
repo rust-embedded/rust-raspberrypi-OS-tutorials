@@ -178,10 +178,10 @@ diff -uNr 06_uart_chainloader/src/_arch/aarch64/cpu/boot.s 07_timestamps/src/_ar
 -	movk	\register, #:abs_g0_nc:\symbol
 -.endm
 -
- .equ _core_id_mask, 0b11
-
  //--------------------------------------------------------------------------------------------------
-@@ -50,35 +39,23 @@
+ // Public Code
+ //--------------------------------------------------------------------------------------------------
+@@ -48,35 +37,23 @@
  	// If execution reaches here, it is the boot core.
 
  	// Initialize DRAM.
@@ -538,7 +538,7 @@ diff -uNr 06_uart_chainloader/src/cpu.rs 07_timestamps/src/cpu.rs
 diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
 --- 06_uart_chainloader/src/main.rs
 +++ 07_timestamps/src/main.rs
-@@ -120,6 +120,7 @@
+@@ -121,6 +121,7 @@
  mod panic_wait;
  mod print;
  mod synchronization;
@@ -546,7 +546,7 @@ diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
 
  /// Early init code.
  ///
-@@ -142,56 +143,38 @@
+@@ -143,56 +144,38 @@
      kernel_main()
  }
 

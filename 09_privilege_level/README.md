@@ -50,8 +50,8 @@ core should it not be in `EL2`.
 ```
 // Only proceed if the core executes in EL2. Park it otherwise.
 mrs	x0, CurrentEL
-cmp	x0, _EL2
-b.ne	1f
+cmp	x0, {CONST_CURRENTEL_EL2}
+b.ne	.L_parking_loop
 ```
 
 Afterwards, we continue with preparing the `EL2` -> `EL1` transition by calling
@@ -211,19 +211,21 @@ diff -uNr 08_hw_debug_JTAG/Cargo.toml 09_privilege_level/Cargo.toml
 diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.rs 09_privilege_level/src/_arch/aarch64/cpu/boot.rs
 --- 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.rs
 +++ 09_privilege_level/src/_arch/aarch64/cpu/boot.rs
-@@ -11,8 +11,53 @@
- //!
+@@ -12,21 +12,72 @@
  //! crate::cpu::boot::arch_boot
 
-+use core::arch::global_asm;
+ use core::arch::global_asm;
 +use cortex_a::{asm, registers::*};
 +use tock_registers::interfaces::Writeable;
-+
+
  // Assembly counterpart to this file.
--core::arch::global_asm!(include_str!("boot.s"));
-+global_asm!(include_str!("boot.s"));
-+
-+//--------------------------------------------------------------------------------------------------
+ global_asm!(
+     include_str!("boot.s"),
++    CONST_CURRENTEL_EL2 = const 0x8,
+     CONST_CORE_ID_MASK = const 0b11
+ );
+
+ //--------------------------------------------------------------------------------------------------
 +// Private Code
 +//--------------------------------------------------------------------------------------------------
 +
@@ -263,10 +265,11 @@ diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.rs 09_privilege_level/src/
 +    // are no plans to ever return to EL2, just re-use the same stack.
 +    SP_EL1.set(phys_boot_core_stack_end_exclusive_addr);
 +}
-
- //--------------------------------------------------------------------------------------------------
++
++//--------------------------------------------------------------------------------------------------
  // Public Code
-@@ -21,7 +66,14 @@
+ //--------------------------------------------------------------------------------------------------
+
  /// The Rust entry of the `kernel` binary.
  ///
  /// The function is called from the assembly `_start` function.
@@ -287,27 +290,19 @@ diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.rs 09_privilege_level/src/
 diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.s 09_privilege_level/src/_arch/aarch64/cpu/boot.s
 --- 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.s
 +++ 09_privilege_level/src/_arch/aarch64/cpu/boot.s
-@@ -18,6 +18,7 @@
- 	add	\register, \register, #:lo12:\symbol
- .endm
-
-+.equ _EL2, 0x8
- .equ _core_id_mask, 0b11
-
- //--------------------------------------------------------------------------------------------------
-@@ -29,6 +30,11 @@
+@@ -27,6 +27,11 @@
  // fn _start()
  //------------------------------------------------------------------------------
  _start:
 +	// Only proceed if the core executes in EL2. Park it otherwise.
 +	mrs	x0, CurrentEL
-+	cmp	x0, _EL2
++	cmp	x0, {CONST_CURRENTEL_EL2}
 +	b.ne	.L_parking_loop
 +
  	// Only proceed on the boot core. Park it otherwise.
  	mrs	x1, MPIDR_EL1
- 	and	x1, x1, _core_id_mask
-@@ -50,11 +56,11 @@
+ 	and	x1, x1, {CONST_CORE_ID_MASK}
+@@ -48,11 +53,11 @@
 
  	// Prepare the jump to Rust code.
  .L_prepare_rust:
@@ -502,7 +497,7 @@ diff -uNr 08_hw_debug_JTAG/src/exception.rs 09_privilege_level/src/exception.rs
 diff -uNr 08_hw_debug_JTAG/src/main.rs 09_privilege_level/src/main.rs
 --- 08_hw_debug_JTAG/src/main.rs
 +++ 09_privilege_level/src/main.rs
-@@ -117,6 +117,7 @@
+@@ -118,6 +118,7 @@
  mod console;
  mod cpu;
  mod driver;
@@ -510,7 +505,7 @@ diff -uNr 08_hw_debug_JTAG/src/main.rs 09_privilege_level/src/main.rs
  mod panic_wait;
  mod print;
  mod synchronization;
-@@ -145,6 +146,8 @@
+@@ -146,6 +147,8 @@
 
  /// The main function running after the early init.
  fn kernel_main() -> ! {
@@ -519,7 +514,7 @@ diff -uNr 08_hw_debug_JTAG/src/main.rs 09_privilege_level/src/main.rs
      use core::time::Duration;
      use driver::interface::DriverManager;
      use time::interface::TimeManager;
-@@ -156,6 +159,12 @@
+@@ -157,6 +160,12 @@
      );
      info!("Booting on: {}", bsp::board_name());
 
@@ -532,7 +527,7 @@ diff -uNr 08_hw_debug_JTAG/src/main.rs 09_privilege_level/src/main.rs
      info!(
          "Architectural timer resolution: {} ns",
          time::time_manager().resolution().as_nanos()
-@@ -170,11 +179,15 @@
+@@ -171,11 +180,15 @@
          info!("      {}. {}", i + 1, driver.compatible());
      }
 

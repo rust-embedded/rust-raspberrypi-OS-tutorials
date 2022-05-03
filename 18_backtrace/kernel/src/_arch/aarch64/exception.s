@@ -63,8 +63,8 @@ __vector_\handler:
 	// For reference: Search for "preferred exception return address" in the Architecture
 	// Reference Manual for ARMv8-A.
 .if \is_sync == 1
-	lsr	w3,  w3, #26 // w3 = ESR_EL1.EC
-	cmp	w3,  #0x15   // w3 == SVC64 ?
+	lsr	w3,  w3, {CONST_ESR_EL1_EC_SHIFT}   // w3 = ESR_EL1.EC
+	cmp	w3,  {CONST_ESR_EL1_EC_VALUE_SVC64} // w3 == SVC64 ?
 	b.eq	1f
 .endif
 	add	x1,  x1, #4

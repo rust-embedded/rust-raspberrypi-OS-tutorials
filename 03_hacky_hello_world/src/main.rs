@@ -106,6 +106,7 @@
 //!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.s`.
 //! 2. Once finished with architectural setup, the arch code calls `kernel_init()`.
 
+#![feature(asm_const)]
 #![feature(format_args_nl)]
 #![feature(panic_info_message)]
 #![no_main]

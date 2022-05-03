@@ -11,5 +11,7 @@
 //!
 //! crate::cpu::boot::arch_boot
 
+use core::arch::global_asm;
+
 // Assembly counterpart to this file.
-core::arch::global_asm!(include_str!("boot.s"));
+global_asm!(include_str!("boot.s"));

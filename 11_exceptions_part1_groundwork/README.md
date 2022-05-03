@@ -1024,7 +1024,7 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/exception.rs 11_exceptions_p
 diff -uNr 10_virtual_mem_part1_identity_mapping/src/main.rs 11_exceptions_part1_groundwork/src/main.rs
 --- 10_virtual_mem_part1_identity_mapping/src/main.rs
 +++ 11_exceptions_part1_groundwork/src/main.rs
-@@ -139,6 +139,8 @@
+@@ -140,6 +140,8 @@
      use driver::interface::DriverManager;
      use memory::mmu::interface::MMU;
 
@@ -1033,7 +1033,7 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/main.rs 11_exceptions_part1_
      if let Err(string) = memory::mmu::mmu().enable_mmu_and_caching() {
          panic!("MMU: {}", string);
      }
-@@ -196,13 +198,28 @@
+@@ -197,13 +199,28 @@
      info!("Timer test, spinning for 1 second");
      time::time_manager().spin_for(Duration::from_secs(1));
 

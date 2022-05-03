@@ -2398,15 +2398,7 @@ diff -uNr 12_integrated_testing/kernel/src/exception/asynchronous.rs 13_exceptio
 diff -uNr 12_integrated_testing/kernel/src/lib.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/lib.rs
 --- 12_integrated_testing/kernel/src/lib.rs
 +++ 13_exceptions_part2_peripheral_IRQs/kernel/src/lib.rs
-@@ -110,6 +110,7 @@
-
- #![allow(clippy::upper_case_acronyms)]
- #![allow(incomplete_features)]
-+#![feature(asm_const)]
- #![feature(core_intrinsics)]
- #![feature(format_args_nl)]
- #![feature(linkage)]
-@@ -132,6 +133,7 @@
+@@ -133,6 +133,7 @@
  pub mod exception;
  pub mod memory;
  pub mod print;

@@ -340,7 +340,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/kernel/Cargo.toml 16_virtual_m
 diff -uNr 15_virtual_mem_part3_precomputed_tables/kernel/src/_arch/aarch64/cpu/boot.rs 16_virtual_mem_part4_higher_half_kernel/kernel/src/_arch/aarch64/cpu/boot.rs
 --- 15_virtual_mem_part3_precomputed_tables/kernel/src/_arch/aarch64/cpu/boot.rs
 +++ 16_virtual_mem_part4_higher_half_kernel/kernel/src/_arch/aarch64/cpu/boot.rs
-@@ -30,7 +30,10 @@
+@@ -34,7 +34,10 @@
  /// - The `bss` section is not initialized yet. The code must not use or reference it in any way.
  /// - The HW state of EL1 must be prepared in a sound way.
  #[inline(always)]
@@ -352,7 +352,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/kernel/src/_arch/aarch64/cpu/b
      // Enable timer counter registers for EL1.
      CNTHCTL_EL2.write(CNTHCTL_EL2::EL1PCEN::SET + CNTHCTL_EL2::EL1PCTEN::SET);
 
-@@ -53,11 +56,11 @@
+@@ -57,11 +60,11 @@
      );
 
      // Second, let the link register point to kernel_init().
@@ -366,7 +366,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/kernel/src/_arch/aarch64/cpu/b
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -74,14 +77,19 @@
+@@ -78,14 +81,19 @@
  #[no_mangle]
  pub unsafe extern "C" fn _start_rust(
      phys_kernel_tables_base_addr: u64,
@@ -409,10 +409,10 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/kernel/src/_arch/aarch64/cpu/b
 +	movk	\register, #:abs_g0_nc:\symbol
 +.endm
 +
- .equ _EL2, 0x8
- .equ _core_id_mask, 0b11
-
-@@ -59,11 +71,23 @@
+ //--------------------------------------------------------------------------------------------------
+ // Public Code
+ //--------------------------------------------------------------------------------------------------
+@@ -56,11 +68,23 @@
  	// Load the base address of the kernel's translation tables.
  	ldr	x0, PHYS_KERNEL_TABLES_BASE_ADDR // provided by bsp/__board_name__/memory/mmu.rs
 

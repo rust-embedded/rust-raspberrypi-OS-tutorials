@@ -20,7 +20,11 @@ use tock_registers::{
 };
 
 // Assembly counterpart to this file.
-global_asm!(include_str!("exception.s"));
+global_asm!(
+    include_str!("exception.s"),
+    CONST_ESR_EL1_EC_SHIFT = const 26,
+    CONST_ESR_EL1_EC_VALUE_SVC64 = const 0x15
+);
 
 //--------------------------------------------------------------------------------------------------
 // Private Definitions

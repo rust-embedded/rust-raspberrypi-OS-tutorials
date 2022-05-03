@@ -552,7 +552,7 @@ diff -uNr 17_kernel_symbols/kernel/src/_arch/aarch64/cpu/boot.rs 18_backtrace/ke
  use cortex_a::{asm, registers::*};
  use tock_registers::interfaces::Writeable;
 
-@@ -63,6 +66,18 @@
+@@ -67,6 +70,18 @@
      SP_EL1.set(virt_boot_core_stack_end_exclusive_addr);
  }
 
@@ -571,7 +571,7 @@ diff -uNr 17_kernel_symbols/kernel/src/_arch/aarch64/cpu/boot.rs 18_backtrace/ke
  //--------------------------------------------------------------------------------------------------
  // Public Code
  //--------------------------------------------------------------------------------------------------
-@@ -89,6 +104,9 @@
+@@ -93,6 +108,9 @@
      let addr = Address::new(phys_kernel_tables_base_addr as usize);
      memory::mmu::enable_mmu_and_caching(addr).unwrap();
 
@@ -581,6 +581,23 @@ diff -uNr 17_kernel_symbols/kernel/src/_arch/aarch64/cpu/boot.rs 18_backtrace/ke
      // Use `eret` to "return" to EL1. Since virtual memory will already be enabled, this results in
      // execution of kernel_init() in EL1 from its _virtual address_.
      asm::eret()
+
+diff -uNr 17_kernel_symbols/kernel/src/_arch/aarch64/exception.rs 18_backtrace/kernel/src/_arch/aarch64/exception.rs
+--- 17_kernel_symbols/kernel/src/_arch/aarch64/exception.rs
++++ 18_backtrace/kernel/src/_arch/aarch64/exception.rs
+@@ -20,7 +20,11 @@
+ };
+
+ // Assembly counterpart to this file.
+-global_asm!(include_str!("exception.s"));
++global_asm!(
++    include_str!("exception.s"),
++    CONST_ESR_EL1_EC_SHIFT = const 26,
++    CONST_ESR_EL1_EC_VALUE_SVC64 = const 0x15
++);
+
+ //--------------------------------------------------------------------------------------------------
+ // Private Definitions
 
 diff -uNr 17_kernel_symbols/kernel/src/_arch/aarch64/exception.s 18_backtrace/kernel/src/_arch/aarch64/exception.s
 --- 17_kernel_symbols/kernel/src/_arch/aarch64/exception.s
@@ -626,8 +643,8 @@ diff -uNr 17_kernel_symbols/kernel/src/_arch/aarch64/exception.s 18_backtrace/ke
 +	// For reference: Search for "preferred exception return address" in the Architecture
 +	// Reference Manual for ARMv8-A.
 +.if \is_sync == 1
-+	lsr	w3,  w3, #26 // w3 = ESR_EL1.EC
-+	cmp	w3,  #0x15   // w3 == SVC64 ?
++	lsr	w3,  w3, {CONST_ESR_EL1_EC_SHIFT}   // w3 = ESR_EL1.EC
++	cmp	w3,  {CONST_ESR_EL1_EC_VALUE_SVC64} // w3 == SVC64 ?
 +	b.eq	1f
 +.endif
 +	add	x1,  x1, #4

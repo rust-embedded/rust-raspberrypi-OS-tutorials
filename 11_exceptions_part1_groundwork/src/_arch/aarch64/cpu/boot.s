@@ -18,9 +18,6 @@
 	add	\register, \register, #:lo12:\symbol
 .endm
 
-.equ _EL2, 0x8
-.equ _core_id_mask, 0b11
-
 //--------------------------------------------------------------------------------------------------
 // Public Code
 //--------------------------------------------------------------------------------------------------
@@ -32,12 +29,12 @@
 _start:
 	// Only proceed if the core executes in EL2. Park it otherwise.
 	mrs	x0, CurrentEL
-	cmp	x0, _EL2
+	cmp	x0, {CONST_CURRENTEL_EL2}
 	b.ne	.L_parking_loop
 
 	// Only proceed on the boot core. Park it otherwise.
 	mrs	x1, MPIDR_EL1
-	and	x1, x1, _core_id_mask
+	and	x1, x1, {CONST_CORE_ID_MASK}
 	ldr	x2, BOOT_CORE_ID      // provided by bsp/__board_name__/cpu.rs
 	cmp	x1, x2
 	b.ne	.L_parking_loop

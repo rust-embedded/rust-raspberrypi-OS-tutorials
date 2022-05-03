@@ -212,10 +212,10 @@ diff -uNr 02_runtime_init/src/console.rs 03_hacky_hello_world/src/console.rs
 diff -uNr 02_runtime_init/src/main.rs 03_hacky_hello_world/src/main.rs
 --- 02_runtime_init/src/main.rs
 +++ 03_hacky_hello_world/src/main.rs
-@@ -106,12 +106,16 @@
- //!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.s`.
+@@ -107,12 +107,16 @@
  //! 2. Once finished with architectural setup, the arch code calls `kernel_init()`.
 
+ #![feature(asm_const)]
 +#![feature(format_args_nl)]
 +#![feature(panic_info_message)]
  #![no_main]
@@ -229,7 +229,7 @@ diff -uNr 02_runtime_init/src/main.rs 03_hacky_hello_world/src/main.rs
 
  /// Early init code.
  ///
-@@ -119,5 +123,7 @@
+@@ -120,5 +124,7 @@
  ///
  /// - Only a single core must be active and running this function.
  unsafe fn kernel_init() -> ! {

@@ -819,7 +819,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/_arch/aarch64/cpu/boot.rs 1
  use core::arch::global_asm;
  use cortex_a::{asm, registers::*};
  use tock_registers::interfaces::Writeable;
-@@ -71,9 +72,16 @@
+@@ -75,9 +76,16 @@
  ///
  /// - Exception return from EL2 must must continue execution in EL1 with `kernel_init()`.
  #[no_mangle]
@@ -841,7 +841,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/_arch/aarch64/cpu/boot.rs 1
 diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/_arch/aarch64/cpu/boot.s 15_virtual_mem_part3_precomputed_tables/kernel/src/_arch/aarch64/cpu/boot.s
 --- 14_virtual_mem_part2_mmio_remap/kernel/src/_arch/aarch64/cpu/boot.s
 +++ 15_virtual_mem_part3_precomputed_tables/kernel/src/_arch/aarch64/cpu/boot.s
-@@ -56,11 +56,14 @@
+@@ -53,11 +53,14 @@
 
  	// Prepare the jump to Rust code.
  .L_prepare_rust:

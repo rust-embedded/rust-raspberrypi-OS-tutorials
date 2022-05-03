@@ -277,10 +277,10 @@ diff -uNr 05_drivers_gpio_uart/src/_arch/aarch64/cpu/boot.s 06_uart_chainloader/
 +	movk	\register, #:abs_g0_nc:\symbol
 +.endm
 +
- .equ _core_id_mask, 0b11
-
  //--------------------------------------------------------------------------------------------------
-@@ -39,23 +50,35 @@
+ // Public Code
+ //--------------------------------------------------------------------------------------------------
+@@ -37,23 +48,35 @@
  	// If execution reaches here, it is the boot core.
 
  	// Initialize DRAM.
@@ -457,7 +457,7 @@ diff -uNr 05_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs 06_uart_chainloader
 diff -uNr 05_drivers_gpio_uart/src/main.rs 06_uart_chainloader/src/main.rs
 --- 05_drivers_gpio_uart/src/main.rs
 +++ 06_uart_chainloader/src/main.rs
-@@ -142,38 +142,56 @@
+@@ -143,38 +143,56 @@
      kernel_main()
  }
 

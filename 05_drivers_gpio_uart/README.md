@@ -1342,10 +1342,10 @@ diff -uNr 04_safe_globals/src/main.rs 05_drivers_gpio_uart/src/main.rs
  //! 2. Once finished with architectural setup, the arch code calls `kernel_init()`.
 
 +#![allow(clippy::upper_case_acronyms)]
+ #![feature(asm_const)]
  #![feature(format_args_nl)]
  #![feature(panic_info_message)]
- #![feature(trait_alias)]
-@@ -115,6 +116,7 @@
+@@ -116,6 +117,7 @@
  mod bsp;
  mod console;
  mod cpu;
@@ -1353,7 +1353,7 @@ diff -uNr 04_safe_globals/src/main.rs 05_drivers_gpio_uart/src/main.rs
  mod panic_wait;
  mod print;
  mod synchronization;
-@@ -124,16 +126,54 @@
+@@ -125,16 +127,54 @@
  /// # Safety
  ///
  /// - Only a single core must be active and running this function.
