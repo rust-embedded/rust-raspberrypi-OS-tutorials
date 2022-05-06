@@ -8,8 +8,8 @@
 #[path = "../_arch/aarch64/memory/mmu.rs"]
 mod arch_mmu;
 
-mod alloc;
 mod mapping_record;
+mod page_alloc;
 mod translation_table;
 mod types;
 
@@ -81,7 +81,7 @@ use translation_table::interface::TranslationTable;
 fn kernel_init_mmio_va_allocator() {
     let region = bsp::memory::mmu::virt_mmio_remap_region();
 
-    alloc::kernel_mmio_va_allocator().lock(|allocator| allocator.initialize(region));
+    page_alloc::kernel_mmio_va_allocator().lock(|allocator| allocator.initialize(region));
 }
 
 /// Map a region in the kernel's translation tables.
@@ -205,7 +205,7 @@ pub unsafe fn kernel_map_mmio(
         };
 
         let virt_region =
-            alloc::kernel_mmio_va_allocator().lock(|allocator| allocator.alloc(num_pages))?;
+            page_alloc::kernel_mmio_va_allocator().lock(|allocator| allocator.alloc(num_pages))?;
 
         kernel_map_at_unchecked(
             name,
@@ -281,7 +281,7 @@ mod tests {
         let phys_region = MemoryRegion::new(phys_start_page_addr, phys_end_exclusive_page_addr);
 
         let num_pages = NonZeroUsize::new(phys_region.num_pages()).unwrap();
-        let virt_region = alloc::kernel_mmio_va_allocator()
+        let virt_region = page_alloc::kernel_mmio_va_allocator()
             .lock(|allocator| allocator.alloc(num_pages))
             .unwrap();
 

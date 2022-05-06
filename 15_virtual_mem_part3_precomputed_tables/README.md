@@ -1663,7 +1663,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu.rs 15_virtual_me
 -        let phys_region = MemoryRegion::new(phys_start_page_addr, phys_end_exclusive_page_addr);
 -
 -        let num_pages = NonZeroUsize::new(phys_region.num_pages()).unwrap();
--        let virt_region = alloc::kernel_mmio_va_allocator()
+-        let virt_region = page_alloc::kernel_mmio_va_allocator()
 -            .lock(|allocator| allocator.alloc(num_pages))
 -            .unwrap();
 -

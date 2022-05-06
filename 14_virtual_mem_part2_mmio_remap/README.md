@@ -279,7 +279,7 @@ pub unsafe fn kernel_map_mmio(
     // omitted
 
         let virt_region =
-            alloc::kernel_mmio_va_allocator().lock(|allocator| allocator.alloc(num_pages))?;
+            page_alloc::kernel_mmio_va_allocator().lock(|allocator| allocator.alloc(num_pages))?;
 
         kernel_map_at_unchecked(
             name,
@@ -296,10 +296,11 @@ pub unsafe fn kernel_map_mmio(
 }
 ```
 
-This allocator is defined and implemented in the added file `src/memory/mmu/alloc.rs`. Like other
-parts of the mapping code, its implementation makes use of the newly introduced `PageAddress<ATYPE>`
-and `MemoryRegion<ATYPE>` types (in [`src/memory/mmu/types.rs`](kernel/src/memory/mmu/types.rs)),
-but apart from that is rather straight forward. Therefore, it won't be covered in details here.
+This allocator is defined and implemented in the added file `src/memory/mmu/paeg_alloc.rs`. Like
+other parts of the mapping code, its implementation makes use of the newly introduced
+`PageAddress<ATYPE>` and `MemoryRegion<ATYPE>` types (in
+[`src/memory/mmu/types.rs`](kernel/src/memory/mmu/types.rs)), but apart from that is rather straight
+forward. Therefore, it won't be covered in details here.
 
 The more interesting question is: How does the allocator get to learn which VAs it can use?
 
@@ -313,7 +314,7 @@ been turned on.
 fn kernel_init_mmio_va_allocator() {
     let region = bsp::memory::mmu::virt_mmio_remap_region();
 
-    alloc::kernel_mmio_va_allocator().lock(|allocator| allocator.initialize(region));
+    page_alloc::kernel_mmio_va_allocator().lock(|allocator| allocator.initialize(region));
 }
 ```
 
@@ -2227,81 +2228,6 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/main.rs 14_virtual_mem_
      let (_, privilege_level) = exception::current_privilege_level();
      info!("Current privilege level: {}", privilege_level);
 
-diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/memory/mmu/alloc.rs 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu/alloc.rs
---- 13_exceptions_part2_peripheral_IRQs/kernel/src/memory/mmu/alloc.rs
-+++ 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu/alloc.rs
-@@ -0,0 +1,70 @@
-+// SPDX-License-Identifier: MIT OR Apache-2.0
-+//
-+// Copyright (c) 2021-2022 Andre Richter <andre.o.richter@gmail.com>
-+
-+//! Allocation.
-+
-+use super::MemoryRegion;
-+use crate::{
-+    memory::{AddressType, Virtual},
-+    synchronization::IRQSafeNullLock,
-+    warn,
-+};
-+use core::num::NonZeroUsize;
-+
-+//--------------------------------------------------------------------------------------------------
-+// Public Definitions
-+//--------------------------------------------------------------------------------------------------
-+
-+/// A page allocator that can be lazyily initialized.
-+pub struct PageAllocator<ATYPE: AddressType> {
-+    pool: Option<MemoryRegion<ATYPE>>,
-+}
-+
-+//--------------------------------------------------------------------------------------------------
-+// Global instances
-+//--------------------------------------------------------------------------------------------------
-+
-+static KERNEL_MMIO_VA_ALLOCATOR: IRQSafeNullLock<PageAllocator<Virtual>> =
-+    IRQSafeNullLock::new(PageAllocator::new());
-+
-+//--------------------------------------------------------------------------------------------------
-+// Public Code
-+//--------------------------------------------------------------------------------------------------
-+
-+/// Return a reference to the kernel's MMIO virtual address allocator.
-+pub fn kernel_mmio_va_allocator() -> &'static IRQSafeNullLock<PageAllocator<Virtual>> {
-+    &KERNEL_MMIO_VA_ALLOCATOR
-+}
-+
-+impl<ATYPE: AddressType> PageAllocator<ATYPE> {
-+    /// Create an instance.
-+    pub const fn new() -> Self {
-+        Self { pool: None }
-+    }
-+
-+    /// Initialize the allocator.
-+    pub fn initialize(&mut self, pool: MemoryRegion<ATYPE>) {
-+        if self.pool.is_some() {
-+            warn!("Already initialized");
-+            return;
-+        }
-+
-+        self.pool = Some(pool);
-+    }
-+
-+    /// Allocate a number of pages.
-+    pub fn alloc(
-+        &mut self,
-+        num_requested_pages: NonZeroUsize,
-+    ) -> Result<MemoryRegion<ATYPE>, &'static str> {
-+        if self.pool.is_none() {
-+            return Err("Allocator not initialized");
-+        }
-+
-+        self.pool
-+            .as_mut()
-+            .unwrap()
-+            .take_first_n_pages(num_requested_pages)
-+    }
-+}
-
 diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/memory/mmu/mapping_record.rs 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu/mapping_record.rs
 --- 13_exceptions_part2_peripheral_IRQs/kernel/src/memory/mmu/mapping_record.rs
 +++ 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu/mapping_record.rs
@@ -2538,6 +2464,81 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/memory/mmu/mapping_reco
 +/// Human-readable print of all recorded kernel mappings.
 +pub fn kernel_print() {
 +    KERNEL_MAPPING_RECORD.read(|mr| mr.print());
++}
+
+diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/memory/mmu/page_alloc.rs 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu/page_alloc.rs
+--- 13_exceptions_part2_peripheral_IRQs/kernel/src/memory/mmu/page_alloc.rs
++++ 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu/page_alloc.rs
+@@ -0,0 +1,70 @@
++// SPDX-License-Identifier: MIT OR Apache-2.0
++//
++// Copyright (c) 2021-2022 Andre Richter <andre.o.richter@gmail.com>
++
++//! Page allocation.
++
++use super::MemoryRegion;
++use crate::{
++    memory::{AddressType, Virtual},
++    synchronization::IRQSafeNullLock,
++    warn,
++};
++use core::num::NonZeroUsize;
++
++//--------------------------------------------------------------------------------------------------
++// Public Definitions
++//--------------------------------------------------------------------------------------------------
++
++/// A page allocator that can be lazyily initialized.
++pub struct PageAllocator<ATYPE: AddressType> {
++    pool: Option<MemoryRegion<ATYPE>>,
++}
++
++//--------------------------------------------------------------------------------------------------
++// Global instances
++//--------------------------------------------------------------------------------------------------
++
++static KERNEL_MMIO_VA_ALLOCATOR: IRQSafeNullLock<PageAllocator<Virtual>> =
++    IRQSafeNullLock::new(PageAllocator::new());
++
++//--------------------------------------------------------------------------------------------------
++// Public Code
++//--------------------------------------------------------------------------------------------------
++
++/// Return a reference to the kernel's MMIO virtual address allocator.
++pub fn kernel_mmio_va_allocator() -> &'static IRQSafeNullLock<PageAllocator<Virtual>> {
++    &KERNEL_MMIO_VA_ALLOCATOR
++}
++
++impl<ATYPE: AddressType> PageAllocator<ATYPE> {
++    /// Create an instance.
++    pub const fn new() -> Self {
++        Self { pool: None }
++    }
++
++    /// Initialize the allocator.
++    pub fn initialize(&mut self, pool: MemoryRegion<ATYPE>) {
++        if self.pool.is_some() {
++            warn!("Already initialized");
++            return;
++        }
++
++        self.pool = Some(pool);
++    }
++
++    /// Allocate a number of pages.
++    pub fn alloc(
++        &mut self,
++        num_requested_pages: NonZeroUsize,
++    ) -> Result<MemoryRegion<ATYPE>, &'static str> {
++        if self.pool.is_none() {
++            return Err("Allocator not initialized");
++        }
++
++        self.pool
++            .as_mut()
++            .unwrap()
++            .take_first_n_pages(num_requested_pages)
++    }
 +}
 
 diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/memory/mmu/translation_table.rs 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu/translation_table.rs
@@ -3037,8 +3038,8 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/memory/mmu.rs 14_virtua
  #[path = "../_arch/aarch64/memory/mmu.rs"]
  mod arch_mmu;
 
-+mod alloc;
 +mod mapping_record;
++mod page_alloc;
  mod translation_table;
 +mod types;
 
@@ -3140,7 +3141,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/memory/mmu.rs 14_virtua
 +fn kernel_init_mmio_va_allocator() {
 +    let region = bsp::memory::mmu::virt_mmio_remap_region();
 +
-+    alloc::kernel_mmio_va_allocator().lock(|allocator| allocator.initialize(region));
++    page_alloc::kernel_mmio_va_allocator().lock(|allocator| allocator.initialize(region));
 +}
 +
 +/// Map a region in the kernel's translation tables.
@@ -3280,7 +3281,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/memory/mmu.rs 14_virtua
 -            "PX"
 -        };
 +        let virt_region =
-+            alloc::kernel_mmio_va_allocator().lock(|allocator| allocator.alloc(num_pages))?;
++            page_alloc::kernel_mmio_va_allocator().lock(|allocator| allocator.alloc(num_pages))?;
 
 -        write!(
 -            f,
@@ -3399,7 +3400,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/memory/mmu.rs 14_virtua
 +        let phys_region = MemoryRegion::new(phys_start_page_addr, phys_end_exclusive_page_addr);
 +
 +        let num_pages = NonZeroUsize::new(phys_region.num_pages()).unwrap();
-+        let virt_region = alloc::kernel_mmio_va_allocator()
++        let virt_region = page_alloc::kernel_mmio_va_allocator()
 +            .lock(|allocator| allocator.alloc(num_pages))
 +            .unwrap();
 

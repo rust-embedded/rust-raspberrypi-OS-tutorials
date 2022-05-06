@@ -2,7 +2,7 @@
 //
 // Copyright (c) 2021-2022 Andre Richter <andre.o.richter@gmail.com>
 
-//! Allocation.
+//! Page allocation.
 
 use super::MemoryRegion;
 use crate::{
