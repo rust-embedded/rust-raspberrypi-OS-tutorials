@@ -277,8 +277,7 @@ Here is the implementation for the `PL011Uart`:
 
 ```rust
 fn register_and_enable_irq_handler(&'static self) -> Result<(), &'static str> {
-    use bsp::exception::asynchronous::irq_manager;
-    use exception::asynchronous::{interface::IRQManager, IRQDescriptor};
+    use exception::asynchronous::{irq_manager, IRQDescriptor};
 
     let descriptor = IRQDescriptor {
         name: Self::COMPATIBLE,
@@ -369,10 +368,8 @@ the the implementation of the trait's handling function:
 ```rust
 #[no_mangle]
 unsafe extern "C" fn current_elx_irq(_e: &mut ExceptionContext) {
-    use exception::asynchronous::interface::IRQManager;
-
     let token = &exception::asynchronous::IRQContext::new();
-    bsp::exception::asynchronous::irq_manager().handle_pending_irqs(token);
+    exception::asynchronous::irq_manager().handle_pending_irqs(token);
 }
 ```
 

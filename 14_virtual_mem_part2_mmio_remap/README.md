@@ -324,7 +324,7 @@ the first time, an instance of the newly introduced `NullConsole` is used as the
 `NullConsole` implements all the console traits, but does nothing. It discards outputs, and returns
 dummy input. For example, should one of the printing macros be called before the UART driver has
 been instantiated and registered, the kernel does not need to crash because the driver is not
-brought up yet. Instead, it can just discards the output. With this new scheme of things, it is
+brought up yet. Instead, it can just discard the output. With this new scheme of things, it is
 possible to safely switch global references like the UART or the IRQ Manager at runtime.
 
 That all the post-driver-init work has now been moved to callbacks is motivated by the idea that
@@ -382,7 +382,7 @@ been turned on.
 fn kernel_init_mmio_va_allocator() {
     let region = bsp::memory::mmu::virt_mmio_remap_region();
 
-    page_alloc::kernel_mmio_va_allocator().lock(|allocator| allocator.initialize(region));
+    page_alloc::kernel_mmio_va_allocator().lock(|allocator| allocator.init(region));
 }
 ```
 
