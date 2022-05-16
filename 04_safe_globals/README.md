@@ -148,7 +148,7 @@ diff -uNr 03_hacky_hello_world/src/bsp/raspberrypi/console.rs 04_safe_globals/sr
          }
 
          Ok(())
-@@ -41,7 +80,37 @@
+@@ -41,7 +80,39 @@
  // Public Code
  //--------------------------------------------------------------------------------------------------
 
@@ -164,9 +164,9 @@ diff -uNr 03_hacky_hello_world/src/bsp/raspberrypi/console.rs 04_safe_globals/sr
  /// Return a reference to the console.
 -pub fn console() -> impl console::interface::Write {
 -    QEMUOutput {}
-+pub fn console() -> &'static impl console::interface::All {
++pub fn console() -> &'static dyn console::interface::All {
 +    &QEMU_OUTPUT
-+}
+ }
 +
 +//------------------------------------------------------------------------------
 +// OS Interface Code
@@ -187,12 +187,14 @@ diff -uNr 03_hacky_hello_world/src/bsp/raspberrypi/console.rs 04_safe_globals/sr
 +    fn chars_written(&self) -> usize {
 +        self.inner.lock(|inner| inner.chars_written)
 +    }
- }
++}
++
++impl console::interface::All for QEMUOutput {}
 
 diff -uNr 03_hacky_hello_world/src/console.rs 04_safe_globals/src/console.rs
 --- 03_hacky_hello_world/src/console.rs
 +++ 04_safe_globals/src/console.rs
-@@ -10,10 +10,22 @@
+@@ -12,12 +12,24 @@
 
  /// Console interfaces.
  pub mod interface {
@@ -218,7 +220,17 @@ diff -uNr 03_hacky_hello_world/src/console.rs 04_safe_globals/src/console.rs
 +    }
 +
 +    /// Trait alias for a full-fledged console.
-+    pub trait All = Write + Statistics;
++    pub trait All: Write + Statistics {}
+ }
+
+ //--------------------------------------------------------------------------------------------------
+@@ -27,6 +39,6 @@
+ /// Return a reference to the console.
+ ///
+ /// This is the global console used by all printing macros.
+-pub fn console() -> impl interface::Write {
++pub fn console() -> &'static dyn interface::All {
+     bsp::console::console()
  }
 
 diff -uNr 03_hacky_hello_world/src/main.rs 04_safe_globals/src/main.rs
@@ -240,24 +252,34 @@ diff -uNr 03_hacky_hello_world/src/main.rs 04_safe_globals/src/main.rs
 
  /// Early init code.
  ///
-@@ -124,7 +126,15 @@
+@@ -124,7 +126,12 @@
  ///
  /// - Only a single core must be active and running this function.
  unsafe fn kernel_init() -> ! {
 -    println!("Hello from Rust!");
-+    use console::interface::Statistics;
++    use console::console;
 
 -    panic!("Stopping here.")
 +    println!("[0] Hello from Rust!");
 +
-+    println!(
-+        "[1] Chars written: {}",
-+        bsp::console::console().chars_written()
-+    );
++    println!("[1] Chars written: {}", console().chars_written());
 +
 +    println!("[2] Stopping here.");
 +    cpu::wait_forever()
  }
+
+diff -uNr 03_hacky_hello_world/src/print.rs 04_safe_globals/src/print.rs
+--- 03_hacky_hello_world/src/print.rs
++++ 04_safe_globals/src/print.rs
+@@ -13,8 +13,6 @@
+
+ #[doc(hidden)]
+ pub fn _print(args: fmt::Arguments) {
+-    use console::interface::Write;
+-
+     console::console().write_fmt(args).unwrap();
+ }
+
 
 diff -uNr 03_hacky_hello_world/src/synchronization.rs 04_safe_globals/src/synchronization.rs
 --- 03_hacky_hello_world/src/synchronization.rs

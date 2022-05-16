@@ -5,10 +5,12 @@
 //! GPIO Driver.
 
 use crate::{
-    bsp::device_driver::common::MMIODerefWrapper, driver, memory, synchronization,
+    bsp::device_driver::common::MMIODerefWrapper,
+    driver,
+    memory::{Address, Virtual},
+    synchronization,
     synchronization::IRQSafeNullLock,
 };
-use core::sync::atomic::{AtomicUsize, Ordering};
 use tock_registers::{
     interfaces::{ReadWriteable, Writeable},
     register_bitfields, register_structs,
@@ -109,26 +111,22 @@ register_structs! {
 /// Abstraction for the associated MMIO registers.
 type Registers = MMIODerefWrapper<RegisterBlock>;
 
+struct GPIOInner {
+    registers: Registers,
+}
+
 //--------------------------------------------------------------------------------------------------
 // Public Definitions
 //--------------------------------------------------------------------------------------------------
 
-pub struct GPIOInner {
-    registers: Registers,
-}
-
-// Export the inner struct so that BSPs can use it for the panic handler.
-pub use GPIOInner as PanicGPIO;
-
 /// Representation of the GPIO HW.
 pub struct GPIO {
-    mmio_descriptor: memory::mmu::MMIODescriptor,
-    virt_mmio_start_addr: AtomicUsize,
     inner: IRQSafeNullLock<GPIOInner>,
+    post_init_callback: fn(),
 }
 
 //--------------------------------------------------------------------------------------------------
-// Public Code
+// Private Code
 //--------------------------------------------------------------------------------------------------
 
 impl GPIOInner {
@@ -137,23 +135,10 @@ impl GPIOInner {
     /// # Safety
     ///
     /// - The user must ensure to provide a correct MMIO start address.
-    pub const unsafe fn new(mmio_start_addr: usize) -> Self {
+    pub const unsafe fn new(mmio_start_addr: Address<Virtual>) -> Self {
         Self {
             registers: Registers::new(mmio_start_addr),
         }
-    }
-
-    /// Init code.
-    ///
-    /// # Safety
-    ///
-    /// - The user must ensure to provide a correct MMIO start address.
-    pub unsafe fn init(&mut self, new_mmio_start_addr: Option<usize>) -> Result<(), &'static str> {
-        if let Some(addr) = new_mmio_start_addr {
-            self.registers = Registers::new(addr);
-        }
-
-        Ok(())
     }
 
     /// Disable pull-up/down on pins 14 and 15.
@@ -205,17 +190,22 @@ impl GPIOInner {
     }
 }
 
+//--------------------------------------------------------------------------------------------------
+// Public Code
+//--------------------------------------------------------------------------------------------------
+
 impl GPIO {
+    pub const COMPATIBLE: &'static str = "BCM GPIO";
+
     /// Create an instance.
     ///
     /// # Safety
     ///
-    /// - The user must ensure to provide correct MMIO descriptors.
-    pub const unsafe fn new(mmio_descriptor: memory::mmu::MMIODescriptor) -> Self {
+    /// - The user must ensure to provide a correct MMIO start address.
+    pub const unsafe fn new(mmio_start_addr: Address<Virtual>, post_init_callback: fn()) -> Self {
         Self {
-            mmio_descriptor,
-            virt_mmio_start_addr: AtomicUsize::new(0),
-            inner: IRQSafeNullLock::new(GPIOInner::new(mmio_descriptor.start_addr().as_usize())),
+            inner: IRQSafeNullLock::new(GPIOInner::new(mmio_start_addr)),
+            post_init_callback,
         }
     }
 
@@ -232,28 +222,12 @@ use synchronization::interface::Mutex;
 
 impl driver::interface::DeviceDriver for GPIO {
     fn compatible(&self) -> &'static str {
-        "BCM GPIO"
+        Self::COMPATIBLE
     }
 
     unsafe fn init(&self) -> Result<(), &'static str> {
-        let virt_addr = memory::mmu::kernel_map_mmio(self.compatible(), &self.mmio_descriptor)?;
-
-        self.inner
-            .lock(|inner| inner.init(Some(virt_addr.as_usize())))?;
-
-        self.virt_mmio_start_addr
-            .store(virt_addr.as_usize(), Ordering::Relaxed);
+        (self.post_init_callback)();
 
         Ok(())
-    }
-
-    fn virt_mmio_start_addr(&self) -> Option<usize> {
-        let addr = self.virt_mmio_start_addr.load(Ordering::Relaxed);
-
-        if addr == 0 {
-            return None;
-        }
-
-        Some(addr)
     }
 }

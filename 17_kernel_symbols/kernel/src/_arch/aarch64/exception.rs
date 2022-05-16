@@ -11,7 +11,7 @@
 //!
 //! crate::exception::arch_exception
 
-use crate::{bsp, exception, memory, symbols};
+use crate::{exception, memory, symbols};
 use core::{arch::global_asm, cell::UnsafeCell, fmt};
 use cortex_a::{asm::barrier, registers::*};
 use tock_registers::{
@@ -104,10 +104,8 @@ unsafe extern "C" fn current_elx_synchronous(e: &mut ExceptionContext) {
 
 #[no_mangle]
 unsafe extern "C" fn current_elx_irq(_e: &mut ExceptionContext) {
-    use exception::asynchronous::interface::IRQManager;
-
     let token = &exception::asynchronous::IRQContext::new();
-    bsp::exception::asynchronous::irq_manager().handle_pending_irqs(token);
+    exception::asynchronous::irq_manager().handle_pending_irqs(token);
 }
 
 #[no_mangle]

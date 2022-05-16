@@ -114,6 +114,7 @@
 #![feature(core_intrinsics)]
 #![feature(format_args_nl)]
 #![feature(generic_const_exprs)]
+#![feature(is_sorted)]
 #![feature(linkage)]
 #![feature(panic_info_message)]
 #![feature(step_trait)]
@@ -181,9 +182,23 @@ pub fn test_runner(tests: &[&test_types::UnitTest]) {
 #[cfg(test)]
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
+    use driver::interface::DriverManager;
+
     exception::handling_init();
+
+    let phys_kernel_tables_base_addr = match memory::mmu::kernel_map_binary() {
+        Err(string) => panic!("Error mapping kernel binary: {}", string),
+        Ok(addr) => addr,
+    };
+
+    if let Err(e) = memory::mmu::enable_mmu_and_caching(phys_kernel_tables_base_addr) {
+        panic!("Enabling MMU failed: {}", e);
+    }
+    // Printing will silently fail from here on, because the driver's MMIO is not remapped yet.
+
     memory::mmu::post_enable_init();
-    bsp::console::qemu_bring_up_console();
+    bsp::driver::driver_manager().qemu_bring_up_console();
+    // Printing available again from here on.
 
     test_main();
 

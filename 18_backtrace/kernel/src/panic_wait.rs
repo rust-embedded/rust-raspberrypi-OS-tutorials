@@ -4,18 +4,12 @@
 
 //! A panic handler that infinitely waits.
 
-use crate::{backtrace, bsp, cpu, exception};
-use core::{fmt, panic::PanicInfo};
+use crate::{backtrace, cpu, exception, println};
+use core::panic::PanicInfo;
 
 //--------------------------------------------------------------------------------------------------
 // Private Code
 //--------------------------------------------------------------------------------------------------
-
-fn _panic_print(args: fmt::Arguments) {
-    use fmt::Write;
-
-    unsafe { bsp::console::panic_console_out().write_fmt(args).unwrap() };
-}
 
 /// The point of exit for `libkernel`.
 ///
@@ -32,16 +26,6 @@ fn _panic_exit() -> ! {
     {
         cpu::qemu_exit_failure()
     }
-}
-
-/// Prints with a newline - only use from the panic handler.
-///
-/// Carbon copy from <https://doc.rust-lang.org/src/std/macros.rs.html>
-#[macro_export]
-macro_rules! panic_println {
-    ($($arg:tt)*) => ({
-        _panic_print(format_args_nl!($($arg)*));
-    })
 }
 
 /// Stop immediately if called a second time.
@@ -88,7 +72,7 @@ fn panic(info: &PanicInfo) -> ! {
         _ => ("???", 0, 0),
     };
 
-    panic_println!(
+    println!(
         "[  {:>3}.{:06}] Kernel panic!\n\n\
         Panic location:\n      File '{}', line {}, column {}\n\n\
         {}\n\n\

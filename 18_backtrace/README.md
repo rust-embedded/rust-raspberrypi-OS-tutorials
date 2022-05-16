@@ -228,7 +228,7 @@ match backtrace_res {
 Finally, we add printing of a backtrace to `panic!`:
 
 ```rust
-panic_println!(
+println!(
     "[  {:>3}.{:06}] Kernel panic!\n\n\
     Panic location:\n      File '{}', line {}, column {}\n\n\
     {}\n\n\
@@ -909,7 +909,7 @@ diff -uNr 17_kernel_symbols/kernel/src/bsp/raspberrypi/memory/mmu.rs 18_backtrac
 diff -uNr 17_kernel_symbols/kernel/src/lib.rs 18_backtrace/kernel/src/lib.rs
 --- 17_kernel_symbols/kernel/src/lib.rs
 +++ 18_backtrace/kernel/src/lib.rs
-@@ -128,6 +128,7 @@
+@@ -129,6 +129,7 @@
  mod panic_wait;
  mod synchronization;
 
@@ -967,20 +967,20 @@ diff -uNr 17_kernel_symbols/kernel/src/panic_wait.rs 18_backtrace/kernel/src/pan
 
  //! A panic handler that infinitely waits.
 
--use crate::{bsp, cpu, exception};
-+use crate::{backtrace, bsp, cpu, exception};
- use core::{fmt, panic::PanicInfo};
+-use crate::{cpu, exception, println};
++use crate::{backtrace, cpu, exception, println};
+ use core::panic::PanicInfo;
 
  //--------------------------------------------------------------------------------------------------
-@@ -91,6 +91,7 @@
-     panic_println!(
+@@ -75,6 +75,7 @@
+     println!(
          "[  {:>3}.{:06}] Kernel panic!\n\n\
          Panic location:\n      File '{}', line {}, column {}\n\n\
 +        {}\n\n\
          {}",
          timestamp.as_secs(),
          timestamp.subsec_micros(),
-@@ -98,6 +99,7 @@
+@@ -82,6 +83,7 @@
          line,
          column,
          info.message().unwrap_or(&format_args!("")),
@@ -1036,7 +1036,7 @@ diff -uNr 17_kernel_symbols/kernel/tests/05_backtrace_sanity.rb 18_backtrace/ker
 diff -uNr 17_kernel_symbols/kernel/tests/05_backtrace_sanity.rs 18_backtrace/kernel/tests/05_backtrace_sanity.rs
 --- 17_kernel_symbols/kernel/tests/05_backtrace_sanity.rs
 +++ 18_backtrace/kernel/tests/05_backtrace_sanity.rs
-@@ -0,0 +1,31 @@
+@@ -0,0 +1,33 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
@@ -1050,7 +1050,7 @@ diff -uNr 17_kernel_symbols/kernel/tests/05_backtrace_sanity.rs 18_backtrace/ker
 +/// Console tests should time out on the I/O harness in case of panic.
 +mod panic_wait_forever;
 +
-+use libkernel::{bsp, cpu, exception, memory};
++use libkernel::{bsp, cpu, driver, exception, memory};
 +
 +#[inline(never)]
 +fn nested() {
@@ -1059,9 +1059,11 @@ diff -uNr 17_kernel_symbols/kernel/tests/05_backtrace_sanity.rs 18_backtrace/ker
 +
 +#[no_mangle]
 +unsafe fn kernel_init() -> ! {
++    use driver::interface::DriverManager;
++
 +    exception::handling_init();
 +    memory::mmu::post_enable_init();
-+    bsp::console::qemu_bring_up_console();
++    bsp::driver::driver_manager().qemu_bring_up_console();
 +
 +    nested();
 +
@@ -1103,7 +1105,7 @@ diff -uNr 17_kernel_symbols/kernel/tests/06_backtrace_invalid_frame.rb 18_backtr
 diff -uNr 17_kernel_symbols/kernel/tests/06_backtrace_invalid_frame.rs 18_backtrace/kernel/tests/06_backtrace_invalid_frame.rs
 --- 17_kernel_symbols/kernel/tests/06_backtrace_invalid_frame.rs
 +++ 18_backtrace/kernel/tests/06_backtrace_invalid_frame.rs
-@@ -0,0 +1,33 @@
+@@ -0,0 +1,35 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
@@ -1117,7 +1119,7 @@ diff -uNr 17_kernel_symbols/kernel/tests/06_backtrace_invalid_frame.rs 18_backtr
 +/// Console tests should time out on the I/O harness in case of panic.
 +mod panic_wait_forever;
 +
-+use libkernel::{backtrace, bsp, cpu, exception, memory};
++use libkernel::{backtrace, bsp, cpu, driver, exception, memory};
 +
 +#[inline(never)]
 +fn nested() {
@@ -1128,9 +1130,11 @@ diff -uNr 17_kernel_symbols/kernel/tests/06_backtrace_invalid_frame.rs 18_backtr
 +
 +#[no_mangle]
 +unsafe fn kernel_init() -> ! {
++    use driver::interface::DriverManager;
++
 +    exception::handling_init();
 +    memory::mmu::post_enable_init();
-+    bsp::console::qemu_bring_up_console();
++    bsp::driver::driver_manager().qemu_bring_up_console();
 +
 +    nested();
 +
@@ -1171,7 +1175,7 @@ diff -uNr 17_kernel_symbols/kernel/tests/07_backtrace_invalid_link.rb 18_backtra
 diff -uNr 17_kernel_symbols/kernel/tests/07_backtrace_invalid_link.rs 18_backtrace/kernel/tests/07_backtrace_invalid_link.rs
 --- 17_kernel_symbols/kernel/tests/07_backtrace_invalid_link.rs
 +++ 18_backtrace/kernel/tests/07_backtrace_invalid_link.rs
-@@ -0,0 +1,38 @@
+@@ -0,0 +1,40 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
@@ -1185,7 +1189,7 @@ diff -uNr 17_kernel_symbols/kernel/tests/07_backtrace_invalid_link.rs 18_backtra
 +/// Console tests should time out on the I/O harness in case of panic.
 +mod panic_wait_forever;
 +
-+use libkernel::{backtrace, bsp, cpu, exception, memory};
++use libkernel::{backtrace, bsp, cpu, driver, exception, memory};
 +
 +#[inline(never)]
 +fn nested_2() -> &'static str {
@@ -1201,9 +1205,11 @@ diff -uNr 17_kernel_symbols/kernel/tests/07_backtrace_invalid_link.rs 18_backtra
 +
 +#[no_mangle]
 +unsafe fn kernel_init() -> ! {
++    use driver::interface::DriverManager;
++
 +    exception::handling_init();
 +    memory::mmu::post_enable_init();
-+    bsp::console::qemu_bring_up_console();
++    bsp::driver::driver_manager().qemu_bring_up_console();
 +
 +    nested_1();
 +

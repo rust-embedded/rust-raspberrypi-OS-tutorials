@@ -152,8 +152,7 @@ const MINILOAD_LOGO: &str = r#"
 
 /// The main function running after the early init.
 fn kernel_main() -> ! {
-    use bsp::console::console;
-    use console::interface::All;
+    use console::console;
 
     println!("{}", MINILOAD_LOGO);
     println!("{:^37}", bsp::board_name());

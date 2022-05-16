@@ -12,7 +12,7 @@
 mod panic_wait_forever;
 
 use core::arch::asm;
-use libkernel::{bsp, cpu, exception, info, memory, println};
+use libkernel::{bsp, cpu, driver, exception, info, memory, println};
 
 #[inline(never)]
 fn nested_system_call() {
@@ -30,9 +30,11 @@ fn nested_system_call() {
 
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
+    use driver::interface::DriverManager;
+
     exception::handling_init();
     memory::mmu::post_enable_init();
-    bsp::console::qemu_bring_up_console();
+    bsp::driver::driver_manager().qemu_bring_up_console();
 
     // This line will be printed as the test header.
     println!("Testing exception restore");

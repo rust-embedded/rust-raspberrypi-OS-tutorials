@@ -90,7 +90,7 @@ impl QEMUOutput {
 }
 
 /// Return a reference to the console.
-pub fn console() -> &'static impl console::interface::All {
+pub fn console() -> &'static dyn console::interface::All {
     &QEMU_OUTPUT
 }
 
@@ -114,3 +114,5 @@ impl console::interface::Statistics for QEMUOutput {
         self.inner.lock(|inner| inner.chars_written)
     }
 }
+
+impl console::interface::All for QEMUOutput {}

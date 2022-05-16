@@ -5,7 +5,9 @@
 //! GICC Driver - GIC CPU interface.
 
 use crate::{
-    bsp::device_driver::common::MMIODerefWrapper, exception, synchronization::InitStateLock,
+    bsp::device_driver::common::MMIODerefWrapper,
+    exception,
+    memory::{Address, Virtual},
 };
 use tock_registers::{
     interfaces::{Readable, Writeable},
@@ -62,13 +64,12 @@ type Registers = MMIODerefWrapper<RegisterBlock>;
 
 /// Representation of the GIC CPU interface.
 pub struct GICC {
-    registers: InitStateLock<Registers>,
+    registers: Registers,
 }
 
 //--------------------------------------------------------------------------------------------------
 // Public Code
 //--------------------------------------------------------------------------------------------------
-use crate::synchronization::interface::ReadWriteEx;
 
 impl GICC {
     /// Create an instance.
@@ -76,15 +77,10 @@ impl GICC {
     /// # Safety
     ///
     /// - The user must ensure to provide a correct MMIO start address.
-    pub const unsafe fn new(mmio_start_addr: usize) -> Self {
+    pub const unsafe fn new(mmio_start_addr: Address<Virtual>) -> Self {
         Self {
-            registers: InitStateLock::new(Registers::new(mmio_start_addr)),
+            registers: Registers::new(mmio_start_addr),
         }
-    }
-
-    pub unsafe fn set_mmio(&self, new_mmio_start_addr: usize) {
-        self.registers
-            .write(|regs| *regs = Registers::new(new_mmio_start_addr));
     }
 
     /// Accept interrupts of any priority.
@@ -99,9 +95,7 @@ impl GICC {
     /// - GICC MMIO registers are banked per CPU core. It is therefore safe to have `&self` instead
     ///   of `&mut self`.
     pub fn priority_accept_all(&self) {
-        self.registers.read(|regs| {
-            regs.PMR.write(PMR::Priority.val(255)); // Comment in arch spec.
-        });
+        self.registers.PMR.write(PMR::Priority.val(255)); // Comment in arch spec.
     }
 
     /// Enable the interface - start accepting IRQs.
@@ -111,9 +105,7 @@ impl GICC {
     /// - GICC MMIO registers are banked per CPU core. It is therefore safe to have `&self` instead
     ///   of `&mut self`.
     pub fn enable(&self) {
-        self.registers.read(|regs| {
-            regs.CTLR.write(CTLR::Enable::SET);
-        });
+        self.registers.CTLR.write(CTLR::Enable::SET);
     }
 
     /// Extract the number of the highest-priority pending IRQ.
@@ -129,8 +121,7 @@ impl GICC {
         &self,
         _ic: &exception::asynchronous::IRQContext<'irq_context>,
     ) -> usize {
-        self.registers
-            .read(|regs| regs.IAR.read(IAR::InterruptID) as usize)
+        self.registers.IAR.read(IAR::InterruptID) as usize
     }
 
     /// Complete handling of the currently active IRQ.
@@ -149,8 +140,6 @@ impl GICC {
         irq_number: u32,
         _ic: &exception::asynchronous::IRQContext<'irq_context>,
     ) {
-        self.registers.read(|regs| {
-            regs.EOIR.write(EOIR::EOIINTID.val(irq_number));
-        });
+        self.registers.EOIR.write(EOIR::EOIINTID.val(irq_number));
     }
 }

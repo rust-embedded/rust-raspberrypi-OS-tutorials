@@ -10,6 +10,8 @@
 
 /// Driver interfaces.
 pub mod interface {
+    use crate::bsp;
+
     /// Device Driver functions.
     pub trait DeviceDriver {
         /// Return a compatibility string for identifying the driver.
@@ -31,32 +33,25 @@ pub mod interface {
         fn register_and_enable_irq_handler(&'static self) -> Result<(), &'static str> {
             Ok(())
         }
-
-        /// After MMIO remapping, returns the new virtual start address.
-        ///
-        /// This API assumes a driver has only a single, contiguous MMIO aperture, which will not be
-        /// the case for more complex devices. This API will likely change in future tutorials.
-        fn virt_mmio_start_addr(&self) -> Option<usize> {
-            None
-        }
     }
 
     /// Device driver management functions.
     ///
     /// The `BSP` is supposed to supply one global instance.
     pub trait DriverManager {
-        /// Return a slice of references to all `BSP`-instantiated drivers.
-        fn all_device_drivers(&self) -> &[&'static (dyn DeviceDriver + Sync)];
-
-        /// Return only those drivers needed for the BSP's early printing functionality.
+        /// Instantiate all drivers.
         ///
-        /// For example, the default UART.
-        fn early_print_device_drivers(&self) -> &[&'static (dyn DeviceDriver + Sync)];
+        /// # Safety
+        ///
+        /// Must be called before `all_device_drivers`.
+        unsafe fn instantiate_drivers(&self) -> Result<(), &'static str>;
 
-        /// Return all drivers minus early-print drivers.
-        fn non_early_print_device_drivers(&self) -> &[&'static (dyn DeviceDriver + Sync)];
+        /// Return a slice of references to all `BSP`-instantiated drivers.
+        fn all_device_drivers(&self) -> [&(dyn DeviceDriver + Sync); bsp::driver::NUM_DRIVERS];
 
-        /// Initialization code that runs after the early print driver init.
-        fn post_early_print_device_driver_init(&self);
+        /// Minimal code needed to bring up the console in QEMU (for testing only). This is often
+        /// less steps than on real hardware due to QEMU's abstractions.
+        #[cfg(feature = "test_build")]
+        fn qemu_bring_up_console(&self);
     }
 }

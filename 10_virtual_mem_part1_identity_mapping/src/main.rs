@@ -158,8 +158,7 @@ unsafe fn kernel_init() -> ! {
 
 /// The main function running after the early init.
 fn kernel_main() -> ! {
-    use bsp::console::console;
-    use console::interface::All;
+    use console::{console, interface::Write};
     use core::time::Duration;
     use driver::interface::DriverManager;
     use time::interface::TimeManager;
@@ -209,7 +208,7 @@ fn kernel_main() -> ! {
     // Discard any spurious received characters before going into echo mode.
     console().clear_rx();
     loop {
-        let c = bsp::console::console().read_char();
-        bsp::console::console().write_char(c);
+        let c = console().read_char();
+        console().write_char(c);
     }
 }

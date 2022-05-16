@@ -4,7 +4,10 @@
 
 //! BSP driver support.
 
-use crate::driver;
+use super::{exception, memory::map::mmio};
+use crate::{bsp::device_driver, driver};
+
+pub use device_driver::IRQNumber;
 
 //--------------------------------------------------------------------------------------------------
 // Private Definitions
@@ -19,12 +22,25 @@ struct BSPDriverManager {
 // Global instances
 //--------------------------------------------------------------------------------------------------
 
+pub(super) static PL011_UART: device_driver::PL011Uart = unsafe {
+    device_driver::PL011Uart::new(
+        mmio::PL011_UART_START,
+        exception::asynchronous::irq_map::PL011_UART,
+    )
+};
+
+static GPIO: device_driver::GPIO = unsafe { device_driver::GPIO::new(mmio::GPIO_START) };
+
+#[cfg(feature = "bsp_rpi3")]
+pub(super) static INTERRUPT_CONTROLLER: device_driver::InterruptController =
+    unsafe { device_driver::InterruptController::new(mmio::PERIPHERAL_INTERRUPT_CONTROLLER_START) };
+
+#[cfg(feature = "bsp_rpi4")]
+pub(super) static INTERRUPT_CONTROLLER: device_driver::GICv2 =
+    unsafe { device_driver::GICv2::new(mmio::GICD_START, mmio::GICC_START) };
+
 static BSP_DRIVER_MANAGER: BSPDriverManager = BSPDriverManager {
-    device_drivers: [
-        &super::GPIO,
-        &super::PL011_UART,
-        &super::INTERRUPT_CONTROLLER,
-    ],
+    device_drivers: [&PL011_UART, &GPIO, &INTERRUPT_CONTROLLER],
 };
 
 //--------------------------------------------------------------------------------------------------
@@ -48,6 +64,9 @@ impl driver::interface::DriverManager for BSPDriverManager {
 
     fn post_device_driver_init(&self) {
         // Configure PL011Uart's output pins.
-        super::GPIO.map_pl011_uart();
+        GPIO.map_pl011_uart();
     }
+
+    #[cfg(feature = "test_build")]
+    fn qemu_bring_up_console(&self) {}
 }

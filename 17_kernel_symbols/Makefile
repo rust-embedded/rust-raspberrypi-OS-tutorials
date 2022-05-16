@@ -215,7 +215,7 @@ $(KERNEL_BIN): $(KERNEL_ELF_TTABLES_SYMS)
 ##------------------------------------------------------------------------------
 ## Generate the documentation
 ##------------------------------------------------------------------------------
-doc:
+doc: clean
 	$(call color_header, "Generating docs")
 	@$(DOC_CMD) --document-private-items --open
 

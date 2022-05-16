@@ -28,6 +28,7 @@ pub type PeripheralIRQ =
 
 /// Used for the associated type of trait [`exception::asynchronous::interface::IRQManager`].
 #[derive(Copy, Clone)]
+#[allow(missing_docs)]
 pub enum IRQNumber {
     Local(LocalIRQ),
     Peripheral(PeripheralIRQ),
@@ -74,12 +75,14 @@ impl InterruptController {
     const MAX_PERIPHERAL_IRQ_NUMBER: usize = 63;
     const NUM_PERIPHERAL_IRQS: usize = Self::MAX_PERIPHERAL_IRQ_NUMBER + 1;
 
+    pub const COMPATIBLE: &'static str = "BCM Interrupt Controller";
+
     /// Create an instance.
     ///
     /// # Safety
     ///
     /// - The user must ensure to provide a correct MMIO start address.
-    pub const unsafe fn new(_local_mmio_start_addr: usize, periph_mmio_start_addr: usize) -> Self {
+    pub const unsafe fn new(periph_mmio_start_addr: usize) -> Self {
         Self {
             periph: peripheral_ic::PeripheralIC::new(periph_mmio_start_addr),
         }
@@ -92,7 +95,7 @@ impl InterruptController {
 
 impl driver::interface::DeviceDriver for InterruptController {
     fn compatible(&self) -> &'static str {
-        "BCM Interrupt Controller"
+        Self::COMPATIBLE
     }
 }
 

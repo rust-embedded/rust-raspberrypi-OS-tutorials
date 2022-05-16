@@ -66,6 +66,7 @@ Minipush 1.0
 [MP] ⏳ Waiting for /dev/ttyUSB0
 [MP] ✅ Serial connected
 [MP] 🔌 Please power the target now
+
  __  __ _      _ _                 _
 |  \/  (_)_ _ (_) |   ___  __ _ __| |
 | |\/| | | ' \| | |__/ _ \/ _` / _` |
@@ -74,14 +75,14 @@ Minipush 1.0
            Raspberry Pi 3
 
 [ML] Requesting binary
-[MP] ⏩ Pushing 6 KiB ==========================================🦀 100% 0 KiB/s Time: 00:00:00
+[MP] ⏩ Pushing 7 KiB ==========================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
 [0] mingo version 0.5.0
 [1] Booting on: Raspberry Pi 3
 [2] Drivers loaded:
-      1. BCM GPIO
-      2. BCM PL011 UART
+      1. BCM PL011 UART
+      2. BCM GPIO
 [3] Chars written: 117
 [4] Echoing input now
 ```
@@ -324,23 +325,10 @@ diff -uNr 05_drivers_gpio_uart/src/_arch/aarch64/cpu/boot.s 06_uart_chainloader/
  	// Infinitely wait for events (aka "park the core").
  .L_parking_loop:
 
-diff -uNr 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
---- 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
-+++ 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
-@@ -148,7 +148,7 @@
-         // Make an educated guess for a good delay value (Sequence described in the BCM2837
-         // peripherals PDF).
-         //
--        // - According to Wikipedia, the fastest Pi3 clocks around 1.4 GHz.
-+        // - According to Wikipedia, the fastest RPi4 clocks around 1.5 GHz.
-         // - The Linux 2837 GPIO driver waits 1 µs between the steps.
-         //
-         // So lets try to be on the safe side and default to 2000 cycles, which would equal 1 µs
-
 diff -uNr 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 --- 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -278,7 +278,7 @@
+@@ -275,7 +275,7 @@
      }
 
      /// Retrieve a character.
@@ -349,7 +337,7 @@ diff -uNr 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 0
          // If RX FIFO is empty,
          if self.registers.FR.matches_all(FR::RXFE::SET) {
              // immediately return in non-blocking mode.
-@@ -293,12 +293,7 @@
+@@ -290,12 +290,7 @@
          }
 
          // Read one character.
@@ -363,7 +351,7 @@ diff -uNr 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 0
 
          // Update statistics.
          self.chars_read += 1;
-@@ -378,14 +373,14 @@
+@@ -381,14 +376,14 @@
  impl console::interface::Read for PL011Uart {
      fn read_char(&self) -> char {
          self.inner
@@ -426,19 +414,14 @@ diff -uNr 05_drivers_gpio_uart/src/bsp/raspberrypi/kernel.ld 06_uart_chainloader
 diff -uNr 05_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs 06_uart_chainloader/src/bsp/raspberrypi/memory.rs
 --- 05_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs
 +++ 06_uart_chainloader/src/bsp/raspberrypi/memory.rs
-@@ -11,9 +11,10 @@
+@@ -11,6 +11,7 @@
  /// The board's physical memory map.
  #[rustfmt::skip]
  pub(super) mod map {
 +    pub const BOARD_DEFAULT_LOAD_ADDRESS: usize =        0x8_0000;
 
--    pub const GPIO_OFFSET:         usize = 0x0020_0000;
--    pub const UART_OFFSET:         usize = 0x0020_1000;
-+    pub const GPIO_OFFSET:                usize =        0x0020_0000;
-+    pub const UART_OFFSET:                usize =        0x0020_1000;
-
-     /// Physical devices.
-     #[cfg(feature = "bsp_rpi3")]
+     pub const GPIO_OFFSET:         usize = 0x0020_0000;
+     pub const UART_OFFSET:         usize = 0x0020_1000;
 @@ -35,3 +36,13 @@
          pub const PL011_UART_START: usize = START + UART_OFFSET;
      }
@@ -457,7 +440,7 @@ diff -uNr 05_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs 06_uart_chainloader
 diff -uNr 05_drivers_gpio_uart/src/main.rs 06_uart_chainloader/src/main.rs
 --- 05_drivers_gpio_uart/src/main.rs
 +++ 06_uart_chainloader/src/main.rs
-@@ -143,38 +143,56 @@
+@@ -143,34 +143,55 @@
      kernel_main()
  }
 
@@ -470,8 +453,7 @@ diff -uNr 05_drivers_gpio_uart/src/main.rs 06_uart_chainloader/src/main.rs
 +
  /// The main function running after the early init.
  fn kernel_main() -> ! {
-     use bsp::console::console;
-     use console::interface::All;
+     use console::console;
 -    use driver::interface::DriverManager;
 
 -    println!(
@@ -502,10 +484,7 @@ diff -uNr 05_drivers_gpio_uart/src/main.rs 06_uart_chainloader/src/main.rs
 +        console().write_char(3 as char);
      }
 
--    println!(
--        "[3] Chars written: {}",
--        bsp::console::console().chars_written()
--    );
+-    println!("[3] Chars written: {}", console().chars_written());
 -    println!("[4] Echoing input now");
 +    // Read the binary's size.
 +    let mut size: u32 = u32::from(console().read_char() as u8);
@@ -516,8 +495,8 @@ diff -uNr 05_drivers_gpio_uart/src/main.rs 06_uart_chainloader/src/main.rs
 -    // Discard any spurious received characters before going into echo mode.
 -    console().clear_rx();
 -    loop {
--        let c = bsp::console::console().read_char();
--        bsp::console::console().write_char(c);
+-        let c = console().read_char();
+-        console().write_char(c);
 +    // Trust it's not too big.
 +    console().write_char('O');
 +    console().write_char('K');

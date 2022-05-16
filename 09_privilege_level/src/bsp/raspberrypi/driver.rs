@@ -4,7 +4,8 @@
 
 //! BSP driver support.
 
-use crate::driver;
+use super::memory::map::mmio;
+use crate::{bsp::device_driver, driver};
 
 //--------------------------------------------------------------------------------------------------
 // Private Definitions
@@ -19,8 +20,13 @@ struct BSPDriverManager {
 // Global instances
 //--------------------------------------------------------------------------------------------------
 
+pub(super) static PL011_UART: device_driver::PL011Uart =
+    unsafe { device_driver::PL011Uart::new(mmio::PL011_UART_START) };
+
+static GPIO: device_driver::GPIO = unsafe { device_driver::GPIO::new(mmio::GPIO_START) };
+
 static BSP_DRIVER_MANAGER: BSPDriverManager = BSPDriverManager {
-    device_drivers: [&super::GPIO, &super::PL011_UART],
+    device_drivers: [&PL011_UART, &GPIO],
 };
 
 //--------------------------------------------------------------------------------------------------
@@ -44,6 +50,6 @@ impl driver::interface::DriverManager for BSPDriverManager {
 
     fn post_device_driver_init(&self) {
         // Configure PL011Uart's output pins.
-        super::GPIO.map_pl011_uart();
+        GPIO.map_pl011_uart();
     }
 }

@@ -7,7 +7,9 @@
 #[cfg(target_arch = "aarch64")]
 #[path = "../_arch/aarch64/exception/asynchronous.rs"]
 mod arch_asynchronous;
+mod null_irq_manager;
 
+use crate::{bsp, synchronization};
 use core::{fmt, marker::PhantomData};
 
 //--------------------------------------------------------------------------------------------------
@@ -85,7 +87,7 @@ pub mod interface {
         );
 
         /// Print list of registered handlers.
-        fn print_handler(&self);
+        fn print_handler(&self) {}
     }
 }
 
@@ -94,8 +96,17 @@ pub mod interface {
 pub struct IRQNumber<const MAX_INCLUSIVE: usize>(usize);
 
 //--------------------------------------------------------------------------------------------------
+// Global instances
+//--------------------------------------------------------------------------------------------------
+
+static CUR_IRQ_MANAGER: InitStateLock<
+    &'static (dyn interface::IRQManager<IRQNumberType = bsp::driver::IRQNumber> + Sync),
+> = InitStateLock::new(&null_irq_manager::NULL_IRQ_MANAGER);
+
+//--------------------------------------------------------------------------------------------------
 // Public Code
 //--------------------------------------------------------------------------------------------------
+use synchronization::{interface::ReadWriteEx, InitStateLock};
 
 impl<'irq_context> IRQContext<'irq_context> {
     /// Creates an IRQContext token.
@@ -149,4 +160,19 @@ pub fn exec_with_irq_masked<T>(f: impl FnOnce() -> T) -> T {
     }
 
     ret
+}
+
+/// Register a new IRQ manager.
+pub fn register_irq_manager(
+    new_manager: &'static (dyn interface::IRQManager<IRQNumberType = bsp::driver::IRQNumber>
+                  + Sync),
+) {
+    CUR_IRQ_MANAGER.write(|manager| *manager = new_manager);
+}
+
+/// Return a reference to the currently registered IRQ manager.
+///
+/// This is the IRQ manager used by the architectural interrupt handling code.
+pub fn irq_manager() -> &'static dyn interface::IRQManager<IRQNumberType = bsp::driver::IRQNumber> {
+    CUR_IRQ_MANAGER.read(|manager| *manager)
 }

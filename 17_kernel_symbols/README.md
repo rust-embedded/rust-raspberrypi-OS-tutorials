@@ -269,12 +269,12 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel/src/_arch/aarch64/excep
  //!
  //! crate::exception::arch_exception
 
--use crate::{bsp, exception};
-+use crate::{bsp, exception, memory, symbols};
+-use crate::exception;
++use crate::{exception, memory, symbols};
  use core::{arch::global_asm, cell::UnsafeCell, fmt};
  use cortex_a::{asm::barrier, registers::*};
  use tock_registers::{
-@@ -262,6 +262,14 @@
+@@ -260,6 +260,14 @@
 
          writeln!(f, "{}", self.spsr_el1)?;
          writeln!(f, "ELR_EL1: {:#018x}", self.elr_el1)?;
@@ -332,7 +332,7 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel/src/bsp/raspberrypi/mem
 diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel/src/lib.rs 17_kernel_symbols/kernel/src/lib.rs
 --- 16_virtual_mem_part4_higher_half_kernel/kernel/src/lib.rs
 +++ 17_kernel_symbols/kernel/src/lib.rs
-@@ -137,6 +137,7 @@
+@@ -138,6 +138,7 @@
  pub mod memory;
  pub mod print;
  pub mod state;
@@ -731,6 +731,15 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/Makefile 17_kernel_symbols/Mak
  	$(call color_progress_prefix, "Name")
  	@echo $(KERNEL_BIN)
  	$(call color_progress_prefix, "Size")
+@@ -190,7 +215,7 @@
+ ##------------------------------------------------------------------------------
+ ## Generate the documentation
+ ##------------------------------------------------------------------------------
+-doc:
++doc: clean
+ 	$(call color_header, "Generating docs")
+ 	@$(DOC_CMD) --document-private-items --open
+
 @@ -318,10 +343,19 @@
      cd $(shell pwd)
 

@@ -12,7 +12,7 @@
 mod panic_wait_forever;
 
 use core::arch::asm;
-use libkernel::{bsp, cpu, exception, info, memory, println};
+use libkernel::{bsp, cpu, driver, exception, info, memory, println};
 
 #[inline(never)]
 fn nested_system_call() {
@@ -30,7 +30,7 @@ fn nested_system_call() {
 
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
-    use libkernel::driver::interface::DriverManager;
+    use driver::interface::DriverManager;
 
     exception::handling_init();
 
@@ -52,17 +52,7 @@ unsafe fn kernel_init() -> ! {
     // Printing will silently fail from here on, because the driver's MMIO is not remapped yet.
 
     memory::mmu::post_enable_init();
-    bsp::console::qemu_bring_up_console();
-
-    // Bring up the drivers needed for printing first.
-    for i in bsp::driver::driver_manager()
-        .early_print_device_drivers()
-        .iter()
-    {
-        // Any encountered errors cannot be printed yet, obviously, so just safely park the CPU.
-        i.init().unwrap_or_else(|_| cpu::qemu_exit_failure());
-    }
-    bsp::driver::driver_manager().post_early_print_device_driver_init();
+    bsp::driver::driver_manager().qemu_bring_up_console();
     // Printing available again from here on.
 
     info!("Making a dummy system call");

@@ -11,7 +11,7 @@
 /// Console tests should time out on the I/O harness in case of panic.
 mod panic_wait_forever;
 
-use libkernel::{bsp, cpu, exception, memory};
+use libkernel::{bsp, cpu, driver, exception, memory};
 
 #[inline(never)]
 fn nested() {
@@ -20,9 +20,11 @@ fn nested() {
 
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
+    use driver::interface::DriverManager;
+
     exception::handling_init();
     memory::mmu::post_enable_init();
-    bsp::console::qemu_bring_up_console();
+    bsp::driver::driver_manager().qemu_bring_up_console();
 
     nested();
 

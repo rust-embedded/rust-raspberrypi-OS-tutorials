@@ -188,12 +188,14 @@ diff -uNr 02_runtime_init/src/bsp/raspberrypi.rs 03_hacky_hello_world/src/bsp/ra
 diff -uNr 02_runtime_init/src/console.rs 03_hacky_hello_world/src/console.rs
 --- 02_runtime_init/src/console.rs
 +++ 03_hacky_hello_world/src/console.rs
-@@ -0,0 +1,19 @@
+@@ -0,0 +1,32 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! System console.
++
++use crate::bsp;
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Definitions
@@ -207,6 +209,17 @@ diff -uNr 02_runtime_init/src/console.rs 03_hacky_hello_world/src/console.rs
 +    /// implementing `console::Write` gives a better hint to the reader about the
 +    /// intention.
 +    pub use core::fmt::Write;
++}
++
++//--------------------------------------------------------------------------------------------------
++// Public Code
++//--------------------------------------------------------------------------------------------------
++
++/// Return a reference to the console.
++///
++/// This is the global console used by all printing macros.
++pub fn console() -> impl interface::Write {
++    bsp::console::console()
 +}
 
 diff -uNr 02_runtime_init/src/main.rs 03_hacky_hello_world/src/main.rs
@@ -317,7 +330,7 @@ diff -uNr 02_runtime_init/src/print.rs 03_hacky_hello_world/src/print.rs
 +
 +//! Printing.
 +
-+use crate::{bsp, console};
++use crate::console;
 +use core::fmt;
 +
 +//--------------------------------------------------------------------------------------------------
@@ -328,7 +341,7 @@ diff -uNr 02_runtime_init/src/print.rs 03_hacky_hello_world/src/print.rs
 +pub fn _print(args: fmt::Arguments) {
 +    use console::interface::Write;
 +
-+    bsp::console::console().write_fmt(args).unwrap();
++    console::console().write_fmt(args).unwrap();
 +}
 +
 +/// Prints without a newline.

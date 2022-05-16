@@ -8,6 +8,7 @@
 #[path = "../_arch/aarch64/exception/asynchronous.rs"]
 mod arch_asynchronous;
 
+use crate::bsp;
 use core::{fmt, marker::PhantomData};
 
 //--------------------------------------------------------------------------------------------------
@@ -149,4 +150,11 @@ pub fn exec_with_irq_masked<T>(f: impl FnOnce() -> T) -> T {
     }
 
     ret
+}
+
+/// Return a reference to the IRQ manager.
+///
+/// This is the IRQ manager used by the architectural interrupt handling code.
+pub fn irq_manager() -> &'static dyn interface::IRQManager<IRQNumberType = bsp::driver::IRQNumber> {
+    bsp::exception::asynchronous::irq_manager()
 }

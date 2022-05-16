@@ -29,7 +29,6 @@
     + [The GICv2 Driver (Pi 4)](#the-gicv2-driver-pi-4)
       - [GICC Details](#gicc-details)
       - [GICD Details](#gicd-details)
-- [UART hack](#uart-hack)
 - [Test it](#test-it)
 - [Diff to previous](#diff-to-previous)
 
@@ -282,7 +281,7 @@ fn register_and_enable_irq_handler(&'static self) -> Result<(), &'static str> {
     use exception::asynchronous::{interface::IRQManager, IRQDescriptor};
 
     let descriptor = IRQDescriptor {
-        name: "BCM PL011 UART",
+        name: Self::COMPATIBLE,
         handler: self,
     };
 
@@ -667,6 +666,7 @@ Minipush 1.0
 [MP] ⏳ Waiting for /dev/ttyUSB0
 [MP] ✅ Serial connected
 [MP] 🔌 Please power the target now
+
  __  __ _      _ _                 _
 |  \/  (_)_ _ (_) |   ___  __ _ __| |
 | |\/| | | ' \| | |__/ _ \/ _` / _` |
@@ -678,26 +678,26 @@ Minipush 1.0
 [MP] ⏩ Pushing 66 KiB =========================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
-[    1.010579] mingo version 0.13.0
-[    1.010787] Booting on: Raspberry Pi 3
-[    1.011242] MMU online. Special regions:
-[    1.011718]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
-[    1.012737]       0x3f000000 - 0x4000ffff |  16 MiB | Dev RW PXN | Device MMIO
-[    1.013625] Current privilege level: EL1
-[    1.014102] Exception handling state:
-[    1.014546]       Debug:  Masked
-[    1.014936]       SError: Masked
-[    1.015326]       IRQ:    Unmasked
-[    1.015738]       FIQ:    Masked
-[    1.016127] Architectural timer resolution: 52 ns
-[    1.016702] Drivers loaded:
-[    1.017038]       1. BCM GPIO
-[    1.017395]       2. BCM PL011 UART
-[    1.017817]       3. BCM Interrupt Controller
-[    1.018348] Registered IRQ handlers:
-[    1.018782]       Peripheral handler:
-[    1.019228]              57. BCM PL011 UART
-[    1.019735] Echoing input now
+[    0.822492] mingo version 0.13.0
+[    0.822700] Booting on: Raspberry Pi 3
+[    0.823155] MMU online. Special regions:
+[    0.823632]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
+[    0.824650]       0x3f000000 - 0x4000ffff |  16 MiB | Dev RW PXN | Device MMIO
+[    0.825539] Current privilege level: EL1
+[    0.826015] Exception handling state:
+[    0.826459]       Debug:  Masked
+[    0.826849]       SError: Masked
+[    0.827239]       IRQ:    Unmasked
+[    0.827651]       FIQ:    Masked
+[    0.828041] Architectural timer resolution: 52 ns
+[    0.828615] Drivers loaded:
+[    0.828951]       1. BCM PL011 UART
+[    0.829373]       2. BCM GPIO
+[    0.829731]       3. BCM Interrupt Controller
+[    0.830262] Registered IRQ handlers:
+[    0.830695]       Peripheral handler:
+[    0.831141]              57. BCM PL011 UART
+[    0.831649] Echoing input now
 ```
 
 Raspberry Pi 4:
@@ -710,6 +710,7 @@ Minipush 1.0
 [MP] ⏳ Waiting for /dev/ttyUSB0
 [MP] ✅ Serial connected
 [MP] 🔌 Please power the target now
+
  __  __ _      _ _                 _
 |  \/  (_)_ _ (_) |   ___  __ _ __| |
 | |\/| | | ' \| | |__/ _ \/ _` / _` |
@@ -721,26 +722,26 @@ Minipush 1.0
 [MP] ⏩ Pushing 73 KiB =========================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
-[    1.030536] mingo version 0.13.0
-[    1.030569] Booting on: Raspberry Pi 4
-[    1.031024] MMU online. Special regions:
-[    1.031501]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
-[    1.032519]       0xfe000000 - 0xff84ffff |  24 MiB | Dev RW PXN | Device MMIO
-[    1.033408] Current privilege level: EL1
-[    1.033884] Exception handling state:
-[    1.034328]       Debug:  Masked
-[    1.034718]       SError: Masked
-[    1.035108]       IRQ:    Unmasked
-[    1.035520]       FIQ:    Masked
-[    1.035910] Architectural timer resolution: 18 ns
-[    1.036484] Drivers loaded:
-[    1.036820]       1. BCM GPIO
-[    1.037178]       2. BCM PL011 UART
-[    1.037600]       3. GICv2 (ARM Generic Interrupt Controller v2)
-[    1.038337] Registered IRQ handlers:
-[    1.038770]       Peripheral handler:
-[    1.039217]             153. BCM PL011 UART
-[    1.039725] Echoing input now
+[    0.886853] mingo version 0.13.0
+[    0.886886] Booting on: Raspberry Pi 4
+[    0.887341] MMU online. Special regions:
+[    0.887818]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
+[    0.888836]       0xfe000000 - 0xff84ffff |  24 MiB | Dev RW PXN | Device MMIO
+[    0.889725] Current privilege level: EL1
+[    0.890201] Exception handling state:
+[    0.890645]       Debug:  Masked
+[    0.891035]       SError: Masked
+[    0.891425]       IRQ:    Unmasked
+[    0.891837]       FIQ:    Masked
+[    0.892227] Architectural timer resolution: 18 ns
+[    0.892801] Drivers loaded:
+[    0.893137]       1. BCM PL011 UART
+[    0.893560]       2. BCM GPIO
+[    0.893917]       3. GICv2 (ARM Generic Interrupt Controller v2)
+[    0.894654] Registered IRQ handlers:
+[    0.895087]       Peripheral handler:
+[    0.895534]             153. BCM PL011 UART
+[    0.896042] Echoing input now
 ```
 
 ## Diff to previous
@@ -896,21 +897,19 @@ diff -uNr 12_integrated_testing/kernel/src/_arch/aarch64/exception.rs 13_excepti
  //!
  //! crate::exception::arch_exception
 
-+use crate::{bsp, exception};
++use crate::exception;
  use core::{arch::global_asm, cell::UnsafeCell, fmt};
  use cortex_a::{asm::barrier, registers::*};
  use tock_registers::{
-@@ -102,8 +103,11 @@
+@@ -102,8 +103,9 @@
  }
 
  #[no_mangle]
 -unsafe extern "C" fn current_elx_irq(e: &mut ExceptionContext) {
 -    default_exception_handler(e);
 +unsafe extern "C" fn current_elx_irq(_e: &mut ExceptionContext) {
-+    use exception::asynchronous::interface::IRQManager;
-+
 +    let token = &exception::asynchronous::IRQContext::new();
-+    bsp::exception::asynchronous::irq_manager().handle_pending_irqs(token);
++    exception::asynchronous::irq_manager().handle_pending_irqs(token);
  }
 
  #[no_mangle]
@@ -1268,7 +1267,7 @@ diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/arm/gicv2/gicd.rs 1
 diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/arm/gicv2.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/arm/gicv2.rs
 --- 12_integrated_testing/kernel/src/bsp/device_driver/arm/gicv2.rs
 +++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/arm/gicv2.rs
-@@ -0,0 +1,219 @@
+@@ -0,0 +1,221 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
@@ -1385,6 +1384,8 @@ diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/arm/gicv2.rs 13_exc
 +    const MAX_IRQ_NUMBER: usize = 300; // Normally 1019, but keep it lower to save some space.
 +    const NUM_IRQS: usize = Self::MAX_IRQ_NUMBER + 1;
 +
++    pub const COMPATIBLE: &'static str = "GICv2 (ARM Generic Interrupt Controller v2)";
++
 +    /// Create an instance.
 +    ///
 +    /// # Safety
@@ -1406,7 +1407,7 @@ diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/arm/gicv2.rs 13_exc
 +
 +impl driver::interface::DeviceDriver for GICv2 {
 +    fn compatible(&self) -> &'static str {
-+        "GICv2 (ARM Generic Interrupt Controller v2)"
++        Self::COMPATIBLE
 +    }
 +
 +    unsafe fn init(&self) -> Result<(), &'static str> {
@@ -1515,7 +1516,7 @@ diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
  };
  use tock_registers::{
      interfaces::{ReadWriteable, Writeable},
-@@ -121,7 +121,7 @@
+@@ -118,7 +118,7 @@
 
  /// Representation of the GPIO HW.
  pub struct GPIO {
@@ -1524,7 +1525,7 @@ diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -197,7 +197,7 @@
+@@ -200,7 +200,7 @@
      /// - The user must ensure to provide a correct MMIO start address.
      pub const unsafe fn new(mmio_start_addr: usize) -> Self {
          Self {
@@ -1709,7 +1710,7 @@ diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_interru
 diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs
 --- 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs
 +++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs
-@@ -0,0 +1,131 @@
+@@ -0,0 +1,134 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
@@ -1740,6 +1741,7 @@ diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_interru
 +
 +/// Used for the associated type of trait [`exception::asynchronous::interface::IRQManager`].
 +#[derive(Copy, Clone)]
++#[allow(missing_docs)]
 +pub enum IRQNumber {
 +    Local(LocalIRQ),
 +    Peripheral(PeripheralIRQ),
@@ -1786,12 +1788,14 @@ diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_interru
 +    const MAX_PERIPHERAL_IRQ_NUMBER: usize = 63;
 +    const NUM_PERIPHERAL_IRQS: usize = Self::MAX_PERIPHERAL_IRQ_NUMBER + 1;
 +
++    pub const COMPATIBLE: &'static str = "BCM Interrupt Controller";
++
 +    /// Create an instance.
 +    ///
 +    /// # Safety
 +    ///
 +    /// - The user must ensure to provide a correct MMIO start address.
-+    pub const unsafe fn new(_local_mmio_start_addr: usize, periph_mmio_start_addr: usize) -> Self {
++    pub const unsafe fn new(periph_mmio_start_addr: usize) -> Self {
 +        Self {
 +            periph: peripheral_ic::PeripheralIC::new(periph_mmio_start_addr),
 +        }
@@ -1804,7 +1808,7 @@ diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_interru
 +
 +impl driver::interface::DeviceDriver for InterruptController {
 +    fn compatible(&self) -> &'static str {
-+        "BCM Interrupt Controller"
++        Self::COMPATIBLE
 +    }
 +}
 +
@@ -1921,7 +1925,7 @@ diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_pl011_u
          (0x44 => ICR: WriteOnly<u32, ICR::Register>),
          (0x48 => @END),
      }
-@@ -182,7 +231,8 @@
+@@ -179,7 +228,8 @@
 
  /// Representation of the UART.
  pub struct PL011Uart {
@@ -1931,7 +1935,7 @@ diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_pl011_u
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -250,6 +300,14 @@
+@@ -247,6 +297,14 @@
              .LCR_H
              .write(LCR_H::WLEN::EightBit + LCR_H::FEN::FifosEnabled);
 
@@ -1946,7 +1950,7 @@ diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_pl011_u
          // Turn the UART on.
          self.registers
              .CR
-@@ -332,9 +390,13 @@
+@@ -335,9 +393,13 @@
      /// # Safety
      ///
      /// - The user must ensure to provide a correct MMIO start address.
@@ -1962,17 +1966,16 @@ diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_pl011_u
          }
      }
  }
-@@ -354,6 +416,21 @@
+@@ -357,6 +419,20 @@
 
          Ok(())
      }
 +
 +    fn register_and_enable_irq_handler(&'static self) -> Result<(), &'static str> {
-+        use bsp::exception::asynchronous::irq_manager;
-+        use exception::asynchronous::{interface::IRQManager, IRQDescriptor};
++        use exception::asynchronous::{irq_manager, IRQDescriptor};
 +
 +        let descriptor = IRQDescriptor {
-+            name: "BCM PL011 UART",
++            name: Self::COMPATIBLE,
 +            handler: self,
 +        };
 +
@@ -1984,10 +1987,10 @@ diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_pl011_u
  }
 
  impl console::interface::Write for PL011Uart {
-@@ -400,3 +477,24 @@
-         self.inner.lock(|inner| inner.chars_read)
-     }
+@@ -405,3 +481,24 @@
  }
+
+ impl console::interface::All for PL011Uart {}
 +
 +impl exception::asynchronous::interface::IRQHandler for PL011Uart {
 +    fn handle(&self) -> Result<(), &'static str> {
@@ -2047,7 +2050,19 @@ diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver.rs 13_exceptions_pa
 diff -uNr 12_integrated_testing/kernel/src/bsp/raspberrypi/driver.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/driver.rs
 --- 12_integrated_testing/kernel/src/bsp/raspberrypi/driver.rs
 +++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/driver.rs
-@@ -12,7 +12,7 @@
+@@ -4,29 +4,43 @@
+
+ //! BSP driver support.
+
+-use super::memory::map::mmio;
++use super::{exception, memory::map::mmio};
+ use crate::{bsp::device_driver, driver};
+
++pub use device_driver::IRQNumber;
++
+ //--------------------------------------------------------------------------------------------------
+ // Private Definitions
+ //--------------------------------------------------------------------------------------------------
 
  /// Device Driver Manager type.
  struct BSPDriverManager {
@@ -2056,16 +2071,31 @@ diff -uNr 12_integrated_testing/kernel/src/bsp/raspberrypi/driver.rs 13_exceptio
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -20,7 +20,11 @@
+ // Global instances
  //--------------------------------------------------------------------------------------------------
 
+-pub(super) static PL011_UART: device_driver::PL011Uart =
+-    unsafe { device_driver::PL011Uart::new(mmio::PL011_UART_START) };
++pub(super) static PL011_UART: device_driver::PL011Uart = unsafe {
++    device_driver::PL011Uart::new(
++        mmio::PL011_UART_START,
++        exception::asynchronous::irq_map::PL011_UART,
++    )
++};
+
+ static GPIO: device_driver::GPIO = unsafe { device_driver::GPIO::new(mmio::GPIO_START) };
+
++#[cfg(feature = "bsp_rpi3")]
++pub(super) static INTERRUPT_CONTROLLER: device_driver::InterruptController =
++    unsafe { device_driver::InterruptController::new(mmio::PERIPHERAL_INTERRUPT_CONTROLLER_START) };
++
++#[cfg(feature = "bsp_rpi4")]
++pub(super) static INTERRUPT_CONTROLLER: device_driver::GICv2 =
++    unsafe { device_driver::GICv2::new(mmio::GICD_START, mmio::GICC_START) };
++
  static BSP_DRIVER_MANAGER: BSPDriverManager = BSPDriverManager {
--    device_drivers: [&super::GPIO, &super::PL011_UART],
-+    device_drivers: [
-+        &super::GPIO,
-+        &super::PL011_UART,
-+        &super::INTERRUPT_CONTROLLER,
-+    ],
+-    device_drivers: [&PL011_UART, &GPIO],
++    device_drivers: [&PL011_UART, &GPIO, &INTERRUPT_CONTROLLER],
  };
 
  //--------------------------------------------------------------------------------------------------
@@ -2080,7 +2110,7 @@ diff -uNr 12_integrated_testing/kernel/src/bsp/raspberrypi/exception/asynchronou
 +
 +//! BSP asynchronous exception handling.
 +
-+use crate::{bsp, exception};
++use crate::{bsp, bsp::driver, exception};
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Definitions
@@ -2108,7 +2138,7 @@ diff -uNr 12_integrated_testing/kernel/src/bsp/raspberrypi/exception/asynchronou
 +pub fn irq_manager() -> &'static impl exception::asynchronous::interface::IRQManager<
 +    IRQNumberType = bsp::device_driver::IRQNumber,
 +> {
-+    &super::super::INTERRUPT_CONTROLLER
++    &driver::INTERRUPT_CONTROLLER
 +}
 
 diff -uNr 12_integrated_testing/kernel/src/bsp/raspberrypi/exception.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/exception.rs
@@ -2126,7 +2156,7 @@ diff -uNr 12_integrated_testing/kernel/src/bsp/raspberrypi/exception.rs 13_excep
 diff -uNr 12_integrated_testing/kernel/src/bsp/raspberrypi/memory.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/memory.rs
 --- 12_integrated_testing/kernel/src/bsp/raspberrypi/memory.rs
 +++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/memory.rs
-@@ -73,10 +73,12 @@
+@@ -73,10 +73,11 @@
      pub mod mmio {
          use super::*;
 
@@ -2138,12 +2168,11 @@ diff -uNr 12_integrated_testing/kernel/src/bsp/raspberrypi/memory.rs 13_exceptio
 +        pub const PERIPHERAL_INTERRUPT_CONTROLLER_START: usize = START + 0x0000_B200;
 +        pub const GPIO_START:                            usize = START + GPIO_OFFSET;
 +        pub const PL011_UART_START:                      usize = START + UART_OFFSET;
-+        pub const LOCAL_INTERRUPT_CONTROLLER_START:      usize =         0x4000_0000;
 +        pub const END_INCLUSIVE:                         usize =         0x4000_FFFF;
      }
 
      /// Physical devices.
-@@ -87,6 +89,8 @@
+@@ -87,6 +88,8 @@
          pub const START:            usize =         0xFE00_0000;
          pub const GPIO_START:       usize = START + GPIO_OFFSET;
          pub const PL011_UART_START: usize = START + UART_OFFSET;
@@ -2164,34 +2193,6 @@ diff -uNr 12_integrated_testing/kernel/src/bsp/raspberrypi.rs 13_exceptions_part
  pub mod memory;
 
  //--------------------------------------------------------------------------------------------------
-@@ -17,8 +18,25 @@
- static GPIO: device_driver::GPIO =
-     unsafe { device_driver::GPIO::new(memory::map::mmio::GPIO_START) };
-
--static PL011_UART: device_driver::PL011Uart =
--    unsafe { device_driver::PL011Uart::new(memory::map::mmio::PL011_UART_START) };
-+static PL011_UART: device_driver::PL011Uart = unsafe {
-+    device_driver::PL011Uart::new(
-+        memory::map::mmio::PL011_UART_START,
-+        exception::asynchronous::irq_map::PL011_UART,
-+    )
-+};
-+
-+#[cfg(feature = "bsp_rpi3")]
-+static INTERRUPT_CONTROLLER: device_driver::InterruptController = unsafe {
-+    device_driver::InterruptController::new(
-+        memory::map::mmio::LOCAL_INTERRUPT_CONTROLLER_START,
-+        memory::map::mmio::PERIPHERAL_INTERRUPT_CONTROLLER_START,
-+    )
-+};
-+
-+#[cfg(feature = "bsp_rpi4")]
-+static INTERRUPT_CONTROLLER: device_driver::GICv2 = unsafe {
-+    device_driver::GICv2::new(memory::map::mmio::GICD_START, memory::map::mmio::GICC_START)
-+};
-
- //--------------------------------------------------------------------------------------------------
- // Public Code
 
 diff -uNr 12_integrated_testing/kernel/src/cpu/smp.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/cpu/smp.rs
 --- 12_integrated_testing/kernel/src/cpu/smp.rs
@@ -2247,10 +2248,11 @@ diff -uNr 12_integrated_testing/kernel/src/driver.rs 13_exceptions_part2_periphe
 diff -uNr 12_integrated_testing/kernel/src/exception/asynchronous.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/exception/asynchronous.rs
 --- 12_integrated_testing/kernel/src/exception/asynchronous.rs
 +++ 13_exceptions_part2_peripheral_IRQs/kernel/src/exception/asynchronous.rs
-@@ -8,7 +8,145 @@
+@@ -8,7 +8,153 @@
  #[path = "../_arch/aarch64/exception/asynchronous.rs"]
  mod arch_asynchronous;
 
++use crate::bsp;
 +use core::{fmt, marker::PhantomData};
 +
  //--------------------------------------------------------------------------------------------------
@@ -2394,6 +2396,13 @@ diff -uNr 12_integrated_testing/kernel/src/exception/asynchronous.rs 13_exceptio
 +
 +    ret
 +}
++
++/// Return a reference to the IRQ manager.
++///
++/// This is the IRQ manager used by the architectural interrupt handling code.
++pub fn irq_manager() -> &'static dyn interface::IRQManager<IRQNumberType = bsp::driver::IRQNumber> {
++    bsp::exception::asynchronous::irq_manager()
++}
 
 diff -uNr 12_integrated_testing/kernel/src/lib.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/lib.rs
 --- 12_integrated_testing/kernel/src/lib.rs
@@ -2428,7 +2437,7 @@ diff -uNr 12_integrated_testing/kernel/src/main.rs 13_exceptions_part2_periphera
  #[no_mangle]
  unsafe fn kernel_init() -> ! {
      use driver::interface::DriverManager;
-@@ -43,15 +43,27 @@
+@@ -43,14 +43,27 @@
      bsp::driver::driver_manager().post_device_driver_init();
      // println! is usable from here on.
 
@@ -2451,14 +2460,13 @@ diff -uNr 12_integrated_testing/kernel/src/main.rs 13_exceptions_part2_periphera
 
  /// The main function running after the early init.
  fn kernel_main() -> ! {
--    use bsp::console::console;
--    use console::interface::All;
+-    use console::console;
      use driver::interface::DriverManager;
 +    use exception::asynchronous::interface::IRQManager;
 
      info!("{}", libkernel::version());
      info!("Booting on: {}", bsp::board_name());
-@@ -79,12 +91,9 @@
+@@ -78,12 +91,9 @@
          info!("      {}. {}", i + 1, driver.compatible());
      }
 
@@ -2469,8 +2477,8 @@ diff -uNr 12_integrated_testing/kernel/src/main.rs 13_exceptions_part2_periphera
 -    // Discard any spurious received characters before going into echo mode.
 -    console().clear_rx();
 -    loop {
--        let c = bsp::console::console().read_char();
--        bsp::console::console().write_char(c);
+-        let c = console().read_char();
+-        console().write_char(c);
 -    }
 +    info!("Echoing input now");
 +    cpu::wait_forever();
@@ -2483,12 +2491,12 @@ diff -uNr 12_integrated_testing/kernel/src/panic_wait.rs 13_exceptions_part2_per
 
  //! A panic handler that infinitely waits.
 
--use crate::{bsp, cpu};
-+use crate::{bsp, cpu, exception};
- use core::{fmt, panic::PanicInfo};
+-use crate::{cpu, println};
++use crate::{cpu, exception, println};
+ use core::panic::PanicInfo;
 
  //--------------------------------------------------------------------------------------------------
-@@ -77,6 +77,8 @@
+@@ -61,6 +61,8 @@
  fn panic(info: &PanicInfo) -> ! {
      use crate::time::interface::TimeManager;
 
@@ -2733,7 +2741,7 @@ diff -uNr 12_integrated_testing/kernel/src/synchronization.rs 13_exceptions_part
 diff -uNr 12_integrated_testing/kernel/tests/04_exception_irq_sanity.rs 13_exceptions_part2_peripheral_IRQs/kernel/tests/04_exception_irq_sanity.rs
 --- 12_integrated_testing/kernel/tests/04_exception_irq_sanity.rs
 +++ 13_exceptions_part2_peripheral_IRQs/kernel/tests/04_exception_irq_sanity.rs
-@@ -0,0 +1,66 @@
+@@ -0,0 +1,67 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
@@ -2746,12 +2754,13 @@ diff -uNr 12_integrated_testing/kernel/tests/04_exception_irq_sanity.rs 13_excep
 +#![reexport_test_harness_main = "test_main"]
 +#![test_runner(libkernel::test_runner)]
 +
-+use libkernel::{bsp, cpu, exception};
++use libkernel::{bsp, cpu, driver, exception};
 +use test_macros::kernel_test;
 +
 +#[no_mangle]
 +unsafe fn kernel_init() -> ! {
-+    bsp::console::qemu_bring_up_console();
++    use driver::interface::DriverManager;
++    bsp::driver::driver_manager().qemu_bring_up_console();
 +
 +    exception::handling_init();
 +    exception::asynchronous::local_irq_unmask();

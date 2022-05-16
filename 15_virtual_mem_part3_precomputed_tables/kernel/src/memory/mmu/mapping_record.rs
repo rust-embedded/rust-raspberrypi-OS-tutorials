@@ -76,6 +76,19 @@ impl MappingRecord {
         Self { inner: [None; 12] }
     }
 
+    fn size(&self) -> usize {
+        self.inner.iter().filter(|x| x.is_some()).count()
+    }
+
+    fn sort(&mut self) {
+        let upper_bound_exclusive = self.size();
+        let entries = &mut self.inner[0..upper_bound_exclusive];
+
+        if !entries.is_sorted_by_key(|item| item.unwrap().virt_start_addr) {
+            entries.sort_unstable_by_key(|item| item.unwrap().virt_start_addr)
+        }
+    }
+
     fn find_next_free(&mut self) -> Result<&mut Option<MappingRecordEntry>, &'static str> {
         if let Some(x) = self.inner.iter_mut().find(|x| x.is_none()) {
             return Ok(x);
@@ -121,6 +134,9 @@ impl MappingRecord {
             phys_region,
             attr,
         ));
+
+        self.sort();
+
         Ok(())
     }
 

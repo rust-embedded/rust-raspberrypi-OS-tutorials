@@ -18,18 +18,18 @@ use core::{
 //--------------------------------------------------------------------------------------------------
 
 /// Metadata trait for marking the type of an address.
-pub trait AddressType: Copy + Clone + PartialOrd + PartialEq {}
+pub trait AddressType: Copy + Clone + PartialOrd + PartialEq + Ord + Eq {}
 
 /// Zero-sized type to mark a physical address.
-#[derive(Copy, Clone, Debug, PartialOrd, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialOrd, PartialEq, Ord, Eq)]
 pub enum Physical {}
 
 /// Zero-sized type to mark a virtual address.
-#[derive(Copy, Clone, Debug, PartialOrd, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialOrd, PartialEq, Ord, Eq)]
 pub enum Virtual {}
 
 /// Generic address type.
-#[derive(Copy, Clone, Debug, PartialOrd, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialOrd, PartialEq, Ord, Eq)]
 pub struct Address<ATYPE: AddressType> {
     value: usize,
     _address_type: PhantomData<fn() -> ATYPE>,

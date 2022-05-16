@@ -19,6 +19,7 @@ Minipush 1.0
 [MP] ⏳ Waiting for /dev/ttyUSB0
 [MP] ✅ Serial connected
 [MP] 🔌 Please power the target now
+
  __  __ _      _ _                 _
 |  \/  (_)_ _ (_) |   ___  __ _ __| |
 | |\/| | | ' \| | |__/ _ \/ _` / _` |
@@ -30,16 +31,16 @@ Minipush 1.0
 [MP] ⏩ Pushing 12 KiB =========================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
-[    0.140431] mingo version 0.7.0
-[    0.140630] Booting on: Raspberry Pi 3
-[    0.141085] Architectural timer resolution: 52 ns
-[    0.141660] Drivers loaded:
-[    0.141995]       1. BCM GPIO
-[    0.142353]       2. BCM PL011 UART
-[W   0.142777] Spin duration smaller than architecturally supported, skipping
-[    0.143621] Spinning for 1 second
-[    1.144023] Spinning for 1 second
-[    2.144245] Spinning for 1 second
+[    0.143123] mingo version 0.7.0
+[    0.143323] Booting on: Raspberry Pi 3
+[    0.143778] Architectural timer resolution: 52 ns
+[    0.144352] Drivers loaded:
+[    0.144688]       1. BCM PL011 UART
+[    0.145110]       2. BCM GPIO
+[W   0.145469] Spin duration smaller than architecturally supported, skipping
+[    0.146313] Spinning for 1 second
+[    1.146715] Spinning for 1 second
+[    2.146938] Spinning for 1 second
 ```
 
 ## Diff to previous
@@ -374,7 +375,7 @@ diff -uNr 06_uart_chainloader/src/_arch/aarch64/time.rs 07_timestamps/src/_arch/
 diff -uNr 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 07_timestamps/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
 --- 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
 +++ 07_timestamps/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
-@@ -143,25 +143,19 @@
+@@ -140,25 +140,19 @@
      /// Disable pull-up/down on pins 14 and 15.
      #[cfg(feature = "bsp_rpi3")]
      fn disable_pud_14_15_bcm2837(&mut self) {
@@ -410,7 +411,7 @@ diff -uNr 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 07_times
 diff -uNr 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 07_timestamps/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 --- 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 07_timestamps/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -278,7 +278,7 @@
+@@ -275,7 +275,7 @@
      }
 
      /// Retrieve a character.
@@ -419,7 +420,7 @@ diff -uNr 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 07
          // If RX FIFO is empty,
          if self.registers.FR.matches_all(FR::RXFE::SET) {
              // immediately return in non-blocking mode.
-@@ -293,7 +293,12 @@
+@@ -290,7 +290,12 @@
          }
 
          // Read one character.
@@ -433,7 +434,7 @@ diff -uNr 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 07
 
          // Update statistics.
          self.chars_read += 1;
-@@ -373,14 +378,14 @@
+@@ -376,14 +381,14 @@
  impl console::interface::Read for PL011Uart {
      fn read_char(&self) -> char {
          self.inner
@@ -496,19 +497,14 @@ diff -uNr 06_uart_chainloader/src/bsp/raspberrypi/kernel.ld 07_timestamps/src/bs
 diff -uNr 06_uart_chainloader/src/bsp/raspberrypi/memory.rs 07_timestamps/src/bsp/raspberrypi/memory.rs
 --- 06_uart_chainloader/src/bsp/raspberrypi/memory.rs
 +++ 07_timestamps/src/bsp/raspberrypi/memory.rs
-@@ -11,10 +11,9 @@
+@@ -11,7 +11,6 @@
  /// The board's physical memory map.
  #[rustfmt::skip]
  pub(super) mod map {
 -    pub const BOARD_DEFAULT_LOAD_ADDRESS: usize =        0x8_0000;
 
--    pub const GPIO_OFFSET:                usize =        0x0020_0000;
--    pub const UART_OFFSET:                usize =        0x0020_1000;
-+    pub const GPIO_OFFSET:         usize = 0x0020_0000;
-+    pub const UART_OFFSET:         usize = 0x0020_1000;
-
-     /// Physical devices.
-     #[cfg(feature = "bsp_rpi3")]
+     pub const GPIO_OFFSET:         usize = 0x0020_0000;
+     pub const UART_OFFSET:         usize = 0x0020_1000;
 @@ -36,13 +35,3 @@
          pub const PL011_UART_START: usize = START + UART_OFFSET;
      }
@@ -546,7 +542,7 @@ diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
 
  /// Early init code.
  ///
-@@ -143,56 +144,38 @@
+@@ -143,55 +144,38 @@
      kernel_main()
  }
 
@@ -559,8 +555,7 @@ diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
 -
  /// The main function running after the early init.
  fn kernel_main() -> ! {
--    use bsp::console::console;
--    use console::interface::All;
+-    use console::console;
 +    use core::time::Duration;
 +    use driver::interface::DriverManager;
 +    use time::interface::TimeManager;
@@ -635,7 +630,7 @@ diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
 diff -uNr 06_uart_chainloader/src/panic_wait.rs 07_timestamps/src/panic_wait.rs
 --- 06_uart_chainloader/src/panic_wait.rs
 +++ 07_timestamps/src/panic_wait.rs
-@@ -58,18 +58,23 @@
+@@ -42,18 +42,23 @@
 
  #[panic_handler]
  fn panic(info: &PanicInfo) -> ! {
@@ -650,7 +645,7 @@ diff -uNr 06_uart_chainloader/src/panic_wait.rs 07_timestamps/src/panic_wait.rs
          _ => ("???", 0, 0),
      };
 
-     panic_println!(
+     println!(
 -        "Kernel panic!\n\n\
 +        "[  {:>3}.{:06}] Kernel panic!\n\n\
          Panic location:\n      File '{}', line {}, column {}\n\n\
@@ -664,7 +659,7 @@ diff -uNr 06_uart_chainloader/src/panic_wait.rs 07_timestamps/src/panic_wait.rs
 diff -uNr 06_uart_chainloader/src/print.rs 07_timestamps/src/print.rs
 --- 06_uart_chainloader/src/print.rs
 +++ 07_timestamps/src/print.rs
-@@ -36,3 +36,59 @@
+@@ -34,3 +34,59 @@
          $crate::print::_print(format_args_nl!($($arg)*));
      })
  }

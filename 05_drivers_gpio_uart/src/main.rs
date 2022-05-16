@@ -145,8 +145,7 @@ unsafe fn kernel_init() -> ! {
 
 /// The main function running after the early init.
 fn kernel_main() -> ! {
-    use bsp::console::console;
-    use console::interface::All;
+    use console::console;
     use driver::interface::DriverManager;
 
     println!(
@@ -165,16 +164,13 @@ fn kernel_main() -> ! {
         println!("      {}. {}", i + 1, driver.compatible());
     }
 
-    println!(
-        "[3] Chars written: {}",
-        bsp::console::console().chars_written()
-    );
+    println!("[3] Chars written: {}", console().chars_written());
     println!("[4] Echoing input now");
 
     // Discard any spurious received characters before going into echo mode.
     console().clear_rx();
     loop {
-        let c = bsp::console::console().read_char();
-        bsp::console::console().write_char(c);
+        let c = console().read_char();
+        console().write_char(c);
     }
 }

@@ -42,26 +42,16 @@ unsafe fn kernel_init() -> ! {
 
     memory::mmu::post_enable_init();
 
-    // Bring up the drivers needed for printing first.
-    for i in bsp::driver::driver_manager()
-        .early_print_device_drivers()
-        .iter()
-    {
-        // Any encountered errors cannot be printed yet, obviously, so just safely park the CPU.
-        i.init().unwrap_or_else(|_| cpu::wait_forever());
+    // Instantiate and init all device drivers.
+    if let Err(x) = bsp::driver::driver_manager().instantiate_drivers() {
+        panic!("Error instantiating drivers: {}", x);
     }
-    bsp::driver::driver_manager().post_early_print_device_driver_init();
-    // Printing available again from here on.
-
-    // Now bring up the remaining drivers.
-    for i in bsp::driver::driver_manager()
-        .non_early_print_device_drivers()
-        .iter()
-    {
+    for i in bsp::driver::driver_manager().all_device_drivers().iter() {
         if let Err(x) = i.init() {
             panic!("Error loading driver: {}: {}", i.compatible(), x);
         }
     }
+    // Printing available again from here on.
 
     // Let device drivers register and enable their handlers with the interrupt controller.
     for i in bsp::driver::driver_manager().all_device_drivers() {
@@ -83,7 +73,6 @@ unsafe fn kernel_init() -> ! {
 /// The main function running after the early init.
 fn kernel_main() -> ! {
     use driver::interface::DriverManager;
-    use exception::asynchronous::interface::IRQManager;
 
     info!("{}", libkernel::version());
     info!("Booting on: {}", bsp::board_name());
@@ -112,7 +101,7 @@ fn kernel_main() -> ! {
     }
 
     info!("Registered IRQ handlers:");
-    bsp::exception::asynchronous::irq_manager().print_handler();
+    exception::asynchronous::irq_manager().print_handler();
 
     info!("Echoing input now");
     cpu::wait_forever();

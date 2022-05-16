@@ -417,31 +417,31 @@ Minipush 1.0
 [MP] ⏩ Pushing 64 KiB =========================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
-[    0.787414] mingo version 0.11.0
-[    0.787621] Booting on: Raspberry Pi 3
-[    0.788076] MMU online. Special regions:
-[    0.788553]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
-[    0.789571]       0x3f000000 - 0x4000ffff |  16 MiB | Dev RW PXN | Device MMIO
-[    0.790460] Current privilege level: EL1
-[    0.790936] Exception handling state:
-[    0.791380]       Debug:  Masked
-[    0.791770]       SError: Masked
-[    0.792160]       IRQ:    Masked
-[    0.792550]       FIQ:    Masked
-[    0.792940] Architectural timer resolution: 52 ns
-[    0.793514] Drivers loaded:
-[    0.793850]       1. BCM GPIO
-[    0.794208]       2. BCM PL011 UART
-[    0.794630] Timer test, spinning for 1 second
-[    1.795161]
-[    1.795165] Trying to read from address 8 GiB...
-[    1.795715] ************************************************
-[    1.796407] Whoa! We recovered from a synchronous exception!
-[    1.797100] ************************************************
-[    1.797794]
-[    1.797967] Let's try again
-[    1.798303] Trying to read from address 9 GiB...
-[    1.798867] Kernel panic!
+[    0.798323] mingo version 0.11.0
+[    0.798530] Booting on: Raspberry Pi 3
+[    0.798985] MMU online. Special regions:
+[    0.799462]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
+[    0.800480]       0x3f000000 - 0x4000ffff |  16 MiB | Dev RW PXN | Device MMIO
+[    0.801369] Current privilege level: EL1
+[    0.801845] Exception handling state:
+[    0.802290]       Debug:  Masked
+[    0.802680]       SError: Masked
+[    0.803069]       IRQ:    Masked
+[    0.803459]       FIQ:    Masked
+[    0.803849] Architectural timer resolution: 52 ns
+[    0.804423] Drivers loaded:
+[    0.804759]       1. BCM PL011 UART
+[    0.805182]       2. BCM GPIO
+[    0.805539] Timer test, spinning for 1 second
+[    1.806070]
+[    1.806074] Trying to read from address 8 GiB...
+[    1.806624] ************************************************
+[    1.807316] Whoa! We recovered from a synchronous exception!
+[    1.808009] ************************************************
+[    1.808703]
+[    1.808876] Let's try again
+[    1.809212] Trying to read from address 9 GiB...
+[    1.809776] Kernel panic!
 
 Panic location:
       File 'src/_arch/aarch64/exception.rs', line 58, column 5
@@ -464,25 +464,25 @@ SPSR_EL1: 0x600003c5
             IRQ    (I): Masked
             FIQ    (F): Masked
       Illegal Execution State (IL): Not set
-ELR_EL1: 0x0000000000082194
+ELR_EL1: 0x00000000000845f8
 
 General purpose register:
-      x0 : 0x0000000000000000         x1 : 0x0000000000085517
-      x2 : 0x0000000000000027         x3 : 0x0000000000084380
-      x4 : 0x0000000000000006         x5 : 0xfb5f341800000000
-      x6 : 0x0000000000000000         x7 : 0x7f91bc012b2b0209
-      x8 : 0x0000000240000000         x9 : 0x0000000000085517
+      x0 : 0x0000000000000000         x1 : 0x0000000000086187
+      x2 : 0x0000000000000027         x3 : 0x0000000000081280
+      x4 : 0x0000000000000006         x5 : 0x1e27329c00000000
+      x6 : 0x0000000000000000         x7 : 0xd3d18908028f0243
+      x8 : 0x0000000240000000         x9 : 0x0000000000086187
       x10: 0x0000000000000443         x11: 0x000000003f201000
       x12: 0x0000000000000019         x13: 0x00000000ffffd8f0
       x14: 0x000000000000147b         x15: 0x00000000ffffff9c
       x16: 0x000000000007fd38         x17: 0x0000000005f5e0ff
-      x18: 0x0000000000000030         x19: 0x0000000000090008
-      x20: 0x0000000000085350         x21: 0x000000003b9aca00
-      x22: 0x0000000000082e4c         x23: 0x0000000000082308
+      x18: 0x00000000000c58fc         x19: 0x0000000000090008
+      x20: 0x0000000000085fc0         x21: 0x000000003b9aca00
+      x22: 0x0000000000082238         x23: 0x00000000000813d4
       x24: 0x0000000010624dd3         x25: 0xffffffffc4653600
-      x26: 0x0000000000086638         x27: 0x0000000000085410
-      x28: 0x0000000000084f90         x29: 0x0000000000086538
-      lr : 0x0000000000082188
+      x26: 0x0000000000086988         x27: 0x0000000000086080
+      x28: 0x0000000000085f10         x29: 0x0000000000085c00
+      lr : 0x00000000000845ec
 ```
 
 ## Diff to previous
@@ -1033,7 +1033,16 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/main.rs 11_exceptions_part1_
      if let Err(string) = memory::mmu::mmu().enable_mmu_and_caching() {
          panic!("MMU: {}", string);
      }
-@@ -197,13 +199,28 @@
+@@ -158,7 +160,7 @@
+
+ /// The main function running after the early init.
+ fn kernel_main() -> ! {
+-    use console::{console, interface::Write};
++    use console::console;
+     use core::time::Duration;
+     use driver::interface::DriverManager;
+     use time::interface::TimeManager;
+@@ -196,13 +198,28 @@
      info!("Timer test, spinning for 1 second");
      time::time_manager().spin_for(Duration::from_secs(1));
 

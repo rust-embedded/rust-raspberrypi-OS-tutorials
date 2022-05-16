@@ -108,16 +108,13 @@ register_structs! {
 /// Abstraction for the associated MMIO registers.
 type Registers = MMIODerefWrapper<RegisterBlock>;
 
-//--------------------------------------------------------------------------------------------------
-// Public Definitions
-//--------------------------------------------------------------------------------------------------
-
-pub struct GPIOInner {
+struct GPIOInner {
     registers: Registers,
 }
 
-// Export the inner struct so that BSPs can use it for the panic handler.
-pub use GPIOInner as PanicGPIO;
+//--------------------------------------------------------------------------------------------------
+// Public Definitions
+//--------------------------------------------------------------------------------------------------
 
 /// Representation of the GPIO HW.
 pub struct GPIO {
@@ -125,7 +122,7 @@ pub struct GPIO {
 }
 
 //--------------------------------------------------------------------------------------------------
-// Public Code
+// Private Code
 //--------------------------------------------------------------------------------------------------
 
 impl GPIOInner {
@@ -189,7 +186,13 @@ impl GPIOInner {
     }
 }
 
+//--------------------------------------------------------------------------------------------------
+// Public Code
+//--------------------------------------------------------------------------------------------------
+
 impl GPIO {
+    pub const COMPATIBLE: &'static str = "BCM GPIO";
+
     /// Create an instance.
     ///
     /// # Safety
@@ -214,6 +217,6 @@ use synchronization::interface::Mutex;
 
 impl driver::interface::DeviceDriver for GPIO {
     fn compatible(&self) -> &'static str {
-        "BCM GPIO"
+        Self::COMPATIBLE
     }
 }

@@ -114,6 +114,7 @@
 #![feature(core_intrinsics)]
 #![feature(format_args_nl)]
 #![feature(generic_const_exprs)]
+#![feature(is_sorted)]
 #![feature(linkage)]
 #![feature(panic_info_message)]
 #![feature(step_trait)]
@@ -181,9 +182,11 @@ pub fn test_runner(tests: &[&test_types::UnitTest]) {
 #[cfg(test)]
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
+    use driver::interface::DriverManager;
+
     exception::handling_init();
     memory::mmu::post_enable_init();
-    bsp::console::qemu_bring_up_console();
+    bsp::driver::driver_manager().qemu_bring_up_console();
 
     test_main();
 

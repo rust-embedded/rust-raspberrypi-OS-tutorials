@@ -253,22 +253,22 @@ Minipush 1.0
            Raspberry Pi 3
 
 [ML] Requesting binary
-[MP] ⏩ Pushing 259 KiB ======================================🦀 100% 129 KiB/s Time: 00:00:02
+[MP] ⏩ Pushing 257 KiB ======================================🦀 100% 128 KiB/s Time: 00:00:02
 [ML] Loaded! Executing the payload now
 
-[    2.893480] mingo version 0.16.0
-[    2.893687] Booting on: Raspberry Pi 3
-[    2.894142] MMU online:
-[    2.894434]       -------------------------------------------------------------------------------------------------------------------------------------------
-[    2.896179]                         Virtual                                   Physical               Size       Attr                    Entity
-[    2.897923]       -------------------------------------------------------------------------------------------------------------------------------------------
-[    2.899668]       0xffff_ffff_c000_0000..0xffff_ffff_c000_ffff --> 0x00_0008_0000..0x00_0008_ffff |  64 KiB | C   RO X  | Kernel code and RO data
-[    2.901282]       0xffff_ffff_c001_0000..0xffff_ffff_c004_ffff --> 0x00_0009_0000..0x00_000c_ffff | 256 KiB | C   RW XN | Kernel data and bss
-[    2.902852]       0xffff_ffff_c086_0000..0xffff_ffff_c08d_ffff --> 0x00_0000_0000..0x00_0007_ffff | 512 KiB | C   RW XN | Kernel boot-core stack
-[    2.904455]       0xffff_ffff_c005_0000..0xffff_ffff_c005_ffff --> 0x00_3f20_0000..0x00_3f20_ffff |  64 KiB | Dev RW XN | BCM GPIO
-[    2.905907]                                                                                                             | BCM PL011 UART
-[    2.907424]       0xffff_ffff_c006_0000..0xffff_ffff_c006_ffff --> 0x00_3f00_0000..0x00_3f00_ffff |  64 KiB | Dev RW XN | BCM Peripheral Interrupt Controller
-[    2.909168]       -------------------------------------------------------------------------------------------------------------------------------------------
+[    2.870248] mingo version 0.16.0
+[    2.870456] Booting on: Raspberry Pi 3
+[    2.870911] MMU online:
+[    2.871203]       -------------------------------------------------------------------------------------------------------------------------------------------
+[    2.872947]                         Virtual                                   Physical               Size       Attr                    Entity
+[    2.874691]       -------------------------------------------------------------------------------------------------------------------------------------------
+[    2.876436]       0xffff_ffff_c000_0000..0xffff_ffff_c000_ffff --> 0x00_0008_0000..0x00_0008_ffff |  64 KiB | C   RO X  | Kernel code and RO data
+[    2.878050]       0xffff_ffff_c001_0000..0xffff_ffff_c004_ffff --> 0x00_0009_0000..0x00_000c_ffff | 256 KiB | C   RW XN | Kernel data and bss
+[    2.879621]       0xffff_ffff_c005_0000..0xffff_ffff_c005_ffff --> 0x00_3f20_0000..0x00_3f20_ffff |  64 KiB | Dev RW XN | BCM PL011 UART
+[    2.881137]                                                                                                             | BCM GPIO
+[    2.882589]       0xffff_ffff_c006_0000..0xffff_ffff_c006_ffff --> 0x00_3f00_0000..0x00_3f00_ffff |  64 KiB | Dev RW XN | BCM Interrupt Controller
+[    2.884214]       0xffff_ffff_c086_0000..0xffff_ffff_c08d_ffff --> 0x00_0000_0000..0x00_0007_ffff | 512 KiB | C   RW XN | Kernel boot-core stack
+[    2.885818]       -------------------------------------------------------------------------------------------------------------------------------------------
 ```
 
 Raspberry Pi 4:
@@ -303,23 +303,23 @@ Minipush 1.0
            Raspberry Pi 4
 
 [ML] Requesting binary
-[MP] ⏩ Pushing 266 KiB ======================================🦀 100% 133 KiB/s Time: 00:00:02
+[MP] ⏩ Pushing 257 KiB ======================================🦀 100% 128 KiB/s Time: 00:00:02
 [ML] Loaded! Executing the payload now
 
-[    2.973300] mingo version 0.16.0
-[    2.973334] Booting on: Raspberry Pi 4
-[    2.973789] MMU online:
-[    2.974081]       -------------------------------------------------------------------------------------------------------------------------------------------
-[    2.975825]                         Virtual                                   Physical               Size       Attr                    Entity
-[    2.977569]       -------------------------------------------------------------------------------------------------------------------------------------------
-[    2.979314]       0xffff_ffff_c000_0000..0xffff_ffff_c000_ffff --> 0x00_0008_0000..0x00_0008_ffff |  64 KiB | C   RO X  | Kernel code and RO data
-[    2.980929]       0xffff_ffff_c001_0000..0xffff_ffff_c004_ffff --> 0x00_0009_0000..0x00_000c_ffff | 256 KiB | C   RW XN | Kernel data and bss
-[    2.982499]       0xffff_ffff_c086_0000..0xffff_ffff_c08d_ffff --> 0x00_0000_0000..0x00_0007_ffff | 512 KiB | C   RW XN | Kernel boot-core stack
-[    2.984102]       0xffff_ffff_c005_0000..0xffff_ffff_c005_ffff --> 0x00_fe20_0000..0x00_fe20_ffff |  64 KiB | Dev RW XN | BCM GPIO
-[    2.985554]                                                                                                             | BCM PL011 UART
-[    2.987070]       0xffff_ffff_c006_0000..0xffff_ffff_c006_ffff --> 0x00_ff84_0000..0x00_ff84_ffff |  64 KiB | Dev RW XN | GICD
-[    2.988479]                                                                                                             | GICC
-[    2.989887]       -------------------------------------------------------------------------------------------------------------------------------------------
+[    2.871960] mingo version 0.16.0
+[    2.871994] Booting on: Raspberry Pi 4
+[    2.872449] MMU online:
+[    2.872742]       -------------------------------------------------------------------------------------------------------------------------------------------
+[    2.874486]                         Virtual                                   Physical               Size       Attr                    Entity
+[    2.876230]       -------------------------------------------------------------------------------------------------------------------------------------------
+[    2.877975]       0xffff_ffff_c000_0000..0xffff_ffff_c000_ffff --> 0x00_0008_0000..0x00_0008_ffff |  64 KiB | C   RO X  | Kernel code and RO data
+[    2.879589]       0xffff_ffff_c001_0000..0xffff_ffff_c004_ffff --> 0x00_0009_0000..0x00_000c_ffff | 256 KiB | C   RW XN | Kernel data and bss
+[    2.881159]       0xffff_ffff_c005_0000..0xffff_ffff_c005_ffff --> 0x00_fe20_0000..0x00_fe20_ffff |  64 KiB | Dev RW XN | BCM PL011 UART
+[    2.882676]                                                                                                             | BCM GPIO
+[    2.884128]       0xffff_ffff_c006_0000..0xffff_ffff_c006_ffff --> 0x00_ff84_0000..0x00_ff84_ffff |  64 KiB | Dev RW XN | GICv2 GICD
+[    2.885601]                                                                                                             | GICV2 GICC
+[    2.887074]       0xffff_ffff_c086_0000..0xffff_ffff_c08d_ffff --> 0x00_0000_0000..0x00_0007_ffff | 512 KiB | C   RW XN | Kernel boot-core stack
+[    2.888678]       -------------------------------------------------------------------------------------------------------------------------------------------
 ```
 
 ## Diff to previous
@@ -568,76 +568,6 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/kernel/src/_arch/aarch64/memor
          self.configure_translation_control();
 
 
-diff -uNr 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/console.rs 16_virtual_mem_part4_higher_half_kernel/kernel/src/bsp/raspberrypi/console.rs
---- 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/console.rs
-+++ 16_virtual_mem_part4_higher_half_kernel/kernel/src/bsp/raspberrypi/console.rs
-@@ -4,7 +4,6 @@
-
- //! BSP console facilities.
-
--use super::memory;
- use crate::{bsp::device_driver, console, cpu, driver};
- use core::fmt;
-
-@@ -26,21 +25,27 @@
- pub unsafe fn panic_console_out() -> impl fmt::Write {
-     use driver::interface::DeviceDriver;
-
--    let mut panic_gpio = device_driver::PanicGPIO::new(memory::map::mmio::GPIO_START.as_usize());
--    let mut panic_uart =
--        device_driver::PanicUart::new(memory::map::mmio::PL011_UART_START.as_usize());
--
--    // If remapping of the driver's MMIO already happened, take the remapped start address.
--    // Otherwise, take a chance with the default physical address.
--    let maybe_gpio_mmio_start_addr = super::GPIO.virt_mmio_start_addr();
--    let maybe_uart_mmio_start_addr = super::PL011_UART.virt_mmio_start_addr();
-+    // If remapping of the driver's MMIO hasn't already happened, we won't be able to print. Just
-+    // park the CPU core in this case.
-+    let gpio_mmio_start_addr = match super::GPIO.virt_mmio_start_addr() {
-+        None => cpu::wait_forever(),
-+        Some(x) => x,
-+    };
-+
-+    let uart_mmio_start_addr = match super::PL011_UART.virt_mmio_start_addr() {
-+        None => cpu::wait_forever(),
-+        Some(x) => x,
-+    };
-+
-+    let mut panic_gpio = device_driver::PanicGPIO::new(gpio_mmio_start_addr);
-+    let mut panic_uart = device_driver::PanicUart::new(uart_mmio_start_addr);
-
-     panic_gpio
--        .init(maybe_gpio_mmio_start_addr)
-+        .init(None)
-         .unwrap_or_else(|_| cpu::wait_forever());
-     panic_gpio.map_pl011_uart();
-     panic_uart
--        .init(maybe_uart_mmio_start_addr)
-+        .init(None)
-         .unwrap_or_else(|_| cpu::wait_forever());
-
-     panic_uart
-@@ -55,13 +60,14 @@
- pub unsafe fn panic_console_out() -> impl fmt::Write {
-     use driver::interface::DeviceDriver;
-
--    let mut panic_uart =
--        device_driver::PanicUart::new(memory::map::mmio::PL011_UART_START.as_usize());
--
--    let maybe_uart_mmio_start_addr = super::PL011_UART.virt_mmio_start_addr();
-+    let uart_mmio_start_addr = match super::PL011_UART.virt_mmio_start_addr() {
-+        None => cpu::wait_forever(),
-+        Some(x) => x,
-+    };
-+    let mut panic_uart = device_driver::PanicUart::new(uart_mmio_start_addr);
-
-     panic_uart
--        .init(maybe_uart_mmio_start_addr)
-+        .init(None)
-         .unwrap_or_else(|_| cpu::qemu_exit_failure());
-
-     panic_uart
-
 diff -uNr 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/kernel.ld 16_virtual_mem_part4_higher_half_kernel/kernel/src/bsp/raspberrypi/kernel.ld
 --- 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/kernel.ld
 +++ 16_virtual_mem_part4_higher_half_kernel/kernel/src/bsp/raspberrypi/kernel.ld
@@ -799,7 +729,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/mem
 diff -uNr 15_virtual_mem_part3_precomputed_tables/kernel/src/lib.rs 16_virtual_mem_part4_higher_half_kernel/kernel/src/lib.rs
 --- 15_virtual_mem_part3_precomputed_tables/kernel/src/lib.rs
 +++ 16_virtual_mem_part4_higher_half_kernel/kernel/src/lib.rs
-@@ -152,11 +152,6 @@
+@@ -153,11 +153,6 @@
      )
  }
 
@@ -873,7 +803,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/kernel/src/memory/mmu.rs 16_vi
 diff -uNr 15_virtual_mem_part3_precomputed_tables/kernel/tests/02_exception_sync_page_fault.rs 16_virtual_mem_part4_higher_half_kernel/kernel/tests/02_exception_sync_page_fault.rs
 --- 15_virtual_mem_part3_precomputed_tables/kernel/tests/02_exception_sync_page_fault.rs
 +++ 16_virtual_mem_part4_higher_half_kernel/kernel/tests/02_exception_sync_page_fault.rs
-@@ -28,8 +28,8 @@
+@@ -30,8 +30,8 @@
      // This line will be printed as the test header.
      println!("Testing synchronous exception handling by causing a page fault");
 

@@ -114,6 +114,8 @@ impl GICv2 {
     const MAX_IRQ_NUMBER: usize = 300; // Normally 1019, but keep it lower to save some space.
     const NUM_IRQS: usize = Self::MAX_IRQ_NUMBER + 1;
 
+    pub const COMPATIBLE: &'static str = "GICv2 (ARM Generic Interrupt Controller v2)";
+
     /// Create an instance.
     ///
     /// # Safety
@@ -135,7 +137,7 @@ use synchronization::interface::ReadWriteEx;
 
 impl driver::interface::DeviceDriver for GICv2 {
     fn compatible(&self) -> &'static str {
-        "GICv2 (ARM Generic Interrupt Controller v2)"
+        Self::COMPATIBLE
     }
 
     unsafe fn init(&self) -> Result<(), &'static str> {

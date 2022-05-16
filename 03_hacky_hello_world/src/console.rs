@@ -4,6 +4,8 @@
 
 //! System console.
 
+use crate::bsp;
+
 //--------------------------------------------------------------------------------------------------
 // Public Definitions
 //--------------------------------------------------------------------------------------------------
@@ -16,4 +18,15 @@ pub mod interface {
     /// implementing `console::Write` gives a better hint to the reader about the
     /// intention.
     pub use core::fmt::Write;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Public Code
+//--------------------------------------------------------------------------------------------------
+
+/// Return a reference to the console.
+///
+/// This is the global console used by all printing macros.
+pub fn console() -> impl interface::Write {
+    bsp::console::console()
 }

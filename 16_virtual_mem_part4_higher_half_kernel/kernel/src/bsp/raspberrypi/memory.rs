@@ -111,9 +111,6 @@ pub(super) mod map {
         pub const PL011_UART_START:    Address<Physical> = Address::new(0x3F20_1000);
         pub const PL011_UART_SIZE:     usize             =              0x48;
 
-        pub const LOCAL_IC_START:      Address<Physical> = Address::new(0x4000_0000);
-        pub const LOCAL_IC_SIZE:       usize             =              0x100;
-
         pub const END:                 Address<Physical> = Address::new(0x4001_0000);
     }
 

@@ -40,5 +40,10 @@ pub mod interface {
         ///
         /// For example, device driver code that depends on other drivers already being online.
         fn post_device_driver_init(&self);
+
+        /// Minimal code needed to bring up the console in QEMU (for testing only). This is often
+        /// less steps than on real hardware due to QEMU's abstractions.
+        #[cfg(feature = "test_build")]
+        fn qemu_bring_up_console(&self);
     }
 }

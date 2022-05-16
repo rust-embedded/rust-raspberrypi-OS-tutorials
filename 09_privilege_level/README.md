@@ -166,6 +166,7 @@ Minipush 1.0
 [MP] ⏳ Waiting for /dev/ttyUSB0
 [MP] ✅ Serial connected
 [MP] 🔌 Please power the target now
+
  __  __ _      _ _                 _
 |  \/  (_)_ _ (_) |   ___  __ _ __| |
 | |\/| | | ' \| | |__/ _ \/ _` / _` |
@@ -177,20 +178,20 @@ Minipush 1.0
 [MP] ⏩ Pushing 14 KiB =========================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
-[    0.165757] mingo version 0.9.0
-[    0.165957] Booting on: Raspberry Pi 3
-[    0.166412] Current privilege level: EL1
-[    0.166888] Exception handling state:
-[    0.167333]       Debug:  Masked
-[    0.167723]       SError: Masked
-[    0.168112]       IRQ:    Masked
-[    0.168502]       FIQ:    Masked
-[    0.168893] Architectural timer resolution: 52 ns
-[    0.169467] Drivers loaded:
-[    0.169803]       1. BCM GPIO
-[    0.170160]       2. BCM PL011 UART
-[    0.170583] Timer test, spinning for 1 second
-[    1.171115] Echoing input now
+[    0.162546] mingo version 0.9.0
+[    0.162745] Booting on: Raspberry Pi 3
+[    0.163201] Current privilege level: EL1
+[    0.163677] Exception handling state:
+[    0.164122]       Debug:  Masked
+[    0.164511]       SError: Masked
+[    0.164901]       IRQ:    Masked
+[    0.165291]       FIQ:    Masked
+[    0.165681] Architectural timer resolution: 52 ns
+[    0.166255] Drivers loaded:
+[    0.166592]       1. BCM PL011 UART
+[    0.167014]       2. BCM GPIO
+[    0.167371] Timer test, spinning for 1 second
+[    1.167904] Echoing input now
 ```
 
 ## Diff to previous
@@ -505,16 +506,15 @@ diff -uNr 08_hw_debug_JTAG/src/main.rs 09_privilege_level/src/main.rs
  mod panic_wait;
  mod print;
  mod synchronization;
-@@ -146,6 +147,8 @@
+@@ -146,6 +147,7 @@
 
  /// The main function running after the early init.
  fn kernel_main() -> ! {
-+    use bsp::console::console;
-+    use console::interface::All;
++    use console::console;
      use core::time::Duration;
      use driver::interface::DriverManager;
      use time::interface::TimeManager;
-@@ -157,6 +160,12 @@
+@@ -157,6 +159,12 @@
      );
      info!("Booting on: {}", bsp::board_name());
 
@@ -527,7 +527,7 @@ diff -uNr 08_hw_debug_JTAG/src/main.rs 09_privilege_level/src/main.rs
      info!(
          "Architectural timer resolution: {} ns",
          time::time_manager().resolution().as_nanos()
-@@ -171,11 +180,15 @@
+@@ -171,11 +179,15 @@
          info!("      {}. {}", i + 1, driver.compatible());
      }
 
@@ -543,8 +543,8 @@ diff -uNr 08_hw_debug_JTAG/src/main.rs 09_privilege_level/src/main.rs
      loop {
 -        info!("Spinning for 1 second");
 -        time::time_manager().spin_for(Duration::from_secs(1));
-+        let c = bsp::console::console().read_char();
-+        bsp::console::console().write_char(c);
++        let c = console().read_char();
++        console().write_char(c);
      }
  }
 

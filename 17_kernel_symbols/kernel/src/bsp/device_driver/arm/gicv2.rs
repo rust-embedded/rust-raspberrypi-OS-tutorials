@@ -79,8 +79,12 @@
 mod gicc;
 mod gicd;
 
-use crate::{bsp, cpu, driver, exception, memory, synchronization, synchronization::InitStateLock};
-use core::sync::atomic::{AtomicBool, Ordering};
+use crate::{
+    bsp, cpu, driver, exception,
+    memory::{Address, Virtual},
+    synchronization,
+    synchronization::InitStateLock,
+};
 
 //--------------------------------------------------------------------------------------------------
 // Private Definitions
@@ -97,20 +101,17 @@ pub type IRQNumber = exception::asynchronous::IRQNumber<{ GICv2::MAX_IRQ_NUMBER 
 
 /// Representation of the GIC.
 pub struct GICv2 {
-    gicd_mmio_descriptor: memory::mmu::MMIODescriptor,
-    gicc_mmio_descriptor: memory::mmu::MMIODescriptor,
-
     /// The Distributor.
     gicd: gicd::GICD,
 
     /// The CPU Interface.
     gicc: gicc::GICC,
 
-    /// Have the MMIO regions been remapped yet?
-    is_mmio_remapped: AtomicBool,
-
     /// Stores registered IRQ handlers. Writable only during kernel init. RO afterwards.
     handler_table: InitStateLock<HandlerTable>,
+
+    /// Callback to be invoked after successful init.
+    post_init_callback: fn(),
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -121,22 +122,23 @@ impl GICv2 {
     const MAX_IRQ_NUMBER: usize = 300; // Normally 1019, but keep it lower to save some space.
     const NUM_IRQS: usize = Self::MAX_IRQ_NUMBER + 1;
 
+    pub const COMPATIBLE: &'static str = "GICv2 (ARM Generic Interrupt Controller v2)";
+
     /// Create an instance.
     ///
     /// # Safety
     ///
-    /// - The user must ensure to provide correct MMIO descriptors.
+    /// - The user must ensure to provide a correct MMIO start address.
     pub const unsafe fn new(
-        gicd_mmio_descriptor: memory::mmu::MMIODescriptor,
-        gicc_mmio_descriptor: memory::mmu::MMIODescriptor,
+        gicd_mmio_start_addr: Address<Virtual>,
+        gicc_mmio_start_addr: Address<Virtual>,
+        post_init_callback: fn(),
     ) -> Self {
         Self {
-            gicd_mmio_descriptor,
-            gicc_mmio_descriptor,
-            gicd: gicd::GICD::new(gicd_mmio_descriptor.start_addr().as_usize()),
-            gicc: gicc::GICC::new(gicc_mmio_descriptor.start_addr().as_usize()),
-            is_mmio_remapped: AtomicBool::new(false),
+            gicd: gicd::GICD::new(gicd_mmio_start_addr),
+            gicc: gicc::GICC::new(gicc_mmio_start_addr),
             handler_table: InitStateLock::new([None; Self::NUM_IRQS]),
+            post_init_callback,
         }
     }
 }
@@ -148,30 +150,18 @@ use synchronization::interface::ReadWriteEx;
 
 impl driver::interface::DeviceDriver for GICv2 {
     fn compatible(&self) -> &'static str {
-        "GICv2 (ARM Generic Interrupt Controller v2)"
+        Self::COMPATIBLE
     }
 
     unsafe fn init(&self) -> Result<(), &'static str> {
-        let remapped = self.is_mmio_remapped.load(Ordering::Relaxed);
-        if !remapped {
-            // GICD
-            let mut virt_addr = memory::mmu::kernel_map_mmio("GICD", &self.gicd_mmio_descriptor)?;
-            self.gicd.set_mmio(virt_addr.as_usize());
-
-            // GICC
-            virt_addr = memory::mmu::kernel_map_mmio("GICC", &self.gicc_mmio_descriptor)?;
-            self.gicc.set_mmio(virt_addr.as_usize());
-
-            // Conclude remapping.
-            self.is_mmio_remapped.store(true, Ordering::Relaxed);
-        }
-
         if bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id() {
             self.gicd.boot_core_init();
         }
 
         self.gicc.priority_accept_all();
         self.gicc.enable();
+
+        (self.post_init_callback)();
 
         Ok(())
     }

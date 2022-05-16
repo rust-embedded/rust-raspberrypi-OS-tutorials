@@ -17,13 +17,15 @@
 /// or indirectly.
 mod panic_exit_success;
 
-use libkernel::{bsp, cpu, exception, info, memory, println};
+use libkernel::{bsp, cpu, driver, exception, info, memory, println};
 
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
+    use driver::interface::DriverManager;
+
     exception::handling_init();
     memory::mmu::post_enable_init();
-    bsp::console::qemu_bring_up_console();
+    bsp::driver::driver_manager().qemu_bring_up_console();
 
     // This line will be printed as the test header.
     println!("Testing synchronous exception handling by causing a page fault");

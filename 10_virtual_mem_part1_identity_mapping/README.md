@@ -314,6 +314,7 @@ Minipush 1.0
 [MP] ⏳ Waiting for /dev/ttyUSB0
 [MP] ✅ Serial connected
 [MP] 🔌 Please power the target now
+
  __  __ _      _ _                 _
 |  \/  (_)_ _ (_) |   ___  __ _ __| |
 | |\/| | | ' \| | |__/ _ \/ _` / _` |
@@ -325,25 +326,25 @@ Minipush 1.0
 [MP] ⏩ Pushing 64 KiB =========================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
-[    1.034062] mingo version 0.10.0
-[    1.034270] Booting on: Raspberry Pi 3
-[    1.034725] MMU online. Special regions:
-[    1.035201]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
-[    1.036220]       0x1fff0000 - 0x1fffffff |  64 KiB | Dev RW PXN | Remapped Device MMIO
-[    1.037205]       0x3f000000 - 0x4000ffff |  16 MiB | Dev RW PXN | Device MMIO
-[    1.038094] Current privilege level: EL1
-[    1.038570] Exception handling state:
-[    1.039015]       Debug:  Masked
-[    1.039405]       SError: Masked
-[    1.039794]       IRQ:    Masked
-[    1.040184]       FIQ:    Masked
-[    1.040575] Architectural timer resolution: 52 ns
-[    1.041148] Drivers loaded:
-[    1.041484]       1. BCM GPIO
-[    1.041842]       2. BCM PL011 UART
-[    1.042264] Timer test, spinning for 1 second
+[    0.811167] mingo version 0.10.0
+[    0.811374] Booting on: Raspberry Pi 3
+[    0.811829] MMU online. Special regions:
+[    0.812306]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
+[    0.813324]       0x1fff0000 - 0x1fffffff |  64 KiB | Dev RW PXN | Remapped Device MMIO
+[    0.814310]       0x3f000000 - 0x4000ffff |  16 MiB | Dev RW PXN | Device MMIO
+[    0.815198] Current privilege level: EL1
+[    0.815675] Exception handling state:
+[    0.816119]       Debug:  Masked
+[    0.816509]       SError: Masked
+[    0.816899]       IRQ:    Masked
+[    0.817289]       FIQ:    Masked
+[    0.817679] Architectural timer resolution: 52 ns
+[    0.818253] Drivers loaded:
+[    0.818589]       1. BCM PL011 UART
+[    0.819011]       2. BCM GPIO
+[    0.819369] Timer test, spinning for 1 second
 [     !!!    ] Writing through the remapped UART at 0x1FFF_1000
-[    2.043305] Echoing input now
+[    1.820409] Echoing input now
 ```
 
 ## Diff to previous
@@ -1118,7 +1119,16 @@ diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/s
 
      for i in bsp::driver::driver_manager().all_device_drivers().iter() {
          if let Err(x) = i.init() {
-@@ -160,6 +171,9 @@
+@@ -147,7 +158,7 @@
+
+ /// The main function running after the early init.
+ fn kernel_main() -> ! {
+-    use console::console;
++    use console::{console, interface::Write};
+     use core::time::Duration;
+     use driver::interface::DriverManager;
+     use time::interface::TimeManager;
+@@ -159,6 +170,9 @@
      );
      info!("Booting on: {}", bsp::board_name());
 
@@ -1128,7 +1138,7 @@ diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/s
      let (_, privilege_level) = exception::current_privilege_level();
      info!("Current privilege level: {}", privilege_level);
 
-@@ -183,6 +197,13 @@
+@@ -182,6 +196,13 @@
      info!("Timer test, spinning for 1 second");
      time::time_manager().spin_for(Duration::from_secs(1));
 

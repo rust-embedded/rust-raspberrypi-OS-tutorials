@@ -775,22 +775,22 @@ Minipush 1.0
            Raspberry Pi 3
 
 [ML] Requesting binary
-[MP] ⏩ Pushing 259 KiB ======================================🦀 100% 129 KiB/s Time: 00:00:02
+[MP] ⏩ Pushing 257 KiB ======================================🦀 100% 128 KiB/s Time: 00:00:02
 [ML] Loaded! Executing the payload now
 
-[    2.891133] mingo version 0.15.0
-[    2.891341] Booting on: Raspberry Pi 3
-[    2.891796] MMU online:
-[    2.892088]       -------------------------------------------------------------------------------------------------------------------------------------------
-[    2.893833]                         Virtual                                   Physical               Size       Attr                    Entity
-[    2.895577]       -------------------------------------------------------------------------------------------------------------------------------------------
-[    2.897322]       0x0000_0000_0000_0000..0x0000_0000_0007_ffff --> 0x00_0000_0000..0x00_0007_ffff | 512 KiB | C   RW XN | Kernel boot-core stack
-[    2.898925]       0x0000_0000_0008_0000..0x0000_0000_0008_ffff --> 0x00_0008_0000..0x00_0008_ffff |  64 KiB | C   RO X  | Kernel code and RO data
-[    2.900538]       0x0000_0000_0009_0000..0x0000_0000_000c_ffff --> 0x00_0009_0000..0x00_000c_ffff | 256 KiB | C   RW XN | Kernel data and bss
-[    2.902109]       0x0000_0000_000d_0000..0x0000_0000_000d_ffff --> 0x00_3f20_0000..0x00_3f20_ffff |  64 KiB | Dev RW XN | BCM GPIO
-[    2.903561]                                                                                                             | BCM PL011 UART
-[    2.905078]       0x0000_0000_000e_0000..0x0000_0000_000e_ffff --> 0x00_3f00_0000..0x00_3f00_ffff |  64 KiB | Dev RW XN | BCM Peripheral Interrupt Controller
-[    2.906822]       -------------------------------------------------------------------------------------------------------------------------------------------
+[    2.866917] mingo version 0.15.0
+[    2.867125] Booting on: Raspberry Pi 3
+[    2.867580] MMU online:
+[    2.867872]       -------------------------------------------------------------------------------------------------------------------------------------------
+[    2.869616]                         Virtual                                   Physical               Size       Attr                    Entity
+[    2.871360]       -------------------------------------------------------------------------------------------------------------------------------------------
+[    2.873105]       0x0000_0000_0000_0000..0x0000_0000_0007_ffff --> 0x00_0000_0000..0x00_0007_ffff | 512 KiB | C   RW XN | Kernel boot-core stack
+[    2.874709]       0x0000_0000_0008_0000..0x0000_0000_0008_ffff --> 0x00_0008_0000..0x00_0008_ffff |  64 KiB | C   RO X  | Kernel code and RO data
+[    2.876322]       0x0000_0000_0009_0000..0x0000_0000_000c_ffff --> 0x00_0009_0000..0x00_000c_ffff | 256 KiB | C   RW XN | Kernel data and bss
+[    2.877893]       0x0000_0000_000d_0000..0x0000_0000_000d_ffff --> 0x00_3f20_0000..0x00_3f20_ffff |  64 KiB | Dev RW XN | BCM PL011 UART
+[    2.879410]                                                                                                             | BCM GPIO
+[    2.880861]       0x0000_0000_000e_0000..0x0000_0000_000e_ffff --> 0x00_3f00_0000..0x00_3f00_ffff |  64 KiB | Dev RW XN | BCM Interrupt Controller
+[    2.882487]       -------------------------------------------------------------------------------------------------------------------------------------------
 ```
 
 ## Diff to previous
@@ -1065,65 +1065,6 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/_arch/aarch64/memory/mmu/tr
 
  //--------------------------------------------------------------------------------------------------
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/console.rs 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/console.rs
---- 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/console.rs
-+++ 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/console.rs
-@@ -22,6 +22,7 @@
- /// # Safety
- ///
- /// - Use only for printing during a panic.
-+#[cfg(not(feature = "test_build"))]
- pub unsafe fn panic_console_out() -> impl fmt::Write {
-     use driver::interface::DeviceDriver;
-
-@@ -45,6 +46,27 @@
-     panic_uart
- }
-
-+/// Reduced version for test builds.
-+///
-+/// # Safety
-+///
-+/// - Use only for printing during a panic.
-+#[cfg(feature = "test_build")]
-+pub unsafe fn panic_console_out() -> impl fmt::Write {
-+    use driver::interface::DeviceDriver;
-+
-+    let mut panic_uart =
-+        device_driver::PanicUart::new(memory::map::mmio::PL011_UART_START.as_usize());
-+
-+    let maybe_uart_mmio_start_addr = super::PL011_UART.virt_mmio_start_addr();
-+
-+    panic_uart
-+        .init(maybe_uart_mmio_start_addr)
-+        .unwrap_or_else(|_| cpu::qemu_exit_failure());
-+
-+    panic_uart
-+}
-+
- /// Return a reference to the console.
- pub fn console() -> &'static impl console::interface::All {
-     &super::PL011_UART
-@@ -56,7 +78,15 @@
-
- /// Minimal code needed to bring up the console in QEMU (for testing only). This is often less steps
- /// than on real hardware due to QEMU's abstractions.
--///
--/// For the RPi, nothing needs to be done.
- #[cfg(feature = "test_build")]
--pub fn qemu_bring_up_console() {}
-+pub fn qemu_bring_up_console() {
-+    use driver::interface::DeviceDriver;
-+
-+    // Calling the UART's init ensures that the BSP's instance of the UART does remap the MMIO
-+    // addresses.
-+    unsafe {
-+        super::PL011_UART
-+            .init()
-+            .unwrap_or_else(|_| cpu::qemu_exit_failure());
-+    }
-+}
-
 diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/kernel.ld 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/kernel.ld
 --- 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/kernel.ld
 +++ 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/kernel.ld
@@ -1371,10 +1312,35 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/memory/mmu.
 +    );
  }
 
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/lib.rs 15_virtual_mem_part3_precomputed_tables/kernel/src/lib.rs
+--- 14_virtual_mem_part2_mmio_remap/kernel/src/lib.rs
++++ 15_virtual_mem_part3_precomputed_tables/kernel/src/lib.rs
+@@ -185,20 +185,8 @@
+     use driver::interface::DriverManager;
+
+     exception::handling_init();
+-
+-    let phys_kernel_tables_base_addr = match memory::mmu::kernel_map_binary() {
+-        Err(string) => panic!("Error mapping kernel binary: {}", string),
+-        Ok(addr) => addr,
+-    };
+-
+-    if let Err(e) = memory::mmu::enable_mmu_and_caching(phys_kernel_tables_base_addr) {
+-        panic!("Enabling MMU failed: {}", e);
+-    }
+-    // Printing will silently fail from here on, because the driver's MMIO is not remapped yet.
+-
+     memory::mmu::post_enable_init();
+     bsp::driver::driver_manager().qemu_bring_up_console();
+-    // Printing available again from here on.
+
+     test_main();
+
+
 diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/main.rs 15_virtual_mem_part3_precomputed_tables/kernel/src/main.rs
 --- 14_virtual_mem_part2_mmio_remap/kernel/src/main.rs
 +++ 15_virtual_mem_part3_precomputed_tables/kernel/src/main.rs
-@@ -17,31 +17,23 @@
+@@ -17,29 +17,17 @@
 
  /// Early init code.
  ///
@@ -1406,22 +1372,24 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/main.rs 15_virtual_mem_part
 -
      memory::mmu::post_enable_init();
 
-+    // Add the mapping records for the precomputed entries first, so that they appear on the top of
-+    // the list.
+     // Instantiate and init all device drivers.
+@@ -51,7 +39,6 @@
+             panic!("Error loading driver: {}: {}", i.compatible(), x);
+         }
+     }
+-    // Printing available again from here on.
+
+     // Let device drivers register and enable their handlers with the interrupt controller.
+     for i in bsp::driver::driver_manager().all_device_drivers() {
+@@ -60,6 +47,8 @@
+         }
+     }
+
 +    bsp::memory::mmu::kernel_add_mapping_records_for_precomputed();
 +
-     // Bring up the drivers needed for printing first.
-     for i in bsp::driver::driver_manager()
-         .early_print_device_drivers()
-@@ -51,7 +43,7 @@
-         i.init().unwrap_or_else(|_| cpu::wait_forever());
-     }
-     bsp::driver::driver_manager().post_early_print_device_driver_init();
--    // Printing available again from here on.
-+    // Printing available from here on.
+     // Unmask interrupts on the boot CPU core.
+     exception::asynchronous::local_irq_unmask();
 
-     // Now bring up the remaining drivers.
-     for i in bsp::driver::driver_manager()
 
 diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu/translation_table.rs 15_virtual_mem_part3_precomputed_tables/kernel/src/memory/mmu/translation_table.rs
 --- 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu/translation_table.rs
@@ -1685,57 +1653,66 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu.rs 15_virtual_me
 diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/00_console_sanity.rs 15_virtual_mem_part3_precomputed_tables/kernel/tests/00_console_sanity.rs
 --- 14_virtual_mem_part2_mmio_remap/kernel/tests/00_console_sanity.rs
 +++ 15_virtual_mem_part3_precomputed_tables/kernel/tests/00_console_sanity.rs
-@@ -11,7 +11,7 @@
- /// Console tests should time out on the I/O harness in case of panic.
- mod panic_wait_forever;
-
--use libkernel::{bsp, console, cpu, exception, print};
-+use libkernel::{bsp, console, cpu, exception, memory, print};
-
- #[no_mangle]
- unsafe fn kernel_init() -> ! {
-@@ -19,6 +19,7 @@
-     use console::interface::*;
+@@ -19,20 +19,8 @@
+     use driver::interface::DriverManager;
 
      exception::handling_init();
-+    memory::mmu::post_enable_init();
-     bsp::console::qemu_bring_up_console();
+-
+-    let phys_kernel_tables_base_addr = match memory::mmu::kernel_map_binary() {
+-        Err(string) => panic!("Error mapping kernel binary: {}", string),
+-        Ok(addr) => addr,
+-    };
+-
+-    if let Err(e) = memory::mmu::enable_mmu_and_caching(phys_kernel_tables_base_addr) {
+-        panic!("Enabling MMU failed: {}", e);
+-    }
+-    // Printing will silently fail from here on, because the driver's MMIO is not remapped yet.
+-
+     memory::mmu::post_enable_init();
+     bsp::driver::driver_manager().qemu_bring_up_console();
+-    // Printing available again from here on.
 
      // Handshake
+     assert_eq!(console().read_char(), 'A');
 
 diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/01_timer_sanity.rs 15_virtual_mem_part3_precomputed_tables/kernel/tests/01_timer_sanity.rs
 --- 14_virtual_mem_part2_mmio_remap/kernel/tests/01_timer_sanity.rs
 +++ 15_virtual_mem_part3_precomputed_tables/kernel/tests/01_timer_sanity.rs
-@@ -11,12 +11,13 @@
- #![test_runner(libkernel::test_runner)]
+@@ -19,20 +19,8 @@
+     use driver::interface::DriverManager;
 
- use core::time::Duration;
--use libkernel::{bsp, cpu, exception, time, time::interface::TimeManager};
-+use libkernel::{bsp, cpu, exception, memory, time, time::interface::TimeManager};
- use test_macros::kernel_test;
-
- #[no_mangle]
- unsafe fn kernel_init() -> ! {
      exception::handling_init();
-+    memory::mmu::post_enable_init();
-     bsp::console::qemu_bring_up_console();
+-
+-    let phys_kernel_tables_base_addr = match memory::mmu::kernel_map_binary() {
+-        Err(string) => panic!("Error mapping kernel binary: {}", string),
+-        Ok(addr) => addr,
+-    };
+-
+-    if let Err(e) = memory::mmu::enable_mmu_and_caching(phys_kernel_tables_base_addr) {
+-        panic!("Enabling MMU failed: {}", e);
+-    }
+-    // Printing will silently fail from here on, because the driver's MMIO is not remapped yet.
+-
+     memory::mmu::post_enable_init();
+     bsp::driver::driver_manager().qemu_bring_up_console();
+-    // Printing available again from here on.
 
      // Depending on CPU arch, some timer bring-up code could go here. Not needed for the RPi.
+
 
 diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/02_exception_sync_page_fault.rs 15_virtual_mem_part3_precomputed_tables/kernel/tests/02_exception_sync_page_fault.rs
 --- 14_virtual_mem_part2_mmio_remap/kernel/tests/02_exception_sync_page_fault.rs
 +++ 15_virtual_mem_part3_precomputed_tables/kernel/tests/02_exception_sync_page_fault.rs
-@@ -21,40 +21,12 @@
+@@ -24,28 +24,12 @@
+     use driver::interface::DriverManager;
 
- #[no_mangle]
- unsafe fn kernel_init() -> ! {
--    use libkernel::driver::interface::DriverManager;
--
      exception::handling_init();
--
--    // This line will be printed as the test header.
--    println!("Testing synchronous exception handling by causing a page fault");
--
++    memory::mmu::post_enable_init();
++    bsp::driver::driver_manager().qemu_bring_up_console();
+
+     // This line will be printed as the test header.
+     println!("Testing synchronous exception handling by causing a page fault");
+
 -    let phys_kernel_tables_base_addr = match memory::mmu::kernel_map_binary() {
 -        Err(string) => {
 -            info!("Error mapping kernel binary: {}", string);
@@ -1750,39 +1727,27 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/02_exception_sync_page_fa
 -    }
 -    // Printing will silently fail from here on, because the driver's MMIO is not remapped yet.
 -
-     memory::mmu::post_enable_init();
-     bsp::console::qemu_bring_up_console();
-
--    // Bring up the drivers needed for printing first.
--    for i in bsp::driver::driver_manager()
--        .early_print_device_drivers()
--        .iter()
--    {
--        // Any encountered errors cannot be printed yet, obviously, so just safely park the CPU.
--        i.init().unwrap_or_else(|_| cpu::qemu_exit_failure());
--    }
--    bsp::driver::driver_manager().post_early_print_device_driver_init();
+-    memory::mmu::post_enable_init();
+-    bsp::driver::driver_manager().qemu_bring_up_console();
 -    // Printing available again from here on.
-+    // This line will be printed as the test header.
-+    println!("Testing synchronous exception handling by causing a page fault");
-
+-
      info!("Writing beyond mapped area to address 9 GiB...");
      let big_addr: u64 = 9 * 1024 * 1024 * 1024;
+     core::ptr::read_volatile(big_addr as *mut u64);
 
 diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/03_exception_restore_sanity.rs 15_virtual_mem_part3_precomputed_tables/kernel/tests/03_exception_restore_sanity.rs
 --- 14_virtual_mem_part2_mmio_remap/kernel/tests/03_exception_restore_sanity.rs
 +++ 15_virtual_mem_part3_precomputed_tables/kernel/tests/03_exception_restore_sanity.rs
-@@ -30,40 +30,12 @@
+@@ -33,28 +33,12 @@
+     use driver::interface::DriverManager;
 
- #[no_mangle]
- unsafe fn kernel_init() -> ! {
--    use libkernel::driver::interface::DriverManager;
--
      exception::handling_init();
--
--    // This line will be printed as the test header.
--    println!("Testing exception restore");
--
++    memory::mmu::post_enable_init();
++    bsp::driver::driver_manager().qemu_bring_up_console();
+
+     // This line will be printed as the test header.
+     println!("Testing exception restore");
+
 -    let phys_kernel_tables_base_addr = match memory::mmu::kernel_map_binary() {
 -        Err(string) => {
 -            info!("Error mapping kernel binary: {}", string);
@@ -1797,42 +1762,41 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/03_exception_restore_sani
 -    }
 -    // Printing will silently fail from here on, because the driver's MMIO is not remapped yet.
 -
-     memory::mmu::post_enable_init();
-     bsp::console::qemu_bring_up_console();
-
--    // Bring up the drivers needed for printing first.
--    for i in bsp::driver::driver_manager()
--        .early_print_device_drivers()
--        .iter()
--    {
--        // Any encountered errors cannot be printed yet, obviously, so just safely park the CPU.
--        i.init().unwrap_or_else(|_| cpu::qemu_exit_failure());
--    }
--    bsp::driver::driver_manager().post_early_print_device_driver_init();
+-    memory::mmu::post_enable_init();
+-    bsp::driver::driver_manager().qemu_bring_up_console();
 -    // Printing available again from here on.
-+    // This line will be printed as the test header.
-+    println!("Testing exception restore");
-
+-
      info!("Making a dummy system call");
 
+     // Calling this inside a function indirectly tests if the link register is restored properly.
 
 diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/04_exception_irq_sanity.rs 15_virtual_mem_part3_precomputed_tables/kernel/tests/04_exception_irq_sanity.rs
 --- 14_virtual_mem_part2_mmio_remap/kernel/tests/04_exception_irq_sanity.rs
 +++ 15_virtual_mem_part3_precomputed_tables/kernel/tests/04_exception_irq_sanity.rs
-@@ -10,11 +10,12 @@
- #![reexport_test_harness_main = "test_main"]
- #![test_runner(libkernel::test_runner)]
-
--use libkernel::{bsp, cpu, exception};
-+use libkernel::{bsp, cpu, exception, memory};
- use test_macros::kernel_test;
-
- #[no_mangle]
+@@ -17,22 +17,10 @@
  unsafe fn kernel_init() -> ! {
-+    memory::mmu::post_enable_init();
-     bsp::console::qemu_bring_up_console();
+     use driver::interface::DriverManager;
 
-     exception::handling_init();
+-    exception::handling_init();
+-
+-    let phys_kernel_tables_base_addr = match memory::mmu::kernel_map_binary() {
+-        Err(string) => panic!("Error mapping kernel binary: {}", string),
+-        Ok(addr) => addr,
+-    };
+-
+-    if let Err(e) = memory::mmu::enable_mmu_and_caching(phys_kernel_tables_base_addr) {
+-        panic!("Enabling MMU failed: {}", e);
+-    }
+-    // Printing will silently fail from here on, because the driver's MMIO is not remapped yet.
+-
+     memory::mmu::post_enable_init();
+     bsp::driver::driver_manager().qemu_bring_up_console();
+-    // Printing available again from here on.
+
++    exception::handling_init();
+     exception::asynchronous::local_irq_unmask();
+
+     test_main();
 
 diff -uNr 14_virtual_mem_part2_mmio_remap/Makefile 15_virtual_mem_part3_precomputed_tables/Makefile
 --- 14_virtual_mem_part2_mmio_remap/Makefile

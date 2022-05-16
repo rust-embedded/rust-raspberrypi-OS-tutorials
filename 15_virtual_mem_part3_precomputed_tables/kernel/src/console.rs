@@ -4,6 +4,10 @@
 
 //! System console.
 
+mod null_console;
+
+use crate::synchronization;
+
 //--------------------------------------------------------------------------------------------------
 // Public Definitions
 //--------------------------------------------------------------------------------------------------
@@ -49,5 +53,29 @@ pub mod interface {
     }
 
     /// Trait alias for a full-fledged console.
-    pub trait All = Write + Read + Statistics;
+    pub trait All: Write + Read + Statistics {}
+}
+
+//--------------------------------------------------------------------------------------------------
+// Global instances
+//--------------------------------------------------------------------------------------------------
+
+static CUR_CONSOLE: InitStateLock<&'static (dyn interface::All + Sync)> =
+    InitStateLock::new(&null_console::NULL_CONSOLE);
+
+//--------------------------------------------------------------------------------------------------
+// Public Code
+//--------------------------------------------------------------------------------------------------
+use synchronization::{interface::ReadWriteEx, InitStateLock};
+
+/// Register a new console.
+pub fn register_console(new_console: &'static (dyn interface::All + Sync)) {
+    CUR_CONSOLE.write(|con| *con = new_console);
+}
+
+/// Return a reference to the currently registered console.
+///
+/// This is the global console used by all printing macros.
+pub fn console() -> &'static dyn interface::All {
+    CUR_CONSOLE.read(|con| *con)
 }

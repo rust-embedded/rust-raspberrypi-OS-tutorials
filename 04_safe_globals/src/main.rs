@@ -126,14 +126,11 @@ mod synchronization;
 ///
 /// - Only a single core must be active and running this function.
 unsafe fn kernel_init() -> ! {
-    use console::interface::Statistics;
+    use console::console;
 
     println!("[0] Hello from Rust!");
 
-    println!(
-        "[1] Chars written: {}",
-        bsp::console::console().chars_written()
-    );
+    println!("[1] Chars written: {}", console().chars_written());
 
     println!("[2] Stopping here.");
     cpu::wait_forever()

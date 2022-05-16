@@ -4,7 +4,7 @@
 
 //! BSP asynchronous exception handling.
 
-use crate::{bsp, exception};
+use crate::{bsp, bsp::driver, exception};
 
 //--------------------------------------------------------------------------------------------------
 // Public Definitions
@@ -32,5 +32,5 @@ pub(in crate::bsp) mod irq_map {
 pub fn irq_manager() -> &'static impl exception::asynchronous::interface::IRQManager<
     IRQNumberType = bsp::device_driver::IRQNumber,
 > {
-    &super::super::INTERRUPT_CONTROLLER
+    &driver::INTERRUPT_CONTROLLER
 }

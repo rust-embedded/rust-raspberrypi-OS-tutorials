@@ -77,7 +77,6 @@ pub(super) mod map {
         pub const PERIPHERAL_INTERRUPT_CONTROLLER_START: usize = START + 0x0000_B200;
         pub const GPIO_START:                            usize = START + GPIO_OFFSET;
         pub const PL011_UART_START:                      usize = START + UART_OFFSET;
-        pub const LOCAL_INTERRUPT_CONTROLLER_START:      usize =         0x4000_0000;
         pub const END_INCLUSIVE:                         usize =         0x4000_FFFF;
     }
 

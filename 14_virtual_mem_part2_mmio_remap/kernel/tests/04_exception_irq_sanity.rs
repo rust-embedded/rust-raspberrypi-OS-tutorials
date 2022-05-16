@@ -10,14 +10,29 @@
 #![reexport_test_harness_main = "test_main"]
 #![test_runner(libkernel::test_runner)]
 
-use libkernel::{bsp, cpu, exception};
+use libkernel::{bsp, cpu, driver, exception, memory};
 use test_macros::kernel_test;
 
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
-    bsp::console::qemu_bring_up_console();
+    use driver::interface::DriverManager;
 
     exception::handling_init();
+
+    let phys_kernel_tables_base_addr = match memory::mmu::kernel_map_binary() {
+        Err(string) => panic!("Error mapping kernel binary: {}", string),
+        Ok(addr) => addr,
+    };
+
+    if let Err(e) = memory::mmu::enable_mmu_and_caching(phys_kernel_tables_base_addr) {
+        panic!("Enabling MMU failed: {}", e);
+    }
+    // Printing will silently fail from here on, because the driver's MMIO is not remapped yet.
+
+    memory::mmu::post_enable_init();
+    bsp::driver::driver_manager().qemu_bring_up_console();
+    // Printing available again from here on.
+
     exception::asynchronous::local_irq_unmask();
 
     test_main();

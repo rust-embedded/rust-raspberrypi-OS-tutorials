@@ -7,7 +7,9 @@
 use super::{InterruptController, PendingIRQs, PeripheralIRQ};
 use crate::{
     bsp::device_driver::common::MMIODerefWrapper,
-    driver, exception, memory, synchronization,
+    exception,
+    memory::{Address, Virtual},
+    synchronization,
     synchronization::{IRQSafeNullLock, InitStateLock},
 };
 use tock_registers::{
@@ -55,13 +57,11 @@ type HandlerTable =
 
 /// Representation of the peripheral interrupt controller.
 pub struct PeripheralIC {
-    mmio_descriptor: memory::mmu::MMIODescriptor,
-
     /// Access to write registers is guarded with a lock.
     wo_registers: IRQSafeNullLock<WriteOnlyRegisters>,
 
     /// Register read access is unguarded.
-    ro_registers: InitStateLock<ReadOnlyRegisters>,
+    ro_registers: ReadOnlyRegisters,
 
     /// Stores registered IRQ handlers. Writable only during kernel init. RO afterwards.
     handler_table: InitStateLock<HandlerTable>,
@@ -76,26 +76,21 @@ impl PeripheralIC {
     ///
     /// # Safety
     ///
-    /// - The user must ensure to provide correct MMIO descriptors.
-    pub const unsafe fn new(mmio_descriptor: memory::mmu::MMIODescriptor) -> Self {
-        let addr = mmio_descriptor.start_addr().as_usize();
-
+    /// - The user must ensure to provide a correct MMIO start address.
+    pub const unsafe fn new(mmio_start_addr: Address<Virtual>) -> Self {
         Self {
-            mmio_descriptor,
-            wo_registers: IRQSafeNullLock::new(WriteOnlyRegisters::new(addr)),
-            ro_registers: InitStateLock::new(ReadOnlyRegisters::new(addr)),
+            wo_registers: IRQSafeNullLock::new(WriteOnlyRegisters::new(mmio_start_addr)),
+            ro_registers: ReadOnlyRegisters::new(mmio_start_addr),
             handler_table: InitStateLock::new([None; InterruptController::NUM_PERIPHERAL_IRQS]),
         }
     }
 
     /// Query the list of pending IRQs.
     fn pending_irqs(&self) -> PendingIRQs {
-        self.ro_registers.read(|regs| {
-            let pending_mask: u64 =
-                (u64::from(regs.PENDING_2.get()) << 32) | u64::from(regs.PENDING_1.get());
+        let pending_mask: u64 = (u64::from(self.ro_registers.PENDING_2.get()) << 32)
+            | u64::from(self.ro_registers.PENDING_1.get());
 
-            PendingIRQs::new(pending_mask)
-        })
+        PendingIRQs::new(pending_mask)
     }
 }
 
@@ -103,24 +98,6 @@ impl PeripheralIC {
 // OS Interface Code
 //------------------------------------------------------------------------------
 use synchronization::interface::{Mutex, ReadWriteEx};
-
-impl driver::interface::DeviceDriver for PeripheralIC {
-    fn compatible(&self) -> &'static str {
-        "BCM Peripheral Interrupt Controller"
-    }
-
-    unsafe fn init(&self) -> Result<(), &'static str> {
-        let virt_addr =
-            memory::mmu::kernel_map_mmio(self.compatible(), &self.mmio_descriptor)?.as_usize();
-
-        self.wo_registers
-            .lock(|regs| *regs = WriteOnlyRegisters::new(virt_addr));
-        self.ro_registers
-            .write(|regs| *regs = ReadOnlyRegisters::new(virt_addr));
-
-        Ok(())
-    }
-}
 
 impl exception::asynchronous::interface::IRQManager for PeripheralIC {
     type IRQNumberType = PeripheralIRQ;

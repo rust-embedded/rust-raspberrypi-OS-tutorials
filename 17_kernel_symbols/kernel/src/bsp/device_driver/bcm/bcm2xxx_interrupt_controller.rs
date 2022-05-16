@@ -6,7 +6,10 @@
 
 mod peripheral_ic;
 
-use crate::{driver, exception, memory};
+use crate::{
+    driver, exception,
+    memory::{Address, Virtual},
+};
 
 //--------------------------------------------------------------------------------------------------
 // Private Definitions
@@ -28,6 +31,7 @@ pub type PeripheralIRQ =
 
 /// Used for the associated type of trait [`exception::asynchronous::interface::IRQManager`].
 #[derive(Copy, Clone)]
+#[allow(missing_docs)]
 pub enum IRQNumber {
     Local(LocalIRQ),
     Peripheral(PeripheralIRQ),
@@ -36,6 +40,7 @@ pub enum IRQNumber {
 /// Representation of the Interrupt Controller.
 pub struct InterruptController {
     periph: peripheral_ic::PeripheralIC,
+    post_init_callback: fn(),
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -74,17 +79,20 @@ impl InterruptController {
     const MAX_PERIPHERAL_IRQ_NUMBER: usize = 63;
     const NUM_PERIPHERAL_IRQS: usize = Self::MAX_PERIPHERAL_IRQ_NUMBER + 1;
 
+    pub const COMPATIBLE: &'static str = "BCM Interrupt Controller";
+
     /// Create an instance.
     ///
     /// # Safety
     ///
-    /// - The user must ensure to provide correct MMIO descriptors.
+    /// - The user must ensure to provide a correct MMIO start address.
     pub const unsafe fn new(
-        _local_mmio_descriptor: memory::mmu::MMIODescriptor,
-        periph_mmio_descriptor: memory::mmu::MMIODescriptor,
+        periph_mmio_start_addr: Address<Virtual>,
+        post_init_callback: fn(),
     ) -> Self {
         Self {
-            periph: peripheral_ic::PeripheralIC::new(periph_mmio_descriptor),
+            periph: peripheral_ic::PeripheralIC::new(periph_mmio_start_addr),
+            post_init_callback,
         }
     }
 }
@@ -95,11 +103,13 @@ impl InterruptController {
 
 impl driver::interface::DeviceDriver for InterruptController {
     fn compatible(&self) -> &'static str {
-        "BCM Interrupt Controller"
+        Self::COMPATIBLE
     }
 
     unsafe fn init(&self) -> Result<(), &'static str> {
-        self.periph.init()
+        (self.post_init_callback)();
+
+        Ok(())
     }
 }
 

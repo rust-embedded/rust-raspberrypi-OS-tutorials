@@ -10,13 +10,14 @@
 //! - <https://developer.arm.com/documentation/ddi0183/latest>
 
 use crate::{
-    bsp, bsp::device_driver::common::MMIODerefWrapper, console, cpu, driver, exception, memory,
-    synchronization, synchronization::IRQSafeNullLock,
+    bsp,
+    bsp::device_driver::common::MMIODerefWrapper,
+    console, cpu, driver, exception,
+    memory::{Address, Virtual},
+    synchronization,
+    synchronization::IRQSafeNullLock,
 };
-use core::{
-    fmt,
-    sync::atomic::{AtomicUsize, Ordering},
-};
+use core::fmt;
 use tock_registers::{
     interfaces::{Readable, Writeable},
     register_bitfields, register_structs,
@@ -219,29 +220,25 @@ enum BlockingMode {
     NonBlocking,
 }
 
-//--------------------------------------------------------------------------------------------------
-// Public Definitions
-//--------------------------------------------------------------------------------------------------
-
-pub struct PL011UartInner {
+struct PL011UartInner {
     registers: Registers,
     chars_written: usize,
     chars_read: usize,
 }
 
-// Export the inner struct so that BSPs can use it for the panic handler.
-pub use PL011UartInner as PanicUart;
+//--------------------------------------------------------------------------------------------------
+// Public Definitions
+//--------------------------------------------------------------------------------------------------
 
 /// Representation of the UART.
 pub struct PL011Uart {
-    mmio_descriptor: memory::mmu::MMIODescriptor,
-    virt_mmio_start_addr: AtomicUsize,
     inner: IRQSafeNullLock<PL011UartInner>,
     irq_number: bsp::device_driver::IRQNumber,
+    post_init_callback: fn(),
 }
 
 //--------------------------------------------------------------------------------------------------
-// Public Code
+// Private Code
 //--------------------------------------------------------------------------------------------------
 
 impl PL011UartInner {
@@ -250,7 +247,7 @@ impl PL011UartInner {
     /// # Safety
     ///
     /// - The user must ensure to provide a correct MMIO start address.
-    pub const unsafe fn new(mmio_start_addr: usize) -> Self {
+    pub const unsafe fn new(mmio_start_addr: Address<Virtual>) -> Self {
         Self {
             registers: Registers::new(mmio_start_addr),
             chars_written: 0,
@@ -275,15 +272,7 @@ impl PL011UartInner {
     /// genrated baud rate of `48_000_000 / (16 * 3.25) = 923_077`.
     ///
     /// Error = `((923_077 - 921_600) / 921_600) * 100 = 0.16%`.
-    ///
-    /// # Safety
-    ///
-    /// - The user must ensure to provide a correct MMIO start address.
-    pub unsafe fn init(&mut self, new_mmio_start_addr: Option<usize>) -> Result<(), &'static str> {
-        if let Some(addr) = new_mmio_start_addr {
-            self.registers = Registers::new(addr);
-        }
-
+    pub fn init(&mut self) {
         // Execution can arrive here while there are still characters queued in the TX FIFO and
         // actively being sent out by the UART hardware. If the UART is turned off in this case,
         // those queued characters would be lost.
@@ -325,8 +314,6 @@ impl PL011UartInner {
         self.registers
             .CR
             .write(CR::UARTEN::Enabled + CR::TXE::Enabled + CR::RXE::Enabled);
-
-        Ok(())
     }
 
     /// Send a character.
@@ -399,24 +386,28 @@ impl fmt::Write for PL011UartInner {
     }
 }
 
+//--------------------------------------------------------------------------------------------------
+// Public Code
+//--------------------------------------------------------------------------------------------------
+
 impl PL011Uart {
+    pub const COMPATIBLE: &'static str = "BCM PL011 UART";
+
     /// Create an instance.
     ///
     /// # Safety
     ///
-    /// - The user must ensure to provide correct MMIO descriptors.
+    /// - The user must ensure to provide a correct MMIO start address.
     /// - The user must ensure to provide correct IRQ numbers.
     pub const unsafe fn new(
-        mmio_descriptor: memory::mmu::MMIODescriptor,
+        mmio_start_addr: Address<Virtual>,
         irq_number: bsp::device_driver::IRQNumber,
+        post_init_callback: fn(),
     ) -> Self {
         Self {
-            mmio_descriptor,
-            virt_mmio_start_addr: AtomicUsize::new(0),
-            inner: IRQSafeNullLock::new(PL011UartInner::new(
-                mmio_descriptor.start_addr().as_usize(),
-            )),
+            inner: IRQSafeNullLock::new(PL011UartInner::new(mmio_start_addr)),
             irq_number,
+            post_init_callback,
         }
     }
 }
@@ -428,27 +419,21 @@ use synchronization::interface::Mutex;
 
 impl driver::interface::DeviceDriver for PL011Uart {
     fn compatible(&self) -> &'static str {
-        "BCM PL011 UART"
+        Self::COMPATIBLE
     }
 
     unsafe fn init(&self) -> Result<(), &'static str> {
-        let virt_addr = memory::mmu::kernel_map_mmio(self.compatible(), &self.mmio_descriptor)?;
-
-        self.inner
-            .lock(|inner| inner.init(Some(virt_addr.as_usize())))?;
-
-        self.virt_mmio_start_addr
-            .store(virt_addr.as_usize(), Ordering::Relaxed);
+        self.inner.lock(|inner| inner.init());
+        (self.post_init_callback)();
 
         Ok(())
     }
 
     fn register_and_enable_irq_handler(&'static self) -> Result<(), &'static str> {
-        use bsp::exception::asynchronous::irq_manager;
-        use exception::asynchronous::{interface::IRQManager, IRQDescriptor};
+        use exception::asynchronous::{irq_manager, IRQDescriptor};
 
         let descriptor = IRQDescriptor {
-            name: "BCM PL011 UART",
+            name: Self::COMPATIBLE,
             handler: self,
         };
 
@@ -456,16 +441,6 @@ impl driver::interface::DeviceDriver for PL011Uart {
         irq_manager().enable(self.irq_number);
 
         Ok(())
-    }
-
-    fn virt_mmio_start_addr(&self) -> Option<usize> {
-        let addr = self.virt_mmio_start_addr.load(Ordering::Relaxed);
-
-        if addr == 0 {
-            return None;
-        }
-
-        Some(addr)
     }
 }
 
@@ -513,6 +488,8 @@ impl console::interface::Statistics for PL011Uart {
         self.inner.lock(|inner| inner.chars_read)
     }
 }
+
+impl console::interface::All for PL011Uart {}
 
 impl exception::asynchronous::interface::IRQHandler for PL011Uart {
     fn handle(&self) -> Result<(), &'static str> {

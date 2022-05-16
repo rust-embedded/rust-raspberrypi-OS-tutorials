@@ -9,8 +9,9 @@
 
 use crate::{
     bsp::device_driver::common::MMIODerefWrapper,
+    memory::{Address, Virtual},
     state, synchronization,
-    synchronization::{IRQSafeNullLock, InitStateLock},
+    synchronization::IRQSafeNullLock,
 };
 use tock_registers::{
     interfaces::{Readable, Writeable},
@@ -84,7 +85,7 @@ pub struct GICD {
     shared_registers: IRQSafeNullLock<SharedRegisters>,
 
     /// Access to banked registers is unguarded.
-    banked_registers: InitStateLock<BankedRegisters>,
+    banked_registers: BankedRegisters,
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -121,7 +122,6 @@ impl SharedRegisters {
 //--------------------------------------------------------------------------------------------------
 // Public Code
 //--------------------------------------------------------------------------------------------------
-use crate::synchronization::interface::ReadWriteEx;
 use synchronization::interface::Mutex;
 
 impl GICD {
@@ -130,18 +130,11 @@ impl GICD {
     /// # Safety
     ///
     /// - The user must ensure to provide a correct MMIO start address.
-    pub const unsafe fn new(mmio_start_addr: usize) -> Self {
+    pub const unsafe fn new(mmio_start_addr: Address<Virtual>) -> Self {
         Self {
             shared_registers: IRQSafeNullLock::new(SharedRegisters::new(mmio_start_addr)),
-            banked_registers: InitStateLock::new(BankedRegisters::new(mmio_start_addr)),
+            banked_registers: BankedRegisters::new(mmio_start_addr),
         }
-    }
-
-    pub unsafe fn set_mmio(&self, new_mmio_start_addr: usize) {
-        self.shared_registers
-            .lock(|regs| *regs = SharedRegisters::new(new_mmio_start_addr));
-        self.banked_registers
-            .write(|regs| *regs = BankedRegisters::new(new_mmio_start_addr));
     }
 
     /// Use a banked ITARGETSR to retrieve the executing core's GIC target mask.
@@ -151,8 +144,7 @@ impl GICD {
     ///   "GICD_ITARGETSR0 to GICD_ITARGETSR7 are read-only, and each field returns a value that
     ///    corresponds only to the processor reading the register."
     fn local_gic_target_mask(&self) -> u32 {
-        self.banked_registers
-            .read(|regs| regs.ITARGETSR[0].read(ITARGETSR::Offset0))
+        self.banked_registers.ITARGETSR[0].read(ITARGETSR::Offset0)
     }
 
     /// Route all SPIs to the boot core and enable the distributor.
@@ -191,10 +183,10 @@ impl GICD {
         // Check if we are handling a private or shared IRQ.
         match irq_num {
             // Private.
-            0..=31 => self.banked_registers.read(|regs| {
-                let enable_reg = &regs.ISENABLER;
+            0..=31 => {
+                let enable_reg = &self.banked_registers.ISENABLER;
                 enable_reg.set(enable_reg.get() | enable_bit);
-            }),
+            }
             // Shared.
             _ => {
                 let enable_reg_index_shared = enable_reg_index - 1;

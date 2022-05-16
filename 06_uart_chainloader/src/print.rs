@@ -4,7 +4,7 @@
 
 //! Printing.
 
-use crate::{bsp, console};
+use crate::console;
 use core::fmt;
 
 //--------------------------------------------------------------------------------------------------
@@ -13,9 +13,7 @@ use core::fmt;
 
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
-    use console::interface::Write;
-
-    bsp::console::console().write_fmt(args).unwrap();
+    console::console().write_fmt(args).unwrap();
 }
 
 /// Prints without a newline.
