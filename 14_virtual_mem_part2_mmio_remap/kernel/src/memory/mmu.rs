@@ -81,7 +81,7 @@ use translation_table::interface::TranslationTable;
 fn kernel_init_mmio_va_allocator() {
     let region = bsp::memory::mmu::virt_mmio_remap_region();
 
-    page_alloc::kernel_mmio_va_allocator().lock(|allocator| allocator.initialize(region));
+    page_alloc::kernel_mmio_va_allocator().lock(|allocator| allocator.init(region));
 }
 
 /// Map a region in the kernel's translation tables.

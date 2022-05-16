@@ -28,7 +28,7 @@ unsafe fn kernel_init() -> ! {
     use driver::interface::DriverManager;
 
     exception::handling_init();
-    memory::mmu::post_enable_init();
+    memory::init();
 
     // Instantiate and init all device drivers.
     if let Err(x) = bsp::driver::driver_manager().instantiate_drivers() {

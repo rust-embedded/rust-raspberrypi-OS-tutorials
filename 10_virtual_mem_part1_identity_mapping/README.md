@@ -331,7 +331,7 @@ Minipush 1.0
 [    0.811829] MMU online. Special regions:
 [    0.812306]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
 [    0.813324]       0x1fff0000 - 0x1fffffff |  64 KiB | Dev RW PXN | Remapped Device MMIO
-[    0.814310]       0x3f000000 - 0x4000ffff |  16 MiB | Dev RW PXN | Device MMIO
+[    0.814310]       0x3f000000 - 0x4000ffff |  17 MiB | Dev RW PXN | Device MMIO
 [    0.815198] Current privilege level: EL1
 [    0.815675] Exception handling state:
 [    0.816119]       Debug:  Masked
@@ -1079,10 +1079,37 @@ diff -uNr 09_privilege_level/src/bsp.rs 10_virtual_mem_part1_identity_mapping/sr
  #[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
  mod raspberrypi;
 
+diff -uNr 09_privilege_level/src/common.rs 10_virtual_mem_part1_identity_mapping/src/common.rs
+--- 09_privilege_level/src/common.rs
++++ 10_virtual_mem_part1_identity_mapping/src/common.rs
+@@ -0,0 +1,22 @@
++// SPDX-License-Identifier: MIT OR Apache-2.0
++//
++// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
++
++//! General purpose code.
++
++/// Convert a size into human readable format.
++pub const fn size_human_readable_ceil(size: usize) -> (usize, &'static str) {
++    const KIB: usize = 1024;
++    const MIB: usize = 1024 * 1024;
++    const GIB: usize = 1024 * 1024 * 1024;
++
++    if (size / GIB) > 0 {
++        (size.div_ceil(GIB), "GiB")
++    } else if (size / MIB) > 0 {
++        (size.div_ceil(MIB), "MiB")
++    } else if (size / KIB) > 0 {
++        (size.div_ceil(KIB), "KiB")
++    } else {
++        (size, "Byte")
++    }
++}
+
 diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/src/main.rs
 --- 09_privilege_level/src/main.rs
 +++ 10_virtual_mem_part1_identity_mapping/src/main.rs
-@@ -107,7 +107,9 @@
+@@ -107,18 +107,23 @@
  //! 2. Once finished with architectural setup, the arch code calls `kernel_init()`.
 
  #![allow(clippy::upper_case_acronyms)]
@@ -1090,9 +1117,15 @@ diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/s
  #![feature(asm_const)]
 +#![feature(core_intrinsics)]
  #![feature(format_args_nl)]
++#![feature(int_roundings)]
  #![feature(panic_info_message)]
  #![feature(trait_alias)]
-@@ -119,6 +121,7 @@
+ #![no_main]
+ #![no_std]
+
+ mod bsp;
++mod common;
+ mod console;
  mod cpu;
  mod driver;
  mod exception;
@@ -1100,7 +1133,7 @@ diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/s
  mod panic_wait;
  mod print;
  mod synchronization;
-@@ -129,9 +132,17 @@
+@@ -129,9 +134,17 @@
  /// # Safety
  ///
  /// - Only a single core must be active and running this function.
@@ -1119,7 +1152,7 @@ diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/s
 
      for i in bsp::driver::driver_manager().all_device_drivers().iter() {
          if let Err(x) = i.init() {
-@@ -147,7 +158,7 @@
+@@ -147,7 +160,7 @@
 
  /// The main function running after the early init.
  fn kernel_main() -> ! {
@@ -1128,7 +1161,7 @@ diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/s
      use core::time::Duration;
      use driver::interface::DriverManager;
      use time::interface::TimeManager;
-@@ -159,6 +170,9 @@
+@@ -159,6 +172,9 @@
      );
      info!("Booting on: {}", bsp::board_name());
 
@@ -1138,7 +1171,7 @@ diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/s
      let (_, privilege_level) = exception::current_privilege_level();
      info!("Current privilege level: {}", privilege_level);
 
-@@ -182,6 +196,13 @@
+@@ -182,6 +198,13 @@
      info!("Timer test, spinning for 1 second");
      time::time_manager().spin_for(Duration::from_secs(1));
 
@@ -1175,7 +1208,7 @@ diff -uNr 09_privilege_level/src/memory/mmu/translation_table.rs 10_virtual_mem_
 diff -uNr 09_privilege_level/src/memory/mmu.rs 10_virtual_mem_part1_identity_mapping/src/memory/mmu.rs
 --- 09_privilege_level/src/memory/mmu.rs
 +++ 10_virtual_mem_part1_identity_mapping/src/memory/mmu.rs
-@@ -0,0 +1,264 @@
+@@ -0,0 +1,253 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
@@ -1198,6 +1231,7 @@ diff -uNr 09_privilege_level/src/memory/mmu.rs 10_virtual_mem_part1_identity_map
 +
 +mod translation_table;
 +
++use crate::common;
 +use core::{fmt, ops::RangeInclusive};
 +
 +//--------------------------------------------------------------------------------------------------
@@ -1357,19 +1391,7 @@ diff -uNr 09_privilege_level/src/memory/mmu.rs 10_virtual_mem_part1_identity_map
 +        let end = *(self.virtual_range)().end();
 +        let size = end - start + 1;
 +
-+        // log2(1024).
-+        const KIB_RSHIFT: u32 = 10;
-+
-+        // log2(1024 * 1024).
-+        const MIB_RSHIFT: u32 = 20;
-+
-+        let (size, unit) = if (size >> MIB_RSHIFT) > 0 {
-+            (size >> MIB_RSHIFT, "MiB")
-+        } else if (size >> KIB_RSHIFT) > 0 {
-+            (size >> KIB_RSHIFT, "KiB")
-+        } else {
-+            (size, "Byte")
-+        };
++        let (size, unit) = common::size_human_readable_ceil(size);
 +
 +        let attr = match self.attribute_fields.mem_attributes {
 +            MemAttributes::CacheableDRAM => "C",

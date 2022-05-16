@@ -17,7 +17,7 @@ use test_macros::kernel_test;
 unsafe fn kernel_init() -> ! {
     use driver::interface::DriverManager;
 
-    memory::mmu::post_enable_init();
+    memory::init();
     bsp::driver::driver_manager().qemu_bring_up_console();
 
     exception::handling_init();

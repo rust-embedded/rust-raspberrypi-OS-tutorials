@@ -60,7 +60,9 @@ impl fmt::Display for Backtrace {
             |maybe_iter: Option<&mut dyn Iterator<Item = BacktraceItem>>| match maybe_iter {
                 None => fmt_res = writeln!(f, "ERROR! No valid stack frame found"),
                 Some(iter) => {
-                    for (i, backtrace_res) in iter.enumerate() {
+                    // Since the backtrace is printed, the first function is always
+                    // core::fmt::write. Skip 1 so it is excluded and doesn't bloat the output.
+                    for (i, backtrace_res) in iter.skip(1).enumerate() {
                         match backtrace_res {
                             BacktraceItem::InvalidFramePointer(addr) => {
                                 fmt_res = writeln!(

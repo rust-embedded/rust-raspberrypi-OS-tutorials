@@ -23,7 +23,7 @@ unsafe fn kernel_init() -> ! {
     use driver::interface::DriverManager;
 
     exception::handling_init();
-    memory::mmu::post_enable_init();
+    memory::init();
     bsp::driver::driver_manager().qemu_bring_up_console();
 
     nested();

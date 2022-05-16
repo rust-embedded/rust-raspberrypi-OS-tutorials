@@ -38,7 +38,6 @@ unsafe fn kernel_init() -> ! {
     if let Err(e) = memory::mmu::enable_mmu_and_caching(phys_kernel_tables_base_addr) {
         panic!("Enabling MMU failed: {}", e);
     }
-    // Printing will silently fail from here on, because the driver's MMIO is not remapped yet.
 
     memory::mmu::post_enable_init();
 
@@ -51,7 +50,6 @@ unsafe fn kernel_init() -> ! {
             panic!("Error loading driver: {}: {}", i.compatible(), x);
         }
     }
-    // Printing available again from here on.
 
     // Let device drivers register and enable their handlers with the interrupt controller.
     for i in bsp::driver::driver_manager().all_device_drivers() {

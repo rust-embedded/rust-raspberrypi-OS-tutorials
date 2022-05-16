@@ -111,12 +111,14 @@
 #![feature(asm_const)]
 #![feature(core_intrinsics)]
 #![feature(format_args_nl)]
+#![feature(int_roundings)]
 #![feature(panic_info_message)]
 #![feature(trait_alias)]
 #![no_main]
 #![no_std]
 
 mod bsp;
+mod common;
 mod console;
 mod cpu;
 mod driver;

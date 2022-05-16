@@ -421,7 +421,7 @@ Minipush 1.0
 [    0.798530] Booting on: Raspberry Pi 3
 [    0.798985] MMU online. Special regions:
 [    0.799462]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
-[    0.800480]       0x3f000000 - 0x4000ffff |  16 MiB | Dev RW PXN | Device MMIO
+[    0.800480]       0x3f000000 - 0x4000ffff |  17 MiB | Dev RW PXN | Device MMIO
 [    0.801369] Current privilege level: EL1
 [    0.801845] Exception handling state:
 [    0.802290]       Debug:  Masked
@@ -1024,7 +1024,7 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/exception.rs 11_exceptions_p
 diff -uNr 10_virtual_mem_part1_identity_mapping/src/main.rs 11_exceptions_part1_groundwork/src/main.rs
 --- 10_virtual_mem_part1_identity_mapping/src/main.rs
 +++ 11_exceptions_part1_groundwork/src/main.rs
-@@ -140,6 +140,8 @@
+@@ -142,6 +142,8 @@
      use driver::interface::DriverManager;
      use memory::mmu::interface::MMU;
 
@@ -1033,7 +1033,7 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/main.rs 11_exceptions_part1_
      if let Err(string) = memory::mmu::mmu().enable_mmu_and_caching() {
          panic!("MMU: {}", string);
      }
-@@ -158,7 +160,7 @@
+@@ -160,7 +162,7 @@
 
  /// The main function running after the early init.
  fn kernel_main() -> ! {
@@ -1042,7 +1042,7 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/main.rs 11_exceptions_part1_
      use core::time::Duration;
      use driver::interface::DriverManager;
      use time::interface::TimeManager;
-@@ -196,13 +198,28 @@
+@@ -198,13 +200,28 @@
      info!("Timer test, spinning for 1 second");
      time::time_manager().spin_for(Duration::from_secs(1));
 

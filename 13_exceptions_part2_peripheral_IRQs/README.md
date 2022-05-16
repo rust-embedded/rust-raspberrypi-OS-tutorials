@@ -682,7 +682,7 @@ Minipush 1.0
 [    0.822700] Booting on: Raspberry Pi 3
 [    0.823155] MMU online. Special regions:
 [    0.823632]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
-[    0.824650]       0x3f000000 - 0x4000ffff |  16 MiB | Dev RW PXN | Device MMIO
+[    0.824650]       0x3f000000 - 0x4000ffff |  17 MiB | Dev RW PXN | Device MMIO
 [    0.825539] Current privilege level: EL1
 [    0.826015] Exception handling state:
 [    0.826459]       Debug:  Masked
@@ -726,7 +726,7 @@ Minipush 1.0
 [    0.886886] Booting on: Raspberry Pi 4
 [    0.887341] MMU online. Special regions:
 [    0.887818]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
-[    0.888836]       0xfe000000 - 0xff84ffff |  24 MiB | Dev RW PXN | Device MMIO
+[    0.888836]       0xfe000000 - 0xff84ffff |  25 MiB | Dev RW PXN | Device MMIO
 [    0.889725] Current privilege level: EL1
 [    0.890201] Exception handling state:
 [    0.890645]       Debug:  Masked
@@ -2407,7 +2407,7 @@ diff -uNr 12_integrated_testing/kernel/src/exception/asynchronous.rs 13_exceptio
 diff -uNr 12_integrated_testing/kernel/src/lib.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/lib.rs
 --- 12_integrated_testing/kernel/src/lib.rs
 +++ 13_exceptions_part2_peripheral_IRQs/kernel/src/lib.rs
-@@ -133,6 +133,7 @@
+@@ -135,6 +135,7 @@
  pub mod exception;
  pub mod memory;
  pub mod print;

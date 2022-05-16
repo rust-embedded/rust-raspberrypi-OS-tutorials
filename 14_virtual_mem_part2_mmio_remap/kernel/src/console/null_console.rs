@@ -20,7 +20,7 @@ pub struct NullConsole;
 pub static NULL_CONSOLE: NullConsole = NullConsole {};
 
 //--------------------------------------------------------------------------------------------------
-// Private Code
+// Public Code
 //--------------------------------------------------------------------------------------------------
 
 impl interface::Write for NullConsole {

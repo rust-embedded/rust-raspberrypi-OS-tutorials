@@ -332,7 +332,7 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel/src/bsp/raspberrypi/mem
 diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel/src/lib.rs 17_kernel_symbols/kernel/src/lib.rs
 --- 16_virtual_mem_part4_higher_half_kernel/kernel/src/lib.rs
 +++ 17_kernel_symbols/kernel/src/lib.rs
-@@ -138,6 +138,7 @@
+@@ -139,6 +139,7 @@
  pub mod memory;
  pub mod print;
  pub mod state;

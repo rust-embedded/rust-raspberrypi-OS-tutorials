@@ -8,7 +8,7 @@ use super::{
     AccessPermissions, Address, AttributeFields, MMIODescriptor, MemAttributes, MemoryRegion,
     Physical, Virtual,
 };
-use crate::{bsp, info, synchronization, synchronization::InitStateLock, warn};
+use crate::{bsp, common, info, synchronization, synchronization::InitStateLock, warn};
 
 //--------------------------------------------------------------------------------------------------
 // Private Definitions
@@ -141,9 +141,6 @@ impl MappingRecord {
     }
 
     pub fn print(&self) {
-        const KIB_RSHIFT: u32 = 10; // log2(1024).
-        const MIB_RSHIFT: u32 = 20; // log2(1024 * 1024).
-
         info!("      -------------------------------------------------------------------------------------------------------------------------------------------");
         info!(
             "      {:^44}     {:^30}   {:^7}   {:^9}   {:^35}",
@@ -158,13 +155,7 @@ impl MappingRecord {
             let phys_start = i.phys_start_addr;
             let phys_end_inclusive = phys_start + (size - 1);
 
-            let (size, unit) = if (size >> MIB_RSHIFT) > 0 {
-                (size >> MIB_RSHIFT, "MiB")
-            } else if (size >> KIB_RSHIFT) > 0 {
-                (size >> KIB_RSHIFT, "KiB")
-            } else {
-                (size, "Byte")
-            };
+            let (size, unit) = common::size_human_readable_ceil(size);
 
             let attr = match i.attribute_fields.mem_attributes {
                 MemAttributes::CacheableDRAM => "C",
@@ -183,8 +174,7 @@ impl MappingRecord {
             };
 
             info!(
-                "      {}..{} --> {}..{} | \
-                        {: >3} {} | {: <3} {} {: <2} | {}",
+                "      {}..{} --> {}..{} | {:>3} {} | {:<3} {} {:<2} | {}",
                 virt_start,
                 virt_end_inclusive,
                 phys_start,

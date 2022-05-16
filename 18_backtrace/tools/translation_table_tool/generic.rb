@@ -109,13 +109,23 @@ class MappingDescriptor
         @attributes = attributes
     end
 
+    def size_human_readable(size)
+        if size >= (1024 * 1024)
+            "#{(size / (1024 * 1024)).to_s.rjust(3)} MiB"
+        elsif size >= 1024
+            "#{(size / 1024).to_s.rjust(3)} KiB"
+        else
+            raise
+        end
+    end
+
     def to_s
         name = @name.ljust(self.class.max_section_name_length)
         virt_start = @virt_region.first.to_hex_underscore(with_leading_zeros: true)
         phys_start = @phys_region.first.to_hex_underscore(with_leading_zeros: true)
-        size = ((@virt_region.size * 65_536) / 1024).to_s.rjust(3)
+        size = size_human_readable(@virt_region.size * 65_536)
 
-        "#{name} | #{virt_start} | #{phys_start} | #{size} KiB | #{@attributes}"
+        "#{name} | #{virt_start} | #{phys_start} | #{size} | #{@attributes}"
     end
 
     def self.print_divider

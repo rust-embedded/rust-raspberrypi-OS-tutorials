@@ -727,7 +727,7 @@ diff -uNr 17_kernel_symbols/kernel/src/_arch/aarch64/exception.s 18_backtrace/ke
 diff -uNr 17_kernel_symbols/kernel/src/backtrace.rs 18_backtrace/kernel/src/backtrace.rs
 --- 17_kernel_symbols/kernel/src/backtrace.rs
 +++ 18_backtrace/kernel/src/backtrace.rs
-@@ -0,0 +1,112 @@
+@@ -0,0 +1,114 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
@@ -790,7 +790,9 @@ diff -uNr 17_kernel_symbols/kernel/src/backtrace.rs 18_backtrace/kernel/src/back
 +            |maybe_iter: Option<&mut dyn Iterator<Item = BacktraceItem>>| match maybe_iter {
 +                None => fmt_res = writeln!(f, "ERROR! No valid stack frame found"),
 +                Some(iter) => {
-+                    for (i, backtrace_res) in iter.enumerate() {
++                    // Since the backtrace is printed, the first function is always
++                    // core::fmt::write. Skip 1 so it is excluded and doesn't bloat the output.
++                    for (i, backtrace_res) in iter.skip(1).enumerate() {
 +                        match backtrace_res {
 +                            BacktraceItem::InvalidFramePointer(addr) => {
 +                                fmt_res = writeln!(
@@ -909,7 +911,7 @@ diff -uNr 17_kernel_symbols/kernel/src/bsp/raspberrypi/memory/mmu.rs 18_backtrac
 diff -uNr 17_kernel_symbols/kernel/src/lib.rs 18_backtrace/kernel/src/lib.rs
 --- 17_kernel_symbols/kernel/src/lib.rs
 +++ 18_backtrace/kernel/src/lib.rs
-@@ -129,6 +129,7 @@
+@@ -130,6 +130,7 @@
  mod panic_wait;
  mod synchronization;
 
@@ -1062,7 +1064,7 @@ diff -uNr 17_kernel_symbols/kernel/tests/05_backtrace_sanity.rs 18_backtrace/ker
 +    use driver::interface::DriverManager;
 +
 +    exception::handling_init();
-+    memory::mmu::post_enable_init();
++    memory::init();
 +    bsp::driver::driver_manager().qemu_bring_up_console();
 +
 +    nested();
@@ -1133,7 +1135,7 @@ diff -uNr 17_kernel_symbols/kernel/tests/06_backtrace_invalid_frame.rs 18_backtr
 +    use driver::interface::DriverManager;
 +
 +    exception::handling_init();
-+    memory::mmu::post_enable_init();
++    memory::init();
 +    bsp::driver::driver_manager().qemu_bring_up_console();
 +
 +    nested();
@@ -1208,7 +1210,7 @@ diff -uNr 17_kernel_symbols/kernel/tests/07_backtrace_invalid_link.rs 18_backtra
 +    use driver::interface::DriverManager;
 +
 +    exception::handling_init();
-+    memory::mmu::post_enable_init();
++    memory::init();
 +    bsp::driver::driver_manager().qemu_bring_up_console();
 +
 +    nested_1();
@@ -1263,5 +1265,51 @@ diff -uNr 17_kernel_symbols/Makefile 18_backtrace/Makefile
  gdb gdb-opt0: $(KERNEL_ELF)
  	$(call color_header, "Launching GDB")
  	@$(DOCKER_GDB) gdb-multiarch -q $(KERNEL_ELF)
+
+diff -uNr 17_kernel_symbols/tools/translation_table_tool/bsp.rb 18_backtrace/tools/translation_table_tool/bsp.rb
+--- 17_kernel_symbols/tools/translation_table_tool/bsp.rb
++++ 18_backtrace/tools/translation_table_tool/bsp.rb
+@@ -45,6 +45,10 @@
+                 raise
+             end
+
+-        x.scan(/\d+/).join.to_i(16)
++        # Extract the hex literal with underscores like 0x0123_abcd.
++        x = x.scan(/0x[\h_]*/)[0]
++
++        # Further remove x and _ and convert to int.
++        x.scan(/\h+/).join.to_i(16)
+     end
+ end
+
+diff -uNr 17_kernel_symbols/tools/translation_table_tool/generic.rb 18_backtrace/tools/translation_table_tool/generic.rb
+--- 17_kernel_symbols/tools/translation_table_tool/generic.rb
++++ 18_backtrace/tools/translation_table_tool/generic.rb
+@@ -109,13 +109,23 @@
+         @attributes = attributes
+     end
+
++    def size_human_readable(size)
++        if size >= (1024 * 1024)
++            "#{(size / (1024 * 1024)).to_s.rjust(3)} MiB"
++        elsif size >= 1024
++            "#{(size / 1024).to_s.rjust(3)} KiB"
++        else
++            raise
++        end
++    end
++
+     def to_s
+         name = @name.ljust(self.class.max_section_name_length)
+         virt_start = @virt_region.first.to_hex_underscore(with_leading_zeros: true)
+         phys_start = @phys_region.first.to_hex_underscore(with_leading_zeros: true)
+-        size = ((@virt_region.size * 65_536) / 1024).to_s.rjust(3)
++        size = size_human_readable(@virt_region.size * 65_536)
+
+-        "#{name} | #{virt_start} | #{phys_start} | #{size} KiB | #{@attributes}"
++        "#{name} | #{virt_start} | #{phys_start} | #{size} | #{@attributes}"
+     end
+
+     def self.print_divider
 
 ```

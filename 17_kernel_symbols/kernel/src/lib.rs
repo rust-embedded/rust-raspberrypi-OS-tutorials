@@ -114,6 +114,7 @@
 #![feature(core_intrinsics)]
 #![feature(format_args_nl)]
 #![feature(generic_const_exprs)]
+#![feature(int_roundings)]
 #![feature(is_sorted)]
 #![feature(linkage)]
 #![feature(panic_info_message)]
@@ -181,7 +182,7 @@ unsafe fn kernel_init() -> ! {
     use driver::interface::DriverManager;
 
     exception::handling_init();
-    memory::mmu::post_enable_init();
+    memory::init();
     bsp::driver::driver_manager().qemu_bring_up_console();
 
     test_main();

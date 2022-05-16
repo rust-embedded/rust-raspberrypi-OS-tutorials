@@ -49,11 +49,9 @@ unsafe fn kernel_init() -> ! {
         info!("Enabling MMU failed: {}", e);
         cpu::qemu_exit_failure()
     }
-    // Printing will silently fail from here on, because the driver's MMIO is not remapped yet.
 
     memory::mmu::post_enable_init();
     bsp::driver::driver_manager().qemu_bring_up_console();
-    // Printing available again from here on.
 
     info!("Making a dummy system call");
 

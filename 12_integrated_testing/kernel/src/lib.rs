@@ -113,6 +113,7 @@
 #![feature(asm_const)]
 #![feature(core_intrinsics)]
 #![feature(format_args_nl)]
+#![feature(int_roundings)]
 #![feature(linkage)]
 #![feature(panic_info_message)]
 #![feature(trait_alias)]
@@ -127,6 +128,7 @@ mod panic_wait;
 mod synchronization;
 
 pub mod bsp;
+pub mod common;
 pub mod console;
 pub mod cpu;
 pub mod driver;

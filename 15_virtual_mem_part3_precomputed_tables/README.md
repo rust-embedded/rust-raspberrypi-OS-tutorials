@@ -1315,7 +1315,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/memory/mmu.
 diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/lib.rs 15_virtual_mem_part3_precomputed_tables/kernel/src/lib.rs
 --- 14_virtual_mem_part2_mmio_remap/kernel/src/lib.rs
 +++ 15_virtual_mem_part3_precomputed_tables/kernel/src/lib.rs
-@@ -185,20 +185,8 @@
+@@ -186,17 +186,7 @@
      use driver::interface::DriverManager;
 
      exception::handling_init();
@@ -1328,19 +1328,17 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/lib.rs 15_virtual_mem_part3
 -    if let Err(e) = memory::mmu::enable_mmu_and_caching(phys_kernel_tables_base_addr) {
 -        panic!("Enabling MMU failed: {}", e);
 -    }
--    // Printing will silently fail from here on, because the driver's MMIO is not remapped yet.
 -
-     memory::mmu::post_enable_init();
+-    memory::mmu::post_enable_init();
++    memory::init();
      bsp::driver::driver_manager().qemu_bring_up_console();
--    // Printing available again from here on.
 
      test_main();
-
 
 diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/main.rs 15_virtual_mem_part3_precomputed_tables/kernel/src/main.rs
 --- 14_virtual_mem_part2_mmio_remap/kernel/src/main.rs
 +++ 15_virtual_mem_part3_precomputed_tables/kernel/src/main.rs
-@@ -17,29 +17,17 @@
+@@ -17,29 +17,18 @@
 
  /// Early init code.
  ///
@@ -1368,20 +1366,13 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/main.rs 15_virtual_mem_part
 -    if let Err(e) = memory::mmu::enable_mmu_and_caching(phys_kernel_tables_base_addr) {
 -        panic!("Enabling MMU failed: {}", e);
 -    }
--    // Printing will silently fail from here on, because the driver's MMIO is not remapped yet.
 -
-     memory::mmu::post_enable_init();
+-    memory::mmu::post_enable_init();
++    memory::init();
 
      // Instantiate and init all device drivers.
-@@ -51,7 +39,6 @@
-             panic!("Error loading driver: {}: {}", i.compatible(), x);
-         }
-     }
--    // Printing available again from here on.
-
-     // Let device drivers register and enable their handlers with the interrupt controller.
-     for i in bsp::driver::driver_manager().all_device_drivers() {
-@@ -60,6 +47,8 @@
+     if let Err(x) = bsp::driver::driver_manager().instantiate_drivers() {
+@@ -58,6 +47,8 @@
          }
      }
 
@@ -1494,7 +1485,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu.rs 15_virtual_me
  };
  use core::{fmt, num::NonZeroUsize};
 
-@@ -73,7 +74,7 @@
+@@ -73,17 +74,9 @@
  // Private Code
  //--------------------------------------------------------------------------------------------------
  use interface::MMU;
@@ -1502,8 +1493,18 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu.rs 15_virtual_me
 +use synchronization::interface::ReadWriteEx;
  use translation_table::interface::TranslationTable;
 
- /// Query the BSP for the reserved virtual addresses for MMIO remapping and initialize the kernel's
-@@ -101,13 +102,21 @@
+-/// Query the BSP for the reserved virtual addresses for MMIO remapping and initialize the kernel's
+-/// MMIO VA allocator with it.
+-fn kernel_init_mmio_va_allocator() {
+-    let region = bsp::memory::mmu::virt_mmio_remap_region();
+-
+-    page_alloc::kernel_mmio_va_allocator().lock(|allocator| allocator.init(region));
+-}
+-
+ /// Map a region in the kernel's translation tables.
+ ///
+ /// No input checks done, input is passed through to the architectural implementation.
+@@ -101,13 +94,21 @@
      bsp::memory::mmu::kernel_translation_tables()
          .write(|tables| tables.map_at(virt_region, phys_region, attr))?;
 
@@ -1528,7 +1529,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu.rs 15_virtual_me
  //--------------------------------------------------------------------------------------------------
  // Public Code
  //--------------------------------------------------------------------------------------------------
-@@ -155,27 +164,16 @@
+@@ -155,27 +156,24 @@
      }
  }
 
@@ -1541,6 +1542,14 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu.rs 15_virtual_me
 -/// - See `kernel_map_at_unchecked()`.
 -/// - Does not prevent aliasing. Currently, the callers must be trusted.
 -pub unsafe fn kernel_map_at(
++/// Query the BSP for the reserved virtual addresses for MMIO remapping and initialize the kernel's
++/// MMIO VA allocator with it.
++pub fn kernel_init_mmio_va_allocator() {
++    let region = bsp::memory::mmu::virt_mmio_remap_region();
++
++    page_alloc::kernel_mmio_va_allocator().lock(|allocator| allocator.init(region));
++}
++
 +/// Add an entry to the mapping info record.
 +pub fn kernel_add_mapping_record(
      name: &'static str,
@@ -1561,15 +1570,15 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu.rs 15_virtual_me
  }
 
  /// MMIO remapping in the kernel translation tables.
-@@ -224,21 +222,24 @@
+@@ -224,21 +222,29 @@
      Ok(virt_addr + offset_into_start_page)
  }
 
 -/// Map the kernel's binary. Returns the translation table's base address.
+-///
+-/// # Safety
 +/// Try to translate a kernel virtual page address to a physical page address.
  ///
--/// # Safety
--///
 -/// - See [`bsp::memory::mmu::kernel_map_binary()`].
 -pub unsafe fn kernel_map_binary() -> Result<Address<Physical>, &'static str> {
 -    let phys_kernel_tables_base_addr =
@@ -1577,8 +1586,6 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu.rs 15_virtual_me
 -            tables.init();
 -            tables.phys_base_address()
 -        });
--
--    bsp::memory::mmu::kernel_map_binary()?;
 +/// Will only succeed if there exists a valid mapping for the input page.
 +pub fn try_kernel_virt_page_addr_to_phys_page_addr(
 +    virt_page_addr: PageAddress<Virtual>,
@@ -1587,7 +1594,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu.rs 15_virtual_me
 +        .read(|tables| tables.try_virt_page_addr_to_phys_page_addr(virt_page_addr))
 +}
 
--    Ok(phys_kernel_tables_base_addr)
+-    bsp::memory::mmu::kernel_map_binary()?;
 +/// Try to get the attributes of a kernel page.
 +///
 +/// Will only succeed if there exists a valid mapping for the input page.
@@ -1596,10 +1603,16 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu.rs 15_virtual_me
 +) -> Result<AttributeFields, &'static str> {
 +    bsp::memory::mmu::kernel_translation_tables()
 +        .read(|tables| tables.try_page_attributes(virt_page_addr))
++}
+
+-    Ok(phys_kernel_tables_base_addr)
++/// Human-readable print of all recorded kernel mappings.
++pub fn kernel_print_mappings() {
++    mapping_record::kernel_print()
  }
 
  /// Enable the MMU and data + instruction caching.
-@@ -246,6 +247,7 @@
+@@ -246,56 +252,9 @@
  /// # Safety
  ///
  /// - Crucial function during kernel init. Changes the the complete memory view of the processor.
@@ -1607,10 +1620,18 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu.rs 15_virtual_me
  pub unsafe fn enable_mmu_and_caching(
      phys_tables_base_addr: Address<Physical>,
  ) -> Result<(), MMUEnableError> {
-@@ -261,41 +263,3 @@
- pub fn kernel_print_mappings() {
-     mapping_record::kernel_print()
+     arch_mmu::mmu().enable_mmu_and_caching(phys_tables_base_addr)
  }
+-
+-/// Finish initialization of the MMU subsystem.
+-pub fn post_enable_init() {
+-    kernel_init_mmio_va_allocator();
+-}
+-
+-/// Human-readable print of all recorded kernel mappings.
+-pub fn kernel_print_mappings() {
+-    mapping_record::kernel_print()
+-}
 -
 -//--------------------------------------------------------------------------------------------------
 -// Testing
@@ -1650,10 +1671,26 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu.rs 15_virtual_me
 -    }
 -}
 
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/memory.rs 15_virtual_mem_part3_precomputed_tables/kernel/src/memory.rs
+--- 14_virtual_mem_part2_mmio_remap/kernel/src/memory.rs
++++ 15_virtual_mem_part3_precomputed_tables/kernel/src/memory.rs
+@@ -136,6 +136,11 @@
+     }
+ }
+
++/// Initialize the memory subsystem.
++pub fn init() {
++    mmu::kernel_init_mmio_va_allocator();
++}
++
+ //--------------------------------------------------------------------------------------------------
+ // Testing
+ //--------------------------------------------------------------------------------------------------
+
 diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/00_console_sanity.rs 15_virtual_mem_part3_precomputed_tables/kernel/tests/00_console_sanity.rs
 --- 14_virtual_mem_part2_mmio_remap/kernel/tests/00_console_sanity.rs
 +++ 15_virtual_mem_part3_precomputed_tables/kernel/tests/00_console_sanity.rs
-@@ -19,20 +19,8 @@
+@@ -19,17 +19,7 @@
      use driver::interface::DriverManager;
 
      exception::handling_init();
@@ -1666,19 +1703,17 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/00_console_sanity.rs 15_v
 -    if let Err(e) = memory::mmu::enable_mmu_and_caching(phys_kernel_tables_base_addr) {
 -        panic!("Enabling MMU failed: {}", e);
 -    }
--    // Printing will silently fail from here on, because the driver's MMIO is not remapped yet.
 -
-     memory::mmu::post_enable_init();
+-    memory::mmu::post_enable_init();
++    memory::init();
      bsp::driver::driver_manager().qemu_bring_up_console();
--    // Printing available again from here on.
 
      // Handshake
-     assert_eq!(console().read_char(), 'A');
 
 diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/01_timer_sanity.rs 15_virtual_mem_part3_precomputed_tables/kernel/tests/01_timer_sanity.rs
 --- 14_virtual_mem_part2_mmio_remap/kernel/tests/01_timer_sanity.rs
 +++ 15_virtual_mem_part3_precomputed_tables/kernel/tests/01_timer_sanity.rs
-@@ -19,20 +19,8 @@
+@@ -19,17 +19,7 @@
      use driver::interface::DriverManager;
 
      exception::handling_init();
@@ -1691,23 +1726,21 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/01_timer_sanity.rs 15_vir
 -    if let Err(e) = memory::mmu::enable_mmu_and_caching(phys_kernel_tables_base_addr) {
 -        panic!("Enabling MMU failed: {}", e);
 -    }
--    // Printing will silently fail from here on, because the driver's MMIO is not remapped yet.
 -
-     memory::mmu::post_enable_init();
+-    memory::mmu::post_enable_init();
++    memory::init();
      bsp::driver::driver_manager().qemu_bring_up_console();
--    // Printing available again from here on.
 
      // Depending on CPU arch, some timer bring-up code could go here. Not needed for the RPi.
-
 
 diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/02_exception_sync_page_fault.rs 15_virtual_mem_part3_precomputed_tables/kernel/tests/02_exception_sync_page_fault.rs
 --- 14_virtual_mem_part2_mmio_remap/kernel/tests/02_exception_sync_page_fault.rs
 +++ 15_virtual_mem_part3_precomputed_tables/kernel/tests/02_exception_sync_page_fault.rs
-@@ -24,28 +24,12 @@
+@@ -24,26 +24,12 @@
      use driver::interface::DriverManager;
 
      exception::handling_init();
-+    memory::mmu::post_enable_init();
++    memory::init();
 +    bsp::driver::driver_manager().qemu_bring_up_console();
 
      // This line will be printed as the test header.
@@ -1725,11 +1758,9 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/02_exception_sync_page_fa
 -        info!("Enabling MMU failed: {}", e);
 -        cpu::qemu_exit_failure()
 -    }
--    // Printing will silently fail from here on, because the driver's MMIO is not remapped yet.
 -
 -    memory::mmu::post_enable_init();
 -    bsp::driver::driver_manager().qemu_bring_up_console();
--    // Printing available again from here on.
 -
      info!("Writing beyond mapped area to address 9 GiB...");
      let big_addr: u64 = 9 * 1024 * 1024 * 1024;
@@ -1738,11 +1769,11 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/02_exception_sync_page_fa
 diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/03_exception_restore_sanity.rs 15_virtual_mem_part3_precomputed_tables/kernel/tests/03_exception_restore_sanity.rs
 --- 14_virtual_mem_part2_mmio_remap/kernel/tests/03_exception_restore_sanity.rs
 +++ 15_virtual_mem_part3_precomputed_tables/kernel/tests/03_exception_restore_sanity.rs
-@@ -33,28 +33,12 @@
+@@ -33,26 +33,12 @@
      use driver::interface::DriverManager;
 
      exception::handling_init();
-+    memory::mmu::post_enable_init();
++    memory::init();
 +    bsp::driver::driver_manager().qemu_bring_up_console();
 
      // This line will be printed as the test header.
@@ -1760,11 +1791,9 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/03_exception_restore_sani
 -        info!("Enabling MMU failed: {}", e);
 -        cpu::qemu_exit_failure()
 -    }
--    // Printing will silently fail from here on, because the driver's MMIO is not remapped yet.
 -
 -    memory::mmu::post_enable_init();
 -    bsp::driver::driver_manager().qemu_bring_up_console();
--    // Printing available again from here on.
 -
      info!("Making a dummy system call");
 
@@ -1773,7 +1802,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/03_exception_restore_sani
 diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/04_exception_irq_sanity.rs 15_virtual_mem_part3_precomputed_tables/kernel/tests/04_exception_irq_sanity.rs
 --- 14_virtual_mem_part2_mmio_remap/kernel/tests/04_exception_irq_sanity.rs
 +++ 15_virtual_mem_part3_precomputed_tables/kernel/tests/04_exception_irq_sanity.rs
-@@ -17,22 +17,10 @@
+@@ -17,20 +17,10 @@
  unsafe fn kernel_init() -> ! {
      use driver::interface::DriverManager;
 
@@ -1787,11 +1816,10 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/04_exception_irq_sanity.r
 -    if let Err(e) = memory::mmu::enable_mmu_and_caching(phys_kernel_tables_base_addr) {
 -        panic!("Enabling MMU failed: {}", e);
 -    }
--    // Printing will silently fail from here on, because the driver's MMIO is not remapped yet.
 -
-     memory::mmu::post_enable_init();
+-    memory::mmu::post_enable_init();
++    memory::init();
      bsp::driver::driver_manager().qemu_bring_up_console();
--    // Printing available again from here on.
 
 +    exception::handling_init();
      exception::asynchronous::local_irq_unmask();

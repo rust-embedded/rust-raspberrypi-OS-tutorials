@@ -44,7 +44,7 @@ impl<ATYPE: AddressType> PageAllocator<ATYPE> {
     }
 
     /// Initialize the allocator.
-    pub fn initialize(&mut self, pool: MemoryRegion<ATYPE>) {
+    pub fn init(&mut self, pool: MemoryRegion<ATYPE>) {
         if self.pool.is_some() {
             warn!("Already initialized");
             return;

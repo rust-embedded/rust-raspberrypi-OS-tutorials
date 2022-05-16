@@ -82,14 +82,6 @@ use interface::MMU;
 use synchronization::interface::ReadWriteEx;
 use translation_table::interface::TranslationTable;
 
-/// Query the BSP for the reserved virtual addresses for MMIO remapping and initialize the kernel's
-/// MMIO VA allocator with it.
-fn kernel_init_mmio_va_allocator() {
-    let region = bsp::memory::mmu::virt_mmio_remap_region();
-
-    page_alloc::kernel_mmio_va_allocator().lock(|allocator| allocator.initialize(region));
-}
-
 /// Map a region in the kernel's translation tables.
 ///
 /// No input checks done, input is passed through to the architectural implementation.
@@ -167,6 +159,14 @@ impl<const AS_SIZE: usize> AddressSpace<AS_SIZE> {
 
         AS_SIZE
     }
+}
+
+/// Query the BSP for the reserved virtual addresses for MMIO remapping and initialize the kernel's
+/// MMIO VA allocator with it.
+pub fn kernel_init_mmio_va_allocator() {
+    let region = bsp::memory::mmu::virt_mmio_remap_region();
+
+    page_alloc::kernel_mmio_va_allocator().lock(|allocator| allocator.init(region));
 }
 
 /// Add an entry to the mapping info record.
@@ -247,6 +247,11 @@ pub fn try_kernel_page_attributes(
         .read(|tables| tables.try_page_attributes(virt_page_addr))
 }
 
+/// Human-readable print of all recorded kernel mappings.
+pub fn kernel_print_mappings() {
+    mapping_record::kernel_print()
+}
+
 /// Enable the MMU and data + instruction caching.
 ///
 /// # Safety
@@ -257,14 +262,4 @@ pub unsafe fn enable_mmu_and_caching(
     phys_tables_base_addr: Address<Physical>,
 ) -> Result<(), MMUEnableError> {
     arch_mmu::mmu().enable_mmu_and_caching(phys_tables_base_addr)
-}
-
-/// Finish initialization of the MMU subsystem.
-pub fn post_enable_init() {
-    kernel_init_mmio_va_allocator();
-}
-
-/// Human-readable print of all recorded kernel mappings.
-pub fn kernel_print_mappings() {
-    mapping_record::kernel_print()
 }

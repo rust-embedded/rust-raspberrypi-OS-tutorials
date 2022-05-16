@@ -40,11 +40,9 @@ unsafe fn kernel_init() -> ! {
         info!("Enabling MMU failed: {}", e);
         cpu::qemu_exit_failure()
     }
-    // Printing will silently fail from here on, because the driver's MMIO is not remapped yet.
 
     memory::mmu::post_enable_init();
     bsp::driver::driver_manager().qemu_bring_up_console();
-    // Printing available again from here on.
 
     info!("Writing beyond mapped area to address 9 GiB...");
     let big_addr: u64 = 9 * 1024 * 1024 * 1024;
