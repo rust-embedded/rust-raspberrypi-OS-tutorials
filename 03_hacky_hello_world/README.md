@@ -9,7 +9,7 @@
 
 ## Notable additions
 
-- `src/console.rs` introduces interface `Traits` for console commands and a global reference to the
+- `src/console.rs` introduces interface `Traits` for console commands and global access to the
   kernel's console through `console::console()`.
 - `src/bsp/raspberrypi/console.rs` implements the interface for QEMU's emulated UART.
 - The panic handler makes use of the new `println!()` to display user error messages.
