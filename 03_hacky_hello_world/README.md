@@ -2,16 +2,17 @@
 
 ## tl;dr
 
-- Introducing global `print!()` macros to enable "printf debugging" at the earliest.
+- Introducing global `println!()` macros to enable "printf debugging" at the earliest.
 - To keep tutorial length reasonable, printing functions for now "abuse" a QEMU property that lets
   us use the Raspberry's `UART` without setting it up properly.
 - Using the real hardware `UART` is enabled step-by-step in following tutorials.
 
 ## Notable additions
 
-- `src/console.rs` introduces interface `Traits` for console commands.
+- `src/console.rs` introduces interface `Traits` for console commands and a global reference to the
+  kernel's console through `console::console()`.
 - `src/bsp/raspberrypi/console.rs` implements the interface for QEMU's emulated UART.
-- The panic handler makes use of the new `print!()` to display user error messages.
+- The panic handler makes use of the new `println!()` to display user error messages.
 - There is a new Makefile target, `make test`, intended for automated testing. It boots the compiled
   kernel in `QEMU`, and checks for an expected output string produced by the kernel.
   - In this tutorial, it checks for the string `Stopping here`, which is emitted by the `panic!()`
