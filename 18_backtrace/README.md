@@ -17,13 +17,12 @@ Backtrace:
       ----------------------------------------------------------------------------------------------
           Address            Function containing address
       ----------------------------------------------------------------------------------------------
-       1. ffffffffc0001294 | core::fmt::write
-       2. ffffffffc0005560 | libkernel::panic_wait::_panic_print
-       3. ffffffffc00054a0 | rust_begin_unwind
-       4. ffffffffc0002950 | core::panicking::panic_fmt
-       5. ffffffffc0004898 | current_elx_synchronous
-       6. ffffffffc0000a74 | __vector_current_elx_synchronous
-       7. ffffffffc000111c | kernel_init
+       1. ffffffffc0005560 | libkernel::panic_wait::_panic_print
+       2. ffffffffc00054a0 | rust_begin_unwind
+       3. ffffffffc0002950 | core::panicking::panic_fmt
+       4. ffffffffc0004898 | current_elx_synchronous
+       5. ffffffffc0000a74 | __vector_current_elx_synchronous
+       6. ffffffffc000111c | kernel_init
       ----------------------------------------------------------------------------------------------
 ```
 
@@ -342,13 +341,12 @@ $ TEST=02_exception_sync_page_fault make test_integration
                ----------------------------------------------------------------------------------------------
                    Address            Function containing address
                ----------------------------------------------------------------------------------------------
-                1. ffffffffc0001294 | core::fmt::write
-                2. ffffffffc0005560 | libkernel::panic_wait::_panic_print
-                3. ffffffffc00054a0 | rust_begin_unwind
-                4. ffffffffc0002950 | core::panicking::panic_fmt
-                5. ffffffffc0004898 | current_elx_synchronous
-                6. ffffffffc0000a74 | __vector_current_elx_synchronous
-                7. ffffffffc000111c | kernel_init
+                1. ffffffffc0005560 | libkernel::panic_wait::_panic_print
+                2. ffffffffc00054a0 | rust_begin_unwind
+                3. ffffffffc0002950 | core::panicking::panic_fmt
+                4. ffffffffc0004898 | current_elx_synchronous
+                5. ffffffffc0000a74 | __vector_current_elx_synchronous
+                6. ffffffffc000111c | kernel_init
                ----------------------------------------------------------------------------------------------
 
          -------------------------------------------------------------------
