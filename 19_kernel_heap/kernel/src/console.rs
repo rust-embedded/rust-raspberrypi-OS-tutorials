@@ -77,7 +77,7 @@ pub fn register_console(new_console: &'static (dyn interface::All + Sync)) {
 
     static FIRST_SWITCH: InitStateLock<bool> = InitStateLock::new(true);
     FIRST_SWITCH.write(|first| {
-        if *first == true {
+        if *first {
             *first = false;
 
             buffer_console::BUFFER_CONSOLE.dump();

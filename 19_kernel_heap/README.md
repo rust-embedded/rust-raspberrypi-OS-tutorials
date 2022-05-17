@@ -828,7 +828,7 @@ diff -uNr 18_backtrace/kernel/src/console.rs 19_kernel_heap/kernel/src/console.r
 +
 +    static FIRST_SWITCH: InitStateLock<bool> = InitStateLock::new(true);
 +    FIRST_SWITCH.write(|first| {
-+        if *first == true {
++        if *first {
 +            *first = false;
 +
 +            buffer_console::BUFFER_CONSOLE.dump();
