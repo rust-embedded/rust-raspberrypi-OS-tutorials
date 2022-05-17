@@ -313,7 +313,7 @@ diff -uNr 03_hacky_hello_world/src/synchronization.rs 04_safe_globals/src/synchr
 +        type Data;
 +
 +        /// Locks the mutex and grants the closure temporary mutable access to the wrapped data.
-+        fn lock<R>(&self, f: impl FnOnce(&mut Self::Data) -> R) -> R;
++        fn lock<'a, R>(&'a self, f: impl FnOnce(&'a mut Self::Data) -> R) -> R;
 +    }
 +}
 +
@@ -354,7 +354,7 @@ diff -uNr 03_hacky_hello_world/src/synchronization.rs 04_safe_globals/src/synchr
 +impl<T> interface::Mutex for NullLock<T> {
 +    type Data = T;
 +
-+    fn lock<R>(&self, f: impl FnOnce(&mut Self::Data) -> R) -> R {
++    fn lock<'a, R>(&'a self, f: impl FnOnce(&'a mut Self::Data) -> R) -> R {
 +        // In a real lock, there would be code encapsulating this line that ensures that this
 +        // mutable reference will ever only be given out once at a time.
 +        let data = unsafe { &mut *self.data.get() };

@@ -2605,7 +2605,7 @@ diff -uNr 12_integrated_testing/kernel/src/synchronization.rs 13_exceptions_part
 +++ 13_exceptions_part2_peripheral_IRQs/kernel/src/synchronization.rs
 @@ -28,6 +28,21 @@
          /// Locks the mutex and grants the closure temporary mutable access to the wrapped data.
-         fn lock<R>(&self, f: impl FnOnce(&mut Self::Data) -> R) -> R;
+         fn lock<'a, R>(&'a self, f: impl FnOnce(&'a mut Self::Data) -> R) -> R;
      }
 +
 +    /// A reader-writer exclusion type.
@@ -2617,10 +2617,10 @@ diff -uNr 12_integrated_testing/kernel/src/synchronization.rs 13_exceptions_part
 +        type Data;
 +
 +        /// Grants temporary mutable access to the encapsulated data.
-+        fn write<R>(&self, f: impl FnOnce(&mut Self::Data) -> R) -> R;
++        fn write<'a, R>(&'a self, f: impl FnOnce(&'a mut Self::Data) -> R) -> R;
 +
 +        /// Grants temporary immutable access to the encapsulated data.
-+        fn read<R>(&self, f: impl FnOnce(&Self::Data) -> R) -> R;
++        fn read<'a, R>(&'a self, f: impl FnOnce(&'a Self::Data) -> R) -> R;
 +    }
  }
 
@@ -2682,7 +2682,7 @@ diff -uNr 12_integrated_testing/kernel/src/synchronization.rs 13_exceptions_part
 +impl<T> interface::Mutex for IRQSafeNullLock<T> {
      type Data = T;
 
-     fn lock<R>(&self, f: impl FnOnce(&mut Self::Data) -> R) -> R {
+     fn lock<'a, R>(&'a self, f: impl FnOnce(&'a mut Self::Data) -> R) -> R {
 @@ -72,6 +110,50 @@
          // mutable reference will ever only be given out once at a time.
          let data = unsafe { &mut *self.data.get() };
@@ -2695,7 +2695,7 @@ diff -uNr 12_integrated_testing/kernel/src/synchronization.rs 13_exceptions_part
 +impl<T> interface::ReadWriteEx for InitStateLock<T> {
 +    type Data = T;
 +
-+    fn write<R>(&self, f: impl FnOnce(&mut Self::Data) -> R) -> R {
++    fn write<'a, R>(&'a self, f: impl FnOnce(&'a mut Self::Data) -> R) -> R {
 +        assert!(
 +            state::state_manager().is_init(),
 +            "InitStateLock::write called after kernel init phase"
@@ -2710,7 +2710,7 @@ diff -uNr 12_integrated_testing/kernel/src/synchronization.rs 13_exceptions_part
          f(data)
      }
 +
-+    fn read<R>(&self, f: impl FnOnce(&Self::Data) -> R) -> R {
++    fn read<'a, R>(&'a self, f: impl FnOnce(&'a Self::Data) -> R) -> R {
 +        let data = unsafe { &*self.data.get() };
 +
 +        f(data)

@@ -26,7 +26,7 @@ pub mod interface {
         type Data;
 
         /// Locks the mutex and grants the closure temporary mutable access to the wrapped data.
-        fn lock<R>(&self, f: impl FnOnce(&mut Self::Data) -> R) -> R;
+        fn lock<'a, R>(&'a self, f: impl FnOnce(&'a mut Self::Data) -> R) -> R;
     }
 
     /// A reader-writer exclusion type.
@@ -38,10 +38,10 @@ pub mod interface {
         type Data;
 
         /// Grants temporary mutable access to the encapsulated data.
-        fn write<R>(&self, f: impl FnOnce(&mut Self::Data) -> R) -> R;
+        fn write<'a, R>(&'a self, f: impl FnOnce(&'a mut Self::Data) -> R) -> R;
 
         /// Grants temporary immutable access to the encapsulated data.
-        fn read<R>(&self, f: impl FnOnce(&Self::Data) -> R) -> R;
+        fn read<'a, R>(&'a self, f: impl FnOnce(&'a Self::Data) -> R) -> R;
     }
 }
 
@@ -105,7 +105,7 @@ use crate::{exception, state};
 impl<T> interface::Mutex for IRQSafeNullLock<T> {
     type Data = T;
 
-    fn lock<R>(&self, f: impl FnOnce(&mut Self::Data) -> R) -> R {
+    fn lock<'a, R>(&'a self, f: impl FnOnce(&'a mut Self::Data) -> R) -> R {
         // In a real lock, there would be code encapsulating this line that ensures that this
         // mutable reference will ever only be given out once at a time.
         let data = unsafe { &mut *self.data.get() };
@@ -118,7 +118,7 @@ impl<T> interface::Mutex for IRQSafeNullLock<T> {
 impl<T> interface::ReadWriteEx for InitStateLock<T> {
     type Data = T;
 
-    fn write<R>(&self, f: impl FnOnce(&mut Self::Data) -> R) -> R {
+    fn write<'a, R>(&'a self, f: impl FnOnce(&'a mut Self::Data) -> R) -> R {
         assert!(
             state::state_manager().is_init(),
             "InitStateLock::write called after kernel init phase"
@@ -133,7 +133,7 @@ impl<T> interface::ReadWriteEx for InitStateLock<T> {
         f(data)
     }
 
-    fn read<R>(&self, f: impl FnOnce(&Self::Data) -> R) -> R {
+    fn read<'a, R>(&'a self, f: impl FnOnce(&'a Self::Data) -> R) -> R {
         let data = unsafe { &*self.data.get() };
 
         f(data)
