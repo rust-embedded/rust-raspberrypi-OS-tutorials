@@ -61,7 +61,7 @@ fn panic_prevent_reenter() {
 fn panic(info: &PanicInfo) -> ! {
     use crate::time::interface::TimeManager;
 
-    unsafe { exception::asynchronous::local_irq_mask() };
+    exception::asynchronous::local_irq_mask();
 
     // Protect against panic infinite loops if any of the following code panics itself.
     panic_prevent_reenter();

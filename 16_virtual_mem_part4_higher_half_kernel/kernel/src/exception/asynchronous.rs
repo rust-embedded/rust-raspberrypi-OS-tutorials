@@ -151,13 +151,9 @@ impl<const MAX_INCLUSIVE: usize> fmt::Display for IRQNumber<{ MAX_INCLUSIVE }> {
 /// previous state before returning, so this is deemed safe.
 #[inline(always)]
 pub fn exec_with_irq_masked<T>(f: impl FnOnce() -> T) -> T {
-    let ret: T;
-
-    unsafe {
-        let saved = local_irq_mask_save();
-        ret = f();
-        local_irq_restore(saved);
-    }
+    let saved = local_irq_mask_save();
+    let ret = f();
+    local_irq_restore(saved);
 
     ret
 }

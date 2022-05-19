@@ -83,42 +83,32 @@ pub fn is_local_irq_masked() -> bool {
 ///
 /// "Writes to PSTATE.{PAN, D, A, I, F} occur in program order without the need for additional
 /// synchronization."
-///
-/// # Safety
-///
-/// - Changes the HW state of the executing core.
 #[inline(always)]
-pub unsafe fn local_irq_unmask() {
-    #[rustfmt::skip]
-    asm!(
-        "msr DAIFClr, {arg}",
-        arg = const daif_bits::IRQ,
-        options(nomem, nostack, preserves_flags)
-    );
+pub fn local_irq_unmask() {
+    unsafe {
+        asm!(
+            "msr DAIFClr, {arg}",
+            arg = const daif_bits::IRQ,
+            options(nomem, nostack, preserves_flags)
+        );
+    }
 }
 
 /// Mask IRQs on the executing core.
-///
-/// # Safety
-///
-/// - Changes the HW state of the executing core.
 #[inline(always)]
-pub unsafe fn local_irq_mask() {
-    #[rustfmt::skip]
-    asm!(
-        "msr DAIFSet, {arg}",
-        arg = const daif_bits::IRQ,
-        options(nomem, nostack, preserves_flags)
-    );
+pub fn local_irq_mask() {
+    unsafe {
+        asm!(
+            "msr DAIFSet, {arg}",
+            arg = const daif_bits::IRQ,
+            options(nomem, nostack, preserves_flags)
+        );
+    }
 }
 
 /// Mask IRQs on the executing core and return the previously saved interrupt mask bits (DAIF).
-///
-/// # Safety
-///
-/// - Changes the HW state of the executing core.
 #[inline(always)]
-pub unsafe fn local_irq_mask_save() -> u64 {
+pub fn local_irq_mask_save() -> u64 {
     let saved = DAIF.get();
     local_irq_mask();
 
@@ -127,12 +117,11 @@ pub unsafe fn local_irq_mask_save() -> u64 {
 
 /// Restore the interrupt mask bits (DAIF) using the callee's argument.
 ///
-/// # Safety
+/// # Invariant
 ///
-/// - Changes the HW state of the executing core.
 /// - No sanity checks on the input.
 #[inline(always)]
-pub unsafe fn local_irq_restore(saved: u64) {
+pub fn local_irq_restore(saved: u64) {
     DAIF.set(saved);
 }
 

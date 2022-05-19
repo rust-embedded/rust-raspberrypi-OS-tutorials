@@ -44,21 +44,21 @@ fn local_irq_mask_works() {
     // Precondition: IRQs are unmasked.
     assert!(exception::asynchronous::is_local_irq_masked());
 
-    unsafe { exception::asynchronous::local_irq_mask() };
+    exception::asynchronous::local_irq_mask();
     assert!(!exception::asynchronous::is_local_irq_masked());
 
     // Restore earlier state.
-    unsafe { exception::asynchronous::local_irq_unmask() };
+    exception::asynchronous::local_irq_unmask();
 }
 
 /// Check that IRQ unmasking works.
 #[kernel_test]
 fn local_irq_unmask_works() {
     // Precondition: IRQs are masked.
-    unsafe { exception::asynchronous::local_irq_mask() };
+    exception::asynchronous::local_irq_mask();
     assert!(!exception::asynchronous::is_local_irq_masked());
 
-    unsafe { exception::asynchronous::local_irq_unmask() };
+    exception::asynchronous::local_irq_unmask();
     assert!(exception::asynchronous::is_local_irq_masked());
 }
 
@@ -68,12 +68,12 @@ fn local_irq_mask_save_works() {
     // Precondition: IRQs are unmasked.
     assert!(exception::asynchronous::is_local_irq_masked());
 
-    let first = unsafe { exception::asynchronous::local_irq_mask_save() };
+    let first = exception::asynchronous::local_irq_mask_save();
     assert!(!exception::asynchronous::is_local_irq_masked());
 
-    let second = unsafe { exception::asynchronous::local_irq_mask_save() };
+    let second = exception::asynchronous::local_irq_mask_save();
     assert_ne!(first, second);
 
-    unsafe { exception::asynchronous::local_irq_restore(first) };
+    exception::asynchronous::local_irq_restore(first);
     assert!(exception::asynchronous::is_local_irq_masked());
 }

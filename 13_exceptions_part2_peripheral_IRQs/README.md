@@ -421,13 +421,9 @@ core are masked before the `f(data)` is being executed, and restored afterwards:
 /// previous state before returning, so this is deemed safe.
 #[inline(always)]
 pub fn exec_with_irq_masked<T>(f: impl FnOnce() -> T) -> T {
-    let ret: T;
-
-    unsafe {
-        let saved = local_irq_mask_save();
-        ret = f();
-        local_irq_restore(saved);
-    }
+    let saved = local_irq_mask_save();
+    let ret = f();
+    local_irq_restore(saved);
 
     ret
 }
@@ -814,7 +810,7 @@ diff -uNr 12_integrated_testing/kernel/src/_arch/aarch64/exception/asynchronous.
  trait DaifField {
      fn daif_field() -> tock_registers::fields::Field<u64, DAIF::Register>;
  }
-@@ -66,6 +71,71 @@
+@@ -66,6 +71,60 @@
  // Public Code
  //--------------------------------------------------------------------------------------------------
 
@@ -830,42 +826,32 @@ diff -uNr 12_integrated_testing/kernel/src/_arch/aarch64/exception/asynchronous.
 +///
 +/// "Writes to PSTATE.{PAN, D, A, I, F} occur in program order without the need for additional
 +/// synchronization."
-+///
-+/// # Safety
-+///
-+/// - Changes the HW state of the executing core.
 +#[inline(always)]
-+pub unsafe fn local_irq_unmask() {
-+    #[rustfmt::skip]
-+    asm!(
-+        "msr DAIFClr, {arg}",
-+        arg = const daif_bits::IRQ,
-+        options(nomem, nostack, preserves_flags)
-+    );
++pub fn local_irq_unmask() {
++    unsafe {
++        asm!(
++            "msr DAIFClr, {arg}",
++            arg = const daif_bits::IRQ,
++            options(nomem, nostack, preserves_flags)
++        );
++    }
 +}
 +
 +/// Mask IRQs on the executing core.
-+///
-+/// # Safety
-+///
-+/// - Changes the HW state of the executing core.
 +#[inline(always)]
-+pub unsafe fn local_irq_mask() {
-+    #[rustfmt::skip]
-+    asm!(
-+        "msr DAIFSet, {arg}",
-+        arg = const daif_bits::IRQ,
-+        options(nomem, nostack, preserves_flags)
-+    );
++pub fn local_irq_mask() {
++    unsafe {
++        asm!(
++            "msr DAIFSet, {arg}",
++            arg = const daif_bits::IRQ,
++            options(nomem, nostack, preserves_flags)
++        );
++    }
 +}
 +
 +/// Mask IRQs on the executing core and return the previously saved interrupt mask bits (DAIF).
-+///
-+/// # Safety
-+///
-+/// - Changes the HW state of the executing core.
 +#[inline(always)]
-+pub unsafe fn local_irq_mask_save() -> u64 {
++pub fn local_irq_mask_save() -> u64 {
 +    let saved = DAIF.get();
 +    local_irq_mask();
 +
@@ -874,12 +860,11 @@ diff -uNr 12_integrated_testing/kernel/src/_arch/aarch64/exception/asynchronous.
 +
 +/// Restore the interrupt mask bits (DAIF) using the callee's argument.
 +///
-+/// # Safety
++/// # Invariant
 +///
-+/// - Changes the HW state of the executing core.
 +/// - No sanity checks on the input.
 +#[inline(always)]
-+pub unsafe fn local_irq_restore(saved: u64) {
++pub fn local_irq_restore(saved: u64) {
 +    DAIF.set(saved);
 +}
 +
@@ -2245,7 +2230,7 @@ diff -uNr 12_integrated_testing/kernel/src/driver.rs 13_exceptions_part2_periphe
 diff -uNr 12_integrated_testing/kernel/src/exception/asynchronous.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/exception/asynchronous.rs
 --- 12_integrated_testing/kernel/src/exception/asynchronous.rs
 +++ 13_exceptions_part2_peripheral_IRQs/kernel/src/exception/asynchronous.rs
-@@ -8,7 +8,153 @@
+@@ -8,7 +8,149 @@
  #[path = "../_arch/aarch64/exception/asynchronous.rs"]
  mod arch_asynchronous;
 
@@ -2383,13 +2368,9 @@ diff -uNr 12_integrated_testing/kernel/src/exception/asynchronous.rs 13_exceptio
 +/// previous state before returning, so this is deemed safe.
 +#[inline(always)]
 +pub fn exec_with_irq_masked<T>(f: impl FnOnce() -> T) -> T {
-+    let ret: T;
-+
-+    unsafe {
-+        let saved = local_irq_mask_save();
-+        ret = f();
-+        local_irq_restore(saved);
-+    }
++    let saved = local_irq_mask_save();
++    let ret = f();
++    local_irq_restore(saved);
 +
 +    ret
 +}
@@ -2497,7 +2478,7 @@ diff -uNr 12_integrated_testing/kernel/src/panic_wait.rs 13_exceptions_part2_per
  fn panic(info: &PanicInfo) -> ! {
      use crate::time::interface::TimeManager;
 
-+    unsafe { exception::asynchronous::local_irq_mask() };
++    exception::asynchronous::local_irq_mask();
 +
      // Protect against panic infinite loops if any of the following code panics itself.
      panic_prevent_reenter();
@@ -2773,21 +2754,21 @@ diff -uNr 12_integrated_testing/kernel/tests/04_exception_irq_sanity.rs 13_excep
 +    // Precondition: IRQs are unmasked.
 +    assert!(exception::asynchronous::is_local_irq_masked());
 +
-+    unsafe { exception::asynchronous::local_irq_mask() };
++    exception::asynchronous::local_irq_mask();
 +    assert!(!exception::asynchronous::is_local_irq_masked());
 +
 +    // Restore earlier state.
-+    unsafe { exception::asynchronous::local_irq_unmask() };
++    exception::asynchronous::local_irq_unmask();
 +}
 +
 +/// Check that IRQ unmasking works.
 +#[kernel_test]
 +fn local_irq_unmask_works() {
 +    // Precondition: IRQs are masked.
-+    unsafe { exception::asynchronous::local_irq_mask() };
++    exception::asynchronous::local_irq_mask();
 +    assert!(!exception::asynchronous::is_local_irq_masked());
 +
-+    unsafe { exception::asynchronous::local_irq_unmask() };
++    exception::asynchronous::local_irq_unmask();
 +    assert!(exception::asynchronous::is_local_irq_masked());
 +}
 +
@@ -2797,13 +2778,13 @@ diff -uNr 12_integrated_testing/kernel/tests/04_exception_irq_sanity.rs 13_excep
 +    // Precondition: IRQs are unmasked.
 +    assert!(exception::asynchronous::is_local_irq_masked());
 +
-+    let first = unsafe { exception::asynchronous::local_irq_mask_save() };
++    let first = exception::asynchronous::local_irq_mask_save();
 +    assert!(!exception::asynchronous::is_local_irq_masked());
 +
-+    let second = unsafe { exception::asynchronous::local_irq_mask_save() };
++    let second = exception::asynchronous::local_irq_mask_save();
 +    assert_ne!(first, second);
 +
-+    unsafe { exception::asynchronous::local_irq_restore(first) };
++    exception::asynchronous::local_irq_restore(first);
 +    assert!(exception::asynchronous::is_local_irq_masked());
 +}
 

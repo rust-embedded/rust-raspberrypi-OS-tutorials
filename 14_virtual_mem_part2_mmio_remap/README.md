@@ -2300,7 +2300,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/exception/asynchronous.
 
  impl<'irq_context> IRQContext<'irq_context> {
      /// Creates an IRQContext token.
-@@ -152,9 +162,17 @@
+@@ -148,9 +158,17 @@
      ret
  }
 
