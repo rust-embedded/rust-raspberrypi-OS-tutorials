@@ -328,7 +328,7 @@ The actual handlers referenced from the assembly can now branch to it for the ti
 
 ```rust
 #[no_mangle]
-unsafe extern "C" fn current_elx_irq(e: &mut ExceptionContext) {
+extern "C" fn current_elx_irq(e: &mut ExceptionContext) {
     default_exception_handler(e);
 }
 ```
@@ -367,7 +367,7 @@ To survive this exception, the respective handler has a special demo case:
 
 ```rust
 #[no_mangle]
-unsafe extern "C" fn current_elx_synchronous(e: &mut ExceptionContext) {
+extern "C" fn current_elx_synchronous(e: &mut ExceptionContext) {
     if e.fault_address_valid() {
         let far_el1 = FAR_EL1.get();
 
@@ -565,17 +565,17 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
 +//------------------------------------------------------------------------------
 +
 +#[no_mangle]
-+unsafe extern "C" fn current_el0_synchronous(_e: &mut ExceptionContext) {
++extern "C" fn current_el0_synchronous(_e: &mut ExceptionContext) {
 +    panic!("Should not be here. Use of SP_EL0 in EL1 is not supported.")
 +}
 +
 +#[no_mangle]
-+unsafe extern "C" fn current_el0_irq(_e: &mut ExceptionContext) {
++extern "C" fn current_el0_irq(_e: &mut ExceptionContext) {
 +    panic!("Should not be here. Use of SP_EL0 in EL1 is not supported.")
 +}
 +
 +#[no_mangle]
-+unsafe extern "C" fn current_el0_serror(_e: &mut ExceptionContext) {
++extern "C" fn current_el0_serror(_e: &mut ExceptionContext) {
 +    panic!("Should not be here. Use of SP_EL0 in EL1 is not supported.")
 +}
 +
@@ -584,7 +584,7 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
 +//------------------------------------------------------------------------------
 +
 +#[no_mangle]
-+unsafe extern "C" fn current_elx_synchronous(e: &mut ExceptionContext) {
++extern "C" fn current_elx_synchronous(e: &mut ExceptionContext) {
 +    if e.fault_address_valid() {
 +        let far_el1 = FAR_EL1.get();
 +
@@ -601,12 +601,12 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
 +}
 +
 +#[no_mangle]
-+unsafe extern "C" fn current_elx_irq(e: &mut ExceptionContext) {
++extern "C" fn current_elx_irq(e: &mut ExceptionContext) {
 +    default_exception_handler(e);
 +}
 +
 +#[no_mangle]
-+unsafe extern "C" fn current_elx_serror(e: &mut ExceptionContext) {
++extern "C" fn current_elx_serror(e: &mut ExceptionContext) {
 +    default_exception_handler(e);
 +}
 +
@@ -615,17 +615,17 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
 +//------------------------------------------------------------------------------
 +
 +#[no_mangle]
-+unsafe extern "C" fn lower_aarch64_synchronous(e: &mut ExceptionContext) {
++extern "C" fn lower_aarch64_synchronous(e: &mut ExceptionContext) {
 +    default_exception_handler(e);
 +}
 +
 +#[no_mangle]
-+unsafe extern "C" fn lower_aarch64_irq(e: &mut ExceptionContext) {
++extern "C" fn lower_aarch64_irq(e: &mut ExceptionContext) {
 +    default_exception_handler(e);
 +}
 +
 +#[no_mangle]
-+unsafe extern "C" fn lower_aarch64_serror(e: &mut ExceptionContext) {
++extern "C" fn lower_aarch64_serror(e: &mut ExceptionContext) {
 +    default_exception_handler(e);
 +}
 +
@@ -634,17 +634,17 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
 +//------------------------------------------------------------------------------
 +
 +#[no_mangle]
-+unsafe extern "C" fn lower_aarch32_synchronous(e: &mut ExceptionContext) {
++extern "C" fn lower_aarch32_synchronous(e: &mut ExceptionContext) {
 +    default_exception_handler(e);
 +}
 +
 +#[no_mangle]
-+unsafe extern "C" fn lower_aarch32_irq(e: &mut ExceptionContext) {
++extern "C" fn lower_aarch32_irq(e: &mut ExceptionContext) {
 +    default_exception_handler(e);
 +}
 +
 +#[no_mangle]
-+unsafe extern "C" fn lower_aarch32_serror(e: &mut ExceptionContext) {
++extern "C" fn lower_aarch32_serror(e: &mut ExceptionContext) {
 +    default_exception_handler(e);
 +}
 +

@@ -367,8 +367,8 @@ the the implementation of the trait's handling function:
 
 ```rust
 #[no_mangle]
-unsafe extern "C" fn current_elx_irq(_e: &mut ExceptionContext) {
-    let token = &exception::asynchronous::IRQContext::new();
+extern "C" fn current_elx_irq(_e: &mut ExceptionContext) {
+    let token = unsafe { &exception::asynchronous::IRQContext::new() };
     exception::asynchronous::irq_manager().handle_pending_irqs(token);
 }
 ```
@@ -887,10 +887,10 @@ diff -uNr 12_integrated_testing/kernel/src/_arch/aarch64/exception.rs 13_excepti
  }
 
  #[no_mangle]
--unsafe extern "C" fn current_elx_irq(e: &mut ExceptionContext) {
+-extern "C" fn current_elx_irq(e: &mut ExceptionContext) {
 -    default_exception_handler(e);
-+unsafe extern "C" fn current_elx_irq(_e: &mut ExceptionContext) {
-+    let token = &exception::asynchronous::IRQContext::new();
++extern "C" fn current_elx_irq(_e: &mut ExceptionContext) {
++    let token = unsafe { &exception::asynchronous::IRQContext::new() };
 +    exception::asynchronous::irq_manager().handle_pending_irqs(token);
  }
 
