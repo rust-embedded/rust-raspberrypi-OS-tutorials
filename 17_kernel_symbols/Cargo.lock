@@ -4,9 +4,9 @@ version = 3
 
 [[package]]
 name = "cortex-a"
-version = "7.2.0"
+version = "7.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "27bd91f65ccd348bb2d043d98c5b34af141ecef7f102147f59bf5898f6e734ad"
+checksum = "342880ec3cd4f86ab0b7c42c7f51b0ff104de4311a53e01b97388971bb5b42a2"
 dependencies = [
  "tock-registers",
 ]
@@ -36,11 +36,11 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.37"
+version = "1.0.39"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec757218438d5fda206afc041538b2f6d889286160d649a86a24d37e1235afd1"
+checksum = "c54b25569025b7fc9651de43004ae593a75ad88543b17178aa5e1b9c4f15f56f"
 dependencies = [
- "unicode-xid",
+ "unicode-ident",
 ]
 
 [[package]]
@@ -60,13 +60,13 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "1.0.91"
+version = "1.0.95"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b683b2b825c8eef438b77c36a06dc262294da3d5a5813fac20da149241dcd44d"
+checksum = "fbaf6116ab8924f39d52792136fb74fd60a80194cf1b1c6ffa6453eef1c3f942"
 dependencies = [
  "proc-macro2",
  "quote",
- "unicode-xid",
+ "unicode-ident",
 ]
 
 [[package]]
@@ -90,7 +90,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4ee8fba06c1f4d0b396ef61a54530bb6b28f0dc61c38bc8bc5a5a48161e6282e"
 
 [[package]]
-name = "unicode-xid"
-version = "0.2.2"
+name = "unicode-ident"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ccb82d61f80a663efe1f787a51b16b5a51e3314d6ac365b08639f52387b33f3"
+checksum = "d22af068fba1eb5edcb4aea19d382b2a3deb4c8f9d475c589b6ada9e0fd493ee"
