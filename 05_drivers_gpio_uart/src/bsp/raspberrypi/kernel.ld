@@ -54,7 +54,6 @@ SECTIONS
     } :segment_code
 
     .rodata : ALIGN(8) { *(.rodata*) } :segment_code
-    .got    : ALIGN(8) { *(.got)     } :segment_code
 
     /***********************************************************************************************
     * Data + BSS
@@ -69,4 +68,12 @@ SECTIONS
         . = ALIGN(16);
         __bss_end_exclusive = .;
     } :segment_data
+
+    /***********************************************************************************************
+    * Misc
+    ***********************************************************************************************/
+    .got : { *(.got*) }
+    ASSERT(SIZEOF(.got) == 0, "Relocation support not expected")
+
+    /DISCARD/ : { *(.comment*) }
 }

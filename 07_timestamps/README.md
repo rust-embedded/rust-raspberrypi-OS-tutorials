@@ -150,7 +150,7 @@ diff -uNr 06_uart_chainloader/Makefile 07_timestamps/Makefile
 
  ##------------------------------------------------------------------------------
  ## Run clippy
-@@ -238,8 +232,7 @@
+@@ -237,8 +231,7 @@
  ##------------------------------------------------------------------------------
  test_boot: $(KERNEL_BIN)
  	$(call color_header, "Boot test - $(BSP)")
@@ -482,7 +482,7 @@ diff -uNr 06_uart_chainloader/src/bsp/raspberrypi/kernel.ld 07_timestamps/src/bs
      .text :
      {
          KEEP(*(.text._start))
-@@ -61,10 +61,6 @@
+@@ -60,10 +60,6 @@
      ***********************************************************************************************/
      .data : { *(.data*) } :segment_data
 

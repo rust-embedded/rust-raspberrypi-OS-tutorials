@@ -293,14 +293,12 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel/src/_arch/aarch64/excep
 diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel/src/bsp/raspberrypi/kernel.ld 17_kernel_symbols/kernel/src/bsp/raspberrypi/kernel.ld
 --- 16_virtual_mem_part4_higher_half_kernel/kernel/src/bsp/raspberrypi/kernel.ld
 +++ 17_kernel_symbols/kernel/src/bsp/raspberrypi/kernel.ld
-@@ -56,8 +56,12 @@
+@@ -56,7 +56,11 @@
          *(.text*)                 /* Everything else */
      } :segment_code
 
 -    .rodata : ALIGN(8) { *(.rodata*) } :segment_code
--    .got    : ALIGN(8) { *(.got)     } :segment_code
 +    .rodata         : ALIGN(8) { *(.rodata*) } :segment_code
-+    .got            : ALIGN(8) { *(.got)     } :segment_code
 +    .kernel_symbols : ALIGN(8) {
 +        __kernel_symbols_start = .;
 +        . += 32 * 1024;
@@ -740,7 +738,7 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/Makefile 17_kernel_symbols/Mak
  	$(call color_header, "Generating docs")
  	@$(DOC_CMD) --document-private-items --open
 
-@@ -318,10 +343,19 @@
+@@ -317,10 +342,19 @@
      cd $(shell pwd)
 
      TEST_ELF=$$(echo $$1 | sed -e 's/.*target/target/g')

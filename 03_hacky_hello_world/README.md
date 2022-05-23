@@ -95,7 +95,7 @@ diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
 
 
 
-@@ -191,3 +194,27 @@
+@@ -190,3 +193,27 @@
  	$(call color_header, "Launching nm")
  	@$(DOCKER_TOOLS) $(NM_BINARY) --demangle --print-size $(KERNEL_ELF) | sort | rustfilt
 

@@ -62,7 +62,6 @@ SECTIONS
     } :segment_code
 
     .rodata : ALIGN(8) { *(.rodata*) } :segment_code
-    .got    : ALIGN(8) { *(.got)     } :segment_code
 
     . = ALIGN(PAGE_SIZE);
     __code_end_exclusive = .;
@@ -92,5 +91,13 @@ SECTIONS
     . += 8 * 1024 * 1024;
     __mmio_remap_end_exclusive = .;
 
-    ASSERT((. & PAGE_MASK) == 0, "MMIO remap reservation is not page aligned")
+    ASSERT((. & PAGE_MASK) == 0, "End of boot core stack is not page aligned")
+
+    /***********************************************************************************************
+    * Misc
+    ***********************************************************************************************/
+    .got : { *(.got*) }
+    ASSERT(SIZEOF(.got) == 0, "Relocation support not expected")
+
+    /DISCARD/ : { *(.comment*) }
 }

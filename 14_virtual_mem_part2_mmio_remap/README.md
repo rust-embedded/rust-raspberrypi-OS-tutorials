@@ -1480,7 +1480,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/kernel.
                                               /*   | stack       */
          . += __rpi_phys_binary_load_addr;    /*   | growth      */
                                               /*   | direction   */
-@@ -68,6 +68,7 @@
+@@ -67,6 +67,7 @@
      /***********************************************************************************************
      * Data + BSS
      ***********************************************************************************************/
@@ -1488,11 +1488,10 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/kernel.
      .data : { *(.data*) } :segment_data
 
      /* Section is zeroed in pairs of u64. Align start and end to 16 bytes */
-@@ -78,4 +79,16 @@
-         . = ALIGN(16);
+@@ -78,6 +79,18 @@
          __bss_end_exclusive = .;
      } :segment_data
-+
+
 +    . = ALIGN(PAGE_SIZE);
 +    __data_end_exclusive = .;
 +
@@ -1504,7 +1503,10 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/kernel.
 +    __mmio_remap_end_exclusive = .;
 +
 +    ASSERT((. & PAGE_MASK) == 0, "MMIO remap reservation is not page aligned")
- }
++
+     /***********************************************************************************************
+     * Misc
+     ***********************************************************************************************/
 
 diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/memory/mmu.rs 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/memory/mmu.rs
 --- 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/memory/mmu.rs

@@ -52,12 +52,11 @@ diff -uNr 01_wait_forever/Cargo.toml 02_runtime_init/Cargo.toml
 diff -uNr 01_wait_forever/Makefile 02_runtime_init/Makefile
 --- 01_wait_forever/Makefile
 +++ 02_runtime_init/Makefile
-@@ -180,6 +180,8 @@
+@@ -180,6 +180,7 @@
  	$(call color_header, "Launching objdump")
  	@$(DOCKER_TOOLS) $(OBJDUMP_BINARY) --disassemble --demangle \
                  --section .text   \
 +                --section .rodata \
-+                --section .got    \
                  $(KERNEL_ELF) | rustfilt
 
  ##------------------------------------------------------------------------------
@@ -211,7 +210,7 @@ diff -uNr 01_wait_forever/src/bsp/raspberrypi/kernel.ld 02_runtime_init/src/bsp/
  /* The physical address at which the the kernel binary will be loaded by the Raspberry's firmware */
  __rpi_phys_binary_load_addr = 0x80000;
 
-@@ -13,21 +15,58 @@
+@@ -13,21 +15,65 @@
   *     4 == R
   *     5 == RX
   *     6 == RW
@@ -257,7 +256,6 @@ diff -uNr 01_wait_forever/src/bsp/raspberrypi/kernel.ld 02_runtime_init/src/bsp/
      } :segment_code
 +
 +    .rodata : ALIGN(8) { *(.rodata*) } :segment_code
-+    .got    : ALIGN(8) { *(.got)     } :segment_code
 +
 +    /***********************************************************************************************
 +    * Data + BSS
@@ -272,6 +270,14 @@ diff -uNr 01_wait_forever/src/bsp/raspberrypi/kernel.ld 02_runtime_init/src/bsp/
 +        . = ALIGN(16);
 +        __bss_end_exclusive = .;
 +    } :segment_data
++
++    /***********************************************************************************************
++    * Misc
++    ***********************************************************************************************/
++    .got : { *(.got*) }
++    ASSERT(SIZEOF(.got) == 0, "Relocation support not expected")
++
++    /DISCARD/ : { *(.comment*) }
  }
 
 diff -uNr 01_wait_forever/src/bsp/raspberrypi.rs 02_runtime_init/src/bsp/raspberrypi.rs

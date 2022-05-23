@@ -57,7 +57,6 @@ SECTIONS
     } :segment_code
 
     .rodata : ALIGN(8) { *(.rodata*) } :segment_code
-    .got    : ALIGN(8) { *(.got)     } :segment_code
 
     . = ALIGN(PAGE_SIZE);
     __code_end_exclusive = .;
@@ -107,4 +106,12 @@ SECTIONS
     } :segment_boot_core_stack
 
     ASSERT((. & PAGE_MASK) == 0, "End of boot core stack is not page aligned")
+
+    /***********************************************************************************************
+    * Misc
+    ***********************************************************************************************/
+    .got : { *(.got*) }
+    ASSERT(SIZEOF(.got) == 0, "Relocation support not expected")
+
+    /DISCARD/ : { *(.comment*) }
 }

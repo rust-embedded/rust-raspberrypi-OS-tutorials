@@ -249,7 +249,7 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
 
  ##------------------------------------------------------------------------------
  ## Run clippy
-@@ -232,7 +238,8 @@
+@@ -231,7 +237,8 @@
  ##------------------------------------------------------------------------------
  test_boot: $(KERNEL_BIN)
  	$(call color_header, "Boot test - $(BSP)")
@@ -399,7 +399,7 @@ diff -uNr 05_drivers_gpio_uart/src/bsp/raspberrypi/kernel.ld 06_uart_chainloader
      .text :
      {
          KEEP(*(.text._start))
-@@ -61,6 +61,10 @@
+@@ -60,6 +60,10 @@
      ***********************************************************************************************/
      .data : { *(.data*) } :segment_data
 

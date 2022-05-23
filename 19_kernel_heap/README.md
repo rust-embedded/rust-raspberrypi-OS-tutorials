@@ -512,7 +512,7 @@ diff -uNr 18_backtrace/kernel/src/bsp/raspberrypi/kernel.ld 19_kernel_heap/kerne
      segment_boot_core_stack PT_LOAD FLAGS(6);
  }
 
-@@ -85,6 +86,18 @@
+@@ -84,6 +85,18 @@
      __data_end_exclusive = .;
 
      /***********************************************************************************************

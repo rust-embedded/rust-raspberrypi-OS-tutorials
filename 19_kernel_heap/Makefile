@@ -277,7 +277,6 @@ objdump: $(KERNEL_ELF)
 	@$(DOCKER_TOOLS) $(OBJDUMP_BINARY) --disassemble --demangle \
                 --section .text   \
                 --section .rodata \
-                --section .got    \
                 $(KERNEL_ELF) | rustfilt
 
 ##------------------------------------------------------------------------------

@@ -1077,6 +1077,15 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/kernel.ld 1
  PAGE_SIZE = 64K;
  PAGE_MASK = PAGE_SIZE - 1;
 
+@@ -89,7 +91,7 @@
+     . += 8 * 1024 * 1024;
+     __mmio_remap_end_exclusive = .;
+
+-    ASSERT((. & PAGE_MASK) == 0, "MMIO remap reservation is not page aligned")
++    ASSERT((. & PAGE_MASK) == 0, "End of boot core stack is not page aligned")
+
+     /***********************************************************************************************
+     * Misc
 
 diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/kernel_virt_addr_space_size.ld 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/kernel_virt_addr_space_size.ld
 --- 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/kernel_virt_addr_space_size.ld
@@ -1888,7 +1897,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/Makefile 15_virtual_mem_part3_precompu
  	$(call color_progress_prefix, "Name")
  	@echo $(KERNEL_BIN)
  	$(call color_progress_prefix, "Size")
-@@ -301,6 +320,7 @@
+@@ -300,6 +319,7 @@
      TEST_ELF=$$(echo $$1 | sed -e 's/.*target/target/g')
      TEST_BINARY=$$(echo $$1.img | sed -e 's/.*target/target/g')
 

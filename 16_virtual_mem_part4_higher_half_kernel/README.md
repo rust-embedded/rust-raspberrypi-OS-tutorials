@@ -598,8 +598,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/ker
  SECTIONS
  {
 -    . =  __rpi_phys_dram_start_addr;
-+    . =  __kernel_virt_start_addr;
-
+-
 -    /***********************************************************************************************
 -    * Boot Core Stack
 -    ***********************************************************************************************/
@@ -611,7 +610,8 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/ker
 -                                             /*   | direction   */
 -        __boot_core_stack_end_exclusive = .; /*   |             */
 -    } :segment_boot_core_stack
--
++    . =  __kernel_virt_start_addr;
+
 -    ASSERT((. & PAGE_MASK) == 0, "End of boot core stack is not page aligned")
 +    ASSERT((. & PAGE_MASK) == 0, "Start of address space is not page aligned")
 
@@ -624,10 +624,11 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/ker
      {
          KEEP(*(.text._start))
          *(.text._start_arguments) /* Constants (or statics in Rust speak) read by _start(). */
-@@ -93,4 +88,23 @@
+@@ -91,6 +86,25 @@
+     . += 8 * 1024 * 1024;
      __mmio_remap_end_exclusive = .;
 
-     ASSERT((. & PAGE_MASK) == 0, "MMIO remap reservation is not page aligned")
++    ASSERT((. & PAGE_MASK) == 0, "MMIO remap reservation is not page aligned")
 +
 +    /***********************************************************************************************
 +    * Guard Page
@@ -646,8 +647,9 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/ker
 +        __boot_core_stack_end_exclusive = .; /*   |             */
 +    } :segment_boot_core_stack
 +
-+    ASSERT((. & PAGE_MASK) == 0, "End of boot core stack is not page aligned")
- }
+     ASSERT((. & PAGE_MASK) == 0, "End of boot core stack is not page aligned")
+
+     /***********************************************************************************************
 
 diff -uNr 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/memory/mmu.rs 16_virtual_mem_part4_higher_half_kernel/kernel/src/bsp/raspberrypi/memory/mmu.rs
 --- 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/memory/mmu.rs

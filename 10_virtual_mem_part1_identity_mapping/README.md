@@ -855,9 +855,9 @@ diff -uNr 09_privilege_level/src/bsp/raspberrypi/kernel.ld 10_virtual_mem_part1_
      .text :
      {
          KEEP(*(.text._start))
-@@ -56,6 +62,9 @@
+@@ -55,6 +61,9 @@
+
      .rodata : ALIGN(8) { *(.rodata*) } :segment_code
-     .got    : ALIGN(8) { *(.got)     } :segment_code
 
 +    . = ALIGN(PAGE_SIZE);
 +    __code_end_exclusive = .;
