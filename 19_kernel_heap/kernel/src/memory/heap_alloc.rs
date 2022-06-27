@@ -131,7 +131,7 @@ unsafe impl GlobalAlloc for HeapAllocator {
 pub fn kernel_init_heap_allocator() {
     let region = bsp::memory::mmu::virt_heap_region();
 
-    KERNEL_HEAP_ALLOCATOR
-        .inner
-        .lock(|inner| unsafe { inner.init(region.start_addr().as_usize(), region.size()) });
+    KERNEL_HEAP_ALLOCATOR.inner.lock(|inner| unsafe {
+        inner.init(region.start_addr().as_usize() as *mut u8, region.size())
+    });
 }

@@ -280,7 +280,7 @@ diff -uNr 18_backtrace/kernel/Cargo.toml 19_kernel_heap/kernel/Cargo.toml
  [dependencies]
  test-types = { path = "../libraries/test-types" }
  debug-symbol-types = { path = "../libraries/debug-symbol-types" }
-+linked_list_allocator = { version = "0.9.x", default-features = false, features = ["const_mut_refs"] }
++linked_list_allocator = { version = "0.10.x", default-features = false, features = ["const_mut_refs"] }
 
  # Optional dependencies
  tock-registers = { version = "0.7.x", default-features = false, features = ["register_types"], optional = true }
@@ -1043,9 +1043,9 @@ diff -uNr 18_backtrace/kernel/src/memory/heap_alloc.rs 19_kernel_heap/kernel/src
 +pub fn kernel_init_heap_allocator() {
 +    let region = bsp::memory::mmu::virt_heap_region();
 +
-+    KERNEL_HEAP_ALLOCATOR
-+        .inner
-+        .lock(|inner| unsafe { inner.init(region.start_addr().as_usize(), region.size()) });
++    KERNEL_HEAP_ALLOCATOR.inner.lock(|inner| unsafe {
++        inner.init(region.start_addr().as_usize() as *mut u8, region.size())
++    });
 +}
 
 diff -uNr 18_backtrace/kernel/src/memory/mmu/mapping_record.rs 19_kernel_heap/kernel/src/memory/mmu/mapping_record.rs
