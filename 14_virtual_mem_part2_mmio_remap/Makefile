@@ -74,7 +74,7 @@ LAST_BUILD_CONFIG    = target/$(BSP).build_config
 KERNEL_ELF      = target/$(TARGET)/release/kernel
 # This parses cargo's dep-info file.
 # https://doc.rust-lang.org/cargo/guide/build-cache.html#dep-info-files
-KERNEL_ELF_DEPS = $(filter-out %: ,$(file < $(KERNEL_ELF).d)) $(LAST_BUILD_CONFIG)
+KERNEL_ELF_DEPS = $(filter-out %: ,$(file < $(KERNEL_ELF).d)) $(KERNEL_MANIFEST) $(LAST_BUILD_CONFIG)
 
 
 

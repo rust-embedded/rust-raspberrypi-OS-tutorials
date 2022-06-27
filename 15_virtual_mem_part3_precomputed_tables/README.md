@@ -1846,8 +1846,8 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/Makefile 15_virtual_mem_part3_precompu
 +KERNEL_ELF_RAW      = target/$(TARGET)/release/kernel
  # This parses cargo's dep-info file.
  # https://doc.rust-lang.org/cargo/guide/build-cache.html#dep-info-files
--KERNEL_ELF_DEPS = $(filter-out modulo: ,$(file < $(KERNEL_ELF).d)) $(LAST_BUILD_CONFIG)
-+KERNEL_ELF_RAW_DEPS = $(filter-out modulo: ,$(file < $(KERNEL_ELF_RAW).d)) $(LAST_BUILD_CONFIG)
+-KERNEL_ELF_DEPS = $(filter-out modulo: ,$(file < $(KERNEL_ELF).d)) $(KERNEL_MANIFEST) $(LAST_BUILD_CONFIG)
++KERNEL_ELF_RAW_DEPS = $(filter-out modulo: ,$(file < $(KERNEL_ELF_RAW).d)) $(KERNEL_MANIFEST) $(LAST_BUILD_CONFIG)
 +
 +##------------------------------------------------------------------------------
 +## Translation tables
