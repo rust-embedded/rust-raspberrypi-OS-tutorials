@@ -81,6 +81,7 @@ $ DEV_SERIAL=/dev/tty.usbserial-0001 make miniterm
 
 7. Connect the USB serial to your host PC.
     - Wiring diagram at [top-level README](../README.md#-usb-serial-output).
+    - \## <u>**NOTE**</u> ## TX (transmit) wire connects to the RX (receive) pin.
     - Make sure that you **DID NOT** connect the power pin of the USB serial. Only RX/TX and GND.
 8. Connect the RPi to the (USB) power cable and observe the output:
 

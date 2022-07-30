@@ -82,7 +82,7 @@ class MiniPush < MiniTerm
 
     # override
     def handle_reconnect(_error)
-        connetion_reset
+        connection_reset
 
         puts
         puts "[#{@name_short}] ⚡ " \
@@ -107,7 +107,7 @@ class MiniPush < MiniTerm
     rescue StandardError => e
         handle_unexpected(e)
     ensure
-        connetion_reset
+        connection_reset
         puts
         puts "[#{@name_short}] Bye 👋"
     end
