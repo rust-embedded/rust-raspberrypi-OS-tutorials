@@ -21,7 +21,7 @@ pub use arch_exception::{current_privilege_level, handling_init};
 
 /// Kernel privilege levels.
 #[allow(missing_docs)]
-#[derive(PartialEq)]
+#[derive(Eq, PartialEq)]
 pub enum PrivilegeLevel {
     User,
     Kernel,

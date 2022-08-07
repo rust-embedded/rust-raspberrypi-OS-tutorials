@@ -15,13 +15,13 @@ use core::{convert::From, iter::Step, num::NonZeroUsize, ops::Range};
 //--------------------------------------------------------------------------------------------------
 
 /// A wrapper type around [Address] that ensures page alignment.
-#[derive(Copy, Clone, Debug, PartialOrd, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialOrd, PartialEq)]
 pub struct PageAddress<ATYPE: AddressType> {
     inner: Address<ATYPE>,
 }
 
 /// A type that describes a region of memory in quantities of pages.
-#[derive(Copy, Clone, Debug, PartialOrd, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialOrd, PartialEq)]
 pub struct MemoryRegion<ATYPE: AddressType> {
     start: PageAddress<ATYPE>,
     end_exclusive: PageAddress<ATYPE>,
@@ -29,7 +29,7 @@ pub struct MemoryRegion<ATYPE: AddressType> {
 
 /// Architecture agnostic memory attributes.
 #[allow(missing_docs)]
-#[derive(Copy, Clone, Debug, PartialOrd, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialOrd, PartialEq)]
 pub enum MemAttributes {
     CacheableDRAM,
     Device,
@@ -37,7 +37,7 @@ pub enum MemAttributes {
 
 /// Architecture agnostic access permissions.
 #[allow(missing_docs)]
-#[derive(Copy, Clone, Debug, PartialOrd, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialOrd, PartialEq)]
 pub enum AccessPermissions {
     ReadOnly,
     ReadWrite,
@@ -45,7 +45,7 @@ pub enum AccessPermissions {
 
 /// Collection of memory attributes.
 #[allow(missing_docs)]
-#[derive(Copy, Clone, Debug, PartialOrd, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialOrd, PartialEq)]
 pub struct AttributeFields {
     pub mem_attributes: MemAttributes,
     pub acc_perms: AccessPermissions,

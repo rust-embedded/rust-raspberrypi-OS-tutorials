@@ -183,13 +183,9 @@ Lookup is done by just iterating over the slice:
 ```rust
 /// Retrieve the symbol corresponding to a virtual address, if any.
 pub fn lookup_symbol(addr: Address<Virtual>) -> Option<&'static Symbol> {
-    for i in kernel_symbols_slice() {
-        if i.contains(addr.as_usize()) {
-            return Some(i);
-        }
-    }
-
-    None
+    kernel_symbols_slice()
+        .iter()
+        .find(|&i| i.contains(addr.as_usize()))
 }
 ```
 
@@ -342,7 +338,7 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel/src/lib.rs 17_kernel_sy
 diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel/src/symbols.rs 17_kernel_symbols/kernel/src/symbols.rs
 --- 16_virtual_mem_part4_higher_half_kernel/kernel/src/symbols.rs
 +++ 17_kernel_symbols/kernel/src/symbols.rs
-@@ -0,0 +1,87 @@
+@@ -0,0 +1,83 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
@@ -394,13 +390,9 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel/src/symbols.rs 17_kerne
 +
 +/// Retrieve the symbol corresponding to a virtual address, if any.
 +pub fn lookup_symbol(addr: Address<Virtual>) -> Option<&'static Symbol> {
-+    for i in kernel_symbols_slice() {
-+        if i.contains(addr.as_usize()) {
-+            return Some(i);
-+        }
-+    }
-+
-+    None
++    kernel_symbols_slice()
++        .iter()
++        .find(|&i| i.contains(addr.as_usize()))
 +}
 +
 +//--------------------------------------------------------------------------------------------------

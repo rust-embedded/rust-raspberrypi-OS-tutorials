@@ -5,5 +5,3 @@ format_code_in_doc_comments = true
 normalize_comments = true
 wrap_comments = true
 comment_width = 100
-report_fixme = "Always"
-report_todo = "Always"

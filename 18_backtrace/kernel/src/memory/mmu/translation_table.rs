@@ -97,7 +97,7 @@ mod tests {
         // This will occupy a lot of space on the stack.
         let mut tables = MinSizeTranslationTable::new_for_runtime();
 
-        assert!(tables.init().is_ok());
+        assert_eq!(tables.init(), Ok(()));
 
         let virt_end_exclusive_page_addr: PageAddress<Virtual> = PageAddress::MAX;
         let virt_start_page_addr: PageAddress<Virtual> =

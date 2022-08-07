@@ -49,13 +49,9 @@ fn kernel_symbols_slice() -> &'static [Symbol] {
 
 /// Retrieve the symbol corresponding to a virtual address, if any.
 pub fn lookup_symbol(addr: Address<Virtual>) -> Option<&'static Symbol> {
-    for i in kernel_symbols_slice() {
-        if i.contains(addr.as_usize()) {
-            return Some(i);
-        }
-    }
-
-    None
+    kernel_symbols_slice()
+        .iter()
+        .find(|&i| i.contains(addr.as_usize()))
 }
 
 //--------------------------------------------------------------------------------------------------

@@ -103,8 +103,7 @@ impl MappingRecord {
     ) -> Option<&mut MappingRecordEntry> {
         self.inner
             .iter_mut()
-            .filter(|x| x.is_some())
-            .map(|x| x.as_mut().unwrap())
+            .filter_map(|x| x.as_mut())
             .filter(|x| x.attribute_fields.mem_attributes == MemAttributes::Device)
             .find(|x| {
                 if x.phys_start_addr != phys_region.start_addr() {

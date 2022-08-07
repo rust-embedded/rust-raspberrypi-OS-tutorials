@@ -749,7 +749,7 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/kernel/src/memory/mmu/translat
 +++ 16_virtual_mem_part4_higher_half_kernel/kernel/src/memory/mmu/translation_table.rs
 @@ -99,9 +99,9 @@
 
-         assert!(tables.init().is_ok());
+         assert_eq!(tables.init(), Ok(()));
 
 -        let virt_start_page_addr: PageAddress<Virtual> = PageAddress::from(0);
 -        let virt_end_exclusive_page_addr: PageAddress<Virtual> =

@@ -1454,7 +1454,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu/translation_tabl
 +        let mut tables = MinSizeTranslationTable::new_for_runtime();
 
 -        tables.init();
-+        assert!(tables.init().is_ok());
++        assert_eq!(tables.init(), Ok(()));
 
          let virt_start_page_addr: PageAddress<Virtual> = PageAddress::from(0);
          let virt_end_exclusive_page_addr: PageAddress<Virtual> =

@@ -487,7 +487,7 @@ diff -uNr 08_hw_debug_JTAG/src/exception.rs 09_privilege_level/src/exception.rs
 +
 +/// Kernel privilege levels.
 +#[allow(missing_docs)]
-+#[derive(PartialEq)]
++#[derive(Eq, PartialEq)]
 +pub enum PrivilegeLevel {
 +    User,
 +    Kernel,

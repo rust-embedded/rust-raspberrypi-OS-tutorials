@@ -2425,7 +2425,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/main.rs 14_virtual_mem_
 diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/memory/mmu/mapping_record.rs 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu/mapping_record.rs
 --- 13_exceptions_part2_peripheral_IRQs/kernel/src/memory/mmu/mapping_record.rs
 +++ 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu/mapping_record.rs
-@@ -0,0 +1,239 @@
+@@ -0,0 +1,238 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
@@ -2531,8 +2531,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/memory/mmu/mapping_reco
 +    ) -> Option<&mut MappingRecordEntry> {
 +        self.inner
 +            .iter_mut()
-+            .filter(|x| x.is_some())
-+            .map(|x| x.as_mut().unwrap())
++            .filter_map(|x| x.as_mut())
 +            .filter(|x| x.attribute_fields.mem_attributes == MemAttributes::Device)
 +            .find(|x| {
 +                if x.phys_start_addr != phys_region.start_addr() {
@@ -2859,13 +2858,13 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/memory/mmu/types.rs 14_
 +//--------------------------------------------------------------------------------------------------
 +
 +/// A wrapper type around [Address] that ensures page alignment.
-+#[derive(Copy, Clone, Debug, PartialOrd, PartialEq)]
++#[derive(Copy, Clone, Debug, Eq, PartialOrd, PartialEq)]
 +pub struct PageAddress<ATYPE: AddressType> {
 +    inner: Address<ATYPE>,
 +}
 +
 +/// A type that describes a region of memory in quantities of pages.
-+#[derive(Copy, Clone, Debug, PartialOrd, PartialEq)]
++#[derive(Copy, Clone, Debug, Eq, PartialOrd, PartialEq)]
 +pub struct MemoryRegion<ATYPE: AddressType> {
 +    start: PageAddress<ATYPE>,
 +    end_exclusive: PageAddress<ATYPE>,
@@ -2873,7 +2872,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/memory/mmu/types.rs 14_
 +
 +/// Architecture agnostic memory attributes.
 +#[allow(missing_docs)]
-+#[derive(Copy, Clone, Debug, PartialOrd, PartialEq)]
++#[derive(Copy, Clone, Debug, Eq, PartialOrd, PartialEq)]
 +pub enum MemAttributes {
 +    CacheableDRAM,
 +    Device,
@@ -2881,7 +2880,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/memory/mmu/types.rs 14_
 +
 +/// Architecture agnostic access permissions.
 +#[allow(missing_docs)]
-+#[derive(Copy, Clone, Debug, PartialOrd, PartialEq)]
++#[derive(Copy, Clone, Debug, Eq, PartialOrd, PartialEq)]
 +pub enum AccessPermissions {
 +    ReadOnly,
 +    ReadWrite,
@@ -2889,7 +2888,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/memory/mmu/types.rs 14_
 +
 +/// Collection of memory attributes.
 +#[allow(missing_docs)]
-+#[derive(Copy, Clone, Debug, PartialOrd, PartialEq)]
++#[derive(Copy, Clone, Debug, Eq, PartialOrd, PartialEq)]
 +pub struct AttributeFields {
 +    pub mem_attributes: MemAttributes,
 +    pub acc_perms: AccessPermissions,
