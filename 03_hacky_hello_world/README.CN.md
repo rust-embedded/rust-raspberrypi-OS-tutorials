@@ -2,7 +2,7 @@
 
 ## tl;dr
 
-- 全面介绍`println!()` 宏以便尽早启用"printf debugging"。
+- 介绍全局的`println!()`宏以便尽早启用"printf debugging"。
 - 为了保持教程长度合理，打印函数目前 "滥用" 了 QEMU 属性，该属性允许我们在没有正确设置的情况下使用树莓派的`UART`。
 - 在接下来的教程中将逐步使用真实硬件的`UART`。
 
