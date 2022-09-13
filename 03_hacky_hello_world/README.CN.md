@@ -31,7 +31,7 @@ Panic location:
 Stopping here.
 ```
 
-## 与上面不同
+## 相比之前的变化（diff）
 ```diff
 
 diff -uNr 02_runtime_init/Cargo.toml 03_hacky_hello_world/Cargo.toml
