@@ -17,9 +17,9 @@ version = "0.1.0"
 
 [[package]]
 name = "linked_list_allocator"
-version = "0.9.1"
+version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "549ce1740e46b291953c4340adcd74c59bcf4308f4cac050fd33ba91b7168f4a"
+checksum = "e98908d64cd118e4a3fb26803bd2aef3e7796f1d494517c89b8fea19b92b8c12"
 
 [[package]]
 name = "mingo"
