@@ -18,7 +18,7 @@ test_build = ["qemu-exit"]
 [dependencies]
 test-types = { path = "../libraries/test-types" }
 debug-symbol-types = { path = "../libraries/debug-symbol-types" }
-linked_list_allocator = { version = "0.10.x", default-features = false, features = ["const_mut_refs"] }
+linked_list_allocator = { version = "0.10.2", default-features = false, features = ["const_mut_refs"] }
 
 # Optional dependencies
 tock-registers = { version = "0.7.x", default-features = false, features = ["register_types"], optional = true }
