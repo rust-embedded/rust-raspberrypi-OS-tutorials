@@ -32,4 +32,4 @@ Stopping here.
 ```
 
 ## 相比之前的变化（diff）
-Please check [the english version](README.md#diff-to-previous), which is kept up-to-date.
+请检查[英文版本](README.md#diff-to-previous)，这是最新的。
