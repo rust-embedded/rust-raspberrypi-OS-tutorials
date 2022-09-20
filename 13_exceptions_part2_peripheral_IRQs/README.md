@@ -1549,7 +1549,7 @@ diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_interru
 +        (0x00 => _reserved1),
 +        (0x10 => ENABLE_1: WriteOnly<u32>),
 +        (0x14 => ENABLE_2: WriteOnly<u32>),
-+        (0x24 => @END),
++        (0x18 => @END),
 +    }
 +}
 +
