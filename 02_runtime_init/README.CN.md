@@ -19,5 +19,5 @@
 [bss]: https://en.wikipedia.org/wiki/.bss
 
 ## 相比之前的变化（diff）
+请检查[英文版本](README.md#diff-to-previous)，这是最新的。
 
-Please check [the english version](README.md#diff-to-previous), which is kept up-to-date.
