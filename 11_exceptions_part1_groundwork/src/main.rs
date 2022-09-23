@@ -109,11 +109,14 @@
 #![allow(clippy::upper_case_acronyms)]
 #![allow(incomplete_features)]
 #![feature(asm_const)]
+#![feature(const_option)]
 #![feature(core_intrinsics)]
 #![feature(format_args_nl)]
 #![feature(int_roundings)]
+#![feature(nonzero_min_max)]
 #![feature(panic_info_message)]
 #![feature(trait_alias)]
+#![feature(unchecked_math)]
 #![no_main]
 #![no_std]
 
@@ -165,7 +168,6 @@ fn kernel_main() -> ! {
     use console::console;
     use core::time::Duration;
     use driver::interface::DriverManager;
-    use time::interface::TimeManager;
 
     info!(
         "{} version {}",

@@ -59,8 +59,6 @@ fn panic_prevent_reenter() {
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    use crate::time::interface::TimeManager;
-
     // Protect against panic infinite loops if any of the following code panics itself.
     panic_prevent_reenter();
 

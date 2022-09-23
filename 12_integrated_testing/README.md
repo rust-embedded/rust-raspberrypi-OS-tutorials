@@ -622,7 +622,7 @@ your test code into individual chunks. For example, take a look at `tests/01_tim
 #![test_runner(libkernel::test_runner)]
 
 use core::time::Duration;
-use libkernel::{bsp, cpu, driver, exception, time, time::interface::TimeManager};
+use libkernel::{bsp, cpu, driver, exception, time};
 use test_macros::kernel_test;
 
 #[no_mangle]
@@ -643,6 +643,7 @@ unsafe fn kernel_init() -> ! {
 #[kernel_test]
 fn timer_is_counting() {
     assert!(time::time_manager().uptime().as_nanos() > 0)
+    assert!(time::time_manager().resolution().as_nanos() < 100)
 }
 
 /// Timer resolution must be sufficient.

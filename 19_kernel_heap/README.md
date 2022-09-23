@@ -433,7 +433,7 @@ diff -uNr 18_backtrace/kernel/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 19
 diff -uNr 18_backtrace/kernel/src/bsp/raspberrypi/driver.rs 19_kernel_heap/kernel/src/bsp/raspberrypi/driver.rs
 --- 18_backtrace/kernel/src/bsp/raspberrypi/driver.rs
 +++ 19_kernel_heap/kernel/src/bsp/raspberrypi/driver.rs
-@@ -11,11 +11,11 @@
+@@ -11,6 +11,7 @@
      memory::mmu::MMIODescriptor,
      synchronization::{interface::ReadWriteEx, InitStateLock},
  };
@@ -441,12 +441,7 @@ diff -uNr 18_backtrace/kernel/src/bsp/raspberrypi/driver.rs 19_kernel_heap/kerne
  use core::{
      mem::MaybeUninit,
      sync::atomic::{AtomicBool, Ordering},
- };
--
- pub use device_driver::IRQNumber;
-
- //--------------------------------------------------------------------------------------------------
-@@ -24,18 +24,11 @@
+@@ -24,18 +25,11 @@
 
  /// Device Driver Manager type.
  struct BSPDriverManager {
@@ -466,7 +461,7 @@ diff -uNr 18_backtrace/kernel/src/bsp/raspberrypi/driver.rs 19_kernel_heap/kerne
  // Global instances
  //--------------------------------------------------------------------------------------------------
 
-@@ -50,7 +43,7 @@
+@@ -50,7 +44,7 @@
  static mut INTERRUPT_CONTROLLER: MaybeUninit<device_driver::GICv2> = MaybeUninit::uninit();
 
  static BSP_DRIVER_MANAGER: BSPDriverManager = BSPDriverManager {
@@ -475,7 +470,7 @@ diff -uNr 18_backtrace/kernel/src/bsp/raspberrypi/driver.rs 19_kernel_heap/kerne
      init_done: AtomicBool::new(false),
  };
 
-@@ -143,9 +136,9 @@
+@@ -143,9 +137,9 @@
 
      unsafe fn register_drivers(&self) {
          self.device_drivers.write(|drivers| {
@@ -488,7 +483,7 @@ diff -uNr 18_backtrace/kernel/src/bsp/raspberrypi/driver.rs 19_kernel_heap/kerne
          });
      }
  }
-@@ -180,9 +173,8 @@
+@@ -180,9 +174,8 @@
          Ok(())
      }
 
@@ -871,9 +866,9 @@ diff -uNr 18_backtrace/kernel/src/lib.rs 19_kernel_heap/kernel/src/lib.rs
  #![allow(incomplete_features)]
 +#![feature(alloc_error_handler)]
  #![feature(asm_const)]
+ #![feature(const_option)]
  #![feature(core_intrinsics)]
- #![feature(format_args_nl)]
-@@ -127,6 +128,8 @@
+@@ -130,6 +131,8 @@
  #![reexport_test_harness_main = "test_main"]
  #![test_runner(crate::test_runner)]
 
@@ -1269,7 +1264,7 @@ diff -uNr 18_backtrace/kernel/src/memory.rs 19_kernel_heap/kernel/src/memory.rs
 diff -uNr 18_backtrace/kernel/src/print.rs 19_kernel_heap/kernel/src/print.rs
 --- 18_backtrace/kernel/src/print.rs
 +++ 19_kernel_heap/kernel/src/print.rs
-@@ -90,3 +90,35 @@
+@@ -82,3 +82,31 @@
          ));
      })
  }
@@ -1279,8 +1274,6 @@ diff -uNr 18_backtrace/kernel/src/print.rs 19_kernel_heap/kernel/src/print.rs
 +macro_rules! debug {
 +    ($string:expr) => ({
 +        if cfg!(feature = "debug_prints") {
-+            use $crate::time::interface::TimeManager;
-+
 +            let timestamp = $crate::time::time_manager().uptime();
 +
 +            $crate::print::_print(format_args_nl!(
@@ -1292,8 +1285,6 @@ diff -uNr 18_backtrace/kernel/src/print.rs 19_kernel_heap/kernel/src/print.rs
 +    });
 +    ($format_string:expr, $($arg:tt)*) => ({
 +        if cfg!(feature = "debug_prints") {
-+            use $crate::time::interface::TimeManager;
-+
 +            let timestamp = $crate::time::time_manager().uptime();
 +
 +            $crate::print::_print(format_args_nl!(

@@ -11,7 +11,7 @@
 #![test_runner(libkernel::test_runner)]
 
 use core::time::Duration;
-use libkernel::{bsp, cpu, driver, exception, memory, time, time::interface::TimeManager};
+use libkernel::{bsp, cpu, driver, exception, memory, time};
 use test_macros::kernel_test;
 
 #[no_mangle]
@@ -38,6 +38,7 @@ fn timer_is_counting() {
 /// Timer resolution must be sufficient.
 #[kernel_test]
 fn timer_resolution_is_sufficient() {
+    assert!(time::time_manager().resolution().as_nanos() > 0);
     assert!(time::time_manager().resolution().as_nanos() < 100)
 }
 

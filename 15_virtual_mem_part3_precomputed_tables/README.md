@@ -841,7 +841,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/_arch/aarch64/cpu/boot.rs 1
 diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/_arch/aarch64/cpu/boot.s 15_virtual_mem_part3_precomputed_tables/kernel/src/_arch/aarch64/cpu/boot.s
 --- 14_virtual_mem_part2_mmio_remap/kernel/src/_arch/aarch64/cpu/boot.s
 +++ 15_virtual_mem_part3_precomputed_tables/kernel/src/_arch/aarch64/cpu/boot.s
-@@ -53,11 +53,14 @@
+@@ -53,19 +53,22 @@
 
  	// Prepare the jump to Rust code.
  .L_prepare_rust:
@@ -853,6 +853,18 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/_arch/aarch64/cpu/boot.s 15
 -	mov	sp, x0
 +	ADR_REL	x1, __boot_core_stack_end_exclusive
 +	mov	sp, x1
+
+ 	// Read the CPU's timer counter frequency and store it in ARCH_TIMER_COUNTER_FREQUENCY.
+ 	// Abort if the frequency read back as 0.
+-	ADR_REL	x1, ARCH_TIMER_COUNTER_FREQUENCY // provided by aarch64/time.rs
+-	mrs	x2, CNTFRQ_EL0
+-	cmp	x2, xzr
++	ADR_REL	x2, ARCH_TIMER_COUNTER_FREQUENCY // provided by aarch64/time.rs
++	mrs	x3, CNTFRQ_EL0
++	cmp	x3, xzr
+ 	b.eq	.L_parking_loop
+-	str	w2, [x1]
++	str	w3, [x2]
 
 -	// Jump to Rust code. x0 holds the function argument provided to _start_rust().
 +	// Jump to Rust code. x0 and x1 hold the function arguments provided to _start_rust().
@@ -1324,7 +1336,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/memory/mmu.
 diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/lib.rs 15_virtual_mem_part3_precomputed_tables/kernel/src/lib.rs
 --- 14_virtual_mem_part2_mmio_remap/kernel/src/lib.rs
 +++ 15_virtual_mem_part3_precomputed_tables/kernel/src/lib.rs
-@@ -186,17 +186,7 @@
+@@ -189,17 +189,7 @@
      use driver::interface::DriverManager;
 
      exception::handling_init();

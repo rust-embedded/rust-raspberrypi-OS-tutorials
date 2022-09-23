@@ -909,7 +909,7 @@ diff -uNr 17_kernel_symbols/kernel/src/bsp/raspberrypi/memory/mmu.rs 18_backtrac
 diff -uNr 17_kernel_symbols/kernel/src/lib.rs 18_backtrace/kernel/src/lib.rs
 --- 17_kernel_symbols/kernel/src/lib.rs
 +++ 18_backtrace/kernel/src/lib.rs
-@@ -130,6 +130,7 @@
+@@ -133,6 +133,7 @@
  mod panic_wait;
  mod synchronization;
 
@@ -972,7 +972,7 @@ diff -uNr 17_kernel_symbols/kernel/src/panic_wait.rs 18_backtrace/kernel/src/pan
  use core::panic::PanicInfo;
 
  //--------------------------------------------------------------------------------------------------
-@@ -75,6 +75,7 @@
+@@ -73,6 +73,7 @@
      println!(
          "[  {:>3}.{:06}] Kernel panic!\n\n\
          Panic location:\n      File '{}', line {}, column {}\n\n\
@@ -980,7 +980,7 @@ diff -uNr 17_kernel_symbols/kernel/src/panic_wait.rs 18_backtrace/kernel/src/pan
          {}",
          timestamp.as_secs(),
          timestamp.subsec_micros(),
-@@ -82,6 +83,7 @@
+@@ -80,6 +81,7 @@
          line,
          column,
          info.message().unwrap_or(&format_args!("")),

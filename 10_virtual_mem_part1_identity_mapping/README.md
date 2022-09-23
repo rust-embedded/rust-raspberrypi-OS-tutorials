@@ -1109,18 +1109,20 @@ diff -uNr 09_privilege_level/src/common.rs 10_virtual_mem_part1_identity_mapping
 diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/src/main.rs
 --- 09_privilege_level/src/main.rs
 +++ 10_virtual_mem_part1_identity_mapping/src/main.rs
-@@ -107,18 +107,23 @@
+@@ -107,9 +107,12 @@
  //! 2. Once finished with architectural setup, the arch code calls `kernel_init()`.
 
  #![allow(clippy::upper_case_acronyms)]
 +#![allow(incomplete_features)]
  #![feature(asm_const)]
+ #![feature(const_option)]
 +#![feature(core_intrinsics)]
  #![feature(format_args_nl)]
 +#![feature(int_roundings)]
+ #![feature(nonzero_min_max)]
  #![feature(panic_info_message)]
  #![feature(trait_alias)]
- #![no_main]
+@@ -118,10 +121,12 @@
  #![no_std]
 
  mod bsp;
@@ -1133,7 +1135,7 @@ diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/s
  mod panic_wait;
  mod print;
  mod synchronization;
-@@ -129,9 +134,17 @@
+@@ -132,9 +137,17 @@
  /// # Safety
  ///
  /// - Only a single core must be active and running this function.
@@ -1152,7 +1154,7 @@ diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/s
 
      for i in bsp::driver::driver_manager().all_device_drivers().iter() {
          if let Err(x) = i.init() {
-@@ -147,7 +160,7 @@
+@@ -150,7 +163,7 @@
 
  /// The main function running after the early init.
  fn kernel_main() -> ! {
@@ -1160,8 +1162,8 @@ diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/s
 +    use console::{console, interface::Write};
      use core::time::Duration;
      use driver::interface::DriverManager;
-     use time::interface::TimeManager;
-@@ -159,6 +172,9 @@
+
+@@ -161,6 +174,9 @@
      );
      info!("Booting on: {}", bsp::board_name());
 
@@ -1171,7 +1173,7 @@ diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/s
      let (_, privilege_level) = exception::current_privilege_level();
      info!("Current privilege level: {}", privilege_level);
 
-@@ -182,6 +198,13 @@
+@@ -184,6 +200,13 @@
      info!("Timer test, spinning for 1 second");
      time::time_manager().spin_for(Duration::from_secs(1));
 

@@ -303,7 +303,7 @@ diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.s 09_privilege_level/src/_
  	// Only proceed on the boot core. Park it otherwise.
  	mrs	x1, MPIDR_EL1
  	and	x1, x1, {CONST_CORE_ID_MASK}
-@@ -48,11 +53,11 @@
+@@ -48,7 +53,7 @@
 
  	// Prepare the jump to Rust code.
  .L_prepare_rust:
@@ -311,6 +311,10 @@ diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.s 09_privilege_level/src/_
 +	// Set the stack pointer. This ensures that any code in EL2 that needs the stack will work.
  	ADR_REL	x0, __boot_core_stack_end_exclusive
  	mov	sp, x0
+
+@@ -60,7 +65,7 @@
+ 	b.eq	.L_parking_loop
+ 	str	w2, [x1]
 
 -	// Jump to Rust code.
 +	// Jump to Rust code. x0 holds the function argument provided to _start_rust().
@@ -498,7 +502,7 @@ diff -uNr 08_hw_debug_JTAG/src/exception.rs 09_privilege_level/src/exception.rs
 diff -uNr 08_hw_debug_JTAG/src/main.rs 09_privilege_level/src/main.rs
 --- 08_hw_debug_JTAG/src/main.rs
 +++ 09_privilege_level/src/main.rs
-@@ -118,6 +118,7 @@
+@@ -121,6 +121,7 @@
  mod console;
  mod cpu;
  mod driver;
@@ -506,15 +510,15 @@ diff -uNr 08_hw_debug_JTAG/src/main.rs 09_privilege_level/src/main.rs
  mod panic_wait;
  mod print;
  mod synchronization;
-@@ -146,6 +147,7 @@
+@@ -149,6 +150,7 @@
 
  /// The main function running after the early init.
  fn kernel_main() -> ! {
 +    use console::console;
      use core::time::Duration;
      use driver::interface::DriverManager;
-     use time::interface::TimeManager;
-@@ -157,6 +159,12 @@
+
+@@ -159,6 +161,12 @@
      );
      info!("Booting on: {}", bsp::board_name());
 
@@ -527,7 +531,7 @@ diff -uNr 08_hw_debug_JTAG/src/main.rs 09_privilege_level/src/main.rs
      info!(
          "Architectural timer resolution: {} ns",
          time::time_manager().resolution().as_nanos()
-@@ -171,11 +179,15 @@
+@@ -173,11 +181,15 @@
          info!("      {}. {}", i + 1, driver.compatible());
      }
 

@@ -108,9 +108,12 @@
 
 #![allow(clippy::upper_case_acronyms)]
 #![feature(asm_const)]
+#![feature(const_option)]
 #![feature(format_args_nl)]
+#![feature(nonzero_min_max)]
 #![feature(panic_info_message)]
 #![feature(trait_alias)]
+#![feature(unchecked_math)]
 #![no_main]
 #![no_std]
 
@@ -148,7 +151,6 @@ unsafe fn kernel_init() -> ! {
 fn kernel_main() -> ! {
     use core::time::Duration;
     use driver::interface::DriverManager;
-    use time::interface::TimeManager;
 
     info!(
         "{} version {}",

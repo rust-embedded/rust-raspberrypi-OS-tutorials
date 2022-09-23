@@ -2385,7 +2385,7 @@ diff -uNr 12_integrated_testing/kernel/src/exception/asynchronous.rs 13_exceptio
 diff -uNr 12_integrated_testing/kernel/src/lib.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/lib.rs
 --- 12_integrated_testing/kernel/src/lib.rs
 +++ 13_exceptions_part2_peripheral_IRQs/kernel/src/lib.rs
-@@ -135,6 +135,7 @@
+@@ -138,6 +138,7 @@
  pub mod exception;
  pub mod memory;
  pub mod print;
@@ -2474,10 +2474,10 @@ diff -uNr 12_integrated_testing/kernel/src/panic_wait.rs 13_exceptions_part2_per
  use core::panic::PanicInfo;
 
  //--------------------------------------------------------------------------------------------------
-@@ -61,6 +61,8 @@
- fn panic(info: &PanicInfo) -> ! {
-     use crate::time::interface::TimeManager;
+@@ -59,6 +59,8 @@
 
+ #[panic_handler]
+ fn panic(info: &PanicInfo) -> ! {
 +    exception::asynchronous::local_irq_mask();
 +
      // Protect against panic infinite loops if any of the following code panics itself.

@@ -16,6 +16,7 @@ use core::{
     mem::MaybeUninit,
     sync::atomic::{AtomicBool, Ordering},
 };
+
 pub use device_driver::IRQNumber;
 
 //--------------------------------------------------------------------------------------------------

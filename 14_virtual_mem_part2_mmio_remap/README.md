@@ -2326,20 +2326,21 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/exception/asynchronous.
 diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/lib.rs 14_virtual_mem_part2_mmio_remap/kernel/src/lib.rs
 --- 13_exceptions_part2_peripheral_IRQs/kernel/src/lib.rs
 +++ 14_virtual_mem_part2_mmio_remap/kernel/src/lib.rs
-@@ -113,9 +113,12 @@
- #![feature(asm_const)]
+@@ -114,10 +114,13 @@
+ #![feature(const_option)]
  #![feature(core_intrinsics)]
  #![feature(format_args_nl)]
 +#![feature(generic_const_exprs)]
  #![feature(int_roundings)]
 +#![feature(is_sorted)]
  #![feature(linkage)]
+ #![feature(nonzero_min_max)]
  #![feature(panic_info_message)]
 +#![feature(step_trait)]
  #![feature(trait_alias)]
+ #![feature(unchecked_math)]
  #![no_std]
- // Testing
-@@ -183,6 +186,17 @@
+@@ -186,6 +189,17 @@
      use driver::interface::DriverManager;
 
      exception::handling_init();
@@ -3821,8 +3822,8 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/tests/01_timer_sanity.rs 14
  #![test_runner(libkernel::test_runner)]
 
  use core::time::Duration;
--use libkernel::{bsp, cpu, driver, exception, time, time::interface::TimeManager};
-+use libkernel::{bsp, cpu, driver, exception, memory, time, time::interface::TimeManager};
+-use libkernel::{bsp, cpu, driver, exception, time};
++use libkernel::{bsp, cpu, driver, exception, memory, time};
  use test_macros::kernel_test;
 
  #[no_mangle]

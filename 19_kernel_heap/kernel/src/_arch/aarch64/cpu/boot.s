@@ -84,6 +84,14 @@ _start:
 	ADR_REL	x4, __boot_core_stack_end_exclusive
 	mov	sp, x4
 
+	// Read the CPU's timer counter frequency and store it in ARCH_TIMER_COUNTER_FREQUENCY.
+	// Abort if the frequency read back as 0.
+	ADR_REL	x5, ARCH_TIMER_COUNTER_FREQUENCY // provided by aarch64/time.rs
+	mrs	x6, CNTFRQ_EL0
+	cmp	x6, xzr
+	b.eq	.L_parking_loop
+	str	w6, [x5]
+
 	// Jump to Rust code. x0, x1 and x2 hold the function arguments provided to _start_rust().
 	b	_start_rust
 
