@@ -432,20 +432,20 @@ diff -uNr 15_virtual_mem_part3_precomputed_tables/kernel/src/_arch/aarch64/cpu/b
 +	// Setting the stack pointer to this value ensures that anything that still runs in EL2,
 +	// until the kernel returns to EL1 with the MMU enabled, works as well. After the return to
 +	// EL1, the virtual address of the stack retrieved above will be used.
-+	ADR_REL	x4, __boot_core_stack_end_exclusive
-+	mov	sp, x4
++	ADR_REL	x3, __boot_core_stack_end_exclusive
++	mov	sp, x3
 
  	// Read the CPU's timer counter frequency and store it in ARCH_TIMER_COUNTER_FREQUENCY.
  	// Abort if the frequency read back as 0.
 -	ADR_REL	x2, ARCH_TIMER_COUNTER_FREQUENCY // provided by aarch64/time.rs
 -	mrs	x3, CNTFRQ_EL0
 -	cmp	x3, xzr
-+	ADR_REL	x5, ARCH_TIMER_COUNTER_FREQUENCY // provided by aarch64/time.rs
-+	mrs	x6, CNTFRQ_EL0
-+	cmp	x6, xzr
++	ADR_REL	x4, ARCH_TIMER_COUNTER_FREQUENCY // provided by aarch64/time.rs
++	mrs	x5, CNTFRQ_EL0
++	cmp	x5, xzr
  	b.eq	.L_parking_loop
 -	str	w3, [x2]
-+	str	w6, [x5]
++	str	w5, [x4]
 
 -	// Jump to Rust code. x0 and x1 hold the function arguments provided to _start_rust().
 +	// Jump to Rust code. x0, x1 and x2 hold the function arguments provided to _start_rust().

@@ -291,7 +291,7 @@ diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.rs 09_privilege_level/src/
 diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.s 09_privilege_level/src/_arch/aarch64/cpu/boot.s
 --- 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.s
 +++ 09_privilege_level/src/_arch/aarch64/cpu/boot.s
-@@ -27,6 +27,11 @@
+@@ -27,11 +27,16 @@
  // fn _start()
  //------------------------------------------------------------------------------
  _start:
@@ -301,8 +301,17 @@ diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.s 09_privilege_level/src/_
 +	b.ne	.L_parking_loop
 +
  	// Only proceed on the boot core. Park it otherwise.
- 	mrs	x1, MPIDR_EL1
- 	and	x1, x1, {CONST_CORE_ID_MASK}
+-	mrs	x0, MPIDR_EL1
+-	and	x0, x0, {CONST_CORE_ID_MASK}
+-	ldr	x1, BOOT_CORE_ID      // provided by bsp/__board_name__/cpu.rs
+-	cmp	x0, x1
++	mrs	x1, MPIDR_EL1
++	and	x1, x1, {CONST_CORE_ID_MASK}
++	ldr	x2, BOOT_CORE_ID      // provided by bsp/__board_name__/cpu.rs
++	cmp	x1, x2
+ 	b.ne	.L_parking_loop
+
+ 	// If execution reaches here, it is the boot core.
 @@ -48,7 +53,7 @@
 
  	// Prepare the jump to Rust code.
