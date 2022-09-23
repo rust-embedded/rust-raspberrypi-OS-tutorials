@@ -94,7 +94,7 @@ class TutorialCrate
     private
 
     def boot_test?
-        Dir.exist?("#{@folder}/kernel/tests")
+        Dir.exist?("#{@folder}/tests") || Dir.exist?("#{@folder}/kernel/tests")
     end
 
     def unit_integration_tests?
