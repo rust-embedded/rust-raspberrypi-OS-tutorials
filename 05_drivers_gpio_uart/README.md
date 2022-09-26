@@ -131,11 +131,11 @@ diff -uNr 04_safe_globals/Cargo.toml 05_drivers_gpio_uart/Cargo.toml
  [dependencies]
 
 +# Optional dependencies
-+tock-registers = { version = "0.7.x", default-features = false, features = ["register_types"], optional = true }
++tock-registers = { version = "0.8.x", default-features = false, features = ["register_types"], optional = true }
 +
  # Platform specific dependencies
  [target.'cfg(target_arch = "aarch64")'.dependencies]
- cortex-a = { version = "7.x.x" }
+ cortex-a = { version = "8.x.x" }
 
 diff -uNr 04_safe_globals/Makefile 05_drivers_gpio_uart/Makefile
 --- 04_safe_globals/Makefile

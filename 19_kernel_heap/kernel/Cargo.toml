@@ -21,12 +21,12 @@ debug-symbol-types = { path = "../libraries/debug-symbol-types" }
 linked_list_allocator = { version = "0.10.x", default-features = false, features = ["const_mut_refs"] }
 
 # Optional dependencies
-tock-registers = { version = "0.7.x", default-features = false, features = ["register_types"], optional = true }
+tock-registers = { version = "0.8.x", default-features = false, features = ["register_types"], optional = true }
 qemu-exit = { version = "3.x.x", optional = true }
 
 # Platform specific dependencies
 [target.'cfg(target_arch = "aarch64")'.dependencies]
-cortex-a = { version = "7.x.x" }
+cortex-a = { version = "8.x.x" }
 
 ##--------------------------------------------------------------------------------------------------
 ## Testing

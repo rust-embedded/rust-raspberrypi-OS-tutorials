@@ -283,7 +283,7 @@ diff -uNr 18_backtrace/kernel/Cargo.toml 19_kernel_heap/kernel/Cargo.toml
 +linked_list_allocator = { version = "0.10.x", default-features = false, features = ["const_mut_refs"] }
 
  # Optional dependencies
- tock-registers = { version = "0.7.x", default-features = false, features = ["register_types"], optional = true }
+ tock-registers = { version = "0.8.x", default-features = false, features = ["register_types"], optional = true }
 
 diff -uNr 18_backtrace/kernel/src/bsp/device_driver/arm/gicv2.rs 19_kernel_heap/kernel/src/bsp/device_driver/arm/gicv2.rs
 --- 18_backtrace/kernel/src/bsp/device_driver/arm/gicv2.rs

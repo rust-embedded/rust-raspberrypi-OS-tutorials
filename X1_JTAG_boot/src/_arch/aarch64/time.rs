@@ -121,7 +121,7 @@ impl TryFrom<Duration> for GenericTimerCounterValue {
 #[inline(always)]
 fn read_cntpct() -> GenericTimerCounterValue {
     // Prevent that the counter is read ahead of time due to out-of-order execution.
-    unsafe { barrier::isb(barrier::SY) };
+    barrier::isb(barrier::SY);
     let cnt = CNTPCT_EL0.get();
 
     GenericTimerCounterValue(cnt)

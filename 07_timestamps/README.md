@@ -380,7 +380,7 @@ diff -uNr 06_uart_chainloader/src/_arch/aarch64/time.rs 07_timestamps/src/_arch/
 +#[inline(always)]
 +fn read_cntpct() -> GenericTimerCounterValue {
 +    // Prevent that the counter is read ahead of time due to out-of-order execution.
-+    unsafe { barrier::isb(barrier::SY) };
++    barrier::isb(barrier::SY);
 +    let cnt = CNTPCT_EL0.get();
 +
 +    GenericTimerCounterValue(cnt)

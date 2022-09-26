@@ -261,7 +261,7 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel/Cargo.toml 17_kernel_sy
 +debug-symbol-types = { path = "../libraries/debug-symbol-types" }
 
  # Optional dependencies
- tock-registers = { version = "0.7.x", default-features = false, features = ["register_types"], optional = true }
+ tock-registers = { version = "0.8.x", default-features = false, features = ["register_types"], optional = true }
 
 diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel/src/_arch/aarch64/exception.rs 17_kernel_symbols/kernel/src/_arch/aarch64/exception.rs
 --- 16_virtual_mem_part4_higher_half_kernel/kernel/src/_arch/aarch64/exception.rs
