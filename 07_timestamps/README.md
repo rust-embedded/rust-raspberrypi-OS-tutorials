@@ -302,6 +302,15 @@ diff -uNr 06_uart_chainloader/src/_arch/aarch64/time.rs 07_timestamps/src/_arch/
 +// Private Code
 +//--------------------------------------------------------------------------------------------------
 +
++fn arch_timer_counter_frequency() -> NonZeroU32 {
++    // Read volatile is needed here to prevent the compiler from optimizing
++    // ARCH_TIMER_COUNTER_FREQUENCY away.
++    //
++    // This is safe, because all the safety requirements as stated in read_volatile()'s
++    // documentation are fulfilled.
++    unsafe { core::ptr::read_volatile(&ARCH_TIMER_COUNTER_FREQUENCY) }
++}
++
 +impl GenericTimerCounterValue {
 +    pub const MAX: Self = GenericTimerCounterValue(u64::MAX);
 +}
@@ -320,13 +329,7 @@ diff -uNr 06_uart_chainloader/src/_arch/aarch64/time.rs 07_timestamps/src/_arch/
 +            return Duration::ZERO;
 +        }
 +
-+        // Read volatile is needed here to prevent the compiler from optimizing
-+        // ARCH_TIMER_COUNTER_FREQUENCY away.
-+        //
-+        // This is safe, because all the safety requirements as stated in read_volatile()'s
-+        // documentation are fulfilled.
-+        let frequency: NonZeroU64 =
-+            unsafe { core::ptr::read_volatile(&ARCH_TIMER_COUNTER_FREQUENCY) }.into();
++        let frequency: NonZeroU64 = arch_timer_counter_frequency().into();
 +
 +        // Div<NonZeroU64> implementation for u64 cannot panic.
 +        let secs = counter_value.0.div(frequency);
@@ -361,10 +364,7 @@ diff -uNr 06_uart_chainloader/src/_arch/aarch64/time.rs 07_timestamps/src/_arch/
 +            return Err("Conversion error. Duration too big");
 +        }
 +
-+        // This is safe, because all the safety requirements as stated in read_volatile()'s
-+        // documentation are fulfilled.
-+        let frequency: u128 =
-+            unsafe { u32::from(core::ptr::read_volatile(&ARCH_TIMER_COUNTER_FREQUENCY)) as u128 };
++        let frequency: u128 = u32::from(arch_timer_counter_frequency()) as u128;
 +        let duration: u128 = duration.as_nanos();
 +
 +        // This is safe, because frequency can never be greater than u32::MAX, and

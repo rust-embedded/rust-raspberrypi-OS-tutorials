@@ -1249,7 +1249,7 @@ diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/arm/gicv2/gicd.rs 1
 diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/arm/gicv2.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/arm/gicv2.rs
 --- 12_integrated_testing/kernel/src/bsp/device_driver/arm/gicv2.rs
 +++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/arm/gicv2.rs
-@@ -0,0 +1,221 @@
+@@ -0,0 +1,220 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
@@ -1337,7 +1337,7 @@ diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/arm/gicv2.rs 13_exc
 +// Private Definitions
 +//--------------------------------------------------------------------------------------------------
 +
-+type HandlerTable = [Option<exception::asynchronous::IRQDescriptor>; GICv2::NUM_IRQS];
++type HandlerTable = [Option<exception::asynchronous::IRQDescriptor>; IRQNumber::NUM_TOTAL];
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Definitions
@@ -1364,7 +1364,6 @@ diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/arm/gicv2.rs 13_exc
 +
 +impl GICv2 {
 +    const MAX_IRQ_NUMBER: usize = 300; // Normally 1019, but keep it lower to save some space.
-+    const NUM_IRQS: usize = Self::MAX_IRQ_NUMBER + 1;
 +
 +    pub const COMPATIBLE: &'static str = "GICv2 (ARM Generic Interrupt Controller v2)";
 +
@@ -1377,7 +1376,7 @@ diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/arm/gicv2.rs 13_exc
 +        Self {
 +            gicd: gicd::GICD::new(gicd_mmio_start_addr),
 +            gicc: gicc::GICC::new(gicc_mmio_start_addr),
-+            handler_table: InitStateLock::new([None; Self::NUM_IRQS]),
++            handler_table: InitStateLock::new([None; IRQNumber::NUM_TOTAL]),
 +        }
 +    }
 +}
@@ -1520,14 +1519,18 @@ diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
 diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
 --- 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
 +++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
-@@ -0,0 +1,167 @@
+@@ -0,0 +1,170 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Peripheral Interrupt Controller Driver.
++//!
++//! # Resources
++//!
++//! - <https://github.com/raspberrypi/documentation/files/1888662/BCM2837-ARM-Peripherals.-.Revised.-.V2-1.pdf>
 +
-+use super::{InterruptController, PendingIRQs, PeripheralIRQ};
++use super::{PendingIRQs, PeripheralIRQ};
 +use crate::{
 +    bsp::device_driver::common::MMIODerefWrapper,
 +    exception, synchronization,
@@ -1569,8 +1572,7 @@ diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_interru
 +/// Abstraction for the ReadOnly parts of the associated MMIO registers.
 +type ReadOnlyRegisters = MMIODerefWrapper<RORegisterBlock>;
 +
-+type HandlerTable =
-+    [Option<exception::asynchronous::IRQDescriptor>; InterruptController::NUM_PERIPHERAL_IRQS];
++type HandlerTable = [Option<exception::asynchronous::IRQDescriptor>; PeripheralIRQ::NUM_TOTAL];
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Definitions
@@ -1602,7 +1604,7 @@ diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_interru
 +        Self {
 +            wo_registers: IRQSafeNullLock::new(WriteOnlyRegisters::new(mmio_start_addr)),
 +            ro_registers: ReadOnlyRegisters::new(mmio_start_addr),
-+            handler_table: InitStateLock::new([None; InterruptController::NUM_PERIPHERAL_IRQS]),
++            handler_table: InitStateLock::new([None; PeripheralIRQ::NUM_TOTAL]),
 +        }
 +    }
 +
@@ -1692,7 +1694,7 @@ diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_interru
 diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs
 --- 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs
 +++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs
-@@ -0,0 +1,134 @@
+@@ -0,0 +1,131 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
@@ -1748,16 +1750,13 @@ diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_interru
 +    type Item = usize;
 +
 +    fn next(&mut self) -> Option<Self::Item> {
-+        use core::intrinsics::cttz;
-+
-+        let next = cttz(self.bitmask);
-+        if next == 64 {
++        if self.bitmask == 0 {
 +            return None;
 +        }
 +
-+        self.bitmask &= !(1 << next);
-+
-+        Some(next as usize)
++        let next = self.bitmask.trailing_zeros() as usize;
++        self.bitmask &= self.bitmask.wrapping_sub(1);
++        Some(next)
 +    }
 +}
 +
@@ -1766,9 +1765,9 @@ diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_interru
 +//--------------------------------------------------------------------------------------------------
 +
 +impl InterruptController {
-+    const MAX_LOCAL_IRQ_NUMBER: usize = 11;
++    // Restrict to 3 for now. This makes future code for local_ic.rs more straight forward.
++    const MAX_LOCAL_IRQ_NUMBER: usize = 3;
 +    const MAX_PERIPHERAL_IRQ_NUMBER: usize = 63;
-+    const NUM_PERIPHERAL_IRQS: usize = Self::MAX_PERIPHERAL_IRQ_NUMBER + 1;
 +
 +    pub const COMPATIBLE: &'static str = "BCM Interrupt Controller";
 +
@@ -2230,7 +2229,7 @@ diff -uNr 12_integrated_testing/kernel/src/driver.rs 13_exceptions_part2_periphe
 diff -uNr 12_integrated_testing/kernel/src/exception/asynchronous.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/exception/asynchronous.rs
 --- 12_integrated_testing/kernel/src/exception/asynchronous.rs
 +++ 13_exceptions_part2_peripheral_IRQs/kernel/src/exception/asynchronous.rs
-@@ -8,7 +8,149 @@
+@@ -8,7 +8,152 @@
  #[path = "../_arch/aarch64/exception/asynchronous.rs"]
  mod arch_asynchronous;
 
@@ -2343,6 +2342,9 @@ diff -uNr 12_integrated_testing/kernel/src/exception/asynchronous.rs 13_exceptio
 +}
 +
 +impl<const MAX_INCLUSIVE: usize> IRQNumber<{ MAX_INCLUSIVE }> {
++    /// The total number of IRQs this type supports.
++    pub const NUM_TOTAL: usize = MAX_INCLUSIVE + 1;
++
 +    /// Creates a new instance if number <= MAX_INCLUSIVE.
 +    pub const fn new(number: usize) -> Self {
 +        assert!(number <= MAX_INCLUSIVE);

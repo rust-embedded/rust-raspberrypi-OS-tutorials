@@ -57,16 +57,13 @@ impl Iterator for PendingIRQs {
     type Item = usize;
 
     fn next(&mut self) -> Option<Self::Item> {
-        use core::intrinsics::cttz;
-
-        let next = cttz(self.bitmask);
-        if next == 64 {
+        if self.bitmask == 0 {
             return None;
         }
 
-        self.bitmask &= !(1 << next);
-
-        Some(next as usize)
+        let next = self.bitmask.trailing_zeros() as usize;
+        self.bitmask &= self.bitmask.wrapping_sub(1);
+        Some(next)
     }
 }
 
@@ -75,9 +72,9 @@ impl Iterator for PendingIRQs {
 //--------------------------------------------------------------------------------------------------
 
 impl InterruptController {
-    const MAX_LOCAL_IRQ_NUMBER: usize = 11;
+    // Restrict to 3 for now. This makes future code for local_ic.rs more straight forward.
+    const MAX_LOCAL_IRQ_NUMBER: usize = 3;
     const MAX_PERIPHERAL_IRQ_NUMBER: usize = 63;
-    const NUM_PERIPHERAL_IRQS: usize = Self::MAX_PERIPHERAL_IRQ_NUMBER + 1;
 
     pub const COMPATIBLE: &'static str = "BCM Interrupt Controller";
 

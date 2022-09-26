@@ -298,57 +298,44 @@ diff -uNr 18_backtrace/kernel/src/bsp/device_driver/arm/gicv2.rs 19_kernel_heap/
  // Private Definitions
  //--------------------------------------------------------------------------------------------------
 
--type HandlerTable = [Option<exception::asynchronous::IRQDescriptor>; GICv2::NUM_IRQS];
+-type HandlerTable = [Option<exception::asynchronous::IRQDescriptor>; IRQNumber::NUM_TOTAL];
 +type HandlerTable = Vec<Option<exception::asynchronous::IRQDescriptor>>;
 
  //--------------------------------------------------------------------------------------------------
  // Public Definitions
-@@ -119,8 +120,7 @@
+@@ -119,7 +120,7 @@
  //--------------------------------------------------------------------------------------------------
 
  impl GICv2 {
 -    const MAX_IRQ_NUMBER: usize = 300; // Normally 1019, but keep it lower to save some space.
--    const NUM_IRQS: usize = Self::MAX_IRQ_NUMBER + 1;
 +    const MAX_IRQ_NUMBER: usize = 1019;
 
      pub const COMPATIBLE: &'static str = "GICv2 (ARM Generic Interrupt Controller v2)";
 
-@@ -137,7 +137,7 @@
+@@ -136,7 +137,7 @@
          Self {
              gicd: gicd::GICD::new(gicd_mmio_start_addr),
              gicc: gicc::GICC::new(gicc_mmio_start_addr),
--            handler_table: InitStateLock::new([None; Self::NUM_IRQS]),
+-            handler_table: InitStateLock::new([None; IRQNumber::NUM_TOTAL]),
 +            handler_table: InitStateLock::new(Vec::new()),
              post_init_callback,
          }
      }
-@@ -178,6 +178,12 @@
-         self.handler_table.write(|table| {
-             let irq_number = irq_number.get();
+@@ -153,6 +154,9 @@
+     }
 
-+            if table.len() < irq_number {
-+                // IRQDescriptor has an integrated range sanity check on construction, so this
-+                // vector can't grow arbitrarily big.
-+                table.resize(irq_number + 1, None);
-+            }
+     unsafe fn init(&self) -> Result<(), &'static str> {
++        self.handler_table
++            .write(|table| table.resize(IRQNumber::NUM_TOTAL, None));
 +
-             if table[irq_number].is_some() {
-                 return Err("IRQ handler already registered");
-             }
+         if bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id() {
+             self.gicd.boot_core_init();
+         }
 
 diff -uNr 18_backtrace/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs 19_kernel_heap/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
 --- 18_backtrace/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
 +++ 19_kernel_heap/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
-@@ -4,7 +4,7 @@
-
- //! Peripheral Interrupt Controller Driver.
-
--use super::{InterruptController, PendingIRQs, PeripheralIRQ};
-+use super::{PendingIRQs, PeripheralIRQ};
- use crate::{
-     bsp::device_driver::common::MMIODerefWrapper,
-     exception,
-@@ -12,6 +12,7 @@
+@@ -16,6 +16,7 @@
      synchronization,
      synchronization::{IRQSafeNullLock, InitStateLock},
  };
@@ -356,50 +343,46 @@ diff -uNr 18_backtrace/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_contro
  use tock_registers::{
      interfaces::{Readable, Writeable},
      register_structs,
-@@ -48,8 +49,7 @@
+@@ -52,7 +53,7 @@
  /// Abstraction for the ReadOnly parts of the associated MMIO registers.
  type ReadOnlyRegisters = MMIODerefWrapper<RORegisterBlock>;
 
--type HandlerTable =
--    [Option<exception::asynchronous::IRQDescriptor>; InterruptController::NUM_PERIPHERAL_IRQS];
+-type HandlerTable = [Option<exception::asynchronous::IRQDescriptor>; PeripheralIRQ::NUM_TOTAL];
 +type HandlerTable = Vec<Option<exception::asynchronous::IRQDescriptor>>;
 
  //--------------------------------------------------------------------------------------------------
  // Public Definitions
-@@ -81,7 +81,7 @@
+@@ -84,10 +85,16 @@
          Self {
              wo_registers: IRQSafeNullLock::new(WriteOnlyRegisters::new(mmio_start_addr)),
              ro_registers: ReadOnlyRegisters::new(mmio_start_addr),
--            handler_table: InitStateLock::new([None; InterruptController::NUM_PERIPHERAL_IRQS]),
+-            handler_table: InitStateLock::new([None; PeripheralIRQ::NUM_TOTAL]),
 +            handler_table: InitStateLock::new(Vec::new()),
          }
      }
 
-@@ -110,6 +110,12 @@
-         self.handler_table.write(|table| {
-             let irq_number = irq.get();
-
-+            if table.len() < irq_number {
-+                // IRQDescriptor has an integrated range sanity check on construction, so this
-+                // vector can't grow arbitrarily big.
-+                table.resize(irq_number + 1, None);
-+            }
++    /// Called by the kernel to bring up the device.
++    pub fn init(&self) {
++        self.handler_table
++            .write(|table| table.resize(PeripheralIRQ::NUM_TOTAL, None));
++    }
 +
-             if table[irq_number].is_some() {
-                 return Err("IRQ handler already registered");
-             }
+     /// Query the list of pending IRQs.
+     fn pending_irqs(&self) -> PendingIRQs {
+         let pending_mask: u64 = (u64::from(self.ro_registers.PENDING_2.get()) << 32)
 
 diff -uNr 18_backtrace/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs 19_kernel_heap/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs
 --- 18_backtrace/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs
 +++ 19_kernel_heap/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs
-@@ -77,7 +77,6 @@
- impl InterruptController {
-     const MAX_LOCAL_IRQ_NUMBER: usize = 11;
-     const MAX_PERIPHERAL_IRQ_NUMBER: usize = 63;
--    const NUM_PERIPHERAL_IRQS: usize = Self::MAX_PERIPHERAL_IRQ_NUMBER + 1;
+@@ -104,6 +104,8 @@
+     }
 
-     pub const COMPATIBLE: &'static str = "BCM Interrupt Controller";
+     unsafe fn init(&self) -> Result<(), &'static str> {
++        self.periph.init();
++
+         (self.post_init_callback)();
 
+         Ok(())
 
 diff -uNr 18_backtrace/kernel/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 19_kernel_heap/kernel/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 --- 18_backtrace/kernel/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs

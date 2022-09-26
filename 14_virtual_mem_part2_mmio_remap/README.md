@@ -948,7 +948,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/arm/g
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -121,11 +129,16 @@
+@@ -120,11 +128,16 @@
      /// # Safety
      ///
      /// - The user must ensure to provide a correct MMIO start address.
@@ -961,12 +961,12 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/arm/g
          Self {
              gicd: gicd::GICD::new(gicd_mmio_start_addr),
              gicc: gicc::GICC::new(gicc_mmio_start_addr),
-             handler_table: InitStateLock::new([None; Self::NUM_IRQS]),
+             handler_table: InitStateLock::new([None; IRQNumber::NUM_TOTAL]),
 +            post_init_callback,
          }
      }
  }
-@@ -148,6 +161,8 @@
+@@ -147,6 +160,8 @@
          self.gicc.priority_accept_all();
          self.gicc.enable();
 
@@ -1035,8 +1035,8 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/b
 diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
 --- 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
 +++ 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
-@@ -7,7 +7,9 @@
- use super::{InterruptController, PendingIRQs, PeripheralIRQ};
+@@ -11,7 +11,9 @@
+ use super::{PendingIRQs, PeripheralIRQ};
  use crate::{
      bsp::device_driver::common::MMIODerefWrapper,
 -    exception, synchronization,
@@ -1046,7 +1046,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/b
      synchronization::{IRQSafeNullLock, InitStateLock},
  };
  use tock_registers::{
-@@ -75,7 +77,7 @@
+@@ -78,7 +80,7 @@
      /// # Safety
      ///
      /// - The user must ensure to provide a correct MMIO start address.
@@ -1079,7 +1079,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/b
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -82,9 +86,13 @@
+@@ -79,9 +83,13 @@
      /// # Safety
      ///
      /// - The user must ensure to provide a correct MMIO start address.
@@ -1094,7 +1094,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/b
          }
      }
  }
-@@ -97,6 +105,12 @@
+@@ -94,6 +102,12 @@
      fn compatible(&self) -> &'static str {
          Self::COMPATIBLE
      }
@@ -2302,7 +2302,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/exception/asynchronous.
 
  impl<'irq_context> IRQContext<'irq_context> {
      /// Creates an IRQContext token.
-@@ -148,9 +158,17 @@
+@@ -151,9 +161,17 @@
      ret
  }
 

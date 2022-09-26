@@ -116,6 +116,9 @@ impl<'irq_context> IRQContext<'irq_context> {
 }
 
 impl<const MAX_INCLUSIVE: usize> IRQNumber<{ MAX_INCLUSIVE }> {
+    /// The total number of IRQs this type supports.
+    pub const NUM_TOTAL: usize = MAX_INCLUSIVE + 1;
+
     /// Creates a new instance if number <= MAX_INCLUSIVE.
     pub const fn new(number: usize) -> Self {
         assert!(number <= MAX_INCLUSIVE);

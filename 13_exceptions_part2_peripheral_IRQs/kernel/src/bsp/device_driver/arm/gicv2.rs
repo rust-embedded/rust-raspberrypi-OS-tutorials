@@ -85,7 +85,7 @@ use crate::{bsp, cpu, driver, exception, synchronization, synchronization::InitS
 // Private Definitions
 //--------------------------------------------------------------------------------------------------
 
-type HandlerTable = [Option<exception::asynchronous::IRQDescriptor>; GICv2::NUM_IRQS];
+type HandlerTable = [Option<exception::asynchronous::IRQDescriptor>; IRQNumber::NUM_TOTAL];
 
 //--------------------------------------------------------------------------------------------------
 // Public Definitions
@@ -112,7 +112,6 @@ pub struct GICv2 {
 
 impl GICv2 {
     const MAX_IRQ_NUMBER: usize = 300; // Normally 1019, but keep it lower to save some space.
-    const NUM_IRQS: usize = Self::MAX_IRQ_NUMBER + 1;
 
     pub const COMPATIBLE: &'static str = "GICv2 (ARM Generic Interrupt Controller v2)";
 
@@ -125,7 +124,7 @@ impl GICv2 {
         Self {
             gicd: gicd::GICD::new(gicd_mmio_start_addr),
             gicc: gicc::GICC::new(gicc_mmio_start_addr),
-            handler_table: InitStateLock::new([None; Self::NUM_IRQS]),
+            handler_table: InitStateLock::new([None; IRQNumber::NUM_TOTAL]),
         }
     }
 }

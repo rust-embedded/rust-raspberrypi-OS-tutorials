@@ -3,8 +3,12 @@
 // Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
 
 //! Peripheral Interrupt Controller Driver.
+//!
+//! # Resources
+//!
+//! - <https://github.com/raspberrypi/documentation/files/1888662/BCM2837-ARM-Peripherals.-.Revised.-.V2-1.pdf>
 
-use super::{InterruptController, PendingIRQs, PeripheralIRQ};
+use super::{PendingIRQs, PeripheralIRQ};
 use crate::{
     bsp::device_driver::common::MMIODerefWrapper,
     exception, synchronization,
@@ -46,8 +50,7 @@ type WriteOnlyRegisters = MMIODerefWrapper<WORegisterBlock>;
 /// Abstraction for the ReadOnly parts of the associated MMIO registers.
 type ReadOnlyRegisters = MMIODerefWrapper<RORegisterBlock>;
 
-type HandlerTable =
-    [Option<exception::asynchronous::IRQDescriptor>; InterruptController::NUM_PERIPHERAL_IRQS];
+type HandlerTable = [Option<exception::asynchronous::IRQDescriptor>; PeripheralIRQ::NUM_TOTAL];
 
 //--------------------------------------------------------------------------------------------------
 // Public Definitions
@@ -79,7 +82,7 @@ impl PeripheralIC {
         Self {
             wo_registers: IRQSafeNullLock::new(WriteOnlyRegisters::new(mmio_start_addr)),
             ro_registers: ReadOnlyRegisters::new(mmio_start_addr),
-            handler_table: InitStateLock::new([None; InterruptController::NUM_PERIPHERAL_IRQS]),
+            handler_table: InitStateLock::new([None; PeripheralIRQ::NUM_TOTAL]),
         }
     }
 

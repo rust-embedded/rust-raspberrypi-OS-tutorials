@@ -3,6 +3,10 @@
 // Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
 
 //! Peripheral Interrupt Controller Driver.
+//!
+//! # Resources
+//!
+//! - <https://github.com/raspberrypi/documentation/files/1888662/BCM2837-ARM-Peripherals.-.Revised.-.V2-1.pdf>
 
 use super::{PendingIRQs, PeripheralIRQ};
 use crate::{
@@ -85,6 +89,12 @@ impl PeripheralIC {
         }
     }
 
+    /// Called by the kernel to bring up the device.
+    pub fn init(&self) {
+        self.handler_table
+            .write(|table| table.resize(PeripheralIRQ::NUM_TOTAL, None));
+    }
+
     /// Query the list of pending IRQs.
     fn pending_irqs(&self) -> PendingIRQs {
         let pending_mask: u64 = (u64::from(self.ro_registers.PENDING_2.get()) << 32)
@@ -109,12 +119,6 @@ impl exception::asynchronous::interface::IRQManager for PeripheralIC {
     ) -> Result<(), &'static str> {
         self.handler_table.write(|table| {
             let irq_number = irq.get();
-
-            if table.len() < irq_number {
-                // IRQDescriptor has an integrated range sanity check on construction, so this
-                // vector can't grow arbitrarily big.
-                table.resize(irq_number + 1, None);
-            }
 
             if table[irq_number].is_some() {
                 return Err("IRQ handler already registered");

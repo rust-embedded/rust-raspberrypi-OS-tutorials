@@ -154,6 +154,9 @@ impl driver::interface::DeviceDriver for GICv2 {
     }
 
     unsafe fn init(&self) -> Result<(), &'static str> {
+        self.handler_table
+            .write(|table| table.resize(IRQNumber::NUM_TOTAL, None));
+
         if bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id() {
             self.gicd.boot_core_init();
         }
@@ -177,12 +180,6 @@ impl exception::asynchronous::interface::IRQManager for GICv2 {
     ) -> Result<(), &'static str> {
         self.handler_table.write(|table| {
             let irq_number = irq_number.get();
-
-            if table.len() < irq_number {
-                // IRQDescriptor has an integrated range sanity check on construction, so this
-                // vector can't grow arbitrarily big.
-                table.resize(irq_number + 1, None);
-            }
 
             if table[irq_number].is_some() {
                 return Err("IRQ handler already registered");

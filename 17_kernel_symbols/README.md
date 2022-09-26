@@ -168,13 +168,18 @@ fn kernel_symbol_section_virt_start_addr() -> Address<Virtual> {
     Address::new(unsafe { __kernel_symbols_start.get() as usize })
 }
 
+fn num_kernel_symbols() -> usize {
+    unsafe {
+        // Read volatile is needed here to prevent the compiler from optimizing NUM_KERNEL_SYMBOLS
+        // away.
+        core::ptr::read_volatile(&NUM_KERNEL_SYMBOLS as *const u64) as usize
+    }
+}
+
 fn kernel_symbols_slice() -> &'static [Symbol] {
     let ptr = kernel_symbol_section_virt_start_addr().as_usize() as *const Symbol;
 
-    unsafe {
-        let num = core::ptr::read_volatile(&NUM_KERNEL_SYMBOLS as *const u64) as usize;
-        slice::from_raw_parts(ptr, num)
-    }
+    unsafe { slice::from_raw_parts(ptr, num_kernel_symbols()) }
 }
 ```
 
@@ -338,7 +343,7 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel/src/lib.rs 17_kernel_sy
 diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel/src/symbols.rs 17_kernel_symbols/kernel/src/symbols.rs
 --- 16_virtual_mem_part4_higher_half_kernel/kernel/src/symbols.rs
 +++ 17_kernel_symbols/kernel/src/symbols.rs
-@@ -0,0 +1,83 @@
+@@ -0,0 +1,88 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
@@ -375,13 +380,18 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel/src/symbols.rs 17_kerne
 +    Address::new(unsafe { __kernel_symbols_start.get() as usize })
 +}
 +
++fn num_kernel_symbols() -> usize {
++    unsafe {
++        // Read volatile is needed here to prevent the compiler from optimizing NUM_KERNEL_SYMBOLS
++        // away.
++        core::ptr::read_volatile(&NUM_KERNEL_SYMBOLS as *const u64) as usize
++    }
++}
++
 +fn kernel_symbols_slice() -> &'static [Symbol] {
 +    let ptr = kernel_symbol_section_virt_start_addr().as_usize() as *const Symbol;
 +
-+    unsafe {
-+        let num = core::ptr::read_volatile(&NUM_KERNEL_SYMBOLS as *const u64) as usize;
-+        slice::from_raw_parts(ptr, num)
-+    }
++    unsafe { slice::from_raw_parts(ptr, num_kernel_symbols()) }
 +}
 +
 +//--------------------------------------------------------------------------------------------------
