@@ -10,7 +10,7 @@ mod arch_asynchronous;
 mod null_irq_manager;
 
 use crate::{bsp, synchronization};
-use core::{fmt, marker::PhantomData};
+use core::marker::PhantomData;
 
 //--------------------------------------------------------------------------------------------------
 // Architectural Public Reexports
@@ -24,14 +24,23 @@ pub use arch_asynchronous::{
 // Public Definitions
 //--------------------------------------------------------------------------------------------------
 
+/// Interrupt number as defined by the BSP.
+pub type IRQNumber = bsp::exception::asynchronous::IRQNumber;
+
 /// Interrupt descriptor.
 #[derive(Copy, Clone)]
-pub struct IRQDescriptor {
+pub struct IRQHandlerDescriptor<T>
+where
+    T: Copy,
+{
+    /// The IRQ number.
+    number: T,
+
     /// Descriptive name.
-    pub name: &'static str,
+    name: &'static str,
 
     /// Reference to handler trait object.
-    pub handler: &'static (dyn interface::IRQHandler + Sync),
+    handler: &'static (dyn interface::IRQHandler + Sync),
 }
 
 /// IRQContext token.
@@ -61,17 +70,16 @@ pub mod interface {
     /// platform's interrupt controller.
     pub trait IRQManager {
         /// The IRQ number type depends on the implementation.
-        type IRQNumberType;
+        type IRQNumberType: Copy;
 
         /// Register a handler.
         fn register_handler(
             &self,
-            irq_number: Self::IRQNumberType,
-            descriptor: super::IRQDescriptor,
+            irq_handler_descriptor: super::IRQHandlerDescriptor<Self::IRQNumberType>,
         ) -> Result<(), &'static str>;
 
         /// Enable an interrupt in the controller.
-        fn enable(&self, irq_number: Self::IRQNumberType);
+        fn enable(&self, irq_number: &Self::IRQNumberType);
 
         /// Handle pending interrupts.
         ///
@@ -91,22 +99,51 @@ pub mod interface {
     }
 }
 
-/// A wrapper type for IRQ numbers with integrated range sanity check.
-#[derive(Copy, Clone)]
-pub struct IRQNumber<const MAX_INCLUSIVE: usize>(usize);
-
 //--------------------------------------------------------------------------------------------------
 // Global instances
 //--------------------------------------------------------------------------------------------------
 
 static CUR_IRQ_MANAGER: InitStateLock<
-    &'static (dyn interface::IRQManager<IRQNumberType = bsp::driver::IRQNumber> + Sync),
+    &'static (dyn interface::IRQManager<IRQNumberType = IRQNumber> + Sync),
 > = InitStateLock::new(&null_irq_manager::NULL_IRQ_MANAGER);
 
 //--------------------------------------------------------------------------------------------------
 // Public Code
 //--------------------------------------------------------------------------------------------------
 use synchronization::{interface::ReadWriteEx, InitStateLock};
+
+impl<T> IRQHandlerDescriptor<T>
+where
+    T: Copy,
+{
+    /// Create an instance.
+    pub const fn new(
+        number: T,
+        name: &'static str,
+        handler: &'static (dyn interface::IRQHandler + Sync),
+    ) -> Self {
+        Self {
+            number,
+            name,
+            handler,
+        }
+    }
+
+    /// Return the number.
+    pub const fn number(&self) -> T {
+        self.number
+    }
+
+    /// Return the name.
+    pub const fn name(&self) -> &'static str {
+        self.name
+    }
+
+    /// Return the handler.
+    pub const fn handler(&self) -> &'static (dyn interface::IRQHandler + Sync) {
+        self.handler
+    }
+}
 
 impl<'irq_context> IRQContext<'irq_context> {
     /// Creates an IRQContext token.
@@ -125,29 +162,6 @@ impl<'irq_context> IRQContext<'irq_context> {
     }
 }
 
-impl<const MAX_INCLUSIVE: usize> IRQNumber<{ MAX_INCLUSIVE }> {
-    /// The total number of IRQs this type supports.
-    pub const NUM_TOTAL: usize = MAX_INCLUSIVE + 1;
-
-    /// Creates a new instance if number <= MAX_INCLUSIVE.
-    pub const fn new(number: usize) -> Self {
-        assert!(number <= MAX_INCLUSIVE);
-
-        Self(number)
-    }
-
-    /// Return the wrapped number.
-    pub const fn get(self) -> usize {
-        self.0
-    }
-}
-
-impl<const MAX_INCLUSIVE: usize> fmt::Display for IRQNumber<{ MAX_INCLUSIVE }> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
 /// Executes the provided closure while IRQs are masked on the executing core.
 ///
 /// While the function temporarily changes the HW state of the executing core, it restores it to the
@@ -163,8 +177,7 @@ pub fn exec_with_irq_masked<T>(f: impl FnOnce() -> T) -> T {
 
 /// Register a new IRQ manager.
 pub fn register_irq_manager(
-    new_manager: &'static (dyn interface::IRQManager<IRQNumberType = bsp::driver::IRQNumber>
-                  + Sync),
+    new_manager: &'static (dyn interface::IRQManager<IRQNumberType = IRQNumber> + Sync),
 ) {
     CUR_IRQ_MANAGER.write(|manager| *manager = new_manager);
 }
@@ -172,6 +185,6 @@ pub fn register_irq_manager(
 /// Return a reference to the currently registered IRQ manager.
 ///
 /// This is the IRQ manager used by the architectural interrupt handling code.
-pub fn irq_manager() -> &'static dyn interface::IRQManager<IRQNumberType = bsp::driver::IRQNumber> {
+pub fn irq_manager() -> &'static dyn interface::IRQManager<IRQNumberType = IRQNumber> {
     CUR_IRQ_MANAGER.read(|manager| *manager)
 }

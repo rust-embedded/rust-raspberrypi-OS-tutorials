@@ -10,9 +10,9 @@
 //! - <https://developer.arm.com/documentation/ddi0183/latest>
 
 use crate::{
-    bsp,
     bsp::device_driver::common::MMIODerefWrapper,
-    console, cpu, driver, exception,
+    console, cpu, driver,
+    exception::{self, asynchronous::IRQNumber},
     memory::{Address, Virtual},
     synchronization,
     synchronization::IRQSafeNullLock,
@@ -233,8 +233,6 @@ struct PL011UartInner {
 /// Representation of the UART.
 pub struct PL011Uart {
     inner: IRQSafeNullLock<PL011UartInner>,
-    irq_number: bsp::device_driver::IRQNumber,
-    post_init_callback: fn(),
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -398,16 +396,9 @@ impl PL011Uart {
     /// # Safety
     ///
     /// - The user must ensure to provide a correct MMIO start address.
-    /// - The user must ensure to provide correct IRQ numbers.
-    pub const unsafe fn new(
-        mmio_start_addr: Address<Virtual>,
-        irq_number: bsp::device_driver::IRQNumber,
-        post_init_callback: fn(),
-    ) -> Self {
+    pub const unsafe fn new(mmio_start_addr: Address<Virtual>) -> Self {
         Self {
             inner: IRQSafeNullLock::new(PL011UartInner::new(mmio_start_addr)),
-            irq_number,
-            post_init_callback,
         }
     }
 }
@@ -418,27 +409,28 @@ impl PL011Uart {
 use synchronization::interface::Mutex;
 
 impl driver::interface::DeviceDriver for PL011Uart {
+    type IRQNumberType = IRQNumber;
+
     fn compatible(&self) -> &'static str {
         Self::COMPATIBLE
     }
 
     unsafe fn init(&self) -> Result<(), &'static str> {
         self.inner.lock(|inner| inner.init());
-        (self.post_init_callback)();
 
         Ok(())
     }
 
-    fn register_and_enable_irq_handler(&'static self) -> Result<(), &'static str> {
-        use exception::asynchronous::{irq_manager, IRQDescriptor};
+    fn register_and_enable_irq_handler(
+        &'static self,
+        irq_number: &Self::IRQNumberType,
+    ) -> Result<(), &'static str> {
+        use exception::asynchronous::{irq_manager, IRQHandlerDescriptor};
 
-        let descriptor = IRQDescriptor {
-            name: Self::COMPATIBLE,
-            handler: self,
-        };
+        let descriptor = IRQHandlerDescriptor::new(*irq_number, Self::COMPATIBLE, self);
 
-        irq_manager().register_handler(self.irq_number, descriptor)?;
-        irq_manager().enable(self.irq_number);
+        irq_manager().register_handler(descriptor)?;
+        irq_manager().enable(irq_number);
 
         Ok(())
     }

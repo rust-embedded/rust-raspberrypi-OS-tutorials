@@ -1024,8 +1024,8 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/exception.rs 11_exceptions_p
 diff -uNr 10_virtual_mem_part1_identity_mapping/src/main.rs 11_exceptions_part1_groundwork/src/main.rs
 --- 10_virtual_mem_part1_identity_mapping/src/main.rs
 +++ 11_exceptions_part1_groundwork/src/main.rs
-@@ -145,6 +145,8 @@
-     use driver::interface::DriverManager;
+@@ -144,6 +144,8 @@
+ unsafe fn kernel_init() -> ! {
      use memory::mmu::interface::MMU;
 
 +    exception::handling_init();
@@ -1040,9 +1040,9 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/main.rs 11_exceptions_part1_
 -    use console::{console, interface::Write};
 +    use console::console;
      use core::time::Duration;
-     use driver::interface::DriverManager;
 
-@@ -200,13 +202,28 @@
+     info!(
+@@ -193,13 +195,28 @@
      info!("Timer test, spinning for 1 second");
      time::time_manager().spin_for(Duration::from_secs(1));
 

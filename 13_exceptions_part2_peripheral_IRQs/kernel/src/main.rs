@@ -13,7 +13,7 @@
 #![no_main]
 #![no_std]
 
-use libkernel::{bsp, cpu, driver, exception, info, memory, state, time, warn};
+use libkernel::{bsp, cpu, driver, exception, info, memory, state, time};
 
 /// Early init code.
 ///
@@ -26,7 +26,6 @@ use libkernel::{bsp, cpu, driver, exception, info, memory, state, time, warn};
 ///       IRQSafeNullLocks instead of spinlocks), will fail to work (properly) on the RPi SoCs.
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
-    use driver::interface::DriverManager;
     use memory::mmu::interface::MMU;
 
     exception::handling_init();
@@ -35,20 +34,13 @@ unsafe fn kernel_init() -> ! {
         panic!("MMU: {}", string);
     }
 
-    for i in bsp::driver::driver_manager().all_device_drivers().iter() {
-        if let Err(x) = i.init() {
-            panic!("Error loading driver: {}: {}", i.compatible(), x);
-        }
+    // Initialize the BSP driver subsystem.
+    if let Err(x) = bsp::driver::init() {
+        panic!("Error initializing BSP driver subsystem: {}", x);
     }
-    bsp::driver::driver_manager().post_device_driver_init();
-    // println! is usable from here on.
 
-    // Let device drivers register and enable their handlers with the interrupt controller.
-    for i in bsp::driver::driver_manager().all_device_drivers() {
-        if let Err(msg) = i.register_and_enable_irq_handler() {
-            warn!("Error registering IRQ handler: {}", msg);
-        }
-    }
+    // Initialize all device drivers.
+    driver::driver_manager().init_drivers_and_irqs();
 
     // Unmask interrupts on the boot CPU core.
     exception::asynchronous::local_irq_unmask();
@@ -62,9 +54,6 @@ unsafe fn kernel_init() -> ! {
 
 /// The main function running after the early init.
 fn kernel_main() -> ! {
-    use driver::interface::DriverManager;
-    use exception::asynchronous::interface::IRQManager;
-
     info!("{}", libkernel::version());
     info!("Booting on: {}", bsp::board_name());
 
@@ -83,16 +72,10 @@ fn kernel_main() -> ! {
     );
 
     info!("Drivers loaded:");
-    for (i, driver) in bsp::driver::driver_manager()
-        .all_device_drivers()
-        .iter()
-        .enumerate()
-    {
-        info!("      {}. {}", i + 1, driver.compatible());
-    }
+    driver::driver_manager().enumerate();
 
     info!("Registered IRQ handlers:");
-    bsp::exception::asynchronous::irq_manager().print_handler();
+    exception::asynchronous::irq_manager().print_handler();
 
     info!("Echoing input now");
     cpu::wait_forever();

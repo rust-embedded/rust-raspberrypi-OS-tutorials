@@ -5,8 +5,8 @@
 //! GPIO Driver.
 
 use crate::{
-    bsp::device_driver::common::MMIODerefWrapper, driver, synchronization,
-    synchronization::IRQSafeNullLock,
+    bsp::device_driver::common::MMIODerefWrapper, driver, exception::asynchronous::IRQNumber,
+    synchronization, synchronization::IRQSafeNullLock,
 };
 use tock_registers::{
     interfaces::{ReadWriteable, Writeable},
@@ -216,6 +216,8 @@ impl GPIO {
 use synchronization::interface::Mutex;
 
 impl driver::interface::DeviceDriver for GPIO {
+    type IRQNumberType = IRQNumber;
+
     fn compatible(&self) -> &'static str {
         Self::COMPATIBLE
     }

@@ -291,7 +291,7 @@ test_boot: $(KERNEL_BIN)
 ## Helpers for unit and integration test targets
 ##------------------------------------------------------------------------------
 define KERNEL_TEST_RUNNER
-    #!/usr/bin/env bash
+#!/usr/bin/env bash
 
     # The cargo test runner seems to change into the crate under test's directory. Therefore, ensure
     # this script executes from the root.

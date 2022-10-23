@@ -2,35 +2,81 @@
 
 ## tl;dr
 
-- Now that we enabled safe globals in the previous tutorial, the infrastructure is laid for adding
-  the first real device drivers.
-- We throw out the magic QEMU console and use a real `UART` now. Like serious embedded hackers do!
+- Drivers for the real `UART` and the `GPIO` controller are added.
+- **For the first time, we will be able to run the code on the real hardware** (scroll down for
+  instructions).
 
-## Notable additions
+## Introduction
 
-- For the first time, we will be able to run the code on the real hardware.
-  - Therefore, building is now differentiated between the **RPi 3** and the **RPi4**.
-  - By default, all `Makefile` targets will build for the **RPi 3**.
-  - In order to build for the the **RPi4**, prepend `BSP=rpi4` to each target. For example:
-    - `BSP=rpi4 make`
-    - `BSP=rpi4 make doc`
-  - Unfortunately, QEMU does not yet support the **RPi4**, so `BSP=rpi4 make qemu` won't work.
-- A `driver::interface::DeviceDriver` trait is added for abstracting `BSP` driver implementations
-  from kernel code.
-- Drivers are stored in `src/bsp/device_driver`, and can be reused between `BSP`s.
-    - We introduce the `GPIO` driver, which pinmuxes (that is, routing signals from inside the `SoC`
-      to actual HW pins) the RPi's PL011 UART.
-      - Note how this driver differentiates between **RPi 3** and **RPi4**. Their HW is different,
-        so we have to account for it in SW.
-    - Most importantly, the `PL011Uart` driver: It implements the `console::interface::*` traits and
-      is from now on used as the main system console output.
-- `BSP`s now contain a memory map in `src/bsp/raspberrypi/memory.rs`. In the specific case, they
-  contain the Raspberry's `MMIO` addresses which are used to instantiate the respective device
-  drivers.
+Now that we enabled safe globals in the previous tutorial, the infrastructure is laid for adding the
+first real device drivers. We throw out the magic QEMU console and introduce a `driver manager`,
+which allows the `BSP` to register device drivers with the `kernel`.
+
+## Driver Manager
+
+The first step consists of adding a `driver subsystem` to the kernel. The corresponding code will
+live in `src/driver.rs`. The subsystem introduces `interface::DeviceDriver`, a common trait that
+every device driver will need to implement and that is known to the kernel. A global
+`DRIVER_MANAGER` instance (of type `DriverManager`) that is instantiated in the same file serves as
+the central entity that can be called to manage all things device drivers in the kernel. For
+example, by using the globally accessible `crate::driver::driver_manager().register_driver(...)`,
+any code can can register an object with static lifetime that implements the
+`interface::DeviceDriver` trait.
+
+During kernel init, a call to `crate::driver::driver_manager().init_drivers(...)` will let the
+driver manager loop over all registered drivers and kick off their initialization, and also execute
+an optional `post-init callback` that can be registered alongside the driver. For example, this
+mechanism is used to switch over to the `UART` driver as the main system console after the `UART`
+driver has been initialized.
+
+## BSP Driver Implementation
+
+In `src/bsp/raspberrypi/driver.rs`, the function `init()` takes care of registering the `UART` and
+`GPIO` drivers. It is therefore important that during kernel init, the correct order of (i) first
+initializing the BSP driver subsystem, and only then (ii) calling the `driver_manager()` is
+followed, like the following excerpt from `main.rs` shows:
+
+```rust
+unsafe fn kernel_init() -> ! {
+    // Initialize the BSP driver subsystem.
+    if let Err(x) = bsp::driver::init() {
+        panic!("Error initializing BSP driver subsystem: {}", x);
+    }
+
+    // Initialize all device drivers.
+    driver::driver_manager().init_drivers();
+    // println! is usable from here on.
+```
+
+
+
+The drivers themselves are stored in `src/bsp/device_driver`, and can be reused between `BSP`s. The
+first driver added in these tutorials is the `PL011Uart` driver: It implements the
+`console::interface::*` traits and is from now on used as the main system console. The second driver
+is the `GPIO` driver, which pinmuxes (that is, routing signals from inside the `SoC` to actual HW
+pins) the RPi's PL011 UART accordingly. Note how the `GPIO` driver differentiates between **RPi3**
+and **RPi4**. Their HW is different, so we have to account for it in SW.
+
+The `BSP`s now also contain a memory map in `src/bsp/raspberrypi/memory.rs`. It provides the
+Raspberry's `MMIO` addresses which are used by the `BSP` to instantiate the respective device
+drivers, so that the driver code knows where to find the device's registers in memory.
 
 ## Boot it from SD card
 
-Some steps for preparing the SD card differ between RPi3 and RPi4, so be careful.
+Since we have real `UART` output now, we can run the code on the real hardware. Building is
+differentiated between the **RPi 3** and the **RPi4** due to before mentioned differences in the
+`GPIO` driver. By default, all `Makefile` targets will build for the **RPi 3**. In order to build
+for the the **RPi4**, prepend `BSP=rpi4` to each target. For example:
+
+```console
+$ BSP=rpi4 make
+$ BSP=rpi4 make doc
+```
+
+Unfortunately, QEMU does not yet support the **RPi4**, so `BSP=rpi4 make qemu` won't work.
+
+**Some steps for preparing the SD card differ between RPi3 and RPi4, so be careful in the
+following.**
 
 ### Common for both
 
@@ -1072,7 +1118,7 @@ diff -uNr 04_safe_globals/src/bsp/raspberrypi/console.rs 05_drivers_gpio_uart/sr
 diff -uNr 04_safe_globals/src/bsp/raspberrypi/driver.rs 05_drivers_gpio_uart/src/bsp/raspberrypi/driver.rs
 --- 04_safe_globals/src/bsp/raspberrypi/driver.rs
 +++ 05_drivers_gpio_uart/src/bsp/raspberrypi/driver.rs
-@@ -0,0 +1,55 @@
+@@ -0,0 +1,71 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
@@ -1080,53 +1126,69 @@ diff -uNr 04_safe_globals/src/bsp/raspberrypi/driver.rs 05_drivers_gpio_uart/src
 +//! BSP driver support.
 +
 +use super::memory::map::mmio;
-+use crate::{bsp::device_driver, driver};
-+
-+//--------------------------------------------------------------------------------------------------
-+// Private Definitions
-+//--------------------------------------------------------------------------------------------------
-+
-+/// Device Driver Manager type.
-+struct BSPDriverManager {
-+    device_drivers: [&'static (dyn DeviceDriver + Sync); 2],
-+}
++use crate::{bsp::device_driver, console, driver as generic_driver};
++use core::sync::atomic::{AtomicBool, Ordering};
 +
 +//--------------------------------------------------------------------------------------------------
 +// Global instances
 +//--------------------------------------------------------------------------------------------------
 +
-+pub(super) static PL011_UART: device_driver::PL011Uart =
++static PL011_UART: device_driver::PL011Uart =
 +    unsafe { device_driver::PL011Uart::new(mmio::PL011_UART_START) };
-+
 +static GPIO: device_driver::GPIO = unsafe { device_driver::GPIO::new(mmio::GPIO_START) };
 +
-+static BSP_DRIVER_MANAGER: BSPDriverManager = BSPDriverManager {
-+    device_drivers: [&PL011_UART, &GPIO],
-+};
++//--------------------------------------------------------------------------------------------------
++// Private Code
++//--------------------------------------------------------------------------------------------------
++
++/// This must be called only after successful init of the UART driver.
++fn post_init_uart() -> Result<(), &'static str> {
++    console::register_console(&PL011_UART);
++
++    Ok(())
++}
++
++/// This must be called only after successful init of the GPIO driver.
++fn post_init_gpio() -> Result<(), &'static str> {
++    GPIO.map_pl011_uart();
++    Ok(())
++}
++
++fn driver_uart() -> Result<(), &'static str> {
++    let uart_descriptor =
++        generic_driver::DeviceDriverDescriptor::new(&PL011_UART, Some(post_init_uart));
++    generic_driver::driver_manager().register_driver(uart_descriptor);
++
++    Ok(())
++}
++
++fn driver_gpio() -> Result<(), &'static str> {
++    let gpio_descriptor = generic_driver::DeviceDriverDescriptor::new(&GPIO, Some(post_init_gpio));
++    generic_driver::driver_manager().register_driver(gpio_descriptor);
++
++    Ok(())
++}
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Code
 +//--------------------------------------------------------------------------------------------------
 +
-+/// Return a reference to the driver manager.
-+pub fn driver_manager() -> &'static impl driver::interface::DriverManager {
-+    &BSP_DRIVER_MANAGER
-+}
-+
-+//------------------------------------------------------------------------------
-+// OS Interface Code
-+//------------------------------------------------------------------------------
-+use driver::interface::DeviceDriver;
-+
-+impl driver::interface::DriverManager for BSPDriverManager {
-+    fn all_device_drivers(&self) -> &[&'static (dyn DeviceDriver + Sync)] {
-+        &self.device_drivers[..]
++/// Initialize the driver subsystem.
++///
++/// # Safety
++///
++/// See child function calls.
++pub unsafe fn init() -> Result<(), &'static str> {
++    static INIT_DONE: AtomicBool = AtomicBool::new(false);
++    if INIT_DONE.load(Ordering::Relaxed) {
++        return Err("Init already done");
 +    }
 +
-+    fn post_device_driver_init(&self) {
-+        // Configure PL011Uart's output pins.
-+        GPIO.map_pl011_uart();
-+    }
++    driver_uart()?;
++    driver_gpio()?;
++
++    INIT_DONE.store(true, Ordering::Relaxed);
++    Ok(())
 +}
 
 diff -uNr 04_safe_globals/src/bsp/raspberrypi/memory.rs 05_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs
@@ -1174,9 +1236,11 @@ diff -uNr 04_safe_globals/src/bsp/raspberrypi/memory.rs 05_drivers_gpio_uart/src
 diff -uNr 04_safe_globals/src/bsp/raspberrypi.rs 05_drivers_gpio_uart/src/bsp/raspberrypi.rs
 --- 04_safe_globals/src/bsp/raspberrypi.rs
 +++ 05_drivers_gpio_uart/src/bsp/raspberrypi.rs
-@@ -6,3 +6,22 @@
+@@ -4,5 +4,23 @@
 
- pub mod console;
+ //! Top-level BSP file for the Raspberry Pi 3 and 4.
+
+-pub mod console;
  pub mod cpu;
 +pub mod driver;
 +pub mod memory;
@@ -1211,10 +1275,67 @@ diff -uNr 04_safe_globals/src/bsp.rs 05_drivers_gpio_uart/src/bsp.rs
  mod raspberrypi;
 
 
+diff -uNr 04_safe_globals/src/console/null_console.rs 05_drivers_gpio_uart/src/console/null_console.rs
+--- 04_safe_globals/src/console/null_console.rs
++++ 05_drivers_gpio_uart/src/console/null_console.rs
+@@ -0,0 +1,41 @@
++// SPDX-License-Identifier: MIT OR Apache-2.0
++//
++// Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
++
++//! Null console.
++
++use super::interface;
++use core::fmt;
++
++//--------------------------------------------------------------------------------------------------
++// Public Definitions
++//--------------------------------------------------------------------------------------------------
++
++pub struct NullConsole;
++
++//--------------------------------------------------------------------------------------------------
++// Global instances
++//--------------------------------------------------------------------------------------------------
++
++pub static NULL_CONSOLE: NullConsole = NullConsole {};
++
++//--------------------------------------------------------------------------------------------------
++// Public Code
++//--------------------------------------------------------------------------------------------------
++
++impl interface::Write for NullConsole {
++    fn write_char(&self, _c: char) {}
++
++    fn write_fmt(&self, _args: fmt::Arguments) -> fmt::Result {
++        fmt::Result::Ok(())
++    }
++
++    fn flush(&self) {}
++}
++
++impl interface::Read for NullConsole {
++    fn clear_rx(&self) {}
++}
++
++impl interface::Statistics for NullConsole {}
++impl interface::All for NullConsole {}
+
 diff -uNr 04_safe_globals/src/console.rs 05_drivers_gpio_uart/src/console.rs
 --- 04_safe_globals/src/console.rs
 +++ 05_drivers_gpio_uart/src/console.rs
-@@ -16,8 +16,25 @@
+@@ -4,7 +4,9 @@
+
+ //! System console.
+
+-use crate::bsp;
++mod null_console;
++
++use crate::synchronization::{self, NullLock};
+
+ //--------------------------------------------------------------------------------------------------
+ // Public Definitions
+@@ -16,8 +18,25 @@
 
      /// Console write functions.
      pub trait Write {
@@ -1240,7 +1361,7 @@ diff -uNr 04_safe_globals/src/console.rs 05_drivers_gpio_uart/src/console.rs
      }
 
      /// Console statistics.
-@@ -26,10 +43,15 @@
+@@ -26,19 +45,37 @@
          fn chars_written(&self) -> usize {
              0
          }
@@ -1257,6 +1378,30 @@ diff -uNr 04_safe_globals/src/console.rs 05_drivers_gpio_uart/src/console.rs
  }
 
  //--------------------------------------------------------------------------------------------------
++// Global instances
++//--------------------------------------------------------------------------------------------------
++
++static CUR_CONSOLE: NullLock<&'static (dyn interface::All + Sync)> =
++    NullLock::new(&null_console::NULL_CONSOLE);
++
++//--------------------------------------------------------------------------------------------------
+ // Public Code
+ //--------------------------------------------------------------------------------------------------
++use synchronization::interface::Mutex;
++
++/// Register a new console.
++pub fn register_console(new_console: &'static (dyn interface::All + Sync)) {
++    CUR_CONSOLE.lock(|con| *con = new_console);
++}
+
+-/// Return a reference to the console.
++/// Return a reference to the currently registered console.
+ ///
+ /// This is the global console used by all printing macros.
+ pub fn console() -> &'static dyn interface::All {
+-    bsp::console::console()
++    CUR_CONSOLE.lock(|con| *con)
+ }
 
 diff -uNr 04_safe_globals/src/cpu.rs 05_drivers_gpio_uart/src/cpu.rs
 --- 04_safe_globals/src/cpu.rs
@@ -1274,12 +1419,28 @@ diff -uNr 04_safe_globals/src/cpu.rs 05_drivers_gpio_uart/src/cpu.rs
 diff -uNr 04_safe_globals/src/driver.rs 05_drivers_gpio_uart/src/driver.rs
 --- 04_safe_globals/src/driver.rs
 +++ 05_drivers_gpio_uart/src/driver.rs
-@@ -0,0 +1,44 @@
+@@ -0,0 +1,167 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Driver support.
++
++use crate::{
++    println,
++    synchronization::{interface::Mutex, NullLock},
++};
++
++//--------------------------------------------------------------------------------------------------
++// Private Definitions
++//--------------------------------------------------------------------------------------------------
++
++const NUM_DRIVERS: usize = 5;
++
++struct DriverManagerInner {
++    next_index: usize,
++    descriptors: [Option<DeviceDriverDescriptor>; NUM_DRIVERS],
++}
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Definitions
@@ -1301,22 +1462,129 @@ diff -uNr 04_safe_globals/src/driver.rs 05_drivers_gpio_uart/src/driver.rs
 +            Ok(())
 +        }
 +    }
++}
 +
-+    /// Device driver management functions.
++/// Tpye to be used as an optional callback after a driver's init() has run.
++pub type DeviceDriverPostInitCallback = unsafe fn() -> Result<(), &'static str>;
++
++/// A descriptor for device drivers.
++#[derive(Copy, Clone)]
++pub struct DeviceDriverDescriptor {
++    device_driver: &'static (dyn interface::DeviceDriver + Sync),
++    post_init_callback: Option<DeviceDriverPostInitCallback>,
++}
++
++/// Provides device driver management functions.
++pub struct DriverManager {
++    inner: NullLock<DriverManagerInner>,
++}
++
++//--------------------------------------------------------------------------------------------------
++// Global instances
++//--------------------------------------------------------------------------------------------------
++
++static DRIVER_MANAGER: DriverManager = DriverManager::new();
++
++//--------------------------------------------------------------------------------------------------
++// Private Code
++//--------------------------------------------------------------------------------------------------
++
++impl DriverManagerInner {
++    /// Create an instance.
++    pub const fn new() -> Self {
++        Self {
++            next_index: 0,
++            descriptors: [None; NUM_DRIVERS],
++        }
++    }
++}
++
++//--------------------------------------------------------------------------------------------------
++// Public Code
++//--------------------------------------------------------------------------------------------------
++
++impl DeviceDriverDescriptor {
++    /// Create an instance.
++    pub fn new(
++        device_driver: &'static (dyn interface::DeviceDriver + Sync),
++        post_init_callback: Option<DeviceDriverPostInitCallback>,
++    ) -> Self {
++        Self {
++            device_driver,
++            post_init_callback,
++        }
++    }
++}
++
++/// Return a reference to the global DriverManager.
++pub fn driver_manager() -> &'static DriverManager {
++    &DRIVER_MANAGER
++}
++
++impl DriverManager {
++    /// Create an instance.
++    pub const fn new() -> Self {
++        Self {
++            inner: NullLock::new(DriverManagerInner::new()),
++        }
++    }
++
++    /// Register a device driver with the kernel.
++    pub fn register_driver(&self, descriptor: DeviceDriverDescriptor) {
++        self.inner.lock(|inner| {
++            inner.descriptors[inner.next_index] = Some(descriptor);
++            inner.next_index += 1;
++        })
++    }
++
++    /// Helper for iterating over registered drivers.
++    fn for_each_descriptor<'a>(&'a self, f: impl FnMut(&'a DeviceDriverDescriptor)) {
++        self.inner.lock(|inner| {
++            inner
++                .descriptors
++                .iter()
++                .filter_map(|x| x.as_ref())
++                .for_each(f)
++        })
++    }
++
++    /// Fully initialize all drivers.
 +    ///
-+    /// The `BSP` is supposed to supply one global instance.
-+    pub trait DriverManager {
-+        /// Return a slice of references to all `BSP`-instantiated drivers.
-+        ///
-+        /// # Safety
-+        ///
-+        /// - The order of devices is the order in which `DeviceDriver::init()` is called.
-+        fn all_device_drivers(&self) -> &[&'static (dyn DeviceDriver + Sync)];
++    /// # Safety
++    ///
++    /// - During init, drivers might do stuff with system-wide impact.
++    pub unsafe fn init_drivers(&self) {
++        self.for_each_descriptor(|descriptor| {
++            // 1. Initialize driver.
++            if let Err(x) = descriptor.device_driver.init() {
++                panic!(
++                    "Error initializing driver: {}: {}",
++                    descriptor.device_driver.compatible(),
++                    x
++                );
++            }
 +
-+        /// Initialization code that runs after driver init.
-+        ///
-+        /// For example, device driver code that depends on other drivers already being online.
-+        fn post_device_driver_init(&self);
++            // 2. Call corresponding post init callback.
++            if let Some(callback) = &descriptor.post_init_callback {
++                if let Err(x) = callback() {
++                    panic!(
++                        "Error during driver post-init callback: {}: {}",
++                        descriptor.device_driver.compatible(),
++                        x
++                    );
++                }
++            }
++        });
++    }
++
++    /// Enumerate all registered device drivers.
++    pub fn enumerate(&self) {
++        let mut i: usize = 1;
++        self.for_each_descriptor(|descriptor| {
++            println!("      {}. {}", i, descriptor.device_driver.compatible());
++
++            i += 1;
++        });
 +    }
 +}
 
@@ -1339,21 +1607,20 @@ diff -uNr 04_safe_globals/src/main.rs 05_drivers_gpio_uart/src/main.rs
  mod panic_wait;
  mod print;
  mod synchronization;
-@@ -125,13 +127,50 @@
+@@ -125,13 +127,42 @@
  /// # Safety
  ///
  /// - Only a single core must be active and running this function.
 +/// - The init calls in this function must appear in the correct order.
  unsafe fn kernel_init() -> ! {
 -    use console::console;
-+    use driver::interface::DriverManager;
-+
-+    for i in bsp::driver::driver_manager().all_device_drivers().iter() {
-+        if let Err(x) = i.init() {
-+            panic!("Error loading driver: {}: {}", i.compatible(), x);
-+        }
++    // Initialize the BSP driver subsystem.
++    if let Err(x) = bsp::driver::init() {
++        panic!("Error initializing BSP driver subsystem: {}", x);
 +    }
-+    bsp::driver::driver_manager().post_device_driver_init();
++
++    // Initialize all device drivers.
++    driver::driver_manager().init_drivers();
 +    // println! is usable from here on.
 
 -    println!("[0] Hello from Rust!");
@@ -1365,7 +1632,6 @@ diff -uNr 04_safe_globals/src/main.rs 05_drivers_gpio_uart/src/main.rs
 +/// The main function running after the early init.
 +fn kernel_main() -> ! {
 +    use console::console;
-+    use driver::interface::DriverManager;
 
 -    println!("[2] Stopping here.");
 -    cpu::wait_forever()
@@ -1377,13 +1643,7 @@ diff -uNr 04_safe_globals/src/main.rs 05_drivers_gpio_uart/src/main.rs
 +    println!("[1] Booting on: {}", bsp::board_name());
 +
 +    println!("[2] Drivers loaded:");
-+    for (i, driver) in bsp::driver::driver_manager()
-+        .all_device_drivers()
-+        .iter()
-+        .enumerate()
-+    {
-+        println!("      {}. {}", i + 1, driver.compatible());
-+    }
++    driver::driver_manager().enumerate();
 +
 +    println!("[3] Chars written: {}", console().chars_written());
 +    println!("[4] Echoing input now");

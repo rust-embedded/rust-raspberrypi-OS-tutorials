@@ -172,7 +172,7 @@ impl GICD {
     }
 
     /// Enable an interrupt.
-    pub fn enable(&self, irq_num: super::IRQNumber) {
+    pub fn enable(&self, irq_num: &super::IRQNumber) {
         let irq_num = irq_num.get();
 
         // Each bit in the u32 enable register corresponds to one IRQ number. Shift right by 5

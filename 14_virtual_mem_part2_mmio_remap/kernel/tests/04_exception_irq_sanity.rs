@@ -10,13 +10,11 @@
 #![reexport_test_harness_main = "test_main"]
 #![test_runner(libkernel::test_runner)]
 
-use libkernel::{bsp, cpu, driver, exception, memory};
+use libkernel::{bsp, cpu, exception, memory};
 use test_macros::kernel_test;
 
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
-    use driver::interface::DriverManager;
-
     exception::handling_init();
 
     let phys_kernel_tables_base_addr = match memory::mmu::kernel_map_binary() {
@@ -29,7 +27,7 @@ unsafe fn kernel_init() -> ! {
     }
 
     memory::mmu::post_enable_init();
-    bsp::driver::driver_manager().qemu_bring_up_console();
+    bsp::driver::qemu_bring_up_console();
 
     exception::asynchronous::local_irq_unmask();
 

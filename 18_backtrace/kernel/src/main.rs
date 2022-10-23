@@ -13,7 +13,7 @@
 #![no_main]
 #![no_std]
 
-use libkernel::{bsp, cpu, driver, exception, info, memory, state, time, warn};
+use libkernel::{bsp, cpu, driver, exception, info, memory, state, time};
 
 /// Early init code.
 ///
@@ -25,27 +25,16 @@ use libkernel::{bsp, cpu, driver, exception, info, memory, state, time, warn};
 /// - Printing will not work until the respective driver's MMIO is remapped.
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
-    use driver::interface::DriverManager;
-
     exception::handling_init();
     memory::init();
 
-    // Instantiate and init all device drivers.
-    if let Err(x) = bsp::driver::driver_manager().instantiate_drivers() {
-        panic!("Error instantiating drivers: {}", x);
-    }
-    for i in bsp::driver::driver_manager().all_device_drivers().iter() {
-        if let Err(x) = i.init() {
-            panic!("Error loading driver: {}: {}", i.compatible(), x);
-        }
+    // Initialize the BSP driver subsystem.
+    if let Err(x) = bsp::driver::init() {
+        panic!("Error initializing BSP driver subsystem: {}", x);
     }
 
-    // Let device drivers register and enable their handlers with the interrupt controller.
-    for i in bsp::driver::driver_manager().all_device_drivers() {
-        if let Err(msg) = i.register_and_enable_irq_handler() {
-            warn!("Error registering IRQ handler: {}", msg);
-        }
-    }
+    // Initialize all device drivers.
+    driver::driver_manager().init_drivers_and_irqs();
 
     bsp::memory::mmu::kernel_add_mapping_records_for_precomputed();
 
@@ -61,8 +50,6 @@ unsafe fn kernel_init() -> ! {
 
 /// The main function running after the early init.
 fn kernel_main() -> ! {
-    use driver::interface::DriverManager;
-
     info!("{}", libkernel::version());
     info!("Booting on: {}", bsp::board_name());
 
@@ -81,13 +68,7 @@ fn kernel_main() -> ! {
     );
 
     info!("Drivers loaded:");
-    for (i, driver) in bsp::driver::driver_manager()
-        .all_device_drivers()
-        .iter()
-        .enumerate()
-    {
-        info!("      {}. {}", i + 1, driver.compatible());
-    }
+    driver::driver_manager().enumerate();
 
     info!("Registered IRQ handlers:");
     exception::asynchronous::irq_manager().print_handler();

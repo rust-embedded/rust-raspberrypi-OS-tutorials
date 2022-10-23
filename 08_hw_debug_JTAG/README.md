@@ -401,4 +401,26 @@ diff -uNr 07_timestamps/Makefile 08_hw_debug_JTAG/Makefile
  ## Testing targets
  ##--------------------------------------------------------------------------------------------------
 
+diff -uNr 07_timestamps/src/bsp/raspberrypi/driver.rs 08_hw_debug_JTAG/src/bsp/raspberrypi/driver.rs
+--- 07_timestamps/src/bsp/raspberrypi/driver.rs
++++ 08_hw_debug_JTAG/src/bsp/raspberrypi/driver.rs
+@@ -57,17 +57,6 @@
+ /// # Safety
+ ///
+ /// See child function calls.
+-///
+-/// # Note
+-///
+-/// Using atomics here relieves us from needing to use `unsafe` for the static variable.
+-///
+-/// On `AArch64`, which is the only implemented architecture at the time of writing this,
+-/// [`AtomicBool::load`] and [`AtomicBool::store`] are lowered to ordinary load and store
+-/// instructions. They are therefore safe to use even with MMU + caching deactivated.
+-///
+-/// [`AtomicBool::load`]: core::sync::atomic::AtomicBool::load
+-/// [`AtomicBool::store`]: core::sync::atomic::AtomicBool::store
+ pub unsafe fn init() -> Result<(), &'static str> {
+     static INIT_DONE: AtomicBool = AtomicBool::new(false);
+     if INIT_DONE.load(Ordering::Relaxed) {
+
 ```

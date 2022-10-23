@@ -134,14 +134,13 @@ mod time;
 /// - Only a single core must be active and running this function.
 /// - The init calls in this function must appear in the correct order.
 unsafe fn kernel_init() -> ! {
-    use driver::interface::DriverManager;
-
-    for i in bsp::driver::driver_manager().all_device_drivers().iter() {
-        if let Err(x) = i.init() {
-            panic!("Error loading driver: {}: {}", i.compatible(), x);
-        }
+    // Initialize the BSP driver subsystem.
+    if let Err(x) = bsp::driver::init() {
+        panic!("Error initializing BSP driver subsystem: {}", x);
     }
-    bsp::driver::driver_manager().post_device_driver_init();
+
+    // Initialize all device drivers.
+    driver::driver_manager().init_drivers();
     // println! is usable from here on.
 
     // Transition from unsafe to safe.
@@ -152,7 +151,6 @@ unsafe fn kernel_init() -> ! {
 fn kernel_main() -> ! {
     use console::console;
     use core::time::Duration;
-    use driver::interface::DriverManager;
 
     info!(
         "{} version {}",
@@ -173,13 +171,7 @@ fn kernel_main() -> ! {
     );
 
     info!("Drivers loaded:");
-    for (i, driver) in bsp::driver::driver_manager()
-        .all_device_drivers()
-        .iter()
-        .enumerate()
-    {
-        info!("      {}. {}", i + 1, driver.compatible());
-    }
+    driver::driver_manager().enumerate();
 
     info!("Timer test, spinning for 1 second");
     time::time_manager().spin_for(Duration::from_secs(1));

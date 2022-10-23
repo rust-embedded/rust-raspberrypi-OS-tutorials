@@ -296,7 +296,6 @@ Turning on virtual memory is now the first thing we do during kernel init:
 
 ```rust
 unsafe fn kernel_init() -> ! {
-    use driver::interface::DriverManager;
     use memory::mmu::interface::MMU;
 
     if let Err(string) = memory::mmu::mmu().enable_mmu_and_caching() {
@@ -1135,7 +1134,7 @@ diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/s
  mod panic_wait;
  mod print;
  mod synchronization;
-@@ -132,9 +137,17 @@
+@@ -132,8 +137,17 @@
  /// # Safety
  ///
  /// - Only a single core must be active and running this function.
@@ -1145,25 +1144,25 @@ diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/s
 +///       e.g. the yet-to-be-introduced spinlocks in the device drivers (which currently employ
 +///       NullLocks instead of spinlocks), will fail to work (properly) on the RPi SoCs.
  unsafe fn kernel_init() -> ! {
-     use driver::interface::DriverManager;
 +    use memory::mmu::interface::MMU;
 +
 +    if let Err(string) = memory::mmu::mmu().enable_mmu_and_caching() {
 +        panic!("MMU: {}", string);
 +    }
-
-     for i in bsp::driver::driver_manager().all_device_drivers().iter() {
-         if let Err(x) = i.init() {
-@@ -150,7 +163,7 @@
++
+     // Initialize the BSP driver subsystem.
+     if let Err(x) = bsp::driver::init() {
+         panic!("Error initializing BSP driver subsystem: {}", x);
+@@ -149,7 +163,7 @@
 
  /// The main function running after the early init.
  fn kernel_main() -> ! {
 -    use console::console;
 +    use console::{console, interface::Write};
      use core::time::Duration;
-     use driver::interface::DriverManager;
 
-@@ -161,6 +174,9 @@
+     info!(
+@@ -159,6 +173,9 @@
      );
      info!("Booting on: {}", bsp::board_name());
 
@@ -1173,7 +1172,7 @@ diff -uNr 09_privilege_level/src/main.rs 10_virtual_mem_part1_identity_mapping/s
      let (_, privilege_level) = exception::current_privilege_level();
      info!("Current privilege level: {}", privilege_level);
 
-@@ -184,6 +200,13 @@
+@@ -176,6 +193,13 @@
      info!("Timer test, spinning for 1 second");
      time::time_manager().spin_for(Duration::from_secs(1));
 

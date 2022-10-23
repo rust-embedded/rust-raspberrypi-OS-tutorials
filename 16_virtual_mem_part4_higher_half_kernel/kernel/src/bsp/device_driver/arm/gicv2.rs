@@ -80,7 +80,8 @@ mod gicc;
 mod gicd;
 
 use crate::{
-    bsp, cpu, driver, exception,
+    bsp::{self, device_driver::common::BoundedUsize},
+    cpu, driver, exception,
     memory::{Address, Virtual},
     synchronization,
     synchronization::InitStateLock,
@@ -90,14 +91,15 @@ use crate::{
 // Private Definitions
 //--------------------------------------------------------------------------------------------------
 
-type HandlerTable = [Option<exception::asynchronous::IRQDescriptor>; IRQNumber::NUM_TOTAL];
+type HandlerTable = [Option<exception::asynchronous::IRQHandlerDescriptor<IRQNumber>>;
+    IRQNumber::MAX_INCLUSIVE + 1];
 
 //--------------------------------------------------------------------------------------------------
 // Public Definitions
 //--------------------------------------------------------------------------------------------------
 
 /// Used for the associated type of trait [`exception::asynchronous::interface::IRQManager`].
-pub type IRQNumber = exception::asynchronous::IRQNumber<{ GICv2::MAX_IRQ_NUMBER }>;
+pub type IRQNumber = BoundedUsize<{ GICv2::MAX_IRQ_NUMBER }>;
 
 /// Representation of the GIC.
 pub struct GICv2 {
@@ -109,9 +111,6 @@ pub struct GICv2 {
 
     /// Stores registered IRQ handlers. Writable only during kernel init. RO afterwards.
     handler_table: InitStateLock<HandlerTable>,
-
-    /// Callback to be invoked after successful init.
-    post_init_callback: fn(),
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -131,13 +130,11 @@ impl GICv2 {
     pub const unsafe fn new(
         gicd_mmio_start_addr: Address<Virtual>,
         gicc_mmio_start_addr: Address<Virtual>,
-        post_init_callback: fn(),
     ) -> Self {
         Self {
             gicd: gicd::GICD::new(gicd_mmio_start_addr),
             gicc: gicc::GICC::new(gicc_mmio_start_addr),
-            handler_table: InitStateLock::new([None; IRQNumber::NUM_TOTAL]),
-            post_init_callback,
+            handler_table: InitStateLock::new([None; IRQNumber::MAX_INCLUSIVE + 1]),
         }
     }
 }
@@ -148,6 +145,8 @@ impl GICv2 {
 use synchronization::interface::ReadWriteEx;
 
 impl driver::interface::DeviceDriver for GICv2 {
+    type IRQNumberType = IRQNumber;
+
     fn compatible(&self) -> &'static str {
         Self::COMPATIBLE
     }
@@ -160,8 +159,6 @@ impl driver::interface::DeviceDriver for GICv2 {
         self.gicc.priority_accept_all();
         self.gicc.enable();
 
-        (self.post_init_callback)();
-
         Ok(())
     }
 }
@@ -171,23 +168,22 @@ impl exception::asynchronous::interface::IRQManager for GICv2 {
 
     fn register_handler(
         &self,
-        irq_number: Self::IRQNumberType,
-        descriptor: exception::asynchronous::IRQDescriptor,
+        irq_handler_descriptor: exception::asynchronous::IRQHandlerDescriptor<Self::IRQNumberType>,
     ) -> Result<(), &'static str> {
         self.handler_table.write(|table| {
-            let irq_number = irq_number.get();
+            let irq_number = irq_handler_descriptor.number().get();
 
             if table[irq_number].is_some() {
                 return Err("IRQ handler already registered");
             }
 
-            table[irq_number] = Some(descriptor);
+            table[irq_number] = Some(irq_handler_descriptor);
 
             Ok(())
         })
     }
 
-    fn enable(&self, irq_number: Self::IRQNumberType) {
+    fn enable(&self, irq_number: &Self::IRQNumberType) {
         self.gicd.enable(irq_number);
     }
 
@@ -210,7 +206,7 @@ impl exception::asynchronous::interface::IRQManager for GICv2 {
                 None => panic!("No handler registered for IRQ {}", irq_number),
                 Some(descriptor) => {
                     // Call the IRQ handler. Panics on failure.
-                    descriptor.handler.handle().expect("Error handling IRQ");
+                    descriptor.handler().handle().expect("Error handling IRQ");
                 }
             }
         });
@@ -227,7 +223,7 @@ impl exception::asynchronous::interface::IRQManager for GICv2 {
         self.handler_table.read(|table| {
             for (i, opt) in table.iter().skip(32).enumerate() {
                 if let Some(handler) = opt {
-                    info!("            {: >3}. {}", i + 32, handler.name);
+                    info!("            {: >3}. {}", i + 32, handler.name());
                 }
             }
         });

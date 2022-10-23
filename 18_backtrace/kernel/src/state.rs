@@ -52,7 +52,7 @@ impl StateManager {
     const SINGLE_CORE_MAIN: u8 = 1;
     const MULTI_CORE_MAIN: u8 = 2;
 
-    /// Create a new instance.
+    /// Create an instance.
     pub const fn new() -> Self {
         Self(AtomicU8::new(Self::INIT))
     }

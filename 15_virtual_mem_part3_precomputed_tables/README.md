@@ -1336,9 +1336,9 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/memory/mmu.
 diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/lib.rs 15_virtual_mem_part3_precomputed_tables/kernel/src/lib.rs
 --- 14_virtual_mem_part2_mmio_remap/kernel/src/lib.rs
 +++ 15_virtual_mem_part3_precomputed_tables/kernel/src/lib.rs
-@@ -189,17 +189,7 @@
-     use driver::interface::DriverManager;
-
+@@ -187,17 +187,7 @@
+ #[no_mangle]
+ unsafe fn kernel_init() -> ! {
      exception::handling_init();
 -
 -    let phys_kernel_tables_base_addr = match memory::mmu::kernel_map_binary() {
@@ -1352,14 +1352,14 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/lib.rs 15_virtual_mem_part3
 -
 -    memory::mmu::post_enable_init();
 +    memory::init();
-     bsp::driver::driver_manager().qemu_bring_up_console();
+     bsp::driver::qemu_bring_up_console();
 
      test_main();
 
 diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/main.rs 15_virtual_mem_part3_precomputed_tables/kernel/src/main.rs
 --- 14_virtual_mem_part2_mmio_remap/kernel/src/main.rs
 +++ 15_virtual_mem_part3_precomputed_tables/kernel/src/main.rs
-@@ -17,29 +17,18 @@
+@@ -17,27 +17,16 @@
 
  /// Early init code.
  ///
@@ -1375,8 +1375,6 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/main.rs 15_virtual_mem_part
 +/// - Printing will not work until the respective driver's MMIO is remapped.
  #[no_mangle]
  unsafe fn kernel_init() -> ! {
-     use driver::interface::DriverManager;
-
      exception::handling_init();
 -
 -    let phys_kernel_tables_base_addr = match memory::mmu::kernel_map_binary() {
@@ -1391,11 +1389,11 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/main.rs 15_virtual_mem_part
 -    memory::mmu::post_enable_init();
 +    memory::init();
 
-     // Instantiate and init all device drivers.
-     if let Err(x) = bsp::driver::driver_manager().instantiate_drivers() {
-@@ -58,6 +47,8 @@
-         }
-     }
+     // Initialize the BSP driver subsystem.
+     if let Err(x) = bsp::driver::init() {
+@@ -47,6 +36,8 @@
+     // Initialize all device drivers.
+     driver::driver_manager().init_drivers_and_irqs();
 
 +    bsp::memory::mmu::kernel_add_mapping_records_for_precomputed();
 +
@@ -1711,8 +1709,8 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/memory.rs 15_virtual_mem_pa
 diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/00_console_sanity.rs 15_virtual_mem_part3_precomputed_tables/kernel/tests/00_console_sanity.rs
 --- 14_virtual_mem_part2_mmio_remap/kernel/tests/00_console_sanity.rs
 +++ 15_virtual_mem_part3_precomputed_tables/kernel/tests/00_console_sanity.rs
-@@ -19,17 +19,7 @@
-     use driver::interface::DriverManager;
+@@ -18,17 +18,7 @@
+     use console::console;
 
      exception::handling_init();
 -
@@ -1727,16 +1725,16 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/00_console_sanity.rs 15_v
 -
 -    memory::mmu::post_enable_init();
 +    memory::init();
-     bsp::driver::driver_manager().qemu_bring_up_console();
+     bsp::driver::qemu_bring_up_console();
 
      // Handshake
 
 diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/01_timer_sanity.rs 15_virtual_mem_part3_precomputed_tables/kernel/tests/01_timer_sanity.rs
 --- 14_virtual_mem_part2_mmio_remap/kernel/tests/01_timer_sanity.rs
 +++ 15_virtual_mem_part3_precomputed_tables/kernel/tests/01_timer_sanity.rs
-@@ -19,17 +19,7 @@
-     use driver::interface::DriverManager;
-
+@@ -17,17 +17,7 @@
+ #[no_mangle]
+ unsafe fn kernel_init() -> ! {
      exception::handling_init();
 -
 -    let phys_kernel_tables_base_addr = match memory::mmu::kernel_map_binary() {
@@ -1750,19 +1748,19 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/01_timer_sanity.rs 15_vir
 -
 -    memory::mmu::post_enable_init();
 +    memory::init();
-     bsp::driver::driver_manager().qemu_bring_up_console();
+     bsp::driver::qemu_bring_up_console();
 
      // Depending on CPU arch, some timer bring-up code could go here. Not needed for the RPi.
 
 diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/02_exception_sync_page_fault.rs 15_virtual_mem_part3_precomputed_tables/kernel/tests/02_exception_sync_page_fault.rs
 --- 14_virtual_mem_part2_mmio_remap/kernel/tests/02_exception_sync_page_fault.rs
 +++ 15_virtual_mem_part3_precomputed_tables/kernel/tests/02_exception_sync_page_fault.rs
-@@ -24,26 +24,12 @@
-     use driver::interface::DriverManager;
-
+@@ -22,26 +22,12 @@
+ #[no_mangle]
+ unsafe fn kernel_init() -> ! {
      exception::handling_init();
 +    memory::init();
-+    bsp::driver::driver_manager().qemu_bring_up_console();
++    bsp::driver::qemu_bring_up_console();
 
      // This line will be printed as the test header.
      println!("Testing synchronous exception handling by causing a page fault");
@@ -1781,7 +1779,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/02_exception_sync_page_fa
 -    }
 -
 -    memory::mmu::post_enable_init();
--    bsp::driver::driver_manager().qemu_bring_up_console();
+-    bsp::driver::qemu_bring_up_console();
 -
      info!("Writing beyond mapped area to address 9 GiB...");
      let big_addr: u64 = 9 * 1024 * 1024 * 1024;
@@ -1790,12 +1788,12 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/02_exception_sync_page_fa
 diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/03_exception_restore_sanity.rs 15_virtual_mem_part3_precomputed_tables/kernel/tests/03_exception_restore_sanity.rs
 --- 14_virtual_mem_part2_mmio_remap/kernel/tests/03_exception_restore_sanity.rs
 +++ 15_virtual_mem_part3_precomputed_tables/kernel/tests/03_exception_restore_sanity.rs
-@@ -33,26 +33,12 @@
-     use driver::interface::DriverManager;
-
+@@ -31,26 +31,12 @@
+ #[no_mangle]
+ unsafe fn kernel_init() -> ! {
      exception::handling_init();
 +    memory::init();
-+    bsp::driver::driver_manager().qemu_bring_up_console();
++    bsp::driver::qemu_bring_up_console();
 
      // This line will be printed as the test header.
      println!("Testing exception restore");
@@ -1814,7 +1812,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/03_exception_restore_sani
 -    }
 -
 -    memory::mmu::post_enable_init();
--    bsp::driver::driver_manager().qemu_bring_up_console();
+-    bsp::driver::qemu_bring_up_console();
 -
      info!("Making a dummy system call");
 
@@ -1823,10 +1821,10 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/03_exception_restore_sani
 diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/04_exception_irq_sanity.rs 15_virtual_mem_part3_precomputed_tables/kernel/tests/04_exception_irq_sanity.rs
 --- 14_virtual_mem_part2_mmio_remap/kernel/tests/04_exception_irq_sanity.rs
 +++ 15_virtual_mem_part3_precomputed_tables/kernel/tests/04_exception_irq_sanity.rs
-@@ -17,20 +17,10 @@
- unsafe fn kernel_init() -> ! {
-     use driver::interface::DriverManager;
+@@ -15,20 +15,10 @@
 
+ #[no_mangle]
+ unsafe fn kernel_init() -> ! {
 -    exception::handling_init();
 -
 -    let phys_kernel_tables_base_addr = match memory::mmu::kernel_map_binary() {
@@ -1840,7 +1838,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/04_exception_irq_sanity.r
 -
 -    memory::mmu::post_enable_init();
 +    memory::init();
-     bsp::driver::driver_manager().qemu_bring_up_console();
+     bsp::driver::qemu_bring_up_console();
 
 +    exception::handling_init();
      exception::asynchronous::local_irq_unmask();

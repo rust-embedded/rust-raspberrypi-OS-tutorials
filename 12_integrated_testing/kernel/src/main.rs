@@ -26,7 +26,6 @@ use libkernel::{bsp, console, driver, exception, info, memory, time};
 ///       NullLocks instead of spinlocks), will fail to work (properly) on the RPi SoCs.
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
-    use driver::interface::DriverManager;
     use memory::mmu::interface::MMU;
 
     exception::handling_init();
@@ -35,12 +34,13 @@ unsafe fn kernel_init() -> ! {
         panic!("MMU: {}", string);
     }
 
-    for i in bsp::driver::driver_manager().all_device_drivers().iter() {
-        if let Err(x) = i.init() {
-            panic!("Error loading driver: {}: {}", i.compatible(), x);
-        }
+    // Initialize the BSP driver subsystem.
+    if let Err(x) = bsp::driver::init() {
+        panic!("Error initializing BSP driver subsystem: {}", x);
     }
-    bsp::driver::driver_manager().post_device_driver_init();
+
+    // Initialize all device drivers.
+    driver::driver_manager().init_drivers();
     // println! is usable from here on.
 
     // Transition from unsafe to safe.
@@ -50,7 +50,6 @@ unsafe fn kernel_init() -> ! {
 /// The main function running after the early init.
 fn kernel_main() -> ! {
     use console::console;
-    use driver::interface::DriverManager;
 
     info!("{}", libkernel::version());
     info!("Booting on: {}", bsp::board_name());
@@ -70,13 +69,7 @@ fn kernel_main() -> ! {
     );
 
     info!("Drivers loaded:");
-    for (i, driver) in bsp::driver::driver_manager()
-        .all_device_drivers()
-        .iter()
-        .enumerate()
-    {
-        info!("      {}. {}", i + 1, driver.compatible());
-    }
+    driver::driver_manager().enumerate();
 
     info!("Echoing input now");
 

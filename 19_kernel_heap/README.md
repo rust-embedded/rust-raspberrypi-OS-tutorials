@@ -131,11 +131,19 @@ wrapped allocator to the heap that we defined earlier:
 ```rust
 /// Query the BSP for the heap region and initialize the kernel's heap allocator with it.
 pub fn kernel_init_heap_allocator() {
+    static INIT_DONE: AtomicBool = AtomicBool::new(false);
+    if INIT_DONE.load(Ordering::Relaxed) {
+        warn!("Already initialized");
+        return;
+    }
+
     let region = bsp::memory::mmu::virt_heap_region();
 
-    KERNEL_HEAP_ALLOCATOR
-        .inner
-        .lock(|inner| unsafe { inner.init(region.start_addr().as_usize(), region.size()) });
+    KERNEL_HEAP_ALLOCATOR.inner.lock(|inner| unsafe {
+        inner.init(region.start_addr().as_usize() as *mut u8, region.size())
+    });
+
+    INIT_DONE.store(true, Ordering::Relaxed);
 }
 ```
 
@@ -288,7 +296,7 @@ diff -uNr 18_backtrace/kernel/Cargo.toml 19_kernel_heap/kernel/Cargo.toml
 diff -uNr 18_backtrace/kernel/src/bsp/device_driver/arm/gicv2.rs 19_kernel_heap/kernel/src/bsp/device_driver/arm/gicv2.rs
 --- 18_backtrace/kernel/src/bsp/device_driver/arm/gicv2.rs
 +++ 19_kernel_heap/kernel/src/bsp/device_driver/arm/gicv2.rs
-@@ -85,12 +85,13 @@
+@@ -86,13 +86,13 @@
      synchronization,
      synchronization::InitStateLock,
  };
@@ -298,12 +306,13 @@ diff -uNr 18_backtrace/kernel/src/bsp/device_driver/arm/gicv2.rs 19_kernel_heap/
  // Private Definitions
  //--------------------------------------------------------------------------------------------------
 
--type HandlerTable = [Option<exception::asynchronous::IRQDescriptor>; IRQNumber::NUM_TOTAL];
-+type HandlerTable = Vec<Option<exception::asynchronous::IRQDescriptor>>;
+-type HandlerTable = [Option<exception::asynchronous::IRQHandlerDescriptor<IRQNumber>>;
+-    IRQNumber::MAX_INCLUSIVE + 1];
++type HandlerTable = Vec<Option<exception::asynchronous::IRQHandlerDescriptor<IRQNumber>>>;
 
  //--------------------------------------------------------------------------------------------------
  // Public Definitions
-@@ -119,7 +120,7 @@
+@@ -118,7 +118,7 @@
  //--------------------------------------------------------------------------------------------------
 
  impl GICv2 {
@@ -312,21 +321,21 @@ diff -uNr 18_backtrace/kernel/src/bsp/device_driver/arm/gicv2.rs 19_kernel_heap/
 
      pub const COMPATIBLE: &'static str = "GICv2 (ARM Generic Interrupt Controller v2)";
 
-@@ -136,7 +137,7 @@
+@@ -134,7 +134,7 @@
          Self {
              gicd: gicd::GICD::new(gicd_mmio_start_addr),
              gicc: gicc::GICC::new(gicc_mmio_start_addr),
--            handler_table: InitStateLock::new([None; IRQNumber::NUM_TOTAL]),
+-            handler_table: InitStateLock::new([None; IRQNumber::MAX_INCLUSIVE + 1]),
 +            handler_table: InitStateLock::new(Vec::new()),
-             post_init_callback,
          }
      }
-@@ -153,6 +154,9 @@
+ }
+@@ -152,6 +152,9 @@
      }
 
      unsafe fn init(&self) -> Result<(), &'static str> {
 +        self.handler_table
-+            .write(|table| table.resize(IRQNumber::NUM_TOTAL, None));
++            .write(|table| table.resize(IRQNumber::MAX_INCLUSIVE + 1, None));
 +
          if bsp::cpu::BOOT_CORE_ID == cpu::smp::core_id() {
              self.gicd.boot_core_init();
@@ -343,20 +352,21 @@ diff -uNr 18_backtrace/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_contro
  use tock_registers::{
      interfaces::{Readable, Writeable},
      register_structs,
-@@ -52,7 +53,7 @@
+@@ -52,8 +53,7 @@
  /// Abstraction for the ReadOnly parts of the associated MMIO registers.
  type ReadOnlyRegisters = MMIODerefWrapper<RORegisterBlock>;
 
--type HandlerTable = [Option<exception::asynchronous::IRQDescriptor>; PeripheralIRQ::NUM_TOTAL];
-+type HandlerTable = Vec<Option<exception::asynchronous::IRQDescriptor>>;
+-type HandlerTable = [Option<exception::asynchronous::IRQHandlerDescriptor<PeripheralIRQ>>;
+-    PeripheralIRQ::MAX_INCLUSIVE + 1];
++type HandlerTable = Vec<Option<exception::asynchronous::IRQHandlerDescriptor<PeripheralIRQ>>>;
 
  //--------------------------------------------------------------------------------------------------
  // Public Definitions
-@@ -84,10 +85,16 @@
+@@ -85,10 +85,16 @@
          Self {
              wo_registers: IRQSafeNullLock::new(WriteOnlyRegisters::new(mmio_start_addr)),
              ro_registers: ReadOnlyRegisters::new(mmio_start_addr),
--            handler_table: InitStateLock::new([None; PeripheralIRQ::NUM_TOTAL]),
+-            handler_table: InitStateLock::new([None; PeripheralIRQ::MAX_INCLUSIVE + 1]),
 +            handler_table: InitStateLock::new(Vec::new()),
          }
      }
@@ -364,7 +374,7 @@ diff -uNr 18_backtrace/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_contro
 +    /// Called by the kernel to bring up the device.
 +    pub fn init(&self) {
 +        self.handler_table
-+            .write(|table| table.resize(PeripheralIRQ::NUM_TOTAL, None));
++            .write(|table| table.resize(PeripheralIRQ::MAX_INCLUSIVE + 1, None));
 +    }
 +
      /// Query the list of pending IRQs.
@@ -374,20 +384,24 @@ diff -uNr 18_backtrace/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_contro
 diff -uNr 18_backtrace/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs 19_kernel_heap/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs
 --- 18_backtrace/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs
 +++ 19_kernel_heap/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs
-@@ -104,6 +104,8 @@
+@@ -109,6 +109,12 @@
+     fn compatible(&self) -> &'static str {
+         Self::COMPATIBLE
      }
-
-     unsafe fn init(&self) -> Result<(), &'static str> {
++
++    unsafe fn init(&self) -> Result<(), &'static str> {
 +        self.periph.init();
 +
-         (self.post_init_callback)();
++        Ok(())
++    }
+ }
 
-         Ok(())
+ impl exception::asynchronous::interface::IRQManager for InterruptController {
 
 diff -uNr 18_backtrace/kernel/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 19_kernel_heap/kernel/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 --- 18_backtrace/kernel/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 19_kernel_heap/kernel/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -329,6 +329,13 @@
+@@ -327,6 +327,13 @@
          self.chars_written += 1;
      }
 
@@ -401,7 +415,7 @@ diff -uNr 18_backtrace/kernel/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 19
      /// Block execution until the last buffered character has been physically put on the TX wire.
      fn flush(&self) {
          // Spin until the busy bit is cleared.
-@@ -451,6 +458,10 @@
+@@ -443,6 +450,10 @@
          self.inner.lock(|inner| inner.write_char(c));
      }
 
@@ -412,72 +426,6 @@ diff -uNr 18_backtrace/kernel/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 19
      fn write_fmt(&self, args: core::fmt::Arguments) -> fmt::Result {
          // Fully qualified syntax for the call to `core::fmt::Write::write_fmt()` to increase
          // readability.
-
-diff -uNr 18_backtrace/kernel/src/bsp/raspberrypi/driver.rs 19_kernel_heap/kernel/src/bsp/raspberrypi/driver.rs
---- 18_backtrace/kernel/src/bsp/raspberrypi/driver.rs
-+++ 19_kernel_heap/kernel/src/bsp/raspberrypi/driver.rs
-@@ -11,6 +11,7 @@
-     memory::mmu::MMIODescriptor,
-     synchronization::{interface::ReadWriteEx, InitStateLock},
- };
-+use alloc::vec::Vec;
- use core::{
-     mem::MaybeUninit,
-     sync::atomic::{AtomicBool, Ordering},
-@@ -24,18 +25,11 @@
-
- /// Device Driver Manager type.
- struct BSPDriverManager {
--    device_drivers: InitStateLock<[Option<&'static (dyn DeviceDriver + Sync)>; NUM_DRIVERS]>,
-+    device_drivers: InitStateLock<Vec<&'static (dyn DeviceDriver + Sync)>>,
-     init_done: AtomicBool,
- }
-
- //--------------------------------------------------------------------------------------------------
--// Public Definitions
--//--------------------------------------------------------------------------------------------------
--
--/// The number of active drivers provided by this BSP.
--pub const NUM_DRIVERS: usize = 3;
--
--//--------------------------------------------------------------------------------------------------
- // Global instances
- //--------------------------------------------------------------------------------------------------
-
-@@ -50,7 +44,7 @@
- static mut INTERRUPT_CONTROLLER: MaybeUninit<device_driver::GICv2> = MaybeUninit::uninit();
-
- static BSP_DRIVER_MANAGER: BSPDriverManager = BSPDriverManager {
--    device_drivers: InitStateLock::new([None; NUM_DRIVERS]),
-+    device_drivers: InitStateLock::new(Vec::new()),
-     init_done: AtomicBool::new(false),
- };
-
-@@ -143,9 +137,9 @@
-
-     unsafe fn register_drivers(&self) {
-         self.device_drivers.write(|drivers| {
--            drivers[0] = Some(PL011_UART.assume_init_ref());
--            drivers[1] = Some(GPIO.assume_init_ref());
--            drivers[2] = Some(INTERRUPT_CONTROLLER.assume_init_ref());
-+            drivers.push(PL011_UART.assume_init_ref());
-+            drivers.push(GPIO.assume_init_ref());
-+            drivers.push(INTERRUPT_CONTROLLER.assume_init_ref());
-         });
-     }
- }
-@@ -180,9 +174,8 @@
-         Ok(())
-     }
-
--    fn all_device_drivers(&self) -> [&(dyn DeviceDriver + Sync); NUM_DRIVERS] {
--        self.device_drivers
--            .read(|drivers| drivers.map(|drivers| drivers.unwrap()))
-+    fn all_device_drivers(&self) -> &Vec<&(dyn DeviceDriver + Sync)> {
-+        self.device_drivers.read(|drivers| drivers)
-     }
-
-     #[cfg(feature = "test_build")]
 
 diff -uNr 18_backtrace/kernel/src/bsp/raspberrypi/kernel.ld 19_kernel_heap/kernel/src/bsp/raspberrypi/kernel.ld
 --- 18_backtrace/kernel/src/bsp/raspberrypi/kernel.ld
@@ -819,26 +767,198 @@ diff -uNr 18_backtrace/kernel/src/console.rs 19_kernel_heap/kernel/src/console.r
 diff -uNr 18_backtrace/kernel/src/driver.rs 19_kernel_heap/kernel/src/driver.rs
 --- 18_backtrace/kernel/src/driver.rs
 +++ 19_kernel_heap/kernel/src/driver.rs
-@@ -10,7 +10,7 @@
+@@ -8,23 +8,10 @@
+     exception, info,
+     synchronization::{interface::ReadWriteEx, InitStateLock},
+ };
++use alloc::vec::Vec;
+ use core::fmt;
 
- /// Driver interfaces.
- pub mod interface {
--    use crate::bsp;
-+    use alloc::vec::Vec;
+ //--------------------------------------------------------------------------------------------------
+-// Private Definitions
+-//--------------------------------------------------------------------------------------------------
+-
+-const NUM_DRIVERS: usize = 5;
+-
+-struct DriverManagerInner<T>
+-where
+-    T: 'static,
+-{
+-    next_index: usize,
+-    descriptors: [Option<DeviceDriverDescriptor<T>>; NUM_DRIVERS],
+-}
+-
+-//--------------------------------------------------------------------------------------------------
+ // Public Definitions
+ //--------------------------------------------------------------------------------------------------
 
-     /// Device Driver functions.
-     pub trait DeviceDriver {
-@@ -46,8 +46,8 @@
-         /// Must be called before `all_device_drivers`.
-         unsafe fn instantiate_drivers(&self) -> Result<(), &'static str>;
+@@ -68,7 +55,6 @@
+ pub type DeviceDriverPostInitCallback = unsafe fn() -> Result<(), &'static str>;
 
--        /// Return a slice of references to all `BSP`-instantiated drivers.
--        fn all_device_drivers(&self) -> [&(dyn DeviceDriver + Sync); bsp::driver::NUM_DRIVERS];
-+        /// Return a vector of references to all `BSP`-instantiated drivers.
-+        fn all_device_drivers(&self) -> &Vec<&(dyn DeviceDriver + Sync)>;
+ /// A descriptor for device drivers.
+-#[derive(Copy, Clone)]
+ pub struct DeviceDriverDescriptor<T>
+ where
+     T: 'static,
+@@ -83,7 +69,7 @@
+ where
+     T: 'static,
+ {
+-    inner: InitStateLock<DriverManagerInner<T>>,
++    descriptors: InitStateLock<Vec<DeviceDriverDescriptor<T>>>,
+ }
 
-         /// Minimal code needed to bring up the console in QEMU (for testing only). This is often
-         /// less steps than on real hardware due to QEMU's abstractions.
+ //--------------------------------------------------------------------------------------------------
+@@ -93,23 +79,6 @@
+ static DRIVER_MANAGER: DriverManager<exception::asynchronous::IRQNumber> = DriverManager::new();
+
+ //--------------------------------------------------------------------------------------------------
+-// Private Code
+-//--------------------------------------------------------------------------------------------------
+-
+-impl<T> DriverManagerInner<T>
+-where
+-    T: 'static + Copy,
+-{
+-    /// Create an instance.
+-    pub const fn new() -> Self {
+-        Self {
+-            next_index: 0,
+-            descriptors: [None; NUM_DRIVERS],
+-        }
+-    }
+-}
+-
+-//--------------------------------------------------------------------------------------------------
+ // Public Code
+ //--------------------------------------------------------------------------------------------------
+
+@@ -135,32 +104,19 @@
+
+ impl<T> DriverManager<T>
+ where
+-    T: fmt::Display + Copy,
++    T: fmt::Display,
+ {
+     /// Create an instance.
+     pub const fn new() -> Self {
+         Self {
+-            inner: InitStateLock::new(DriverManagerInner::new()),
++            descriptors: InitStateLock::new(Vec::new()),
+         }
+     }
+
+     /// Register a device driver with the kernel.
+     pub fn register_driver(&self, descriptor: DeviceDriverDescriptor<T>) {
+-        self.inner.write(|inner| {
+-            inner.descriptors[inner.next_index] = Some(descriptor);
+-            inner.next_index += 1;
+-        })
+-    }
+-
+-    /// Helper for iterating over registered drivers.
+-    fn for_each_descriptor<'a>(&'a self, f: impl FnMut(&'a DeviceDriverDescriptor<T>)) {
+-        self.inner.read(|inner| {
+-            inner
+-                .descriptors
+-                .iter()
+-                .filter_map(|x| x.as_ref())
+-                .for_each(f)
+-        })
++        self.descriptors
++            .write(|descriptors| descriptors.push(descriptor));
+     }
+
+     /// Fully initialize all drivers and their interrupts handlers.
+@@ -169,53 +125,54 @@
+     ///
+     /// - During init, drivers might do stuff with system-wide impact.
+     pub unsafe fn init_drivers_and_irqs(&self) {
+-        self.for_each_descriptor(|descriptor| {
+-            // 1. Initialize driver.
+-            if let Err(x) = descriptor.device_driver.init() {
+-                panic!(
+-                    "Error initializing driver: {}: {}",
+-                    descriptor.device_driver.compatible(),
+-                    x
+-                );
+-            }
+-
+-            // 2. Call corresponding post init callback.
+-            if let Some(callback) = &descriptor.post_init_callback {
+-                if let Err(x) = callback() {
++        self.descriptors.read(|descriptors| {
++            for descriptor in descriptors {
++                // 1. Initialize driver.
++                if let Err(x) = descriptor.device_driver.init() {
+                     panic!(
+-                        "Error during driver post-init callback: {}: {}",
++                        "Error initializing driver: {}: {}",
+                         descriptor.device_driver.compatible(),
+                         x
+                     );
+                 }
++
++                // 2. Call corresponding post init callback.
++                if let Some(callback) = &descriptor.post_init_callback {
++                    if let Err(x) = callback() {
++                        panic!(
++                            "Error during driver post-init callback: {}: {}",
++                            descriptor.device_driver.compatible(),
++                            x
++                        );
++                    }
++                }
+             }
+-        });
+
+-        // 3. After all post-init callbacks were done, the interrupt controller should be
+-        //    registered and functional. So let drivers register with it now.
+-        self.for_each_descriptor(|descriptor| {
+-            if let Some(irq_number) = &descriptor.irq_number {
+-                if let Err(x) = descriptor
+-                    .device_driver
+-                    .register_and_enable_irq_handler(irq_number)
+-                {
+-                    panic!(
+-                        "Error during driver interrupt handler registration: {}: {}",
+-                        descriptor.device_driver.compatible(),
+-                        x
+-                    );
++            // 3. After all post-init callbacks were done, the interrupt controller should be
++            //    registered and functional. So let drivers register with it now.
++            for descriptor in descriptors {
++                if let Some(irq_number) = &descriptor.irq_number {
++                    if let Err(x) = descriptor
++                        .device_driver
++                        .register_and_enable_irq_handler(irq_number)
++                    {
++                        panic!(
++                            "Error during driver interrupt handler registration: {}: {}",
++                            descriptor.device_driver.compatible(),
++                            x
++                        );
++                    }
+                 }
+             }
+-        });
++        })
+     }
+
+     /// Enumerate all registered device drivers.
+     pub fn enumerate(&self) {
+-        let mut i: usize = 1;
+-        self.for_each_descriptor(|descriptor| {
+-            info!("      {}. {}", i, descriptor.device_driver.compatible());
+-
+-            i += 1;
++        self.descriptors.read(|descriptors| {
++            for (i, desc) in descriptors.iter().enumerate() {
++                info!("      {}. {}", i + 1, desc.device_driver.compatible());
++            }
+         });
+     }
+ }
 
 diff -uNr 18_backtrace/kernel/src/lib.rs 19_kernel_heap/kernel/src/lib.rs
 --- 18_backtrace/kernel/src/lib.rs
@@ -870,10 +990,10 @@ diff -uNr 18_backtrace/kernel/src/main.rs 19_kernel_heap/kernel/src/main.rs
 
 +extern crate alloc;
 +
- use libkernel::{bsp, cpu, driver, exception, info, memory, state, time, warn};
+ use libkernel::{bsp, cpu, driver, exception, info, memory, state, time};
 
  /// Early init code.
-@@ -92,6 +94,9 @@
+@@ -73,6 +75,9 @@
      info!("Registered IRQ handlers:");
      exception::asynchronous::irq_manager().print_handler();
 
@@ -887,7 +1007,7 @@ diff -uNr 18_backtrace/kernel/src/main.rs 19_kernel_heap/kernel/src/main.rs
 diff -uNr 18_backtrace/kernel/src/memory/heap_alloc.rs 19_kernel_heap/kernel/src/memory/heap_alloc.rs
 --- 18_backtrace/kernel/src/memory/heap_alloc.rs
 +++ 19_kernel_heap/kernel/src/memory/heap_alloc.rs
-@@ -0,0 +1,137 @@
+@@ -0,0 +1,147 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
@@ -899,8 +1019,10 @@ diff -uNr 18_backtrace/kernel/src/memory/heap_alloc.rs 19_kernel_heap/kernel/src
 +    memory::{Address, Virtual},
 +    synchronization,
 +    synchronization::IRQSafeNullLock,
++    warn,
 +};
 +use alloc::alloc::{GlobalAlloc, Layout};
++use core::sync::atomic::{AtomicBool, Ordering};
 +use linked_list_allocator::Heap as LinkedListHeap;
 +
 +//--------------------------------------------------------------------------------------------------
@@ -1019,11 +1141,19 @@ diff -uNr 18_backtrace/kernel/src/memory/heap_alloc.rs 19_kernel_heap/kernel/src
 +
 +/// Query the BSP for the heap region and initialize the kernel's heap allocator with it.
 +pub fn kernel_init_heap_allocator() {
++    static INIT_DONE: AtomicBool = AtomicBool::new(false);
++    if INIT_DONE.load(Ordering::Relaxed) {
++        warn!("Already initialized");
++        return;
++    }
++
 +    let region = bsp::memory::mmu::virt_heap_region();
 +
 +    KERNEL_HEAP_ALLOCATOR.inner.lock(|inner| unsafe {
 +        inner.init(region.start_addr().as_usize() as *mut u8, region.size())
 +    });
++
++    INIT_DONE.store(true, Ordering::Relaxed);
 +}
 
 diff -uNr 18_backtrace/kernel/src/memory/mmu/mapping_record.rs 19_kernel_heap/kernel/src/memory/mmu/mapping_record.rs
@@ -1279,6 +1409,19 @@ diff -uNr 18_backtrace/kernel/src/print.rs 19_kernel_heap/kernel/src/print.rs
 +        }
 +    })
 +}
+
+diff -uNr 18_backtrace/kernel/src/state.rs 19_kernel_heap/kernel/src/state.rs
+--- 18_backtrace/kernel/src/state.rs
++++ 19_kernel_heap/kernel/src/state.rs
+@@ -52,7 +52,7 @@
+     const SINGLE_CORE_MAIN: u8 = 1;
+     const MULTI_CORE_MAIN: u8 = 2;
+
+-    /// Create an instance.
++    /// Create a new instance.
+     pub const fn new() -> Self {
+         Self(AtomicU8::new(Self::INIT))
+     }
 
 diff -uNr 18_backtrace/Makefile 19_kernel_heap/Makefile
 --- 18_backtrace/Makefile

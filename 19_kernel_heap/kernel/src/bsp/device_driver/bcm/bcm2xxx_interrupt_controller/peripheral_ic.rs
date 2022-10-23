@@ -53,7 +53,7 @@ type WriteOnlyRegisters = MMIODerefWrapper<WORegisterBlock>;
 /// Abstraction for the ReadOnly parts of the associated MMIO registers.
 type ReadOnlyRegisters = MMIODerefWrapper<RORegisterBlock>;
 
-type HandlerTable = Vec<Option<exception::asynchronous::IRQDescriptor>>;
+type HandlerTable = Vec<Option<exception::asynchronous::IRQHandlerDescriptor<PeripheralIRQ>>>;
 
 //--------------------------------------------------------------------------------------------------
 // Public Definitions
@@ -92,7 +92,7 @@ impl PeripheralIC {
     /// Called by the kernel to bring up the device.
     pub fn init(&self) {
         self.handler_table
-            .write(|table| table.resize(PeripheralIRQ::NUM_TOTAL, None));
+            .write(|table| table.resize(PeripheralIRQ::MAX_INCLUSIVE + 1, None));
     }
 
     /// Query the list of pending IRQs.
@@ -114,23 +114,22 @@ impl exception::asynchronous::interface::IRQManager for PeripheralIC {
 
     fn register_handler(
         &self,
-        irq: Self::IRQNumberType,
-        descriptor: exception::asynchronous::IRQDescriptor,
+        irq_handler_descriptor: exception::asynchronous::IRQHandlerDescriptor<Self::IRQNumberType>,
     ) -> Result<(), &'static str> {
         self.handler_table.write(|table| {
-            let irq_number = irq.get();
+            let irq_number = irq_handler_descriptor.number().get();
 
             if table[irq_number].is_some() {
                 return Err("IRQ handler already registered");
             }
 
-            table[irq_number] = Some(descriptor);
+            table[irq_number] = Some(irq_handler_descriptor);
 
             Ok(())
         })
     }
 
-    fn enable(&self, irq: Self::IRQNumberType) {
+    fn enable(&self, irq: &Self::IRQNumberType) {
         self.wo_registers.lock(|regs| {
             let enable_reg = if irq.get() <= 31 {
                 &regs.ENABLE_1
@@ -156,7 +155,7 @@ impl exception::asynchronous::interface::IRQManager for PeripheralIC {
                     None => panic!("No handler registered for IRQ {}", irq_number),
                     Some(descriptor) => {
                         // Call the IRQ handler. Panics on failure.
-                        descriptor.handler.handle().expect("Error handling IRQ");
+                        descriptor.handler().handle().expect("Error handling IRQ");
                     }
                 }
             }
@@ -171,7 +170,7 @@ impl exception::asynchronous::interface::IRQManager for PeripheralIC {
         self.handler_table.read(|table| {
             for (i, opt) in table.iter().enumerate() {
                 if let Some(handler) = opt {
-                    info!("            {: >3}. {}", i, handler.name);
+                    info!("            {: >3}. {}", i, handler.name());
                 }
             }
         });

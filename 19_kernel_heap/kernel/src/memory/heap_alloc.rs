@@ -9,8 +9,10 @@ use crate::{
     memory::{Address, Virtual},
     synchronization,
     synchronization::IRQSafeNullLock,
+    warn,
 };
 use alloc::alloc::{GlobalAlloc, Layout};
+use core::sync::atomic::{AtomicBool, Ordering};
 use linked_list_allocator::Heap as LinkedListHeap;
 
 //--------------------------------------------------------------------------------------------------
@@ -129,9 +131,17 @@ unsafe impl GlobalAlloc for HeapAllocator {
 
 /// Query the BSP for the heap region and initialize the kernel's heap allocator with it.
 pub fn kernel_init_heap_allocator() {
+    static INIT_DONE: AtomicBool = AtomicBool::new(false);
+    if INIT_DONE.load(Ordering::Relaxed) {
+        warn!("Already initialized");
+        return;
+    }
+
     let region = bsp::memory::mmu::virt_heap_region();
 
     KERNEL_HEAP_ALLOCATOR.inner.lock(|inner| unsafe {
         inner.init(region.start_addr().as_usize() as *mut u8, region.size())
     });
+
+    INIT_DONE.store(true, Ordering::Relaxed);
 }

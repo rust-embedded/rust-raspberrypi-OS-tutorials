@@ -183,10 +183,8 @@ pub fn test_runner(tests: &[&test_types::UnitTest]) {
 #[cfg(test)]
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
-    use driver::interface::DriverManager;
-
     exception::handling_init();
-    bsp::driver::driver_manager().qemu_bring_up_console();
+    bsp::driver::qemu_bring_up_console();
 
     test_main();
 

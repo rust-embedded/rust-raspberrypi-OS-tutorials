@@ -266,10 +266,8 @@ implementation in `lib.rs`:
 #[cfg(test)]
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
-    use driver::interface::DriverManager;
-
     exception::handling_init();
-    bsp::driver::driver_manager().qemu_bring_up_console();
+    bsp::driver::qemu_bring_up_console();
 
     test_main();
 
@@ -277,12 +275,12 @@ unsafe fn kernel_init() -> ! {
 }
 ```
 
-Note the call to `bsp::driver::driver_manager().qemu_bring_up_console()`. Since we are running all
-our tests inside `QEMU`, we need to ensure that whatever peripheral implements the kernel's
-`console` interface is initialized, so that we can print from our tests. If you recall [tutorial
-03], bringing up peripherals in `QEMU` might not need the full initialization as is needed on real
-hardware (setting clocks, config registers, etc...) due to the abstractions in `QEMU`'s emulation
-code. So this is an opportunity to cut down on setup code.
+Note the call to `bsp::driver::qemu_bring_up_console()`. Since we are running all our tests inside
+`QEMU`, we need to ensure that whatever peripheral implements the kernel's `console` interface is
+initialized, so that we can print from our tests. If you recall [tutorial 03], bringing up
+peripherals in `QEMU` might not need the full initialization as is needed on real hardware (setting
+clocks, config registers, etc...) due to the abstractions in `QEMU`'s emulation code. So this is an
+opportunity to cut down on setup code.
 
 [tutorial 03]: ../03_hacky_hello_world
 
@@ -622,15 +620,13 @@ your test code into individual chunks. For example, take a look at `tests/01_tim
 #![test_runner(libkernel::test_runner)]
 
 use core::time::Duration;
-use libkernel::{bsp, cpu, driver, exception, time};
+use libkernel::{bsp, cpu, exception, time};
 use test_macros::kernel_test;
 
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
-    use driver::interface::DriverManager;
-
     exception::handling_init();
-    bsp::driver::driver_manager().qemu_bring_up_console();
+    bsp::driver::qemu_bring_up_console();
 
     // Depending on CPU arch, some timer bring-up code could go here. Not needed for the RPi.
 
@@ -643,12 +639,12 @@ unsafe fn kernel_init() -> ! {
 #[kernel_test]
 fn timer_is_counting() {
     assert!(time::time_manager().uptime().as_nanos() > 0)
-    assert!(time::time_manager().resolution().as_nanos() < 100)
 }
 
 /// Timer resolution must be sufficient.
 #[kernel_test]
 fn timer_resolution_is_sufficient() {
+    assert!(time::time_manager().resolution().as_nanos() > 0);
     assert!(time::time_manager().resolution().as_nanos() < 100)
 }
 ```
@@ -719,15 +715,14 @@ so the wanted outcome is a `panic!`. Here is the whole test (minus some inline c
 
 mod panic_exit_success;
 
-use libkernel::{bsp, cpu, driver, exception, info, memory, println};
+use libkernel::{bsp, cpu, exception, info, memory, println};
 
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
-    use driver::interface::DriverManager;
     use memory::mmu::interface::MMU;
 
     exception::handling_init();
-    bsp::driver::driver_manager().qemu_bring_up_console();
+    bsp::driver::qemu_bring_up_console();
 
     // This line will be printed as the test header.
     println!("Testing synchronous exception handling by causing a page fault");
@@ -794,15 +789,14 @@ The subtest first sends `"ABC"` over the console to the kernel, and then expects
 /// Console tests should time out on the I/O harness in case of panic.
 mod panic_wait_forever;
 
-use libkernel::{bsp, console, cpu, driver, exception, print};
+use libkernel::{bsp, console, cpu, exception, print};
 
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
     use console::console;
-    use driver::interface::DriverManager;
 
     exception::handling_init();
-    bsp::driver::driver_manager().qemu_bring_up_console();
+    bsp::driver::qemu_bring_up_console();
 
     // Handshake
     assert_eq!(console().read_char(), 'A');

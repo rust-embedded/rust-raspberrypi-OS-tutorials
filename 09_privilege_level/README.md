@@ -519,15 +519,15 @@ diff -uNr 08_hw_debug_JTAG/src/main.rs 09_privilege_level/src/main.rs
  mod panic_wait;
  mod print;
  mod synchronization;
-@@ -149,6 +150,7 @@
+@@ -148,6 +149,7 @@
 
  /// The main function running after the early init.
  fn kernel_main() -> ! {
 +    use console::console;
      use core::time::Duration;
-     use driver::interface::DriverManager;
 
-@@ -159,6 +161,12 @@
+     info!(
+@@ -157,6 +159,12 @@
      );
      info!("Booting on: {}", bsp::board_name());
 
@@ -540,9 +540,9 @@ diff -uNr 08_hw_debug_JTAG/src/main.rs 09_privilege_level/src/main.rs
      info!(
          "Architectural timer resolution: {} ns",
          time::time_manager().resolution().as_nanos()
-@@ -173,11 +181,15 @@
-         info!("      {}. {}", i + 1, driver.compatible());
-     }
+@@ -165,11 +173,15 @@
+     info!("Drivers loaded:");
+     driver::driver_manager().enumerate();
 
 -    // Test a failing timer case.
 -    time::time_manager().spin_for(Duration::from_nanos(1));

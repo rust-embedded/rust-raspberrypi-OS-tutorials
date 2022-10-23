@@ -989,6 +989,19 @@ diff -uNr 17_kernel_symbols/kernel/src/panic_wait.rs 18_backtrace/kernel/src/pan
 
      _panic_exit()
 
+diff -uNr 17_kernel_symbols/kernel/src/state.rs 18_backtrace/kernel/src/state.rs
+--- 17_kernel_symbols/kernel/src/state.rs
++++ 18_backtrace/kernel/src/state.rs
+@@ -52,7 +52,7 @@
+     const SINGLE_CORE_MAIN: u8 = 1;
+     const MULTI_CORE_MAIN: u8 = 2;
+
+-    /// Create a new instance.
++    /// Create an instance.
+     pub const fn new() -> Self {
+         Self(AtomicU8::new(Self::INIT))
+     }
+
 diff -uNr 17_kernel_symbols/kernel/tests/05_backtrace_sanity.rb 18_backtrace/kernel/tests/05_backtrace_sanity.rb
 --- 17_kernel_symbols/kernel/tests/05_backtrace_sanity.rb
 +++ 18_backtrace/kernel/tests/05_backtrace_sanity.rb
@@ -1036,7 +1049,7 @@ diff -uNr 17_kernel_symbols/kernel/tests/05_backtrace_sanity.rb 18_backtrace/ker
 diff -uNr 17_kernel_symbols/kernel/tests/05_backtrace_sanity.rs 18_backtrace/kernel/tests/05_backtrace_sanity.rs
 --- 17_kernel_symbols/kernel/tests/05_backtrace_sanity.rs
 +++ 18_backtrace/kernel/tests/05_backtrace_sanity.rs
-@@ -0,0 +1,33 @@
+@@ -0,0 +1,31 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
@@ -1050,7 +1063,7 @@ diff -uNr 17_kernel_symbols/kernel/tests/05_backtrace_sanity.rs 18_backtrace/ker
 +/// Console tests should time out on the I/O harness in case of panic.
 +mod panic_wait_forever;
 +
-+use libkernel::{bsp, cpu, driver, exception, memory};
++use libkernel::{bsp, cpu, exception, memory};
 +
 +#[inline(never)]
 +fn nested() {
@@ -1059,11 +1072,9 @@ diff -uNr 17_kernel_symbols/kernel/tests/05_backtrace_sanity.rs 18_backtrace/ker
 +
 +#[no_mangle]
 +unsafe fn kernel_init() -> ! {
-+    use driver::interface::DriverManager;
-+
 +    exception::handling_init();
 +    memory::init();
-+    bsp::driver::driver_manager().qemu_bring_up_console();
++    bsp::driver::qemu_bring_up_console();
 +
 +    nested();
 +
@@ -1105,7 +1116,7 @@ diff -uNr 17_kernel_symbols/kernel/tests/06_backtrace_invalid_frame.rb 18_backtr
 diff -uNr 17_kernel_symbols/kernel/tests/06_backtrace_invalid_frame.rs 18_backtrace/kernel/tests/06_backtrace_invalid_frame.rs
 --- 17_kernel_symbols/kernel/tests/06_backtrace_invalid_frame.rs
 +++ 18_backtrace/kernel/tests/06_backtrace_invalid_frame.rs
-@@ -0,0 +1,35 @@
+@@ -0,0 +1,33 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
@@ -1119,7 +1130,7 @@ diff -uNr 17_kernel_symbols/kernel/tests/06_backtrace_invalid_frame.rs 18_backtr
 +/// Console tests should time out on the I/O harness in case of panic.
 +mod panic_wait_forever;
 +
-+use libkernel::{backtrace, bsp, cpu, driver, exception, memory};
++use libkernel::{backtrace, bsp, cpu, exception, memory};
 +
 +#[inline(never)]
 +fn nested() {
@@ -1130,11 +1141,9 @@ diff -uNr 17_kernel_symbols/kernel/tests/06_backtrace_invalid_frame.rs 18_backtr
 +
 +#[no_mangle]
 +unsafe fn kernel_init() -> ! {
-+    use driver::interface::DriverManager;
-+
 +    exception::handling_init();
 +    memory::init();
-+    bsp::driver::driver_manager().qemu_bring_up_console();
++    bsp::driver::qemu_bring_up_console();
 +
 +    nested();
 +
@@ -1175,7 +1184,7 @@ diff -uNr 17_kernel_symbols/kernel/tests/07_backtrace_invalid_link.rb 18_backtra
 diff -uNr 17_kernel_symbols/kernel/tests/07_backtrace_invalid_link.rs 18_backtrace/kernel/tests/07_backtrace_invalid_link.rs
 --- 17_kernel_symbols/kernel/tests/07_backtrace_invalid_link.rs
 +++ 18_backtrace/kernel/tests/07_backtrace_invalid_link.rs
-@@ -0,0 +1,40 @@
+@@ -0,0 +1,38 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
 +// Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
@@ -1189,7 +1198,7 @@ diff -uNr 17_kernel_symbols/kernel/tests/07_backtrace_invalid_link.rs 18_backtra
 +/// Console tests should time out on the I/O harness in case of panic.
 +mod panic_wait_forever;
 +
-+use libkernel::{backtrace, bsp, cpu, driver, exception, memory};
++use libkernel::{backtrace, bsp, cpu, exception, memory};
 +
 +#[inline(never)]
 +fn nested_2() -> &'static str {
@@ -1205,11 +1214,9 @@ diff -uNr 17_kernel_symbols/kernel/tests/07_backtrace_invalid_link.rs 18_backtra
 +
 +#[no_mangle]
 +unsafe fn kernel_init() -> ! {
-+    use driver::interface::DriverManager;
-+
 +    exception::handling_init();
 +    memory::init();
-+    bsp::driver::driver_manager().qemu_bring_up_console();
++    bsp::driver::qemu_bring_up_console();
 +
 +    nested_1();
 +

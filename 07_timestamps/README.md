@@ -501,6 +501,28 @@ diff -uNr 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 07
          {}
      }
 
+diff -uNr 06_uart_chainloader/src/bsp/raspberrypi/driver.rs 07_timestamps/src/bsp/raspberrypi/driver.rs
+--- 06_uart_chainloader/src/bsp/raspberrypi/driver.rs
++++ 07_timestamps/src/bsp/raspberrypi/driver.rs
+@@ -57,6 +57,17 @@
+ /// # Safety
+ ///
+ /// See child function calls.
++///
++/// # Note
++///
++/// Using atomics here relieves us from needing to use `unsafe` for the static variable.
++///
++/// On `AArch64`, which is the only implemented architecture at the time of writing this,
++/// [`AtomicBool::load`] and [`AtomicBool::store`] are lowered to ordinary load and store
++/// instructions. They are therefore safe to use even with MMU + caching deactivated.
++///
++/// [`AtomicBool::load`]: core::sync::atomic::AtomicBool::load
++/// [`AtomicBool::store`]: core::sync::atomic::AtomicBool::store
+ pub unsafe fn init() -> Result<(), &'static str> {
+     static INIT_DONE: AtomicBool = AtomicBool::new(false);
+     if INIT_DONE.load(Ordering::Relaxed) {
+
 diff -uNr 06_uart_chainloader/src/bsp/raspberrypi/kernel.ld 07_timestamps/src/bsp/raspberrypi/kernel.ld
 --- 06_uart_chainloader/src/bsp/raspberrypi/kernel.ld
 +++ 07_timestamps/src/bsp/raspberrypi/kernel.ld
@@ -580,6 +602,37 @@ diff -uNr 06_uart_chainloader/src/cpu.rs 07_timestamps/src/cpu.rs
 -#[cfg(feature = "bsp_rpi3")]
 -pub use arch_cpu::spin_for_cycles;
 
+diff -uNr 06_uart_chainloader/src/driver.rs 07_timestamps/src/driver.rs
+--- 06_uart_chainloader/src/driver.rs
++++ 07_timestamps/src/driver.rs
+@@ -4,7 +4,10 @@
+
+ //! Driver support.
+
+-use crate::synchronization::{interface::Mutex, NullLock};
++use crate::{
++    info,
++    synchronization::{interface::Mutex, NullLock},
++};
+
+ //--------------------------------------------------------------------------------------------------
+ // Private Definitions
+@@ -151,4 +154,14 @@
+             }
+         });
+     }
++
++    /// Enumerate all registered device drivers.
++    pub fn enumerate(&self) {
++        let mut i: usize = 1;
++        self.for_each_descriptor(|descriptor| {
++            info!("      {}. {}", i, descriptor.device_driver.compatible());
++
++            i += 1;
++        });
++    }
+ }
+
 diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
 --- 06_uart_chainloader/src/main.rs
 +++ 07_timestamps/src/main.rs
@@ -604,7 +657,7 @@ diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
 
  /// Early init code.
  ///
-@@ -143,55 +147,37 @@
+@@ -142,55 +146,30 @@
      kernel_main()
  }
 
@@ -618,9 +671,7 @@ diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
  /// The main function running after the early init.
  fn kernel_main() -> ! {
 -    use console::console;
-+    use core::time::Duration;
-+    use driver::interface::DriverManager;
-
+-
 -    println!("{}", MINILOAD_LOGO);
 -    println!("{:^37}", bsp::board_name());
 -    println!();
@@ -633,26 +684,8 @@ diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
 -    // Notify `Minipush` to send the binary.
 -    for _ in 0..3 {
 -        console().write_char(3 as char);
-+    info!(
-+        "{} version {}",
-+        env!("CARGO_PKG_NAME"),
-+        env!("CARGO_PKG_VERSION")
-+    );
-+    info!("Booting on: {}", bsp::board_name());
-+
-+    info!(
-+        "Architectural timer resolution: {} ns",
-+        time::time_manager().resolution().as_nanos()
-+    );
-+
-+    info!("Drivers loaded:");
-+    for (i, driver) in bsp::driver::driver_manager()
-+        .all_device_drivers()
-+        .iter()
-+        .enumerate()
-+    {
-+        info!("      {}. {}", i + 1, driver.compatible());
-     }
+-    }
++    use core::time::Duration;
 
 -    // Read the binary's size.
 -    let mut size: u32 = u32::from(console().read_char() as u8);
@@ -670,10 +703,29 @@ diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
 -        for i in 0..size {
 -            core::ptr::write_volatile(kernel_addr.offset(i as isize), console().read_char() as u8)
 -        }
--    }
++    info!(
++        "{} version {}",
++        env!("CARGO_PKG_NAME"),
++        env!("CARGO_PKG_VERSION")
++    );
++    info!("Booting on: {}", bsp::board_name());
++
++    info!(
++        "Architectural timer resolution: {} ns",
++        time::time_manager().resolution().as_nanos()
++    );
++
++    info!("Drivers loaded:");
++    driver::driver_manager().enumerate();
++
 +    // Test a failing timer case.
 +    time::time_manager().spin_for(Duration::from_nanos(1));
-
++
++    loop {
++        info!("Spinning for 1 second");
++        time::time_manager().spin_for(Duration::from_secs(1));
+     }
+-
 -    println!("[ML] Loaded! Executing the payload now\n");
 -    console().flush();
 -
@@ -682,10 +734,6 @@ diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
 -
 -    // Jump to loaded kernel!
 -    kernel()
-+    loop {
-+        info!("Spinning for 1 second");
-+        time::time_manager().spin_for(Duration::from_secs(1));
-+    }
  }
 
 diff -uNr 06_uart_chainloader/src/panic_wait.rs 07_timestamps/src/panic_wait.rs

@@ -4,7 +4,9 @@
 
 //! System console.
 
-use crate::bsp;
+mod null_console;
+
+use crate::synchronization::{self, NullLock};
 
 //--------------------------------------------------------------------------------------------------
 // Public Definitions
@@ -55,12 +57,25 @@ pub mod interface {
 }
 
 //--------------------------------------------------------------------------------------------------
-// Public Code
+// Global instances
 //--------------------------------------------------------------------------------------------------
 
-/// Return a reference to the console.
+static CUR_CONSOLE: NullLock<&'static (dyn interface::All + Sync)> =
+    NullLock::new(&null_console::NULL_CONSOLE);
+
+//--------------------------------------------------------------------------------------------------
+// Public Code
+//--------------------------------------------------------------------------------------------------
+use synchronization::interface::Mutex;
+
+/// Register a new console.
+pub fn register_console(new_console: &'static (dyn interface::All + Sync)) {
+    CUR_CONSOLE.lock(|con| *con = new_console);
+}
+
+/// Return a reference to the currently registered console.
 ///
 /// This is the global console used by all printing macros.
 pub fn console() -> &'static dyn interface::All {
-    bsp::console::console()
+    CUR_CONSOLE.lock(|con| *con)
 }
