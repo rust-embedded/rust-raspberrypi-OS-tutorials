@@ -516,7 +516,7 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel_symbols/src/main.rs 17_
 diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel_symbols.mk 17_kernel_symbols/kernel_symbols.mk
 --- 16_virtual_mem_part4_higher_half_kernel/kernel_symbols.mk
 +++ 17_kernel_symbols/kernel_symbols.mk
-@@ -0,0 +1,103 @@
+@@ -0,0 +1,117 @@
 +## SPDX-License-Identifier: MIT OR Apache-2.0
 +##
 +## Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
@@ -598,9 +598,11 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel_symbols.mk 17_kernel_sy
 +##--------------------------------------------------------------------------------------------------
 +## Targets
 +##--------------------------------------------------------------------------------------------------
-+.PHONY: all
++.PHONY: all symbols measure_time_start measure_time_finish
 +
-+all:
++all: measure_time_start symbols measure_time_finish
++
++symbols:
 +	@cp $(KERNEL_SYMBOLS_INPUT_ELF) $(KERNEL_SYMBOLS_OUTPUT_ELF)
 +
 +	@$(DOCKER_TOOLS) $(EXEC_SYMBOLS_TOOL) --gen_symbols $(KERNEL_SYMBOLS_OUTPUT_ELF) \
@@ -619,7 +621,19 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel_symbols.mk 17_kernel_sy
 +	@$(DOCKER_TOOLS) $(EXEC_SYMBOLS_TOOL) --patch_data $(KERNEL_SYMBOLS_OUTPUT_ELF) \
 +                $(KERNEL_SYMBOLS_STRIPPED)
 +
++# Note: The following is the only _trivial_ way I could think of that works out of the box on both
++# Linux and macOS. Since macOS does not have the moduloN nanosecond format string option, the
++# resolution is restricted to whole seconds.
++measure_time_start:
++	@date +modulos > /tmp/kernel_symbols_start.date
++
++measure_time_finish:
++	@date +modulos > /tmp/kernel_symbols_end.date
++
 +	$(call color_progress_prefix, "Finished")
++	@echo "in $$((`cat /tmp/kernel_symbols_end.date` - `cat /tmp/kernel_symbols_start.date`)).0s"
++
++	@rm /tmp/kernel_symbols_end.date /tmp/kernel_symbols_start.date
 
 diff -uNr 16_virtual_mem_part4_higher_half_kernel/libraries/debug-symbol-types/Cargo.toml 17_kernel_symbols/libraries/debug-symbol-types/Cargo.toml
 --- 16_virtual_mem_part4_higher_half_kernel/libraries/debug-symbol-types/Cargo.toml
@@ -683,7 +697,7 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/libraries/debug-symbol-types/s
 diff -uNr 16_virtual_mem_part4_higher_half_kernel/Makefile 17_kernel_symbols/Makefile
 --- 16_virtual_mem_part4_higher_half_kernel/Makefile
 +++ 17_kernel_symbols/Makefile
-@@ -84,7 +84,24 @@
+@@ -85,7 +85,24 @@
  KERNEL_ELF_TTABLES      = target/$(TARGET)/release/kernel+ttables
  KERNEL_ELF_TTABLES_DEPS = $(KERNEL_ELF_RAW) $(wildcard $(TT_TOOL_PATH)/*)
 
@@ -709,7 +723,7 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/Makefile 17_kernel_symbols/Mak
 
 
 
-@@ -177,11 +194,19 @@
+@@ -178,11 +195,18 @@
  	@$(DOCKER_TOOLS) $(EXEC_TT_TOOL) $(BSP) $(KERNEL_ELF_TTABLES)
 
  ##------------------------------------------------------------------------------
@@ -717,8 +731,7 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/Makefile 17_kernel_symbols/Mak
 +##------------------------------------------------------------------------------
 +$(KERNEL_ELF_TTABLES_SYMS): $(KERNEL_ELF_TTABLES_SYMS_DEPS)
 +	$(call color_header, "Generating kernel symbols and patching kernel ELF")
-+	@time -f "in moduloes" \
-+                $(MAKE) --no-print-directory -f kernel_symbols.mk
++	@$(MAKE) --no-print-directory -f kernel_symbols.mk
 +
 +##------------------------------------------------------------------------------
  ## Generate the stripped kernel binary
@@ -731,7 +744,7 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/Makefile 17_kernel_symbols/Mak
  	$(call color_progress_prefix, "Name")
  	@echo $(KERNEL_BIN)
  	$(call color_progress_prefix, "Size")
-@@ -190,7 +215,7 @@
+@@ -191,7 +215,7 @@
  ##------------------------------------------------------------------------------
  ## Generate the documentation
  ##------------------------------------------------------------------------------
@@ -740,7 +753,7 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/Makefile 17_kernel_symbols/Mak
  	$(call color_header, "Generating docs")
  	@$(DOC_CMD) --document-private-items --open
 
-@@ -317,10 +342,19 @@
+@@ -318,10 +342,19 @@
      cd $(shell pwd)
 
      TEST_ELF=$$(echo $$1 | sed -e 's/.*target/target/g')

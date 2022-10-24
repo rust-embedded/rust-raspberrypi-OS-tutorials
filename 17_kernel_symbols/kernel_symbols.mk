@@ -79,9 +79,11 @@ DOCKER_TOOLS = $(DOCKER_CMD) $(DOCKER_IMAGE)
 ##--------------------------------------------------------------------------------------------------
 ## Targets
 ##--------------------------------------------------------------------------------------------------
-.PHONY: all
+.PHONY: all symbols measure_time_start measure_time_finish
 
-all:
+all: measure_time_start symbols measure_time_finish
+
+symbols:
 	@cp $(KERNEL_SYMBOLS_INPUT_ELF) $(KERNEL_SYMBOLS_OUTPUT_ELF)
 
 	@$(DOCKER_TOOLS) $(EXEC_SYMBOLS_TOOL) --gen_symbols $(KERNEL_SYMBOLS_OUTPUT_ELF) \
@@ -100,4 +102,16 @@ all:
 	@$(DOCKER_TOOLS) $(EXEC_SYMBOLS_TOOL) --patch_data $(KERNEL_SYMBOLS_OUTPUT_ELF) \
                 $(KERNEL_SYMBOLS_STRIPPED)
 
+# Note: The following is the only _trivial_ way I could think of that works out of the box on both
+# Linux and macOS. Since macOS does not have the %N nanosecond format string option, the
+# resolution is restricted to whole seconds.
+measure_time_start:
+	@date +%s > /tmp/kernel_symbols_start.date
+
+measure_time_finish:
+	@date +%s > /tmp/kernel_symbols_end.date
+
 	$(call color_progress_prefix, "Finished")
+	@echo "in $$((`cat /tmp/kernel_symbols_end.date` - `cat /tmp/kernel_symbols_start.date`)).0s"
+
+	@rm /tmp/kernel_symbols_end.date /tmp/kernel_symbols_start.date

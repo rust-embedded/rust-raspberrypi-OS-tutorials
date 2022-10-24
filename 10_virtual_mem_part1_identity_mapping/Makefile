@@ -2,8 +2,9 @@
 ##
 ## Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
 
-include ../common/format.mk
 include ../common/docker.mk
+include ../common/format.mk
+include ../common/operating_system.mk
 
 ##--------------------------------------------------------------------------------------------------
 ## Optional, user-provided configuration values
@@ -156,7 +157,7 @@ $(KERNEL_BIN): $(KERNEL_ELF)
 	$(call color_progress_prefix, "Name")
 	@echo $(KERNEL_BIN)
 	$(call color_progress_prefix, "Size")
-	@printf '%s KiB\n' `du -k $(KERNEL_BIN) | cut -f1`
+	$(call disk_usage_KiB, $(KERNEL_BIN))
 
 ##------------------------------------------------------------------------------
 ## Generate the documentation

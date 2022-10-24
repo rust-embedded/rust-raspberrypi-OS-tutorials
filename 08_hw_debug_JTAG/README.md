@@ -320,7 +320,7 @@ diff -uNr 07_timestamps/Cargo.toml 08_hw_debug_JTAG/Cargo.toml
 diff -uNr 07_timestamps/Makefile 08_hw_debug_JTAG/Makefile
 --- 07_timestamps/Makefile
 +++ 08_hw_debug_JTAG/Makefile
-@@ -31,6 +31,8 @@
+@@ -32,6 +32,8 @@
      OBJDUMP_BINARY    = aarch64-none-elf-objdump
      NM_BINARY         = aarch64-none-elf-nm
      READELF_BINARY    = aarch64-none-elf-readelf
@@ -329,7 +329,7 @@ diff -uNr 07_timestamps/Makefile 08_hw_debug_JTAG/Makefile
      LD_SCRIPT_PATH    = $(shell pwd)/src/bsp/raspberrypi
      RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
  else ifeq ($(BSP),rpi4)
-@@ -42,6 +44,8 @@
+@@ -43,6 +45,8 @@
      OBJDUMP_BINARY    = aarch64-none-elf-objdump
      NM_BINARY         = aarch64-none-elf-nm
      READELF_BINARY    = aarch64-none-elf-readelf
@@ -338,7 +338,7 @@ diff -uNr 07_timestamps/Makefile 08_hw_debug_JTAG/Makefile
      LD_SCRIPT_PATH    = $(shell pwd)/src/bsp/raspberrypi
      RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
  endif
-@@ -98,18 +102,25 @@
+@@ -99,18 +103,25 @@
  DOCKER_CMD            = docker run -t --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
  DOCKER_CMD_INTERACT   = $(DOCKER_CMD) -i
  DOCKER_ARG_DIR_COMMON = -v $(shell pwd)/../common:/work/common
@@ -364,7 +364,7 @@ diff -uNr 07_timestamps/Makefile 08_hw_debug_JTAG/Makefile
  endif
 
 
-@@ -214,6 +225,35 @@
+@@ -215,6 +226,35 @@
 
 
 

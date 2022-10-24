@@ -1426,7 +1426,7 @@ diff -uNr 18_backtrace/kernel/src/state.rs 19_kernel_heap/kernel/src/state.rs
 diff -uNr 18_backtrace/Makefile 19_kernel_heap/Makefile
 --- 18_backtrace/Makefile
 +++ 19_kernel_heap/Makefile
-@@ -15,6 +15,11 @@
+@@ -16,6 +16,11 @@
  # Default to a serial device name that is common in Linux.
  DEV_SERIAL ?= /dev/ttyUSB0
 
@@ -1438,7 +1438,7 @@ diff -uNr 18_backtrace/Makefile 19_kernel_heap/Makefile
  # Optional integration test name.
  ifdef TEST
      TEST_ARG = --test $(TEST)
-@@ -69,7 +74,7 @@
+@@ -70,7 +75,7 @@
  ##--------------------------------------------------------------------------------------------------
  KERNEL_MANIFEST      = kernel/Cargo.toml
  KERNEL_LINKER_SCRIPT = kernel.ld
@@ -1447,7 +1447,7 @@ diff -uNr 18_backtrace/Makefile 19_kernel_heap/Makefile
 
  KERNEL_ELF_RAW      = target/$(TARGET)/release/kernel
  # This parses cargo's dep-info file.
-@@ -116,17 +121,17 @@
+@@ -117,17 +122,17 @@
      -D warnings                   \
      -D missing_docs
 

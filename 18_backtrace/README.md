@@ -1227,7 +1227,7 @@ diff -uNr 17_kernel_symbols/kernel/tests/07_backtrace_invalid_link.rs 18_backtra
 diff -uNr 17_kernel_symbols/Makefile 18_backtrace/Makefile
 --- 17_kernel_symbols/Makefile
 +++ 18_backtrace/Makefile
-@@ -42,7 +42,7 @@
+@@ -43,7 +43,7 @@
      OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi3.cfg
      JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi3.img
      LD_SCRIPT_PATH    = $(shell pwd)/kernel/src/bsp/raspberrypi
@@ -1236,7 +1236,7 @@ diff -uNr 17_kernel_symbols/Makefile 18_backtrace/Makefile
  else ifeq ($(BSP),rpi4)
      TARGET            = aarch64-unknown-none-softfloat
      KERNEL_BIN        = kernel8.img
-@@ -56,7 +56,7 @@
+@@ -57,7 +57,7 @@
      OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi4.cfg
      JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi4.img
      LD_SCRIPT_PATH    = $(shell pwd)/kernel/src/bsp/raspberrypi
@@ -1245,7 +1245,7 @@ diff -uNr 17_kernel_symbols/Makefile 18_backtrace/Makefile
  endif
 
  # Export for build.rs.
-@@ -121,10 +121,12 @@
+@@ -122,10 +122,12 @@
      $(FEATURES)                    \
      --release
 

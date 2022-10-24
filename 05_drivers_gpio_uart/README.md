@@ -186,7 +186,7 @@ diff -uNr 04_safe_globals/Cargo.toml 05_drivers_gpio_uart/Cargo.toml
 diff -uNr 04_safe_globals/Makefile 05_drivers_gpio_uart/Makefile
 --- 04_safe_globals/Makefile
 +++ 05_drivers_gpio_uart/Makefile
-@@ -12,6 +12,9 @@
+@@ -13,6 +13,9 @@
  # Default to the RPi3.
  BSP ?= rpi3
 
@@ -196,7 +196,7 @@ diff -uNr 04_safe_globals/Makefile 05_drivers_gpio_uart/Makefile
 
 
  ##--------------------------------------------------------------------------------------------------
-@@ -87,6 +90,7 @@
+@@ -88,6 +91,7 @@
 
  EXEC_QEMU          = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
  EXEC_TEST_DISPATCH = ruby ../common/tests/dispatch.rb
@@ -204,7 +204,7 @@ diff -uNr 04_safe_globals/Makefile 05_drivers_gpio_uart/Makefile
 
  ##------------------------------------------------------------------------------
  ## Dockerization
-@@ -94,18 +98,26 @@
+@@ -95,18 +99,26 @@
  DOCKER_CMD            = docker run -t --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
  DOCKER_CMD_INTERACT   = $(DOCKER_CMD) -i
  DOCKER_ARG_DIR_COMMON = -v $(shell pwd)/../common:/work/common
@@ -232,7 +232,7 @@ diff -uNr 04_safe_globals/Makefile 05_drivers_gpio_uart/Makefile
 
  all: $(KERNEL_BIN)
 
-@@ -155,9 +167,16 @@
+@@ -156,9 +168,16 @@
  qemu: $(KERNEL_BIN)
  	$(call color_header, "Launching QEMU")
  	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)

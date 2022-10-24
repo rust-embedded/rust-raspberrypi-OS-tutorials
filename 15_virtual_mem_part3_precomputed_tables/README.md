@@ -1848,7 +1848,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/04_exception_irq_sanity.r
 diff -uNr 14_virtual_mem_part2_mmio_remap/Makefile 15_virtual_mem_part3_precomputed_tables/Makefile
 --- 14_virtual_mem_part2_mmio_remap/Makefile
 +++ 15_virtual_mem_part3_precomputed_tables/Makefile
-@@ -71,10 +71,20 @@
+@@ -72,10 +72,20 @@
  KERNEL_LINKER_SCRIPT = kernel.ld
  LAST_BUILD_CONFIG    = target/$(BSP).build_config
 
@@ -1871,7 +1871,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/Makefile 15_virtual_mem_part3_precompu
 
 
 
-@@ -103,6 +113,7 @@
+@@ -104,6 +114,7 @@
      -O binary
 
  EXEC_QEMU          = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
@@ -1879,7 +1879,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/Makefile 15_virtual_mem_part3_precompu
  EXEC_TEST_DISPATCH = ruby ../common/tests/dispatch.rb
  EXEC_MINIPUSH      = ruby ../common/serial/minipush.rb
 
-@@ -153,16 +164,24 @@
+@@ -154,16 +165,24 @@
  ##------------------------------------------------------------------------------
  ## Compile the kernel ELF
  ##------------------------------------------------------------------------------
@@ -1907,7 +1907,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/Makefile 15_virtual_mem_part3_precompu
  	$(call color_progress_prefix, "Name")
  	@echo $(KERNEL_BIN)
  	$(call color_progress_prefix, "Size")
-@@ -300,6 +319,7 @@
+@@ -301,6 +320,7 @@
      TEST_ELF=$$(echo $$1 | sed -e 's/.*target/target/g')
      TEST_BINARY=$$(echo $$1.img | sed -e 's/.*target/target/g')
 

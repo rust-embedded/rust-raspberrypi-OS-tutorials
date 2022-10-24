@@ -52,7 +52,7 @@ diff -uNr 01_wait_forever/Cargo.toml 02_runtime_init/Cargo.toml
 diff -uNr 01_wait_forever/Makefile 02_runtime_init/Makefile
 --- 01_wait_forever/Makefile
 +++ 02_runtime_init/Makefile
-@@ -180,6 +180,7 @@
+@@ -181,6 +181,7 @@
  	$(call color_header, "Launching objdump")
  	@$(DOCKER_TOOLS) $(OBJDUMP_BINARY) --disassemble --demangle \
                  --section .text   \

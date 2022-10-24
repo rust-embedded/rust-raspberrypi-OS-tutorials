@@ -140,7 +140,7 @@ Binary files 05_drivers_gpio_uart/demo_payload_rpi4.img and 06_uart_chainloader/
 diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
 --- 05_drivers_gpio_uart/Makefile
 +++ 06_uart_chainloader/Makefile
-@@ -23,27 +23,29 @@
+@@ -24,27 +24,29 @@
  QEMU_MISSING_STRING = "This board is not yet supported for QEMU."
 
  ifeq ($(BSP),rpi3)
@@ -190,7 +190,7 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
  endif
 
  # Export for build.rs.
-@@ -89,8 +91,8 @@
+@@ -90,8 +92,8 @@
      -O binary
 
  EXEC_QEMU          = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
@@ -201,7 +201,7 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
 
  ##------------------------------------------------------------------------------
  ## Dockerization
-@@ -109,7 +111,7 @@
+@@ -110,7 +112,7 @@
  ifeq ($(shell uname -s),Linux)
      DOCKER_CMD_DEV = $(DOCKER_CMD_INTERACT) $(DOCKER_ARG_DEV)
 
@@ -210,7 +210,7 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
  endif
 
 
-@@ -117,7 +119,7 @@
+@@ -118,7 +120,7 @@
  ##--------------------------------------------------------------------------------------------------
  ## Targets
  ##--------------------------------------------------------------------------------------------------
@@ -219,7 +219,7 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
 
  all: $(KERNEL_BIN)
 
-@@ -159,7 +161,7 @@
+@@ -160,7 +162,7 @@
  ##------------------------------------------------------------------------------
  ifeq ($(QEMU_MACHINE_TYPE),) # QEMU is not supported for the board.
 
@@ -228,7 +228,7 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
  	$(call color_header, "$(QEMU_MISSING_STRING)")
 
  else # QEMU is supported.
-@@ -168,13 +170,17 @@
+@@ -169,13 +171,17 @@
  	$(call color_header, "Launching QEMU")
  	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
 
@@ -249,7 +249,7 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
 
  ##------------------------------------------------------------------------------
  ## Run clippy
-@@ -231,7 +237,8 @@
+@@ -232,7 +238,8 @@
  ##------------------------------------------------------------------------------
  test_boot: $(KERNEL_BIN)
  	$(call color_header, "Boot test - $(BSP)")
