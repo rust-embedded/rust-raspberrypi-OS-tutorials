@@ -10,7 +10,7 @@ then
     echo "'bundle' could not be found. Please install Ruby and Bundler."
     exit
 fi
-bundle config set path '.vendor/bundle'
+bundle config set --local path '.vendor/bundle'
 bundle install
 
 #

@@ -108,7 +108,7 @@ class DevTool
         @user_has_supplied_crates = false
         @bsp = bsp_from_env || SUPPORTED_BSPS.first
 
-        cl = user_supplied_crate_list || Dir['*/Cargo.toml'].sort
+        cl = user_supplied_crate_list || Dir['*/Cargo.toml']
         @crates = cl.map { |c| TutorialCrate.new(c.delete_suffix('/Cargo.toml')) }
     end
 

@@ -11,15 +11,15 @@ on:
 jobs:
   build:
     name: Various Sanity Checks
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Set up Node
         uses: actions/setup-node@v1
         with:
           node-version: "12"
-      - name: Set up Ruby 2.x
+      - name: Set up Ruby
         uses: ruby/setup-ruby@v1
       - name: Set up Rust nightly
         run: |
