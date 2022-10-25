@@ -35,6 +35,6 @@ jobs:
           gem install bundler
           bundle config set without 'uart'
           bundle install --retry 3
-      - name: Make all
+      - name: Run
         run: |
           bundle exec ruby utils/devtool.rb make_xtra

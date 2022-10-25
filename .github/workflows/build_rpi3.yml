@@ -35,6 +35,6 @@ jobs:
           gem install bundler
           bundle config set without 'uart'
           bundle install --retry 3
-      - name: Make
+      - name: Run
         run: |
           BSP=rpi3 bundle exec ruby utils/devtool.rb make
