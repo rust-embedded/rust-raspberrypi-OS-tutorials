@@ -1,0 +1,11 @@
+[workspace]
+
+members = [
+        "libraries/*",
+        "kernel",
+        "kernel_symbols"
+]
+
+[profile.release]
+lto = true
+debug = true
