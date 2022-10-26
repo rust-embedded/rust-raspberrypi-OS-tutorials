@@ -166,7 +166,7 @@ pub fn spin_for(duration: Duration) {
 
 /// The associated IRQ number.
 pub const fn timeout_irq() -> exception::asynchronous::IRQNumber {
-    bsp::exception::asynchronous::irq_map::ARM_NS_PHYISCAL_TIMER
+    bsp::exception::asynchronous::irq_map::ARM_NS_PHYSICAL_TIMER
 }
 
 /// Program a timer IRQ to be fired after `delay` has passed.

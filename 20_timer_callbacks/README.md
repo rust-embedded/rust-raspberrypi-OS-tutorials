@@ -58,7 +58,7 @@ diff -uNr 19_kernel_heap/kernel/src/_arch/aarch64/time.rs 20_timer_callbacks/ker
 +
 +/// The associated IRQ number.
 +pub const fn timeout_irq() -> exception::asynchronous::IRQNumber {
-+    bsp::exception::asynchronous::irq_map::ARM_NS_PHYISCAL_TIMER
++    bsp::exception::asynchronous::irq_map::ARM_NS_PHYSICAL_TIMER
 +}
 +
 +/// Program a timer IRQ to be fired after `delay` has passed.
@@ -398,7 +398,7 @@ diff -uNr 19_kernel_heap/kernel/src/bsp/raspberrypi/exception/asynchronous.rs 20
 
 -    pub const PL011_UART: IRQNumber = IRQNumber::Peripheral(PeripheralIRQ::new(57));
 +    /// The non-secure physical timer IRQ number.
-+    pub const ARM_NS_PHYISCAL_TIMER: IRQNumber = IRQNumber::Local(LocalIRQ::new(1));
++    pub const ARM_NS_PHYSICAL_TIMER: IRQNumber = IRQNumber::Local(LocalIRQ::new(1));
 +
 +    pub(in crate::bsp) const PL011_UART: IRQNumber = IRQNumber::Peripheral(PeripheralIRQ::new(57));
  }
@@ -411,7 +411,7 @@ diff -uNr 19_kernel_heap/kernel/src/bsp/raspberrypi/exception/asynchronous.rs 20
 
 -    pub const PL011_UART: IRQNumber = IRQNumber::new(153);
 +    /// The non-secure physical timer IRQ number.
-+    pub const ARM_NS_PHYISCAL_TIMER: IRQNumber = IRQNumber::new(30);
++    pub const ARM_NS_PHYSICAL_TIMER: IRQNumber = IRQNumber::new(30);
 +
 +    pub(in crate::bsp) const PL011_UART: IRQNumber = IRQNumber::new(153);
  }
