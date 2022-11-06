@@ -27,9 +27,9 @@ end
 
 # Monkey-patch IO so that we get access to the buffer of a previously unsuccessful expect().
 class IO
-    # rubocop:disable Naming:MethodName
-    attr_reader :unusedBuf
-    # rubocop:enable Naming:MethodName
+    def unused_buf
+        @unusedBuf
+    end
 end
 
 # A wrapper class that records characters that have been received from a PTY.
@@ -43,7 +43,7 @@ class PTYLoggerWrapper
     def expect(pattern, timeout)
         result = @pty.expect(pattern, timeout)
         @log << if result.nil?
-                    @pty.unusedBuf
+                    @pty.unused_buf
                 else
                     result
                 end
