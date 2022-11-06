@@ -272,8 +272,8 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel/src/_arch/aarch64/excep
 
 -use crate::exception;
 +use crate::{exception, memory, symbols};
+ use aarch64_cpu::{asm::barrier, registers::*};
  use core::{arch::global_asm, cell::UnsafeCell, fmt};
- use cortex_a::{asm::barrier, registers::*};
  use tock_registers::{
 @@ -260,6 +260,14 @@
 

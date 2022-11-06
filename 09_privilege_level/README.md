@@ -75,7 +75,7 @@ We are already using them since [tutorial 07](../07_timestamps/), so of course w
 Therefore we set the respective flags in the [Counter-timer Hypervisor Control register] and
 additionally set the virtual offset to zero so that we get the real physical value everytime:
 
-[Counter-timer Hypervisor Control register]:  https://docs.rs/cortex-a/5.1.2/src/cortex_a/regs/cnthctl_el2.rs.html
+[Counter-timer Hypervisor Control register]:  https://docs.rs/aarch64-cpu/9.0.0/src/aarch64_cpu/registers/cnthctl_el2.rs.html
 
 ```rust
 // Enable timer counter registers for EL1.
@@ -88,7 +88,7 @@ CNTVOFF_EL2.set(0);
 Next, we configure the [Hypervisor Configuration Register] such that `EL1` runs in `AArch64` mode,
 and not in `AArch32`, which would also be possible.
 
-[Hypervisor Configuration Register]: https://docs.rs/cortex-a/5.1.2/src/cortex_a/regs/hcr_el2.rs.html
+[Hypervisor Configuration Register]: https://docs.rs/aarch64-cpu/9.0.0/src/aarch64_cpu/registers/hcr_el2.rs.html
 
 ```rust
 // Set EL1 execution state to AArch64.
@@ -100,7 +100,7 @@ HCR_EL2.write(HCR_EL2::RW::EL1IsAarch64);
 There is actually only one way to transition from a higher EL to a lower EL, which is by way of
 executing the [ERET] instruction.
 
-[ERET]: https://docs.rs/cortex-a/5.1.2/src/cortex_a/asm.rs.html#87-96
+[ERET]: https://docs.rs/aarch64-cpu/9.0.0/src/aarch64_cpu/asm.rs.html#92-101
 
 This instruction will copy the contents of the [Saved Program Status Register - EL2] to `Current
 Program Status Register - EL1` and jump to the instruction address that is stored in the [Exception
@@ -109,8 +109,8 @@ Link Register - EL2].
 This is basically the reverse of what is happening when an exception is taken. You'll learn about
 that in an upcoming tutorial.
 
-[Saved Program Status Register - EL2]: https://docs.rs/cortex-a/5.1.2/src/cortex_a/regs/spsr_el2.rs.html
-[Exception Link Register - EL2]: https://docs.rs/cortex-a/5.1.2/src/cortex_a/regs/elr_el2.rs.html
+[Saved Program Status Register - EL2]: https://docs.rs/aarch64-cpu/9.0.0/src/aarch64_cpu/registers/spsr_el2.rs.html
+[Exception Link Register - EL2]: https://docs.rs/aarch64-cpu/9.0.0/src/aarch64_cpu/registers/elr_el2.rs.html
 
 ```rust
 // Set up a simulated exception return.
@@ -212,11 +212,12 @@ diff -uNr 08_hw_debug_JTAG/Cargo.toml 09_privilege_level/Cargo.toml
 diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.rs 09_privilege_level/src/_arch/aarch64/cpu/boot.rs
 --- 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.rs
 +++ 09_privilege_level/src/_arch/aarch64/cpu/boot.rs
-@@ -12,21 +12,72 @@
+@@ -11,22 +11,73 @@
+ //!
  //! crate::cpu::boot::arch_boot
 
++use aarch64_cpu::{asm, registers::*};
  use core::arch::global_asm;
-+use cortex_a::{asm, registers::*};
 +use tock_registers::interfaces::Writeable;
 
  // Assembly counterpart to this file.
@@ -348,7 +349,7 @@ diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/exception/asynchronous.rs 09_privil
 +//!
 +//! crate::exception::asynchronous::arch_asynchronous
 +
-+use cortex_a::registers::*;
++use aarch64_cpu::registers::*;
 +use tock_registers::interfaces::Readable;
 +
 +//--------------------------------------------------------------------------------------------------
@@ -435,7 +436,7 @@ diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/exception.rs 09_privilege_level/src
 +//!
 +//! crate::exception::arch_exception
 +
-+use cortex_a::registers::*;
++use aarch64_cpu::registers::*;
 +use tock_registers::interfaces::Readable;
 +
 +//--------------------------------------------------------------------------------------------------

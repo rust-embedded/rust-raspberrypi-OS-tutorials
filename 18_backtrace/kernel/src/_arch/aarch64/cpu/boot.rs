@@ -12,11 +12,11 @@
 //! crate::cpu::boot::arch_boot
 
 use crate::{memory, memory::Address};
+use aarch64_cpu::{asm, registers::*};
 use core::{
     arch::global_asm,
     sync::atomic::{compiler_fence, Ordering},
 };
-use cortex_a::{asm, registers::*};
 use tock_registers::interfaces::Writeable;
 
 // Assembly counterpart to this file.

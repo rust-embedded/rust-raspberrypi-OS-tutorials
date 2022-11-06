@@ -751,8 +751,8 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/_arch/aarch64/memory/mm
 -    memory::mmu::{translation_table::KernelTranslationTable, TranslationGranule},
 +    memory::{mmu::TranslationGranule, Address, Physical},
  };
+ use aarch64_cpu::{asm::barrier, registers::*};
  use core::intrinsics::unlikely;
- use cortex_a::{asm::barrier, registers::*};
 @@ -46,13 +46,6 @@
  // Global instances
  //--------------------------------------------------------------------------------------------------

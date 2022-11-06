@@ -11,7 +11,7 @@
 //!
 //! crate::exception::asynchronous::arch_asynchronous
 
-use cortex_a::registers::*;
+use aarch64_cpu::registers::*;
 use tock_registers::interfaces::Readable;
 
 //--------------------------------------------------------------------------------------------------

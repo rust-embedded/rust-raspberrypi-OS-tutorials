@@ -17,8 +17,8 @@ use crate::{
     bsp, memory,
     memory::{mmu::TranslationGranule, Address, Physical},
 };
+use aarch64_cpu::{asm::barrier, registers::*};
 use core::intrinsics::unlikely;
-use cortex_a::{asm::barrier, registers::*};
 use tock_registers::interfaces::{ReadWriteable, Readable, Writeable};
 
 //--------------------------------------------------------------------------------------------------

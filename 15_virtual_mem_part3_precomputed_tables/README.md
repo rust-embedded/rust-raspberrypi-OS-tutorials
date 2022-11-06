@@ -816,8 +816,8 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/_arch/aarch64/cpu/boot.rs 1
  //! crate::cpu::boot::arch_boot
 
 +use crate::{memory, memory::Address};
+ use aarch64_cpu::{asm, registers::*};
  use core::arch::global_asm;
- use cortex_a::{asm, registers::*};
  use tock_registers::interfaces::Writeable;
 @@ -75,9 +76,16 @@
  ///

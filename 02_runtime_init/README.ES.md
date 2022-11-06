@@ -28,7 +28,7 @@
 
   * Llama a `kernel_init()`, que llama a `panic!()`, que al final también pone al núcleo 0 en pausa.
 
-* La librería ahora usa el crate [cortex-a](https://github.com/rust-embedded/cortex-a), que nos da abstracciones sin coste y envuelve las partes que hacen uso de un `unsafe` (partes con código que no es seguro y podría causar errores) cuando se trabaja directamente con los recursos del procesador.
+* La librería ahora usa el crate [aarch64-cpu](https://github.com/rust-embedded/aarch64-cpu), que nos da abstracciones sin coste y envuelve las partes que hacen uso de un `unsafe` (partes con código que no es seguro y podría causar errores) cuando se trabaja directamente con los recursos del procesador.
 
   * Lo puedes ver en acción en `_arch/__arch_name__/cpu.rs`.
 

@@ -3,10 +3,10 @@
 version = 3
 
 [[package]]
-name = "cortex-a"
-version = "8.0.0"
+name = "aarch64-cpu"
+version = "9.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0cd4524931a4e0ec50ae91f0d55f571f31ffe11dd9ce2f9905b8343c018c25bb"
+checksum = "3aceb88e55ba626a5479279268d009a92d9d00eacce0de1b8c236c7ad31b7225"
 dependencies = [
  "tock-registers",
 ]
@@ -15,7 +15,7 @@ dependencies = [
 name = "mingo"
 version = "0.5.0"
 dependencies = [
- "cortex-a",
+ "aarch64-cpu",
  "tock-registers",
 ]
 

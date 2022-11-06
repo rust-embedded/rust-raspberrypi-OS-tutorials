@@ -415,7 +415,7 @@ diff -uNr 17_kernel_symbols/kernel/src/_arch/aarch64/backtrace.rs 18_backtrace/k
 +    backtrace::BacktraceItem,
 +    memory::{Address, Virtual},
 +};
-+use cortex_a::registers::*;
++use aarch64_cpu::registers::*;
 +use tock_registers::interfaces::Readable;
 +
 +//--------------------------------------------------------------------------------------------------
@@ -538,18 +538,18 @@ diff -uNr 17_kernel_symbols/kernel/src/_arch/aarch64/backtrace.rs 18_backtrace/k
 diff -uNr 17_kernel_symbols/kernel/src/_arch/aarch64/cpu/boot.rs 18_backtrace/kernel/src/_arch/aarch64/cpu/boot.rs
 --- 17_kernel_symbols/kernel/src/_arch/aarch64/cpu/boot.rs
 +++ 18_backtrace/kernel/src/_arch/aarch64/cpu/boot.rs
-@@ -12,7 +12,10 @@
- //! crate::cpu::boot::arch_boot
+@@ -13,7 +13,10 @@
 
  use crate::{memory, memory::Address};
+ use aarch64_cpu::{asm, registers::*};
 -use core::arch::global_asm;
 +use core::{
 +    arch::global_asm,
 +    sync::atomic::{compiler_fence, Ordering},
 +};
- use cortex_a::{asm, registers::*};
  use tock_registers::interfaces::Writeable;
 
+ // Assembly counterpart to this file.
 @@ -67,6 +70,18 @@
      SP_EL1.set(virt_boot_core_stack_end_exclusive_addr);
  }

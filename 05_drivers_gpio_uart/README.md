@@ -181,7 +181,7 @@ diff -uNr 04_safe_globals/Cargo.toml 05_drivers_gpio_uart/Cargo.toml
 +
  # Platform specific dependencies
  [target.'cfg(target_arch = "aarch64")'.dependencies]
- cortex-a = { version = "8.x.x" }
+ aarch64-cpu = { version = "9.x.x" }
 
 diff -uNr 04_safe_globals/Makefile 05_drivers_gpio_uart/Makefile
 --- 04_safe_globals/Makefile

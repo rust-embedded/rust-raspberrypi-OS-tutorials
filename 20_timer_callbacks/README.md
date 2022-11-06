@@ -40,12 +40,12 @@ diff -uNr 19_kernel_heap/kernel/src/_arch/aarch64/time.rs 20_timer_callbacks/ker
 +    bsp::{self, exception},
 +    warn,
 +};
+ use aarch64_cpu::{asm::barrier, registers::*};
  use core::{
      num::{NonZeroU128, NonZeroU32, NonZeroU64},
      ops::{Add, Div},
      time::Duration,
  };
- use cortex_a::{asm::barrier, registers::*};
 -use tock_registers::interfaces::Readable;
 +use tock_registers::interfaces::{ReadWriteable, Readable, Writeable};
 

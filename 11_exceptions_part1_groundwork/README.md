@@ -507,10 +507,10 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
  //!
  //! crate::exception::arch_exception
 
--use cortex_a::registers::*;
+-use aarch64_cpu::registers::*;
 -use tock_registers::interfaces::Readable;
++use aarch64_cpu::{asm::barrier, registers::*};
 +use core::{arch::global_asm, cell::UnsafeCell, fmt};
-+use cortex_a::{asm::barrier, registers::*};
 +use tock_registers::{
 +    interfaces::{Readable, Writeable},
 +    registers::InMemoryRegister,

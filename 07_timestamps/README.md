@@ -272,12 +272,12 @@ diff -uNr 06_uart_chainloader/src/_arch/aarch64/time.rs 07_timestamps/src/_arch/
 +//! crate::time::arch_time
 +
 +use crate::warn;
++use aarch64_cpu::{asm::barrier, registers::*};
 +use core::{
 +    num::{NonZeroU128, NonZeroU32, NonZeroU64},
 +    ops::{Add, Div},
 +    time::Duration,
 +};
-+use cortex_a::{asm::barrier, registers::*};
 +use tock_registers::interfaces::Readable;
 +
 +//--------------------------------------------------------------------------------------------------

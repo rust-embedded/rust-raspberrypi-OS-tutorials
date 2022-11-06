@@ -218,9 +218,9 @@ self.configure_translation_control();
 Finally, the `MMU` is turned on through the [System Control Register - EL1]. The last step also
 enables caching for data and instructions.
 
-[Translation Table Base Register 0 - EL1]: https://docs.rs/crate/cortex-a/5.1.2/source/src/regs/ttbr0_el1.rs
-[Translation Control Register - EL1]: https://docs.rs/crate/cortex-a/5.1.2/source/src/regs/tcr_el1.rs
-[System Control Register - EL1]: https://docs.rs/crate/cortex-a/5.1.2/source/src/regs/sctlr_el1.rs
+[Translation Table Base Register 0 - EL1]: https://docs.rs/aarch64-cpu/9.0.0/src/aarch64_cpu/registers/ttbr0_el1.rs.html
+[Translation Control Register - EL1]: https://docs.rs/aarch64-cpu/9.0.0/src/aarch64_cpu/registers/tcr_el1.rs.html
+[System Control Register - EL1]: https://docs.rs/aarch64-cpu/9.0.0/src/aarch64_cpu/registers/sctlr_el1.rs.html
 
 ### `kernel.ld`
 
@@ -257,11 +257,11 @@ The MMU init code is again a good example to see the great potential of Rust's z
 abstractions[[1]][[2]] for embedded programming.
 
 Let's take a look again at the piece of code for setting up the `MAIR_EL1` register using the
-[cortex-a] crate:
+[aarch64-cpu] crate:
 
 [1]: https://blog.rust-lang.org/2015/05/11/traits.html
 [2]: https://ruudvanasseldonk.com/2016/11/30/zero-cost-abstractions
-[cortex-a]: https://crates.io/crates/cortex-a
+[aarch64-cpu]: https://crates.io/crates/aarch64-cpu
 
 ```rust
 /// Setup function for the MAIR_EL1 register.
@@ -681,8 +681,8 @@ diff -uNr 09_privilege_level/src/_arch/aarch64/memory/mmu.rs 10_virtual_mem_part
 +    bsp, memory,
 +    memory::mmu::{translation_table::KernelTranslationTable, TranslationGranule},
 +};
++use aarch64_cpu::{asm::barrier, registers::*};
 +use core::intrinsics::unlikely;
-+use cortex_a::{asm::barrier, registers::*};
 +use tock_registers::interfaces::{ReadWriteable, Readable, Writeable};
 +
 +//--------------------------------------------------------------------------------------------------

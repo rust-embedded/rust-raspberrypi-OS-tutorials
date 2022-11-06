@@ -19,12 +19,12 @@
      1. Jumps to the `_start_rust()` function, defined in `arch/__arch_name__/cpu/boot.rs`.
 - `_start_rust()`:
      - Calls `kernel_init()`, which calls `panic!()`, which eventually halts core0 as well.
-- The library now uses the [cortex-a] crate, which provides zero-overhead abstractions and wraps
+- The library now uses the [aarch64-cpu] crate, which provides zero-overhead abstractions and wraps
   `unsafe` parts when dealing with the CPU's resources.
     - See it in action in `_arch/__arch_name__/cpu.rs`.
 
 [bss]: https://en.wikipedia.org/wiki/.bss
-[cortex-a]: https://github.com/rust-embedded/cortex-a
+[aarch64-cpu]: https://github.com/rust-embedded/aarch64-cpu
 
 ## Diff to previous
 ```diff
@@ -47,7 +47,7 @@ diff -uNr 01_wait_forever/Cargo.toml 02_runtime_init/Cargo.toml
 +
 +# Platform specific dependencies
 +[target.'cfg(target_arch = "aarch64")'.dependencies]
-+cortex-a = { version = "8.x.x" }
++aarch64-cpu = { version = "9.x.x" }
 
 diff -uNr 01_wait_forever/Makefile 02_runtime_init/Makefile
 --- 01_wait_forever/Makefile
@@ -165,7 +165,7 @@ diff -uNr 01_wait_forever/src/_arch/aarch64/cpu.rs 02_runtime_init/src/_arch/aar
 +//!
 +//! crate::cpu::arch_cpu
 +
-+use cortex_a::asm;
++use aarch64_cpu::asm;
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Code

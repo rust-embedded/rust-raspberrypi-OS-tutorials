@@ -802,7 +802,7 @@ diff -uNr 12_integrated_testing/kernel/src/_arch/aarch64/cpu/smp.rs 13_exception
 +//!
 +//! crate::cpu::smp::arch_smp
 +
-+use cortex_a::registers::*;
++use aarch64_cpu::registers::*;
 +use tock_registers::interfaces::Readable;
 +
 +//--------------------------------------------------------------------------------------------------
@@ -823,13 +823,12 @@ diff -uNr 12_integrated_testing/kernel/src/_arch/aarch64/cpu/smp.rs 13_exception
 diff -uNr 12_integrated_testing/kernel/src/_arch/aarch64/exception/asynchronous.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/_arch/aarch64/exception/asynchronous.rs
 --- 12_integrated_testing/kernel/src/_arch/aarch64/exception/asynchronous.rs
 +++ 13_exceptions_part2_peripheral_IRQs/kernel/src/_arch/aarch64/exception/asynchronous.rs
-@@ -11,13 +11,18 @@
- //!
+@@ -12,12 +12,17 @@
  //! crate::exception::asynchronous::arch_asynchronous
 
-+use core::arch::asm;
- use cortex_a::registers::*;
+ use aarch64_cpu::registers::*;
 -use tock_registers::interfaces::Readable;
++use core::arch::asm;
 +use tock_registers::interfaces::{Readable, Writeable};
 
  //--------------------------------------------------------------------------------------------------
@@ -913,8 +912,8 @@ diff -uNr 12_integrated_testing/kernel/src/_arch/aarch64/exception.rs 13_excepti
  //! crate::exception::arch_exception
 
 +use crate::exception;
+ use aarch64_cpu::{asm::barrier, registers::*};
  use core::{arch::global_asm, cell::UnsafeCell, fmt};
- use cortex_a::{asm::barrier, registers::*};
  use tock_registers::{
 @@ -102,8 +103,9 @@
  }
