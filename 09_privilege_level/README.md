@@ -34,7 +34,7 @@ architectures, please have a look at the following links:
 At this point, I strongly recommend that you glimpse over `Chapter 3` of the [Programmer’s Guide for
 ARMv8-A] before you continue. It gives a concise overview about the topic.
 
-[Programmer’s Guide forARMv8-A]: http://infocenter.arm.com/help/topic/com.arm.doc.den0024a/DEN0024A_v8_architecture_PG.pdf
+[Programmer’s Guide for ARMv8-A]: http://infocenter.arm.com/help/topic/com.arm.doc.den0024a/DEN0024A_v8_architecture_PG.pdf
 
 ## Scope of this tutorial
 
