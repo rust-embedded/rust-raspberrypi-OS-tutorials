@@ -12,7 +12,7 @@
 是因为在每次调用时都会创建一个新的`QEMUOutput`实例。
 
 如果我们想保留一些状态，例如关于写入字符数的统计数据，
-我们可以需要创建`QEMUOutput`的单个全局实例 (在Rust中，使用`static`关键字).
+我们需要创建`QEMUOutput`的一个全局实例 (在Rust中，使用`static`关键字).
 
 然而`static QEMU_OUTPUT`不允许调用具有`&mut self`的函数。
 为此，我们需要`static mut`，但是调用改变`static mut`状态的函数是不安全的。
@@ -23,15 +23,15 @@
 `Mutex`是`synchronization.rs`中引入的一个特性，并由同一文件中的`NullLock`实现。
 为了使代码更易于教学，它省略了用于防止并发访问的实际体系结构特定逻辑，因为只要内核仅在单个内核上执行并禁用中断，我们就不需要它。
 
-`NullLock`集中展示了[内部可变性]的Rust核心概念。确保仔细阅读。
-我们还建议您阅读这篇关于[Rust参考类型的精确思想的模型]文章
+`NullLock`侧重于展示Rust内部可变性的核心概念。请务必阅读它。
+我们还建议您阅读这篇关于[Rust的引用类型的精确心智模型]文章
 
 如果要将`NullLock`与一些真实的互斥实现进行比较，可以查看
 [spin crate]或者[parking lot crate]。
 
 [教程03]: ../03_hacky_hello_world
 [内部可变性]: https://doc.rust-lang.org/std/cell/index.html
-[Rust参考类型的精确思想的模型]: https://docs.rs/dtolnay/0.0.6/dtolnay/macro._02__reference_types.html
+[Rust的引用类型的精确心智模型]: https://docs.rs/dtolnay/0.0.6/dtolnay/macro._02__reference_types.html
 [spin crate]: https://github.com/mvdnes/spin-rs
 [parking lot crate]: https://github.com/Amanieu/parking_lot
 
