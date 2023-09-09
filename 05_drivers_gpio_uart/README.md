@@ -54,8 +54,8 @@ The drivers themselves are stored in `src/bsp/device_driver`, and can be reused 
 first driver added in these tutorials is the `PL011Uart` driver: It implements the
 `console::interface::*` traits and is from now on used as the main system console. The second driver
 is the `GPIO` driver, which pinmuxes (that is, routing signals from inside the `SoC` to actual HW
-pins) the RPi's PL011 UART accordingly. Note how the `GPIO` driver differentiates between **RPi3**
-and **RPi4**. Their HW is different, so we have to account for it in SW.
+pins) the RPi's PL011 UART accordingly. Note how the `GPIO` driver differentiates between **RPi 3**
+and **RPi 4**. Their HW is different, so we have to account for it in SW.
 
 The `BSP`s now also contain a memory map in `src/bsp/raspberrypi/memory.rs`. It provides the
 Raspberry's `MMIO` addresses which are used by the `BSP` to instantiate the respective device
@@ -64,18 +64,18 @@ drivers, so that the driver code knows where to find the device's registers in m
 ## Boot it from SD card
 
 Since we have real `UART` output now, we can run the code on the real hardware. Building is
-differentiated between the **RPi 3** and the **RPi4** due to before mentioned differences in the
+differentiated between the **RPi 3** and the **RPi 4** due to before mentioned differences in the
 `GPIO` driver. By default, all `Makefile` targets will build for the **RPi 3**. In order to build
-for the the **RPi4**, prepend `BSP=rpi4` to each target. For example:
+for the the **RPi 4**, prepend `BSP=rpi4` to each target. For example:
 
 ```console
 $ BSP=rpi4 make
 $ BSP=rpi4 make doc
 ```
 
-Unfortunately, QEMU does not yet support the **RPi4**, so `BSP=rpi4 make qemu` won't work.
+Unfortunately, QEMU does not yet support the **RPi 4**, so `BSP=rpi4 make qemu` won't work.
 
-**Some steps for preparing the SD card differ between RPi3 and RPi4, so be careful in the
+**Some steps for preparing the SD card differ between RPi 3 and RPi 4, so be careful in the
 following.**
 
 ### Common for both
@@ -87,7 +87,7 @@ following.**
 arm_64bit=1
 init_uart_clock=48000000
 ```
-### Pi 3
+### RPi 3
 
 3. Copy the following files from the [Raspberry Pi firmware repo](https://github.com/raspberrypi/firmware/tree/master/boot) onto the SD card:
     - [bootcode.bin](https://github.com/raspberrypi/firmware/raw/master/boot/bootcode.bin)
@@ -95,7 +95,7 @@ init_uart_clock=48000000
     - [start.elf](https://github.com/raspberrypi/firmware/raw/master/boot/start.elf)
 4. Run `make`.
 
-### Pi 4
+### RPi 4
 
 3. Copy the following files from the [Raspberry Pi firmware repo](https://github.com/raspberrypi/firmware/tree/master/boot) onto the SD card:
     - [fixup4.dat](https://github.com/raspberrypi/firmware/raw/master/boot/fixup4.dat)
@@ -104,7 +104,7 @@ init_uart_clock=48000000
 4. Run `BSP=rpi4 make`.
 
 
-_**Note**: Should it not work on your RPi4, try renaming `start4.elf` to `start.elf` (without the 4)
+_**Note**: Should it not work on your RPi 4, try renaming `start4.elf` to `start.elf` (without the 4)
 on the SD card._
 
 ### Common again
