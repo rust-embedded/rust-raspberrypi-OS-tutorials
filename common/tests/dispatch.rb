@@ -3,7 +3,7 @@
 
 # SPDX-License-Identifier: MIT OR Apache-2.0
 #
-# Copyright (c) 2019-2022 Andre Richter <andre.o.richter@gmail.com>
+# Copyright (c) 2019-2023 Andre Richter <andre.o.richter@gmail.com>
 
 file_dir = File.dirname(__FILE__)
 $LOAD_PATH.unshift(file_dir) unless $LOAD_PATH.include?(file_dir)

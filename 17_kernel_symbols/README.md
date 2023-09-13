@@ -519,7 +519,7 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel_symbols.mk 17_kernel_sy
 @@ -0,0 +1,117 @@
 +## SPDX-License-Identifier: MIT OR Apache-2.0
 +##
-+## Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
++## Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +include ../common/format.mk
 +include ../common/docker.mk
@@ -833,7 +833,7 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/tools/kernel_symbols_tool/kern
 +
 +# SPDX-License-Identifier: MIT OR Apache-2.0
 +#
-+# Copyright (c) 2021-2022 Andre Richter <andre.o.richter@gmail.com>
++# Copyright (c) 2021-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +# KernelELF
 +class KernelELF

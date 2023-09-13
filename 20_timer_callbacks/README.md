@@ -472,7 +472,7 @@ diff -uNr 19_kernel_heap/kernel/src/time.rs 20_timer_callbacks/kernel/src/time.r
 --- 19_kernel_heap/kernel/src/time.rs
 +++ 20_timer_callbacks/kernel/src/time.rs
 @@ -3,19 +3,54 @@
- // Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
+ // Copyright (c) 2020-2023 Andre Richter <andre.o.richter@gmail.com>
 
  //! Timer primitives.
 +//!

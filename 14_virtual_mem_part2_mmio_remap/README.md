@@ -1928,7 +1928,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/memory/mmu/mapping_reco
 @@ -0,0 +1,238 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! A record of mapped pages.
 +
@@ -2171,7 +2171,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/memory/mmu/page_alloc.r
 @@ -0,0 +1,70 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2021-2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2021-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Page allocation.
 +
@@ -2343,7 +2343,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/memory/mmu/types.rs 14_
 @@ -0,0 +1,373 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Memory Management Unit types.
 +
@@ -2719,7 +2719,7 @@ diff -uNr 13_exceptions_part2_peripheral_IRQs/kernel/src/memory/mmu.rs 14_virtua
 --- 13_exceptions_part2_peripheral_IRQs/kernel/src/memory/mmu.rs
 +++ 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu.rs
 @@ -3,30 +3,24 @@
- // Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
+ // Copyright (c) 2020-2023 Andre Richter <andre.o.richter@gmail.com>
 
  //! Memory Management Unit.
 -//!

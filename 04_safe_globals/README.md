@@ -287,7 +287,7 @@ diff -uNr 03_hacky_hello_world/src/synchronization.rs 04_safe_globals/src/synchr
 @@ -0,0 +1,77 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Synchronization primitives.
 +//!
