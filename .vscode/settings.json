@@ -13,9 +13,5 @@
     "--bins"
   ],
   "rust-analyzer.lens.debug": false,
-  "rust-analyzer.lens.run": false,
-  "rust-analyzer.linkedProjects": [
-    ".\\13_exceptions_part2_peripheral_IRQs\\kernel\\Cargo.toml",
-    ".\\06_uart_chainloader\\Cargo.toml"
-  ]
+  "rust-analyzer.lens.run": false
 }
