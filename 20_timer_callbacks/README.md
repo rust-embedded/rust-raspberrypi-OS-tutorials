@@ -90,7 +90,7 @@ diff -uNr 19_kernel_heap/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 @@ -0,0 +1,173 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2022-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Local Interrupt Controller Driver.
 +//!

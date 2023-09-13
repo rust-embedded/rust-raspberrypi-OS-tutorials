@@ -563,7 +563,7 @@ diff -uNr 18_backtrace/kernel/src/console/buffer_console.rs 19_kernel_heap/kerne
 @@ -0,0 +1,108 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2022-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! A console that buffers input during the init phase.
 +
@@ -676,7 +676,7 @@ diff -uNr 18_backtrace/kernel/src/console/null_console.rs 19_kernel_heap/kernel/
 @@ -1,41 +0,0 @@
 -// SPDX-License-Identifier: MIT OR Apache-2.0
 -//
--// Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
+-// Copyright (c) 2022-2023 Andre Richter <andre.o.richter@gmail.com>
 -
 -//! Null console.
 -
@@ -1010,7 +1010,7 @@ diff -uNr 18_backtrace/kernel/src/memory/heap_alloc.rs 19_kernel_heap/kernel/src
 @@ -0,0 +1,147 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2022-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Heap allocation.
 +

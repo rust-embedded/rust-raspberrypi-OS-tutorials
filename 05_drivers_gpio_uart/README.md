@@ -1281,7 +1281,7 @@ diff -uNr 04_safe_globals/src/console/null_console.rs 05_drivers_gpio_uart/src/c
 @@ -0,0 +1,41 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2022-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Null console.
 +

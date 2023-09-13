@@ -2611,7 +2611,7 @@ diff -uNr 12_integrated_testing/kernel/src/exception/asynchronous/null_irq_manag
 @@ -0,0 +1,42 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2022-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Null IRQ Manager.
 +
