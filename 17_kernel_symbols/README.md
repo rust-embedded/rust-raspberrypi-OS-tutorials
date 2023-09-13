@@ -465,9 +465,9 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel_symbols/Cargo.toml 17_k
 +default = []
 +generated_symbols_available = []
 +
-+##--------------------------------------------------------------------------------------------------
++## --------------------------------------------------------------------------------------------------
 +## Dependencies
-+##--------------------------------------------------------------------------------------------------
++## --------------------------------------------------------------------------------------------------
 +
 +[dependencies]
 +debug-symbol-types = { path = "../libraries/debug-symbol-types" }
@@ -524,9 +524,9 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel_symbols.mk 17_kernel_sy
 +include ../common/format.mk
 +include ../common/docker.mk
 +
-+##--------------------------------------------------------------------------------------------------
++## --------------------------------------------------------------------------------------------------
 +## Check for input variables that need be exported by the calling Makefile
-+##--------------------------------------------------------------------------------------------------
++## --------------------------------------------------------------------------------------------------
 +ifndef KERNEL_SYMBOLS_TOOL_PATH
 +$(error KERNEL_SYMBOLS_TOOL_PATH is not set)
 +endif
@@ -545,9 +545,9 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel_symbols.mk 17_kernel_sy
 +
 +
 +
-+##--------------------------------------------------------------------------------------------------
++## --------------------------------------------------------------------------------------------------
 +## Targets and Prerequisites
-+##--------------------------------------------------------------------------------------------------
++## --------------------------------------------------------------------------------------------------
 +KERNEL_SYMBOLS_MANIFEST      = kernel_symbols/Cargo.toml
 +KERNEL_SYMBOLS_LINKER_SCRIPT = kernel_symbols/kernel_symbols.ld
 +
@@ -562,9 +562,9 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel_symbols.mk 17_kernel_sy
 +
 +
 +
-+##--------------------------------------------------------------------------------------------------
++## --------------------------------------------------------------------------------------------------
 +## Command building blocks
-+##--------------------------------------------------------------------------------------------------
++## --------------------------------------------------------------------------------------------------
 +GET_SYMBOLS_SECTION_VIRT_ADDR = $(DOCKER_TOOLS) $(EXEC_SYMBOLS_TOOL) \
 +    --get_symbols_section_virt_addr $(KERNEL_SYMBOLS_OUTPUT_ELF)
 +
@@ -585,9 +585,9 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel_symbols.mk 17_kernel_sy
 +
 +EXEC_SYMBOLS_TOOL  = ruby $(KERNEL_SYMBOLS_TOOL_PATH)/main.rb
 +
-+##------------------------------------------------------------------------------
++## ------------------------------------------------------------------------------
 +## Dockerization
-+##------------------------------------------------------------------------------
++## ------------------------------------------------------------------------------
 +DOCKER_CMD = docker run -t --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
 +
 +# DOCKER_IMAGE defined in include file (see top of this file).
@@ -595,9 +595,9 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel_symbols.mk 17_kernel_sy
 +
 +
 +
-+##--------------------------------------------------------------------------------------------------
++## --------------------------------------------------------------------------------------------------
 +## Targets
-+##--------------------------------------------------------------------------------------------------
++## --------------------------------------------------------------------------------------------------
 +.PHONY: all symbols measure_time_start measure_time_finish
 +
 +all: measure_time_start symbols measure_time_finish
@@ -702,9 +702,9 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/Makefile 17_kernel_symbols/Mak
  KERNEL_ELF_TTABLES_DEPS = $(KERNEL_ELF_RAW) $(wildcard $(TT_TOOL_PATH)/*)
 
 -KERNEL_ELF = $(KERNEL_ELF_TTABLES)
-+##------------------------------------------------------------------------------
++## ------------------------------------------------------------------------------
 +## Kernel symbols
-+##------------------------------------------------------------------------------
++## ------------------------------------------------------------------------------
 +export KERNEL_SYMBOLS_TOOL_PATH = tools/kernel_symbols_tool
 +
 +KERNEL_ELF_TTABLES_SYMS = target/$(TARGET)/release/kernel+ttables+symbols
@@ -726,16 +726,16 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/Makefile 17_kernel_symbols/Mak
 @@ -178,11 +195,18 @@
  	@$(DOCKER_TOOLS) $(EXEC_TT_TOOL) $(BSP) $(KERNEL_ELF_TTABLES)
 
- ##------------------------------------------------------------------------------
+ ## ------------------------------------------------------------------------------
 +## Generate kernel symbols and patch them into the kernel ELF
-+##------------------------------------------------------------------------------
++## ------------------------------------------------------------------------------
 +$(KERNEL_ELF_TTABLES_SYMS): $(KERNEL_ELF_TTABLES_SYMS_DEPS)
 +	$(call color_header, "Generating kernel symbols and patching kernel ELF")
 +	@$(MAKE) --no-print-directory -f kernel_symbols.mk
 +
-+##------------------------------------------------------------------------------
++## ------------------------------------------------------------------------------
  ## Generate the stripped kernel binary
- ##------------------------------------------------------------------------------
+ ## ------------------------------------------------------------------------------
 -$(KERNEL_BIN): $(KERNEL_ELF_TTABLES)
 +$(KERNEL_BIN): $(KERNEL_ELF_TTABLES_SYMS)
  	$(call color_header, "Generating stripped binary")
@@ -745,9 +745,9 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/Makefile 17_kernel_symbols/Mak
  	@echo $(KERNEL_BIN)
  	$(call color_progress_prefix, "Size")
 @@ -191,7 +215,7 @@
- ##------------------------------------------------------------------------------
+ ## ------------------------------------------------------------------------------
  ## Generate the documentation
- ##------------------------------------------------------------------------------
+ ## ------------------------------------------------------------------------------
 -doc:
 +doc: clean
  	$(call color_header, "Generating docs")

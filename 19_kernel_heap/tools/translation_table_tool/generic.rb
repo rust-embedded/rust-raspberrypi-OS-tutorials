@@ -161,7 +161,7 @@ def kernel_map_binary
     mapping_descriptors.each do |i|
         print 'Generating'.rjust(12).green.bold
         print ' '
-        puts i.to_s
+        puts i
 
         TRANSLATION_TABLES.map_at(i.virt_region, i.phys_region, i.attributes)
     end
