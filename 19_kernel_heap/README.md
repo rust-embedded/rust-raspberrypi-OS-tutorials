@@ -1439,7 +1439,7 @@ diff -uNr 18_backtrace/Makefile 19_kernel_heap/Makefile
  ifdef TEST
      TEST_ARG = --test $(TEST)
 @@ -70,7 +75,7 @@
- ## -------------------------------------------------------------------------------------------------
+ ##--------------------------------------------------------------------------------------------------
  KERNEL_MANIFEST      = kernel/Cargo.toml
  KERNEL_LINKER_SCRIPT = kernel.ld
 -LAST_BUILD_CONFIG    = target/$(BSP).build_config
