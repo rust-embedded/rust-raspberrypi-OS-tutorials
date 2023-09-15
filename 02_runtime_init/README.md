@@ -58,8 +58,7 @@ diff -uNr 01_wait_forever/Makefile 02_runtime_init/Makefile
                  --section .text   \
 +                --section .rodata \
                  $(KERNEL_ELF) | rustfilt
-
- ## ------------------------------------------------------------------------------
+ ##------------------------------------------------------------------------------
 
 diff -uNr 01_wait_forever/src/_arch/aarch64/cpu/boot.rs 02_runtime_init/src/_arch/aarch64/cpu/boot.rs
 --- 01_wait_forever/src/_arch/aarch64/cpu/boot.rs

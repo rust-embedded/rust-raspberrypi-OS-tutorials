@@ -79,9 +79,9 @@ diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
 +EXEC_QEMU          = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
 +EXEC_TEST_DISPATCH = ruby ../common/tests/dispatch.rb
 
- ## ------------------------------------------------------------------------------
+ ##------------------------------------------------------------------------------
  ## Dockerization
- ## ------------------------------------------------------------------------------
+ ##------------------------------------------------------------------------------
 -DOCKER_CMD          = docker run -t --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
 -DOCKER_CMD_INTERACT = $(DOCKER_CMD) -i
 +DOCKER_CMD            = docker run -t --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
@@ -113,9 +113,9 @@ diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
 +
 +else # QEMU is supported.
 +
-+## ------------------------------------------------------------------------------
++##------------------------------------------------------------------------------
 +## Run boot test
-+## ------------------------------------------------------------------------------
++##------------------------------------------------------------------------------
 +test_boot: $(KERNEL_BIN)
 +	$(call color_header, "Boot test - $(BSP)")
 +	@$(DOCKER_TEST) $(EXEC_TEST_DISPATCH) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)

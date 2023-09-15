@@ -66,9 +66,9 @@ OBJCOPY_CMD = rust-objcopy \
 
 EXEC_SYMBOLS_TOOL  = ruby $(KERNEL_SYMBOLS_TOOL_PATH)/main.rb
 
-## ------------------------------------------------------------------------------
+##------------------------------------------------------------------------------
 ## Dockerization
-## ------------------------------------------------------------------------------
+##------------------------------------------------------------------------------
 DOCKER_CMD = docker run -t --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
 
 # DOCKER_IMAGE defined in include file (see top of this file).
