@@ -2,7 +2,7 @@
 
 # SPDX-License-Identifier: MIT OR Apache-2.0
 #
-# Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
+# Copyright (c) 2022-2023 Andre Richter <andre.o.richter@gmail.com>
 
 def generate_symbols(kernel_elf, output_file)
     File.open(output_file, 'w') do |file|

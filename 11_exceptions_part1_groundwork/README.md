@@ -800,7 +800,7 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.s 11
 @@ -0,0 +1,154 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//--------------------------------------------------------------------------------------------------
 +// Definitions

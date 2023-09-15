@@ -1,6 +1,6 @@
 ## SPDX-License-Identifier: MIT OR Apache-2.0
 ##
-## Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
+## Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
 
 include ../common/docker.mk
 include ../common/format.mk
@@ -150,7 +150,7 @@ $(KERNEL_BIN): $(KERNEL_ELF)
 
 ##------------------------------------------------------------------------------
 ## Generate the documentation
-##------------------------------------------------------------------------------
+##-----------------------------------------------------------------------------
 doc:
 	$(call color_header, "Generating docs")
 	@$(DOC_CMD) --document-private-items --open

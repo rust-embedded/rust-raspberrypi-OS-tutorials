@@ -346,7 +346,7 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel/src/symbols.rs 17_kerne
 @@ -0,0 +1,88 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2022-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Debug symbol support.
 +
@@ -478,7 +478,7 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel_symbols/kernel_symbols.
 @@ -0,0 +1,15 @@
 +/* SPDX-License-Identifier: MIT OR Apache-2.0
 + *
-+ * Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
++ * Copyright (c) 2022-2023 Andre Richter <andre.o.richter@gmail.com>
 + */
 +
 +SECTIONS
@@ -498,7 +498,7 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel_symbols/src/main.rs 17_
 @@ -0,0 +1,16 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2022-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Generation of kernel symbols.
 +
@@ -519,7 +519,7 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/kernel_symbols.mk 17_kernel_sy
 @@ -0,0 +1,117 @@
 +## SPDX-License-Identifier: MIT OR Apache-2.0
 +##
-+## Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
++## Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +include ../common/format.mk
 +include ../common/docker.mk
@@ -650,7 +650,7 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/libraries/debug-symbol-types/s
 @@ -0,0 +1,45 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2022-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Types for implementing debug symbol support.
 +
@@ -783,7 +783,7 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/tools/kernel_symbols_tool/cmds
 +
 +# SPDX-License-Identifier: MIT OR Apache-2.0
 +#
-+# Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
++# Copyright (c) 2022-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +def generate_symbols(kernel_elf, output_file)
 +    File.open(output_file, 'w') do |file|
@@ -833,7 +833,7 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/tools/kernel_symbols_tool/kern
 +
 +# SPDX-License-Identifier: MIT OR Apache-2.0
 +#
-+# Copyright (c) 2021-2022 Andre Richter <andre.o.richter@gmail.com>
++# Copyright (c) 2021-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +# KernelELF
 +class KernelELF
@@ -913,7 +913,7 @@ diff -uNr 16_virtual_mem_part4_higher_half_kernel/tools/kernel_symbols_tool/main
 +
 +# SPDX-License-Identifier: MIT OR Apache-2.0
 +#
-+# Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
++# Copyright (c) 2022-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +require 'rubygems'
 +require 'bundler/setup'

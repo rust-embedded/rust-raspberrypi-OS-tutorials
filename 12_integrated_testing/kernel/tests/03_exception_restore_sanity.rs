@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
-// Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
+// Copyright (c) 2022-2023 Andre Richter <andre.o.richter@gmail.com>
 
 //! A simple sanity test to see if exception restore code works.
 

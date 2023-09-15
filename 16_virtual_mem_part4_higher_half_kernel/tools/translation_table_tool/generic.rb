@@ -2,7 +2,7 @@
 
 # SPDX-License-Identifier: MIT OR Apache-2.0
 #
-# Copyright (c) 2021-2022 Andre Richter <andre.o.richter@gmail.com>
+# Copyright (c) 2021-2023 Andre Richter <andre.o.richter@gmail.com>
 
 module Granule64KiB
     SIZE = 64 * 1024
@@ -151,7 +151,7 @@ def kernel_map_binary
     mapping_descriptors.each do |i|
         print 'Generating'.rjust(12).green.bold
         print ' '
-        puts i.to_s
+        puts i
 
         TRANSLATION_TABLES.map_at(i.virt_region, i.phys_region, i.attributes)
     end

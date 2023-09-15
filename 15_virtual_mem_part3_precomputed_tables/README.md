@@ -637,7 +637,7 @@ def kernel_map_binary
     mapping_descriptors.each do |i|
         print 'Generating'.rjust(12).green.bold
         print ' '
-        puts i.to_s
+        puts i
 
         TRANSLATION_TABLES.map_at(i.virt_region, i.phys_region, i.attributes)
     end
@@ -1081,7 +1081,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/kernel.ld 1
 --- 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/kernel.ld
 +++ 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/kernel.ld
 @@ -3,6 +3,8 @@
-  * Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
+  * Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
   */
 
 +INCLUDE kernel_virt_addr_space_size.ld;
@@ -1924,7 +1924,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/tools/translation_table_tool/arch.rb 1
 +
 +# SPDX-License-Identifier: MIT OR Apache-2.0
 +#
-+# Copyright (c) 2021-2022 Andre Richter <andre.o.richter@gmail.com>
++# Copyright (c) 2021-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +# Bitfield manipulation.
 +class BitField
@@ -2241,7 +2241,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/tools/translation_table_tool/bsp.rb 15
 +
 +# SPDX-License-Identifier: MIT OR Apache-2.0
 +#
-+# Copyright (c) 2021-2022 Andre Richter <andre.o.richter@gmail.com>
++# Copyright (c) 2021-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +# Raspberry Pi 3 + 4
 +class RaspberryPi
@@ -2295,7 +2295,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/tools/translation_table_tool/generic.r
 +
 +# SPDX-License-Identifier: MIT OR Apache-2.0
 +#
-+# Copyright (c) 2021-2022 Andre Richter <andre.o.richter@gmail.com>
++# Copyright (c) 2021-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +module Granule64KiB
 +    SIZE = 64 * 1024
@@ -2444,7 +2444,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/tools/translation_table_tool/generic.r
 +    mapping_descriptors.each do |i|
 +        print 'Generating'.rjust(12).green.bold
 +        print ' '
-+        puts i.to_s
++        puts i
 +
 +        TRANSLATION_TABLES.map_at(i.virt_region, i.phys_region, i.attributes)
 +    end
@@ -2479,7 +2479,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/tools/translation_table_tool/kernel_el
 +
 +# SPDX-License-Identifier: MIT OR Apache-2.0
 +#
-+# Copyright (c) 2021-2022 Andre Richter <andre.o.richter@gmail.com>
++# Copyright (c) 2021-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +# KernelELF
 +class KernelELF
@@ -2581,7 +2581,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/tools/translation_table_tool/main.rb 1
 +
 +# SPDX-License-Identifier: MIT OR Apache-2.0
 +#
-+# Copyright (c) 2021-2022 Andre Richter <andre.o.richter@gmail.com>
++# Copyright (c) 2021-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +require 'rubygems'
 +require 'bundler/setup'

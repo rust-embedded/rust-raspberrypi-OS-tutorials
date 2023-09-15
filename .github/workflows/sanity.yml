@@ -1,46 +1,46 @@
 name: Various Sanity Checks
 
 on:
-  push:
-    branches:
-      - master
-  pull_request:
-    branches:
-      - master
+    push:
+        branches:
+            - master
+    pull_request:
+        branches:
+            - master
 
 jobs:
-  build:
-    name: Various Sanity Checks
-    runs-on: ubuntu-22.04
+    build:
+        name: Various Sanity Checks
+        runs-on: ubuntu-22.04
 
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Node
-        uses: actions/setup-node@v1
-        with:
-          node-version: "16"
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
-      - name: Set up Rust nightly
-        run: |
-          rustup component add clippy
-      - name: Set up Bundler
-        run: |
-          gem install bundler
-          bundle config set without 'uart'
-          bundle install --retry 3
-      - name: Set up Prettier
-        run: |
-          npm install prettier
-      - name: Setup misspell
-        run: |
-          curl -L -o ./install-misspell.sh https://raw.githubusercontent.com/client9/misspell/master/install-misspell.sh
-          sh ./install-misspell.sh -b .vendor
-      - name: Run checks
-        run: |
-          BSP=rpi3 bundle exec ruby utils/devtool.rb clippy
-          BSP=rpi4 bundle exec ruby utils/devtool.rb clippy
-          bundle exec ruby utils/devtool.rb copyright
-          bundle exec ruby utils/devtool.rb fmt_check
-          bundle exec ruby utils/devtool.rb misspell
-          bundle exec ruby utils/devtool.rb rubocop
+        steps:
+            - uses: actions/checkout@v3
+            - name: Set up Node
+              uses: actions/setup-node@v1
+              with:
+                  node-version: "16"
+            - name: Set up Ruby
+              uses: ruby/setup-ruby@v1
+            - name: Set up Rust nightly
+              run: |
+                  rustup component add clippy
+            - name: Set up Bundler
+              run: |
+                  gem install bundler
+                  bundle config set without 'uart'
+                  bundle install --retry 3
+            - name: Set up Prettier
+              run: |
+                  npm install prettier
+            - name: Setup misspell
+              run: |
+                  curl -L -o ./install-misspell.sh https://raw.githubusercontent.com/client9/misspell/master/install-misspell.sh
+                  sh ./install-misspell.sh -b .vendor
+            - name: Run checks
+              run: |
+                  BSP=rpi3 bundle exec ruby utils/devtool.rb clippy
+                  BSP=rpi4 bundle exec ruby utils/devtool.rb clippy
+                  bundle exec ruby utils/devtool.rb copyright
+                  bundle exec ruby utils/devtool.rb fmt_check
+                  bundle exec ruby utils/devtool.rb misspell
+                  bundle exec ruby utils/devtool.rb rubocop

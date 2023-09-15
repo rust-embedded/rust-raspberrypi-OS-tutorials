@@ -400,7 +400,7 @@ diff -uNr 17_kernel_symbols/kernel/src/_arch/aarch64/backtrace.rs 18_backtrace/k
 @@ -0,0 +1,136 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2022-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Architectural backtracing support.
 +//!
@@ -728,7 +728,7 @@ diff -uNr 17_kernel_symbols/kernel/src/backtrace.rs 18_backtrace/kernel/src/back
 @@ -0,0 +1,114 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2022-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Backtracing support.
 +
@@ -1010,7 +1010,7 @@ diff -uNr 17_kernel_symbols/kernel/tests/05_backtrace_sanity.rb 18_backtrace/ker
 +
 +# SPDX-License-Identifier: MIT OR Apache-2.0
 +#
-+# Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
++# Copyright (c) 2022-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +require 'console_io_test'
 +
@@ -1052,7 +1052,7 @@ diff -uNr 17_kernel_symbols/kernel/tests/05_backtrace_sanity.rs 18_backtrace/ker
 @@ -0,0 +1,31 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2022-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Test if backtracing code detects an invalid frame pointer.
 +
@@ -1090,7 +1090,7 @@ diff -uNr 17_kernel_symbols/kernel/tests/06_backtrace_invalid_frame.rb 18_backtr
 +
 +# SPDX-License-Identifier: MIT OR Apache-2.0
 +#
-+# Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
++# Copyright (c) 2022-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +require 'console_io_test'
 +
@@ -1119,7 +1119,7 @@ diff -uNr 17_kernel_symbols/kernel/tests/06_backtrace_invalid_frame.rs 18_backtr
 @@ -0,0 +1,33 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2022-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Test if backtracing code detects an invalid frame pointer.
 +
@@ -1159,7 +1159,7 @@ diff -uNr 17_kernel_symbols/kernel/tests/07_backtrace_invalid_link.rb 18_backtra
 +
 +# SPDX-License-Identifier: MIT OR Apache-2.0
 +#
-+# Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
++# Copyright (c) 2022-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +require 'console_io_test'
 +
@@ -1187,7 +1187,7 @@ diff -uNr 17_kernel_symbols/kernel/tests/07_backtrace_invalid_link.rs 18_backtra
 @@ -0,0 +1,38 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2022-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Test if backtracing code detects an invalid link.
 +

@@ -1,10 +1,10 @@
 {
-  "editor.formatOnSave": true,
-  "editor.rulers": [100],
-  "rust-analyzer.cargo.target": "aarch64-unknown-none-softfloat",
-  "rust-analyzer.cargo.features": ["bsp_rpi3"],
-  "rust-analyzer.checkOnSave.allTargets": false,
-  "rust-analyzer.checkOnSave.extraArgs": ["--lib", "--bins"],
-  "rust-analyzer.lens.debug": false,
-  "rust-analyzer.lens.run": false
+    "editor.formatOnSave": true,
+    "editor.rulers": [100],
+    "rust-analyzer.cargo.target": "aarch64-unknown-none-softfloat",
+    "rust-analyzer.cargo.features": ["bsp_rpi3"],
+    "rust-analyzer.checkOnSave.allTargets": false,
+    "rust-analyzer.checkOnSave.extraArgs": ["--lib", "--bins"],
+    "rust-analyzer.lens.debug": false,
+    "rust-analyzer.lens.run": false
 }

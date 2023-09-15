@@ -58,7 +58,6 @@ diff -uNr 01_wait_forever/Makefile 02_runtime_init/Makefile
                  --section .text   \
 +                --section .rodata \
                  $(KERNEL_ELF) | rustfilt
-
  ##------------------------------------------------------------------------------
 
 diff -uNr 01_wait_forever/src/_arch/aarch64/cpu/boot.rs 02_runtime_init/src/_arch/aarch64/cpu/boot.rs
@@ -90,7 +89,7 @@ diff -uNr 01_wait_forever/src/_arch/aarch64/cpu/boot.s 02_runtime_init/src/_arch
 --- 01_wait_forever/src/_arch/aarch64/cpu/boot.s
 +++ 02_runtime_init/src/_arch/aarch64/cpu/boot.s
 @@ -3,6 +3,22 @@
- // Copyright (c) 2021-2022 Andre Richter <andre.o.richter@gmail.com>
+ // Copyright (c) 2021-2023 Andre Richter <andre.o.richter@gmail.com>
 
  //--------------------------------------------------------------------------------------------------
 +// Definitions
@@ -154,7 +153,7 @@ diff -uNr 01_wait_forever/src/_arch/aarch64/cpu.rs 02_runtime_init/src/_arch/aar
 @@ -0,0 +1,26 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Architectural processor code.
 +//!
@@ -185,7 +184,7 @@ diff -uNr 01_wait_forever/src/bsp/raspberrypi/cpu.rs 02_runtime_init/src/bsp/ras
 @@ -0,0 +1,14 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! BSP Processor code.
 +
@@ -202,7 +201,7 @@ diff -uNr 01_wait_forever/src/bsp/raspberrypi/kernel.ld 02_runtime_init/src/bsp/
 --- 01_wait_forever/src/bsp/raspberrypi/kernel.ld
 +++ 02_runtime_init/src/bsp/raspberrypi/kernel.ld
 @@ -3,6 +3,8 @@
-  * Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
+  * Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
   */
 
 +__rpi_phys_dram_start_addr = 0;

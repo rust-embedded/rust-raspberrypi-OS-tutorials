@@ -3,7 +3,7 @@
 
 # SPDX-License-Identifier: MIT OR Apache-2.0
 #
-# Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
+# Copyright (c) 2020-2023 Andre Richter <andre.o.richter@gmail.com>
 
 require_relative 'miniterm'
 require 'ruby-progressbar'
@@ -113,9 +113,9 @@ class MiniPush < MiniTerm
     end
 end
 
-##--------------------------------------------------------------------------------------------------
+## -------------------------------------------------------------------------------------------------
 ## Execution starts here
-##--------------------------------------------------------------------------------------------------
+## -------------------------------------------------------------------------------------------------
 if __FILE__ == $PROGRAM_NAME
     puts
     puts 'Minipush 1.0'.cyan

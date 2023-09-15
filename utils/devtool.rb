@@ -3,7 +3,7 @@
 
 # SPDX-License-Identifier: MIT OR Apache-2.0
 #
-# Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
+# Copyright (c) 2020-2023 Andre Richter <andre.o.richter@gmail.com>
 
 require 'rubygems'
 require 'bundler/setup'
@@ -329,9 +329,9 @@ class DevTool
     end
 end
 
-##--------------------------------------------------------------------------------------------------
+## -------------------------------------------------------------------------------------------------
 ## Execution starts here
-##--------------------------------------------------------------------------------------------------
+## -------------------------------------------------------------------------------------------------
 tool = DevTool.new
 cmd = ARGV[0]
 commands = tool.public_methods(false).sort
