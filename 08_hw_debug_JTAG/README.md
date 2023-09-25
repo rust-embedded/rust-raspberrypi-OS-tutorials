@@ -42,7 +42,7 @@ this area `QEMU` sometimes can not help, since it abstracts certain features of 
 simulate down to the very last bit.
 
 So lets introduce `JTAG` debugging. Once set up, it will allow us to single-step through our kernel
-on the real HW. How cool is that!
+on the real HW. How cool is that?!
 
 ## Outline
 
