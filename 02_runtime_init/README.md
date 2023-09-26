@@ -19,12 +19,12 @@
      1. Jumps to the `_start_rust()` function, defined in `arch/__arch_name__/cpu/boot.rs`.
 - `_start_rust()`:
      - Calls `kernel_init()`, which calls `panic!()`, which eventually halts core0 as well.
-- The library now uses the [cortex-a] crate, which provides zero-overhead abstractions and wraps
+- The library now uses the [aarch64-cpu] crate, which provides zero-overhead abstractions and wraps
   `unsafe` parts when dealing with the CPU's resources.
     - See it in action in `_arch/__arch_name__/cpu.rs`.
 
 [bss]: https://en.wikipedia.org/wiki/.bss
-[cortex-a]: https://github.com/rust-embedded/cortex-a
+[aarch64-cpu]: https://github.com/rust-embedded/aarch64-cpu
 
 ## Diff to previous
 ```diff
@@ -47,28 +47,31 @@ diff -uNr 01_wait_forever/Cargo.toml 02_runtime_init/Cargo.toml
 +
 +# Platform specific dependencies
 +[target.'cfg(target_arch = "aarch64")'.dependencies]
-+cortex-a = { version = "7.x.x" }
++aarch64-cpu = { version = "9.x.x" }
 
 diff -uNr 01_wait_forever/Makefile 02_runtime_init/Makefile
 --- 01_wait_forever/Makefile
 +++ 02_runtime_init/Makefile
-@@ -181,6 +181,8 @@
+@@ -181,6 +181,7 @@
  	$(call color_header, "Launching objdump")
  	@$(DOCKER_TOOLS) $(OBJDUMP_BINARY) --disassemble --demangle \
                  --section .text   \
 +                --section .rodata \
-+                --section .got    \
                  $(KERNEL_ELF) | rustfilt
-
  ##------------------------------------------------------------------------------
 
 diff -uNr 01_wait_forever/src/_arch/aarch64/cpu/boot.rs 02_runtime_init/src/_arch/aarch64/cpu/boot.rs
 --- 01_wait_forever/src/_arch/aarch64/cpu/boot.rs
 +++ 02_runtime_init/src/_arch/aarch64/cpu/boot.rs
-@@ -13,3 +13,15 @@
+@@ -14,4 +14,19 @@
+ use core::arch::global_asm;
 
  // Assembly counterpart to this file.
- core::arch::global_asm!(include_str!("boot.s"));
+-global_asm!(include_str!("boot.s"));
++global_asm!(
++    include_str!("boot.s"),
++    CONST_CORE_ID_MASK = const 0b11
++);
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Code
@@ -85,8 +88,8 @@ diff -uNr 01_wait_forever/src/_arch/aarch64/cpu/boot.rs 02_runtime_init/src/_arc
 diff -uNr 01_wait_forever/src/_arch/aarch64/cpu/boot.s 02_runtime_init/src/_arch/aarch64/cpu/boot.s
 --- 01_wait_forever/src/_arch/aarch64/cpu/boot.s
 +++ 02_runtime_init/src/_arch/aarch64/cpu/boot.s
-@@ -3,6 +3,24 @@
- // Copyright (c) 2021-2022 Andre Richter <andre.o.richter@gmail.com>
+@@ -3,6 +3,22 @@
+ // Copyright (c) 2021-2023 Andre Richter <andre.o.richter@gmail.com>
 
  //--------------------------------------------------------------------------------------------------
 +// Definitions
@@ -104,21 +107,19 @@ diff -uNr 01_wait_forever/src/_arch/aarch64/cpu/boot.s 02_runtime_init/src/_arch
 +	add	\register, \register, #:lo12:\symbol
 +.endm
 +
-+.equ _core_id_mask, 0b11
-+
 +//--------------------------------------------------------------------------------------------------
  // Public Code
  //--------------------------------------------------------------------------------------------------
  .section .text._start
-@@ -11,6 +29,34 @@
+@@ -11,6 +27,34 @@
  // fn _start()
  //------------------------------------------------------------------------------
  _start:
 +	// Only proceed on the boot core. Park it otherwise.
-+	mrs	x1, MPIDR_EL1
-+	and	x1, x1, _core_id_mask
-+	ldr	x2, BOOT_CORE_ID      // provided by bsp/__board_name__/cpu.rs
-+	cmp	x1, x2
++	mrs	x0, MPIDR_EL1
++	and	x0, x0, {CONST_CORE_ID_MASK}
++	ldr	x1, BOOT_CORE_ID      // provided by bsp/__board_name__/cpu.rs
++	cmp	x0, x1
 +	b.ne	.L_parking_loop
 +
 +	// If execution reaches here, it is the boot core.
@@ -152,7 +153,7 @@ diff -uNr 01_wait_forever/src/_arch/aarch64/cpu.rs 02_runtime_init/src/_arch/aar
 @@ -0,0 +1,26 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Architectural processor code.
 +//!
@@ -163,7 +164,7 @@ diff -uNr 01_wait_forever/src/_arch/aarch64/cpu.rs 02_runtime_init/src/_arch/aar
 +//!
 +//! crate::cpu::arch_cpu
 +
-+use cortex_a::asm;
++use aarch64_cpu::asm;
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Code
@@ -183,7 +184,7 @@ diff -uNr 01_wait_forever/src/bsp/raspberrypi/cpu.rs 02_runtime_init/src/bsp/ras
 @@ -0,0 +1,14 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! BSP Processor code.
 +
@@ -196,11 +197,11 @@ diff -uNr 01_wait_forever/src/bsp/raspberrypi/cpu.rs 02_runtime_init/src/bsp/ras
 +#[link_section = ".text._start_arguments"]
 +pub static BOOT_CORE_ID: u64 = 0;
 
-diff -uNr 01_wait_forever/src/bsp/raspberrypi/link.ld 02_runtime_init/src/bsp/raspberrypi/link.ld
---- 01_wait_forever/src/bsp/raspberrypi/link.ld
-+++ 02_runtime_init/src/bsp/raspberrypi/link.ld
+diff -uNr 01_wait_forever/src/bsp/raspberrypi/kernel.ld 02_runtime_init/src/bsp/raspberrypi/kernel.ld
+--- 01_wait_forever/src/bsp/raspberrypi/kernel.ld
++++ 02_runtime_init/src/bsp/raspberrypi/kernel.ld
 @@ -3,6 +3,8 @@
-  * Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
+  * Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
   */
 
 +__rpi_phys_dram_start_addr = 0;
@@ -208,7 +209,7 @@ diff -uNr 01_wait_forever/src/bsp/raspberrypi/link.ld 02_runtime_init/src/bsp/ra
  /* The physical address at which the the kernel binary will be loaded by the Raspberry's firmware */
  __rpi_phys_binary_load_addr = 0x80000;
 
-@@ -13,21 +15,58 @@
+@@ -13,21 +15,65 @@
   *     4 == R
   *     5 == RX
   *     6 == RW
@@ -254,7 +255,6 @@ diff -uNr 01_wait_forever/src/bsp/raspberrypi/link.ld 02_runtime_init/src/bsp/ra
      } :segment_code
 +
 +    .rodata : ALIGN(8) { *(.rodata*) } :segment_code
-+    .got    : ALIGN(8) { *(.got)     } :segment_code
 +
 +    /***********************************************************************************************
 +    * Data + BSS
@@ -269,6 +269,14 @@ diff -uNr 01_wait_forever/src/bsp/raspberrypi/link.ld 02_runtime_init/src/bsp/ra
 +        . = ALIGN(16);
 +        __bss_end_exclusive = .;
 +    } :segment_data
++
++    /***********************************************************************************************
++    * Misc
++    ***********************************************************************************************/
++    .got : { *(.got*) }
++    ASSERT(SIZEOF(.got) == 0, "Relocation support not expected")
++
++    /DISCARD/ : { *(.comment*) }
  }
 
 diff -uNr 01_wait_forever/src/bsp/raspberrypi.rs 02_runtime_init/src/bsp/raspberrypi.rs
@@ -302,15 +310,17 @@ diff -uNr 01_wait_forever/src/cpu.rs 02_runtime_init/src/cpu.rs
 diff -uNr 01_wait_forever/src/main.rs 02_runtime_init/src/main.rs
 --- 01_wait_forever/src/main.rs
 +++ 02_runtime_init/src/main.rs
-@@ -102,6 +102,7 @@
+@@ -104,7 +104,9 @@
  //!
  //! 1. The kernel's entry point is the function `cpu::boot::arch_boot::_start()`.
  //!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.s`.
 +//! 2. Once finished with architectural setup, the arch code calls `kernel_init()`.
 
++#![feature(asm_const)]
  #![no_main]
  #![no_std]
-@@ -110,4 +111,11 @@
+
+@@ -112,4 +114,11 @@
  mod cpu;
  mod panic_wait;
 

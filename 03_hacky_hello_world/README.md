@@ -2,16 +2,17 @@
 
 ## tl;dr
 
-- Introducing global `print!()` macros to enable "printf debugging" at the earliest.
+- Introducing global `println!()` macros to enable "printf debugging" at the earliest.
 - To keep tutorial length reasonable, printing functions for now "abuse" a QEMU property that lets
   us use the Raspberry's `UART` without setting it up properly.
 - Using the real hardware `UART` is enabled step-by-step in following tutorials.
 
 ## Notable additions
 
-- `src/console.rs` introduces interface `Traits` for console commands.
+- `src/console.rs` introduces interface `Traits` for console commands and global access to the
+  kernel's console through `console::console()`.
 - `src/bsp/raspberrypi/console.rs` implements the interface for QEMU's emulated UART.
-- The panic handler makes use of the new `print!()` to display user error messages.
+- The panic handler makes use of the new `println!()` to display user error messages.
 - There is a new Makefile target, `make test`, intended for automated testing. It boots the compiled
   kernel in `QEMU`, and checks for an expected output string produced by the kernel.
   - In this tutorial, it checks for the string `Stopping here`, which is emitted by the `panic!()`
@@ -52,7 +53,7 @@ diff -uNr 02_runtime_init/Cargo.toml 03_hacky_hello_world/Cargo.toml
 diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
 --- 02_runtime_init/Makefile
 +++ 03_hacky_hello_world/Makefile
-@@ -24,7 +24,7 @@
+@@ -25,7 +25,7 @@
      KERNEL_BIN        = kernel8.img
      QEMU_BINARY       = qemu-system-aarch64
      QEMU_MACHINE_TYPE = raspi3
@@ -61,7 +62,7 @@ diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
      OBJDUMP_BINARY    = aarch64-none-elf-objdump
      NM_BINARY         = aarch64-none-elf-nm
      READELF_BINARY    = aarch64-none-elf-readelf
-@@ -35,7 +35,7 @@
+@@ -36,7 +36,7 @@
      KERNEL_BIN        = kernel8.img
      QEMU_BINARY       = qemu-system-aarch64
      QEMU_MACHINE_TYPE =
@@ -94,11 +95,10 @@ diff -uNr 02_runtime_init/Makefile 03_hacky_hello_world/Makefile
 
 
 
-@@ -197,3 +200,28 @@
- ##------------------------------------------------------------------------------
- check:
- 	@RUSTFLAGS="$(RUSTFLAGS)" $(CHECK_CMD) --message-format=json
-+
+@@ -191,3 +194,27 @@
+ 	$(call color_header, "Launching nm")
+ 	@$(DOCKER_TOOLS) $(NM_BINARY) --demangle --print-size $(KERNEL_ELF) | sort | rustfilt
+
 +
 +
 +##--------------------------------------------------------------------------------------------------
@@ -130,7 +130,7 @@ diff -uNr 02_runtime_init/src/bsp/raspberrypi/console.rs 03_hacky_hello_world/sr
 @@ -0,0 +1,47 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! BSP console facilities.
 +
@@ -189,12 +189,14 @@ diff -uNr 02_runtime_init/src/bsp/raspberrypi.rs 03_hacky_hello_world/src/bsp/ra
 diff -uNr 02_runtime_init/src/console.rs 03_hacky_hello_world/src/console.rs
 --- 02_runtime_init/src/console.rs
 +++ 03_hacky_hello_world/src/console.rs
-@@ -0,0 +1,19 @@
+@@ -0,0 +1,32 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! System console.
++
++use crate::bsp;
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Definitions
@@ -209,14 +211,25 @@ diff -uNr 02_runtime_init/src/console.rs 03_hacky_hello_world/src/console.rs
 +    /// intention.
 +    pub use core::fmt::Write;
 +}
++
++//--------------------------------------------------------------------------------------------------
++// Public Code
++//--------------------------------------------------------------------------------------------------
++
++/// Return a reference to the console.
++///
++/// This is the global console used by all printing macros.
++pub fn console() -> impl interface::Write {
++    bsp::console::console()
++}
 
 diff -uNr 02_runtime_init/src/main.rs 03_hacky_hello_world/src/main.rs
 --- 02_runtime_init/src/main.rs
 +++ 03_hacky_hello_world/src/main.rs
-@@ -104,12 +104,16 @@
- //!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.s`.
+@@ -107,12 +107,16 @@
  //! 2. Once finished with architectural setup, the arch code calls `kernel_init()`.
 
+ #![feature(asm_const)]
 +#![feature(format_args_nl)]
 +#![feature(panic_info_message)]
  #![no_main]
@@ -230,7 +243,7 @@ diff -uNr 02_runtime_init/src/main.rs 03_hacky_hello_world/src/main.rs
 
  /// Early init code.
  ///
-@@ -117,5 +121,7 @@
+@@ -120,5 +124,7 @@
  ///
  /// - Only a single core must be active and running this function.
  unsafe fn kernel_init() -> ! {
@@ -314,11 +327,11 @@ diff -uNr 02_runtime_init/src/print.rs 03_hacky_hello_world/src/print.rs
 @@ -0,0 +1,38 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Printing.
 +
-+use crate::{bsp, console};
++use crate::console;
 +use core::fmt;
 +
 +//--------------------------------------------------------------------------------------------------
@@ -329,7 +342,7 @@ diff -uNr 02_runtime_init/src/print.rs 03_hacky_hello_world/src/print.rs
 +pub fn _print(args: fmt::Arguments) {
 +    use console::interface::Write;
 +
-+    bsp::console::console().write_fmt(args).unwrap();
++    console::console().write_fmt(args).unwrap();
 +}
 +
 +/// Prints without a newline.

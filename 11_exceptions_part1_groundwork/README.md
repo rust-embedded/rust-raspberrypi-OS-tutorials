@@ -183,6 +183,7 @@ some hand-crafted assembly. Introducing `exception.s`:
 /// Call the function provided by parameter `\handler` after saving the exception context. Provide
 /// the context as the first parameter to '\handler'.
 .macro CALL_WITH_CONTEXT handler
+__vector_\handler:
 	// Make room on the stack for the exception context.
 	sub	sp,  sp,  #16 * 17
 
@@ -221,6 +222,9 @@ some hand-crafted assembly. Introducing `exception.s`:
 	// After returning from exception handling code, replay the saved context and return via
 	// `eret`.
 	b	__exception_restore_context
+
+.size	__vector_\handler, . - __vector_\handler
+.type	__vector_\handler, function
 .endm
 ```
 
@@ -324,7 +328,7 @@ The actual handlers referenced from the assembly can now branch to it for the ti
 
 ```rust
 #[no_mangle]
-unsafe extern "C" fn current_elx_irq(e: &mut ExceptionContext) {
+extern "C" fn current_elx_irq(e: &mut ExceptionContext) {
     default_exception_handler(e);
 }
 ```
@@ -363,7 +367,7 @@ To survive this exception, the respective handler has a special demo case:
 
 ```rust
 #[no_mangle]
-unsafe extern "C" fn current_elx_synchronous(e: &mut ExceptionContext) {
+extern "C" fn current_elx_synchronous(e: &mut ExceptionContext) {
     if e.fault_address_valid() {
         let far_el1 = FAR_EL1.get();
 
@@ -413,31 +417,31 @@ Minipush 1.0
 [MP] ⏩ Pushing 64 KiB =========================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
-[    0.787414] mingo version 0.11.0
-[    0.787621] Booting on: Raspberry Pi 3
-[    0.788076] MMU online. Special regions:
-[    0.788553]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
-[    0.789571]       0x3f000000 - 0x4000ffff |  16 MiB | Dev RW PXN | Device MMIO
-[    0.790460] Current privilege level: EL1
-[    0.790936] Exception handling state:
-[    0.791380]       Debug:  Masked
-[    0.791770]       SError: Masked
-[    0.792160]       IRQ:    Masked
-[    0.792550]       FIQ:    Masked
-[    0.792940] Architectural timer resolution: 52 ns
-[    0.793514] Drivers loaded:
-[    0.793850]       1. BCM GPIO
-[    0.794208]       2. BCM PL011 UART
-[    0.794630] Timer test, spinning for 1 second
-[    1.795161]
-[    1.795165] Trying to read from address 8 GiB...
-[    1.795715] ************************************************
-[    1.796407] Whoa! We recovered from a synchronous exception!
-[    1.797100] ************************************************
-[    1.797794]
-[    1.797967] Let's try again
-[    1.798303] Trying to read from address 9 GiB...
-[    1.798867] Kernel panic!
+[    0.798323] mingo version 0.11.0
+[    0.798530] Booting on: Raspberry Pi 3
+[    0.798985] MMU online. Special regions:
+[    0.799462]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
+[    0.800480]       0x3f000000 - 0x4000ffff |  17 MiB | Dev RW PXN | Device MMIO
+[    0.801369] Current privilege level: EL1
+[    0.801845] Exception handling state:
+[    0.802290]       Debug:  Masked
+[    0.802680]       SError: Masked
+[    0.803069]       IRQ:    Masked
+[    0.803459]       FIQ:    Masked
+[    0.803849] Architectural timer resolution: 52 ns
+[    0.804423] Drivers loaded:
+[    0.804759]       1. BCM PL011 UART
+[    0.805182]       2. BCM GPIO
+[    0.805539] Timer test, spinning for 1 second
+[    1.806070]
+[    1.806074] Trying to read from address 8 GiB...
+[    1.806624] ************************************************
+[    1.807316] Whoa! We recovered from a synchronous exception!
+[    1.808009] ************************************************
+[    1.808703]
+[    1.808876] Let's try again
+[    1.809212] Trying to read from address 9 GiB...
+[    1.809776] Kernel panic!
 
 Panic location:
       File 'src/_arch/aarch64/exception.rs', line 58, column 5
@@ -460,25 +464,25 @@ SPSR_EL1: 0x600003c5
             IRQ    (I): Masked
             FIQ    (F): Masked
       Illegal Execution State (IL): Not set
-ELR_EL1: 0x0000000000082194
+ELR_EL1: 0x00000000000845f8
 
 General purpose register:
-      x0 : 0x0000000000000000         x1 : 0x0000000000085517
-      x2 : 0x0000000000000027         x3 : 0x0000000000084380
-      x4 : 0x0000000000000006         x5 : 0xfb5f341800000000
-      x6 : 0x0000000000000000         x7 : 0x7f91bc012b2b0209
-      x8 : 0x0000000240000000         x9 : 0x0000000000085517
+      x0 : 0x0000000000000000         x1 : 0x0000000000086187
+      x2 : 0x0000000000000027         x3 : 0x0000000000081280
+      x4 : 0x0000000000000006         x5 : 0x1e27329c00000000
+      x6 : 0x0000000000000000         x7 : 0xd3d18908028f0243
+      x8 : 0x0000000240000000         x9 : 0x0000000000086187
       x10: 0x0000000000000443         x11: 0x000000003f201000
       x12: 0x0000000000000019         x13: 0x00000000ffffd8f0
       x14: 0x000000000000147b         x15: 0x00000000ffffff9c
       x16: 0x000000000007fd38         x17: 0x0000000005f5e0ff
-      x18: 0x0000000000000030         x19: 0x0000000000090008
-      x20: 0x0000000000085350         x21: 0x000000003b9aca00
-      x22: 0x0000000000082e4c         x23: 0x0000000000082308
+      x18: 0x00000000000c58fc         x19: 0x0000000000090008
+      x20: 0x0000000000085fc0         x21: 0x000000003b9aca00
+      x22: 0x0000000000082238         x23: 0x00000000000813d4
       x24: 0x0000000010624dd3         x25: 0xffffffffc4653600
-      x26: 0x0000000000086638         x27: 0x0000000000085410
-      x28: 0x0000000000084f90         x29: 0x0000000000086538
-      lr : 0x0000000000082188
+      x26: 0x0000000000086988         x27: 0x0000000000086080
+      x28: 0x0000000000085f10         x29: 0x0000000000085c00
+      lr : 0x00000000000845ec
 ```
 
 ## Diff to previous
@@ -503,10 +507,10 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
  //!
  //! crate::exception::arch_exception
 
--use cortex_a::registers::*;
+-use aarch64_cpu::registers::*;
 -use tock_registers::interfaces::Readable;
++use aarch64_cpu::{asm::barrier, registers::*};
 +use core::{arch::global_asm, cell::UnsafeCell, fmt};
-+use cortex_a::{asm::barrier, registers::*};
 +use tock_registers::{
 +    interfaces::{Readable, Writeable},
 +    registers::InMemoryRegister,
@@ -539,7 +543,7 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
 +    /// Saved program status.
 +    spsr_el1: SpsrEL1,
 +
-+    // Exception syndrome register.
++    /// Exception syndrome register.
 +    esr_el1: EsrEL1,
 +}
 +
@@ -561,17 +565,17 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
 +//------------------------------------------------------------------------------
 +
 +#[no_mangle]
-+unsafe extern "C" fn current_el0_synchronous(_e: &mut ExceptionContext) {
++extern "C" fn current_el0_synchronous(_e: &mut ExceptionContext) {
 +    panic!("Should not be here. Use of SP_EL0 in EL1 is not supported.")
 +}
 +
 +#[no_mangle]
-+unsafe extern "C" fn current_el0_irq(_e: &mut ExceptionContext) {
++extern "C" fn current_el0_irq(_e: &mut ExceptionContext) {
 +    panic!("Should not be here. Use of SP_EL0 in EL1 is not supported.")
 +}
 +
 +#[no_mangle]
-+unsafe extern "C" fn current_el0_serror(_e: &mut ExceptionContext) {
++extern "C" fn current_el0_serror(_e: &mut ExceptionContext) {
 +    panic!("Should not be here. Use of SP_EL0 in EL1 is not supported.")
 +}
 +
@@ -580,7 +584,7 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
 +//------------------------------------------------------------------------------
 +
 +#[no_mangle]
-+unsafe extern "C" fn current_elx_synchronous(e: &mut ExceptionContext) {
++extern "C" fn current_elx_synchronous(e: &mut ExceptionContext) {
 +    if e.fault_address_valid() {
 +        let far_el1 = FAR_EL1.get();
 +
@@ -597,12 +601,12 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
 +}
 +
 +#[no_mangle]
-+unsafe extern "C" fn current_elx_irq(e: &mut ExceptionContext) {
++extern "C" fn current_elx_irq(e: &mut ExceptionContext) {
 +    default_exception_handler(e);
 +}
 +
 +#[no_mangle]
-+unsafe extern "C" fn current_elx_serror(e: &mut ExceptionContext) {
++extern "C" fn current_elx_serror(e: &mut ExceptionContext) {
 +    default_exception_handler(e);
 +}
 +
@@ -611,17 +615,17 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
 +//------------------------------------------------------------------------------
 +
 +#[no_mangle]
-+unsafe extern "C" fn lower_aarch64_synchronous(e: &mut ExceptionContext) {
++extern "C" fn lower_aarch64_synchronous(e: &mut ExceptionContext) {
 +    default_exception_handler(e);
 +}
 +
 +#[no_mangle]
-+unsafe extern "C" fn lower_aarch64_irq(e: &mut ExceptionContext) {
++extern "C" fn lower_aarch64_irq(e: &mut ExceptionContext) {
 +    default_exception_handler(e);
 +}
 +
 +#[no_mangle]
-+unsafe extern "C" fn lower_aarch64_serror(e: &mut ExceptionContext) {
++extern "C" fn lower_aarch64_serror(e: &mut ExceptionContext) {
 +    default_exception_handler(e);
 +}
 +
@@ -630,17 +634,17 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
 +//------------------------------------------------------------------------------
 +
 +#[no_mangle]
-+unsafe extern "C" fn lower_aarch32_synchronous(e: &mut ExceptionContext) {
++extern "C" fn lower_aarch32_synchronous(e: &mut ExceptionContext) {
 +    default_exception_handler(e);
 +}
 +
 +#[no_mangle]
-+unsafe extern "C" fn lower_aarch32_irq(e: &mut ExceptionContext) {
++extern "C" fn lower_aarch32_irq(e: &mut ExceptionContext) {
 +    default_exception_handler(e);
 +}
 +
 +#[no_mangle]
-+unsafe extern "C" fn lower_aarch32_serror(e: &mut ExceptionContext) {
++extern "C" fn lower_aarch32_serror(e: &mut ExceptionContext) {
 +    default_exception_handler(e);
 +}
 +
@@ -793,10 +797,10 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.rs 1
 diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.s 11_exceptions_part1_groundwork/src/_arch/aarch64/exception.s
 --- 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.s
 +++ 11_exceptions_part1_groundwork/src/_arch/aarch64/exception.s
-@@ -0,0 +1,150 @@
+@@ -0,0 +1,154 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//--------------------------------------------------------------------------------------------------
 +// Definitions
@@ -805,6 +809,7 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.s 11
 +/// Call the function provided by parameter `\handler` after saving the exception context. Provide
 +/// the context as the first parameter to '\handler'.
 +.macro CALL_WITH_CONTEXT handler
++__vector_\handler:
 +	// Make room on the stack for the exception context.
 +	sub	sp,  sp,  #16 * 17
 +
@@ -843,6 +848,9 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/_arch/aarch64/exception.s 11
 +	// After returning from exception handling code, replay the saved context and return via
 +	// `eret`.
 +	b	__exception_restore_context
++
++.size	__vector_\handler, . - __vector_\handler
++.type	__vector_\handler, function
 +.endm
 +
 +.macro FIQ_SUSPEND
@@ -1016,8 +1024,8 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/exception.rs 11_exceptions_p
 diff -uNr 10_virtual_mem_part1_identity_mapping/src/main.rs 11_exceptions_part1_groundwork/src/main.rs
 --- 10_virtual_mem_part1_identity_mapping/src/main.rs
 +++ 11_exceptions_part1_groundwork/src/main.rs
-@@ -137,6 +137,8 @@
-     use driver::interface::DriverManager;
+@@ -144,6 +144,8 @@
+ unsafe fn kernel_init() -> ! {
      use memory::mmu::interface::MMU;
 
 +    exception::handling_init();
@@ -1025,7 +1033,16 @@ diff -uNr 10_virtual_mem_part1_identity_mapping/src/main.rs 11_exceptions_part1_
      if let Err(string) = memory::mmu::mmu().enable_mmu_and_caching() {
          panic!("MMU: {}", string);
      }
-@@ -194,13 +196,28 @@
+@@ -163,7 +165,7 @@
+
+ /// The main function running after the early init.
+ fn kernel_main() -> ! {
+-    use console::{console, interface::Write};
++    use console::console;
+     use core::time::Duration;
+
+     info!(
+@@ -193,13 +195,28 @@
      info!("Timer test, spinning for 1 second");
      time::time_manager().spin_for(Duration::from_secs(1));
 

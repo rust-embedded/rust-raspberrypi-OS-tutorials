@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
-// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
+// Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
 
 // Rust embedded logo for `make doc`.
-#![doc(html_logo_url = "https://git.io/JeGIp")]
+#![doc(
+    html_logo_url = "https://raw.githubusercontent.com/rust-embedded/wg/master/assets/logo/ewg-logo-blue-white-on-transparent.png"
+)]
 
 //! The `kernel` binary.
 //!
@@ -106,14 +108,20 @@
 
 #![allow(clippy::upper_case_acronyms)]
 #![allow(incomplete_features)]
+#![feature(asm_const)]
+#![feature(const_option)]
 #![feature(core_intrinsics)]
 #![feature(format_args_nl)]
+#![feature(int_roundings)]
+#![feature(nonzero_min_max)]
 #![feature(panic_info_message)]
 #![feature(trait_alias)]
+#![feature(unchecked_math)]
 #![no_main]
 #![no_std]
 
 mod bsp;
+mod common;
 mod console;
 mod cpu;
 mod driver;
@@ -134,19 +142,19 @@ mod time;
 ///       e.g. the yet-to-be-introduced spinlocks in the device drivers (which currently employ
 ///       NullLocks instead of spinlocks), will fail to work (properly) on the RPi SoCs.
 unsafe fn kernel_init() -> ! {
-    use driver::interface::DriverManager;
     use memory::mmu::interface::MMU;
 
     if let Err(string) = memory::mmu::mmu().enable_mmu_and_caching() {
         panic!("MMU: {}", string);
     }
 
-    for i in bsp::driver::driver_manager().all_device_drivers().iter() {
-        if let Err(x) = i.init() {
-            panic!("Error loading driver: {}: {}", i.compatible(), x);
-        }
+    // Initialize the BSP driver subsystem.
+    if let Err(x) = bsp::driver::init() {
+        panic!("Error initializing BSP driver subsystem: {}", x);
     }
-    bsp::driver::driver_manager().post_device_driver_init();
+
+    // Initialize all device drivers.
+    driver::driver_manager().init_drivers();
     // println! is usable from here on.
 
     // Transition from unsafe to safe.
@@ -155,11 +163,8 @@ unsafe fn kernel_init() -> ! {
 
 /// The main function running after the early init.
 fn kernel_main() -> ! {
-    use bsp::console::console;
-    use console::interface::All;
+    use console::{console, interface::Write};
     use core::time::Duration;
-    use driver::interface::DriverManager;
-    use time::interface::TimeManager;
 
     info!(
         "{} version {}",
@@ -183,13 +188,7 @@ fn kernel_main() -> ! {
     );
 
     info!("Drivers loaded:");
-    for (i, driver) in bsp::driver::driver_manager()
-        .all_device_drivers()
-        .iter()
-        .enumerate()
-    {
-        info!("      {}. {}", i + 1, driver.compatible());
-    }
+    driver::driver_manager().enumerate();
 
     info!("Timer test, spinning for 1 second");
     time::time_manager().spin_for(Duration::from_secs(1));
@@ -206,7 +205,7 @@ fn kernel_main() -> ! {
     // Discard any spurious received characters before going into echo mode.
     console().clear_rx();
     loop {
-        let c = bsp::console::console().read_char();
-        bsp::console::console().write_char(c);
+        let c = console().read_char();
+        console().write_char(c);
     }
 }

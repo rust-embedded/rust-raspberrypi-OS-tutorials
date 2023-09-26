@@ -19,6 +19,7 @@ Minipush 1.0
 [MP] ⏳ Waiting for /dev/ttyUSB0
 [MP] ✅ Serial connected
 [MP] 🔌 Please power the target now
+
  __  __ _      _ _                 _
 |  \/  (_)_ _ (_) |   ___  __ _ __| |
 | |\/| | | ' \| | |__/ _ \/ _` / _` |
@@ -30,16 +31,16 @@ Minipush 1.0
 [MP] ⏩ Pushing 12 KiB =========================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
-[    0.140431] mingo version 0.7.0
-[    0.140630] Booting on: Raspberry Pi 3
-[    0.141085] Architectural timer resolution: 52 ns
-[    0.141660] Drivers loaded:
-[    0.141995]       1. BCM GPIO
-[    0.142353]       2. BCM PL011 UART
-[W   0.142777] Spin duration smaller than architecturally supported, skipping
-[    0.143621] Spinning for 1 second
-[    1.144023] Spinning for 1 second
-[    2.144245] Spinning for 1 second
+[    0.143123] mingo version 0.7.0
+[    0.143323] Booting on: Raspberry Pi 3
+[    0.143778] Architectural timer resolution: 52 ns
+[    0.144352] Drivers loaded:
+[    0.144688]       1. BCM PL011 UART
+[    0.145110]       2. BCM GPIO
+[W   0.145469] Spin duration smaller than architecturally supported, skipping
+[    0.146313] Spinning for 1 second
+[    1.146715] Spinning for 1 second
+[    2.146938] Spinning for 1 second
 ```
 
 ## Diff to previous
@@ -62,7 +63,7 @@ Binary files 06_uart_chainloader/demo_payload_rpi4.img and 07_timestamps/demo_pa
 diff -uNr 06_uart_chainloader/Makefile 07_timestamps/Makefile
 --- 06_uart_chainloader/Makefile
 +++ 07_timestamps/Makefile
-@@ -23,29 +23,27 @@
+@@ -24,29 +24,27 @@
  QEMU_MISSING_STRING = "This board is not yet supported for QEMU."
 
  ifeq ($(BSP),rpi3)
@@ -149,7 +150,7 @@ diff -uNr 06_uart_chainloader/Makefile 07_timestamps/Makefile
 
  ##------------------------------------------------------------------------------
  ## Run clippy
-@@ -245,8 +239,7 @@
+@@ -238,8 +232,7 @@
  ##------------------------------------------------------------------------------
  test_boot: $(KERNEL_BIN)
  	$(call color_header, "Boot test - $(BSP)")
@@ -178,10 +179,10 @@ diff -uNr 06_uart_chainloader/src/_arch/aarch64/cpu/boot.s 07_timestamps/src/_ar
 -	movk	\register, #:abs_g0_nc:\symbol
 -.endm
 -
- .equ _core_id_mask, 0b11
-
  //--------------------------------------------------------------------------------------------------
-@@ -50,35 +39,23 @@
+ // Public Code
+ //--------------------------------------------------------------------------------------------------
+@@ -48,35 +37,31 @@
  	// If execution reaches here, it is the boot core.
 
  	// Initialize DRAM.
@@ -219,6 +220,14 @@ diff -uNr 06_uart_chainloader/src/_arch/aarch64/cpu/boot.s 07_timestamps/src/_ar
 -	// Jump to the relocated Rust code.
 -	ADR_ABS	x1, _start_rust
 -	br	x1
++	// Read the CPU's timer counter frequency and store it in ARCH_TIMER_COUNTER_FREQUENCY.
++	// Abort if the frequency read back as 0.
++	ADR_REL	x1, ARCH_TIMER_COUNTER_FREQUENCY // provided by aarch64/time.rs
++	mrs	x2, CNTFRQ_EL0
++	cmp	x2, xzr
++	b.eq	.L_parking_loop
++	str	w2, [x1]
++
 +	// Jump to Rust code.
 +	b	_start_rust
 
@@ -248,10 +257,10 @@ diff -uNr 06_uart_chainloader/src/_arch/aarch64/cpu.rs 07_timestamps/src/_arch/a
 diff -uNr 06_uart_chainloader/src/_arch/aarch64/time.rs 07_timestamps/src/_arch/aarch64/time.rs
 --- 06_uart_chainloader/src/_arch/aarch64/time.rs
 +++ 07_timestamps/src/_arch/aarch64/time.rs
-@@ -0,0 +1,121 @@
+@@ -0,0 +1,162 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Architectural timer primitives.
 +//!
@@ -262,124 +271,165 @@ diff -uNr 06_uart_chainloader/src/_arch/aarch64/time.rs 07_timestamps/src/_arch/
 +//!
 +//! crate::time::arch_time
 +
-+use crate::{time, warn};
-+use core::time::Duration;
-+use cortex_a::{asm::barrier, registers::*};
-+use tock_registers::interfaces::{ReadWriteable, Readable, Writeable};
++use crate::warn;
++use aarch64_cpu::{asm::barrier, registers::*};
++use core::{
++    num::{NonZeroU128, NonZeroU32, NonZeroU64},
++    ops::{Add, Div},
++    time::Duration,
++};
++use tock_registers::interfaces::Readable;
 +
 +//--------------------------------------------------------------------------------------------------
 +// Private Definitions
 +//--------------------------------------------------------------------------------------------------
 +
-+const NS_PER_S: u64 = 1_000_000_000;
++const NANOSEC_PER_SEC: NonZeroU64 = NonZeroU64::new(1_000_000_000).unwrap();
 +
-+/// ARMv8 Generic Timer.
-+struct GenericTimer;
++#[derive(Copy, Clone, PartialOrd, PartialEq)]
++struct GenericTimerCounterValue(u64);
 +
 +//--------------------------------------------------------------------------------------------------
 +// Global instances
 +//--------------------------------------------------------------------------------------------------
 +
-+static TIME_MANAGER: GenericTimer = GenericTimer;
++/// Boot assembly code overwrites this value with the value of CNTFRQ_EL0 before any Rust code is
++/// executed. This given value here is just a (safe) dummy.
++#[no_mangle]
++static ARCH_TIMER_COUNTER_FREQUENCY: NonZeroU32 = NonZeroU32::MIN;
 +
 +//--------------------------------------------------------------------------------------------------
 +// Private Code
 +//--------------------------------------------------------------------------------------------------
 +
-+impl GenericTimer {
-+    #[inline(always)]
-+    fn read_cntpct(&self) -> u64 {
-+        // Prevent that the counter is read ahead of time due to out-of-order execution.
-+        unsafe { barrier::isb(barrier::SY) };
-+        CNTPCT_EL0.get()
++fn arch_timer_counter_frequency() -> NonZeroU32 {
++    // Read volatile is needed here to prevent the compiler from optimizing
++    // ARCH_TIMER_COUNTER_FREQUENCY away.
++    //
++    // This is safe, because all the safety requirements as stated in read_volatile()'s
++    // documentation are fulfilled.
++    unsafe { core::ptr::read_volatile(&ARCH_TIMER_COUNTER_FREQUENCY) }
++}
++
++impl GenericTimerCounterValue {
++    pub const MAX: Self = GenericTimerCounterValue(u64::MAX);
++}
++
++impl Add for GenericTimerCounterValue {
++    type Output = Self;
++
++    fn add(self, other: Self) -> Self {
++        GenericTimerCounterValue(self.0.wrapping_add(other.0))
 +    }
++}
++
++impl From<GenericTimerCounterValue> for Duration {
++    fn from(counter_value: GenericTimerCounterValue) -> Self {
++        if counter_value.0 == 0 {
++            return Duration::ZERO;
++        }
++
++        let frequency: NonZeroU64 = arch_timer_counter_frequency().into();
++
++        // Div<NonZeroU64> implementation for u64 cannot panic.
++        let secs = counter_value.0.div(frequency);
++
++        // This is safe, because frequency can never be greater than u32::MAX, which means the
++        // largest theoretical value for sub_second_counter_value is (u32::MAX - 1). Therefore,
++        // (sub_second_counter_value * NANOSEC_PER_SEC) cannot overflow an u64.
++        //
++        // The subsequent division ensures the result fits into u32, since the max result is smaller
++        // than NANOSEC_PER_SEC. Therefore, just cast it to u32 using `as`.
++        let sub_second_counter_value = counter_value.0 modulo frequency;
++        let nanos = unsafe { sub_second_counter_value.unchecked_mul(u64::from(NANOSEC_PER_SEC)) }
++            .div(frequency) as u32;
++
++        Duration::new(secs, nanos)
++    }
++}
++
++fn max_duration() -> Duration {
++    Duration::from(GenericTimerCounterValue::MAX)
++}
++
++impl TryFrom<Duration> for GenericTimerCounterValue {
++    type Error = &'static str;
++
++    fn try_from(duration: Duration) -> Result<Self, Self::Error> {
++        if duration < resolution() {
++            return Ok(GenericTimerCounterValue(0));
++        }
++
++        if duration > max_duration() {
++            return Err("Conversion error. Duration too big");
++        }
++
++        let frequency: u128 = u32::from(arch_timer_counter_frequency()) as u128;
++        let duration: u128 = duration.as_nanos();
++
++        // This is safe, because frequency can never be greater than u32::MAX, and
++        // (Duration::MAX.as_nanos() * u32::MAX) < u128::MAX.
++        let counter_value =
++            unsafe { duration.unchecked_mul(frequency) }.div(NonZeroU128::from(NANOSEC_PER_SEC));
++
++        // Since we checked above that we are <= max_duration(), just cast to u64.
++        Ok(GenericTimerCounterValue(counter_value as u64))
++    }
++}
++
++#[inline(always)]
++fn read_cntpct() -> GenericTimerCounterValue {
++    // Prevent that the counter is read ahead of time due to out-of-order execution.
++    barrier::isb(barrier::SY);
++    let cnt = CNTPCT_EL0.get();
++
++    GenericTimerCounterValue(cnt)
 +}
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Code
 +//--------------------------------------------------------------------------------------------------
 +
-+/// Return a reference to the time manager.
-+pub fn time_manager() -> &'static impl time::interface::TimeManager {
-+    &TIME_MANAGER
++/// The timer's resolution.
++pub fn resolution() -> Duration {
++    Duration::from(GenericTimerCounterValue(1))
 +}
 +
-+//------------------------------------------------------------------------------
-+// OS Interface Code
-+//------------------------------------------------------------------------------
++/// The uptime since power-on of the device.
++///
++/// This includes time consumed by firmware and bootloaders.
++pub fn uptime() -> Duration {
++    read_cntpct().into()
++}
 +
-+impl time::interface::TimeManager for GenericTimer {
-+    fn resolution(&self) -> Duration {
-+        Duration::from_nanos(NS_PER_S / (CNTFRQ_EL0.get() as u64))
-+    }
++/// Spin for a given duration.
++pub fn spin_for(duration: Duration) {
++    let curr_counter_value = read_cntpct();
 +
-+    fn uptime(&self) -> Duration {
-+        let current_count: u64 = self.read_cntpct() * NS_PER_S;
-+        let frq: u64 = CNTFRQ_EL0.get() as u64;
-+
-+        Duration::from_nanos(current_count / frq)
-+    }
-+
-+    fn spin_for(&self, duration: Duration) {
-+        // Instantly return on zero.
-+        if duration.as_nanos() == 0 {
++    let counter_value_delta: GenericTimerCounterValue = match duration.try_into() {
++        Err(msg) => {
++            warn!("spin_for: {}. Skipping", msg);
 +            return;
 +        }
++        Ok(val) => val,
++    };
++    let counter_value_target = curr_counter_value + counter_value_delta;
 +
-+        // Calculate the register compare value.
-+        let frq = CNTFRQ_EL0.get();
-+        let x = match frq.checked_mul(duration.as_nanos() as u64) {
-+            #[allow(unused_imports)]
-+            None => {
-+                warn!("Spin duration too long, skipping");
-+                return;
-+            }
-+            Some(val) => val,
-+        };
-+        let tval = x / NS_PER_S;
-+
-+        // Check if it is within supported bounds.
-+        let warn: Option<&str> = if tval == 0 {
-+            Some("smaller")
-+        // The upper 32 bits of CNTP_TVAL_EL0 are reserved.
-+        } else if tval > u32::max_value().into() {
-+            Some("bigger")
-+        } else {
-+            None
-+        };
-+
-+        #[allow(unused_imports)]
-+        if let Some(w) = warn {
-+            warn!(
-+                "Spin duration {} than architecturally supported, skipping",
-+                w
-+            );
-+            return;
-+        }
-+
-+        // Set the compare value register.
-+        CNTP_TVAL_EL0.set(tval);
-+
-+        // Kick off the counting.                       // Disable timer interrupt.
-+        CNTP_CTL_EL0.modify(CNTP_CTL_EL0::ENABLE::SET + CNTP_CTL_EL0::IMASK::SET);
-+
-+        // ISTATUS will be '1' when cval ticks have passed. Busy-check it.
-+        while !CNTP_CTL_EL0.matches_all(CNTP_CTL_EL0::ISTATUS::SET) {}
-+
-+        // Disable counting again.
-+        CNTP_CTL_EL0.modify(CNTP_CTL_EL0::ENABLE::CLEAR);
-+    }
++    // Busy wait.
++    //
++    // Read CNTPCT_EL0 directly to avoid the ISB that is part of [`read_cntpct`].
++    while GenericTimerCounterValue(CNTPCT_EL0.get()) < counter_value_target {}
 +}
 
 diff -uNr 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 07_timestamps/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
 --- 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
 +++ 07_timestamps/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
-@@ -143,25 +143,19 @@
+@@ -140,25 +140,19 @@
      /// Disable pull-up/down on pins 14 and 15.
      #[cfg(feature = "bsp_rpi3")]
      fn disable_pud_14_15_bcm2837(&mut self) {
 -        use crate::cpu;
-+        use crate::{time, time::interface::TimeManager};
++        use crate::time;
 +        use core::time::Duration;
 
 -        // Make an educated guess for a good delay value (Sequence described in the BCM2837
@@ -410,7 +460,7 @@ diff -uNr 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 07_times
 diff -uNr 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 07_timestamps/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 --- 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 07_timestamps/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -278,7 +278,7 @@
+@@ -275,7 +275,7 @@
      }
 
      /// Retrieve a character.
@@ -419,7 +469,7 @@ diff -uNr 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 07
          // If RX FIFO is empty,
          if self.registers.FR.matches_all(FR::RXFE::SET) {
              // immediately return in non-blocking mode.
-@@ -293,7 +293,12 @@
+@@ -290,7 +290,12 @@
          }
 
          // Read one character.
@@ -433,7 +483,7 @@ diff -uNr 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 07
 
          // Update statistics.
          self.chars_read += 1;
-@@ -373,14 +378,14 @@
+@@ -376,14 +381,14 @@
  impl console::interface::Read for PL011Uart {
      fn read_char(&self) -> char {
          self.inner
@@ -451,11 +501,33 @@ diff -uNr 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 07
          {}
      }
 
-diff -uNr 06_uart_chainloader/src/bsp/raspberrypi/link.ld 07_timestamps/src/bsp/raspberrypi/link.ld
---- 06_uart_chainloader/src/bsp/raspberrypi/link.ld
-+++ 07_timestamps/src/bsp/raspberrypi/link.ld
+diff -uNr 06_uart_chainloader/src/bsp/raspberrypi/driver.rs 07_timestamps/src/bsp/raspberrypi/driver.rs
+--- 06_uart_chainloader/src/bsp/raspberrypi/driver.rs
++++ 07_timestamps/src/bsp/raspberrypi/driver.rs
+@@ -57,6 +57,17 @@
+ /// # Safety
+ ///
+ /// See child function calls.
++///
++/// # Note
++///
++/// Using atomics here relieves us from needing to use `unsafe` for the static variable.
++///
++/// On `AArch64`, which is the only implemented architecture at the time of writing this,
++/// [`AtomicBool::load`] and [`AtomicBool::store`] are lowered to ordinary load and store
++/// instructions. They are therefore safe to use even with MMU + caching deactivated.
++///
++/// [`AtomicBool::load`]: core::sync::atomic::AtomicBool::load
++/// [`AtomicBool::store`]: core::sync::atomic::AtomicBool::store
+ pub unsafe fn init() -> Result<(), &'static str> {
+     static INIT_DONE: AtomicBool = AtomicBool::new(false);
+     if INIT_DONE.load(Ordering::Relaxed) {
+
+diff -uNr 06_uart_chainloader/src/bsp/raspberrypi/kernel.ld 07_timestamps/src/bsp/raspberrypi/kernel.ld
+--- 06_uart_chainloader/src/bsp/raspberrypi/kernel.ld
++++ 07_timestamps/src/bsp/raspberrypi/kernel.ld
 @@ -3,6 +3,8 @@
-  * Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
+  * Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
   */
 
 +__rpi_phys_dram_start_addr = 0;
@@ -481,7 +553,7 @@ diff -uNr 06_uart_chainloader/src/bsp/raspberrypi/link.ld 07_timestamps/src/bsp/
      .text :
      {
          KEEP(*(.text._start))
-@@ -61,10 +61,6 @@
+@@ -60,10 +60,6 @@
      ***********************************************************************************************/
      .data : { *(.data*) } :segment_data
 
@@ -496,19 +568,14 @@ diff -uNr 06_uart_chainloader/src/bsp/raspberrypi/link.ld 07_timestamps/src/bsp/
 diff -uNr 06_uart_chainloader/src/bsp/raspberrypi/memory.rs 07_timestamps/src/bsp/raspberrypi/memory.rs
 --- 06_uart_chainloader/src/bsp/raspberrypi/memory.rs
 +++ 07_timestamps/src/bsp/raspberrypi/memory.rs
-@@ -11,10 +11,9 @@
+@@ -11,7 +11,6 @@
  /// The board's physical memory map.
  #[rustfmt::skip]
  pub(super) mod map {
 -    pub const BOARD_DEFAULT_LOAD_ADDRESS: usize =        0x8_0000;
 
--    pub const GPIO_OFFSET:                usize =        0x0020_0000;
--    pub const UART_OFFSET:                usize =        0x0020_1000;
-+    pub const GPIO_OFFSET:         usize = 0x0020_0000;
-+    pub const UART_OFFSET:         usize = 0x0020_1000;
-
-     /// Physical devices.
-     #[cfg(feature = "bsp_rpi3")]
+     pub const GPIO_OFFSET:         usize = 0x0020_0000;
+     pub const UART_OFFSET:         usize = 0x0020_1000;
 @@ -36,13 +35,3 @@
          pub const PL011_UART_START: usize = START + UART_OFFSET;
      }
@@ -535,10 +602,54 @@ diff -uNr 06_uart_chainloader/src/cpu.rs 07_timestamps/src/cpu.rs
 -#[cfg(feature = "bsp_rpi3")]
 -pub use arch_cpu::spin_for_cycles;
 
+diff -uNr 06_uart_chainloader/src/driver.rs 07_timestamps/src/driver.rs
+--- 06_uart_chainloader/src/driver.rs
++++ 07_timestamps/src/driver.rs
+@@ -4,7 +4,10 @@
+
+ //! Driver support.
+
+-use crate::synchronization::{interface::Mutex, NullLock};
++use crate::{
++    info,
++    synchronization::{interface::Mutex, NullLock},
++};
+
+ //--------------------------------------------------------------------------------------------------
+ // Private Definitions
+@@ -151,4 +154,14 @@
+             }
+         });
+     }
++
++    /// Enumerate all registered device drivers.
++    pub fn enumerate(&self) {
++        let mut i: usize = 1;
++        self.for_each_descriptor(|descriptor| {
++            info!("      {}. {}", i, descriptor.device_driver.compatible());
++
++            i += 1;
++        });
++    }
+ }
+
 diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
 --- 06_uart_chainloader/src/main.rs
 +++ 07_timestamps/src/main.rs
-@@ -118,6 +118,7 @@
+@@ -108,9 +108,12 @@
+
+ #![allow(clippy::upper_case_acronyms)]
+ #![feature(asm_const)]
++#![feature(const_option)]
+ #![feature(format_args_nl)]
++#![feature(nonzero_min_max)]
+ #![feature(panic_info_message)]
+ #![feature(trait_alias)]
++#![feature(unchecked_math)]
+ #![no_main]
+ #![no_std]
+
+@@ -121,6 +124,7 @@
  mod panic_wait;
  mod print;
  mod synchronization;
@@ -546,7 +657,7 @@ diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
 
  /// Early init code.
  ///
-@@ -140,56 +141,38 @@
+@@ -142,55 +146,30 @@
      kernel_main()
  }
 
@@ -559,12 +670,8 @@ diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
 -
  /// The main function running after the early init.
  fn kernel_main() -> ! {
--    use bsp::console::console;
--    use console::interface::All;
-+    use core::time::Duration;
-+    use driver::interface::DriverManager;
-+    use time::interface::TimeManager;
-
+-    use console::console;
+-
 -    println!("{}", MINILOAD_LOGO);
 -    println!("{:^37}", bsp::board_name());
 -    println!();
@@ -577,26 +684,8 @@ diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
 -    // Notify `Minipush` to send the binary.
 -    for _ in 0..3 {
 -        console().write_char(3 as char);
-+    info!(
-+        "{} version {}",
-+        env!("CARGO_PKG_NAME"),
-+        env!("CARGO_PKG_VERSION")
-+    );
-+    info!("Booting on: {}", bsp::board_name());
-+
-+    info!(
-+        "Architectural timer resolution: {} ns",
-+        time::time_manager().resolution().as_nanos()
-+    );
-+
-+    info!("Drivers loaded:");
-+    for (i, driver) in bsp::driver::driver_manager()
-+        .all_device_drivers()
-+        .iter()
-+        .enumerate()
-+    {
-+        info!("      {}. {}", i + 1, driver.compatible());
-     }
+-    }
++    use core::time::Duration;
 
 -    // Read the binary's size.
 -    let mut size: u32 = u32::from(console().read_char() as u8);
@@ -614,10 +703,29 @@ diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
 -        for i in 0..size {
 -            core::ptr::write_volatile(kernel_addr.offset(i as isize), console().read_char() as u8)
 -        }
--    }
++    info!(
++        "{} version {}",
++        env!("CARGO_PKG_NAME"),
++        env!("CARGO_PKG_VERSION")
++    );
++    info!("Booting on: {}", bsp::board_name());
++
++    info!(
++        "Architectural timer resolution: {} ns",
++        time::time_manager().resolution().as_nanos()
++    );
++
++    info!("Drivers loaded:");
++    driver::driver_manager().enumerate();
++
 +    // Test a failing timer case.
 +    time::time_manager().spin_for(Duration::from_nanos(1));
-
++
++    loop {
++        info!("Spinning for 1 second");
++        time::time_manager().spin_for(Duration::from_secs(1));
+     }
+-
 -    println!("[ML] Loaded! Executing the payload now\n");
 -    console().flush();
 -
@@ -626,21 +734,12 @@ diff -uNr 06_uart_chainloader/src/main.rs 07_timestamps/src/main.rs
 -
 -    // Jump to loaded kernel!
 -    kernel()
-+    loop {
-+        info!("Spinning for 1 second");
-+        time::time_manager().spin_for(Duration::from_secs(1));
-+    }
  }
 
 diff -uNr 06_uart_chainloader/src/panic_wait.rs 07_timestamps/src/panic_wait.rs
 --- 06_uart_chainloader/src/panic_wait.rs
 +++ 07_timestamps/src/panic_wait.rs
-@@ -58,18 +58,23 @@
-
- #[panic_handler]
- fn panic(info: &PanicInfo) -> ! {
-+    use crate::time::interface::TimeManager;
-+
+@@ -45,15 +45,18 @@
      // Protect against panic infinite loops if any of the following code panics itself.
      panic_prevent_reenter();
 
@@ -650,7 +749,7 @@ diff -uNr 06_uart_chainloader/src/panic_wait.rs 07_timestamps/src/panic_wait.rs
          _ => ("???", 0, 0),
      };
 
-     panic_println!(
+     println!(
 -        "Kernel panic!\n\n\
 +        "[  {:>3}.{:06}] Kernel panic!\n\n\
          Panic location:\n      File '{}', line {}, column {}\n\n\
@@ -664,7 +763,7 @@ diff -uNr 06_uart_chainloader/src/panic_wait.rs 07_timestamps/src/panic_wait.rs
 diff -uNr 06_uart_chainloader/src/print.rs 07_timestamps/src/print.rs
 --- 06_uart_chainloader/src/print.rs
 +++ 07_timestamps/src/print.rs
-@@ -36,3 +36,59 @@
+@@ -34,3 +34,51 @@
          $crate::print::_print(format_args_nl!($($arg)*));
      })
  }
@@ -673,8 +772,6 @@ diff -uNr 06_uart_chainloader/src/print.rs 07_timestamps/src/print.rs
 +#[macro_export]
 +macro_rules! info {
 +    ($string:expr) => ({
-+        use $crate::time::interface::TimeManager;
-+
 +        let timestamp = $crate::time::time_manager().uptime();
 +
 +        $crate::print::_print(format_args_nl!(
@@ -684,8 +781,6 @@ diff -uNr 06_uart_chainloader/src/print.rs 07_timestamps/src/print.rs
 +        ));
 +    });
 +    ($format_string:expr, $($arg:tt)*) => ({
-+        use $crate::time::interface::TimeManager;
-+
 +        let timestamp = $crate::time::time_manager().uptime();
 +
 +        $crate::print::_print(format_args_nl!(
@@ -701,8 +796,6 @@ diff -uNr 06_uart_chainloader/src/print.rs 07_timestamps/src/print.rs
 +#[macro_export]
 +macro_rules! warn {
 +    ($string:expr) => ({
-+        use $crate::time::interface::TimeManager;
-+
 +        let timestamp = $crate::time::time_manager().uptime();
 +
 +        $crate::print::_print(format_args_nl!(
@@ -712,8 +805,6 @@ diff -uNr 06_uart_chainloader/src/print.rs 07_timestamps/src/print.rs
 +        ));
 +    });
 +    ($format_string:expr, $($arg:tt)*) => ({
-+        use $crate::time::interface::TimeManager;
-+
 +        let timestamp = $crate::time::time_manager().uptime();
 +
 +        $crate::print::_print(format_args_nl!(
@@ -728,10 +819,10 @@ diff -uNr 06_uart_chainloader/src/print.rs 07_timestamps/src/print.rs
 diff -uNr 06_uart_chainloader/src/time.rs 07_timestamps/src/time.rs
 --- 06_uart_chainloader/src/time.rs
 +++ 07_timestamps/src/time.rs
-@@ -0,0 +1,37 @@
+@@ -0,0 +1,57 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Timer primitives.
 +
@@ -739,31 +830,51 @@ diff -uNr 06_uart_chainloader/src/time.rs 07_timestamps/src/time.rs
 +#[path = "_arch/aarch64/time.rs"]
 +mod arch_time;
 +
-+//--------------------------------------------------------------------------------------------------
-+// Architectural Public Reexports
-+//--------------------------------------------------------------------------------------------------
-+pub use arch_time::time_manager;
++use core::time::Duration;
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Definitions
 +//--------------------------------------------------------------------------------------------------
 +
-+/// Timekeeping interfaces.
-+pub mod interface {
-+    use core::time::Duration;
++/// Provides time management functions.
++pub struct TimeManager;
 +
-+    /// Time management functions.
-+    pub trait TimeManager {
-+        /// The timer's resolution.
-+        fn resolution(&self) -> Duration;
++//--------------------------------------------------------------------------------------------------
++// Global instances
++//--------------------------------------------------------------------------------------------------
 +
-+        /// The uptime since power-on of the device.
-+        ///
-+        /// This includes time consumed by firmware and bootloaders.
-+        fn uptime(&self) -> Duration;
++static TIME_MANAGER: TimeManager = TimeManager::new();
 +
-+        /// Spin for a given duration.
-+        fn spin_for(&self, duration: Duration);
++//--------------------------------------------------------------------------------------------------
++// Public Code
++//--------------------------------------------------------------------------------------------------
++
++/// Return a reference to the global TimeManager.
++pub fn time_manager() -> &'static TimeManager {
++    &TIME_MANAGER
++}
++
++impl TimeManager {
++    /// Create an instance.
++    pub const fn new() -> Self {
++        Self
++    }
++
++    /// The timer's resolution.
++    pub fn resolution(&self) -> Duration {
++        arch_time::resolution()
++    }
++
++    /// The uptime since power-on of the device.
++    ///
++    /// This includes time consumed by firmware and bootloaders.
++    pub fn uptime(&self) -> Duration {
++        arch_time::uptime()
++    }
++
++    /// Spin for a given duration.
++    pub fn spin_for(&self, duration: Duration) {
++        arch_time::spin_for(duration)
 +    }
 +}
 
@@ -783,7 +894,7 @@ diff -uNr 06_uart_chainloader/tests/chainboot_test.rb 07_timestamps/tests/chainb
 -
 -# SPDX-License-Identifier: MIT OR Apache-2.0
 -#
--# Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
+-# Copyright (c) 2020-2023 Andre Richter <andre.o.richter@gmail.com>
 -
 -require_relative '../../common/serial/minipush'
 -require_relative '../../common/tests/boot_test'

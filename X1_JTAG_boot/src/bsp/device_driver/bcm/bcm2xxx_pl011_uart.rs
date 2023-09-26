@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
-// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
+// Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
 
 //! PL011 UART driver.
 //!
@@ -167,18 +167,15 @@ enum BlockingMode {
     NonBlocking,
 }
 
-//--------------------------------------------------------------------------------------------------
-// Public Definitions
-//--------------------------------------------------------------------------------------------------
-
-pub struct PL011UartInner {
+struct PL011UartInner {
     registers: Registers,
     chars_written: usize,
     chars_read: usize,
 }
 
-// Export the inner struct so that BSPs can use it for the panic handler.
-pub use PL011UartInner as PanicUart;
+//--------------------------------------------------------------------------------------------------
+// Public Definitions
+//--------------------------------------------------------------------------------------------------
 
 /// Representation of the UART.
 pub struct PL011Uart {
@@ -186,7 +183,7 @@ pub struct PL011Uart {
 }
 
 //--------------------------------------------------------------------------------------------------
-// Public Code
+// Private Code
 //--------------------------------------------------------------------------------------------------
 
 impl PL011UartInner {
@@ -326,7 +323,13 @@ impl fmt::Write for PL011UartInner {
     }
 }
 
+//--------------------------------------------------------------------------------------------------
+// Public Code
+//--------------------------------------------------------------------------------------------------
+
 impl PL011Uart {
+    pub const COMPATIBLE: &'static str = "BCM PL011 UART";
+
     /// Create an instance.
     ///
     /// # Safety
@@ -346,7 +349,7 @@ use synchronization::interface::Mutex;
 
 impl driver::interface::DeviceDriver for PL011Uart {
     fn compatible(&self) -> &'static str {
-        "BCM PL011 UART"
+        Self::COMPATIBLE
     }
 
     unsafe fn init(&self) -> Result<(), &'static str> {
@@ -364,7 +367,7 @@ impl console::interface::Write for PL011Uart {
     }
 
     fn write_fmt(&self, args: core::fmt::Arguments) -> fmt::Result {
-        // Fully qualified syntax for the call to `core::fmt::Write::write:fmt()` to increase
+        // Fully qualified syntax for the call to `core::fmt::Write::write_fmt()` to increase
         // readability.
         self.inner.lock(|inner| fmt::Write::write_fmt(inner, args))
     }
@@ -400,3 +403,5 @@ impl console::interface::Statistics for PL011Uart {
         self.inner.lock(|inner| inner.chars_read)
     }
 }
+
+impl console::interface::All for PL011Uart {}

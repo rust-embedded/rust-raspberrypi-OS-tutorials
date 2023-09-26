@@ -2,7 +2,7 @@
 
 # SPDX-License-Identifier: MIT OR Apache-2.0
 #
-# Copyright (c) 2019-2022 Andre Richter <andre.o.richter@gmail.com>
+# Copyright (c) 2019-2023 Andre Richter <andre.o.richter@gmail.com>
 
 require 'expect'
 require 'pty'
@@ -27,9 +27,9 @@ end
 
 # Monkey-patch IO so that we get access to the buffer of a previously unsuccessful expect().
 class IO
-    # rubocop:disable Naming:MethodName
-    attr_reader :unusedBuf
-    # rubocop:enable Naming:MethodName
+    def unused_buf
+        @unusedBuf
+    end
 end
 
 # A wrapper class that records characters that have been received from a PTY.
@@ -43,7 +43,7 @@ class PTYLoggerWrapper
     def expect(pattern, timeout)
         result = @pty.expect(pattern, timeout)
         @log << if result.nil?
-                    @pty.unusedBuf
+                    @pty.unused_buf
                 else
                     result
                 end

@@ -3,7 +3,7 @@
 
 # SPDX-License-Identifier: MIT OR Apache-2.0
 #
-# Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
+# Copyright (c) 2020-2023 Andre Richter <andre.o.richter@gmail.com>
 
 require 'rubygems'
 require 'bundler/setup'
@@ -88,7 +88,7 @@ class MiniTerm
         end
     end
 
-    def connetion_reset
+    def connection_reset
         @target_serial&.close
         @target_serial = nil
         @host_console.cooked!
@@ -96,14 +96,14 @@ class MiniTerm
 
     # When the serial lost power or was removed during R/W operation.
     def handle_reconnect(_error)
-        connetion_reset
+        connection_reset
 
         puts
         puts "[#{@name_short}] ⚡ #{'Connection Error: Reinsert the USB serial again'.light_red}"
     end
 
     def handle_unexpected(error)
-        connetion_reset
+        connection_reset
 
         puts
         puts "[#{@name_short}] ⚡ #{"Unexpected Error: #{error.inspect}".light_red}"
@@ -120,15 +120,15 @@ class MiniTerm
     rescue StandardError => e
         handle_unexpected(e)
     ensure
-        connetion_reset
+        connection_reset
         puts
         puts "[#{@name_short}] Bye 👋"
     end
 end
 
-##--------------------------------------------------------------------------------------------------
+## -------------------------------------------------------------------------------------------------
 ## Execution starts here
-##--------------------------------------------------------------------------------------------------
+## -------------------------------------------------------------------------------------------------
 if __FILE__ == $PROGRAM_NAME
     puts
     puts 'Miniterm 1.0'.cyan

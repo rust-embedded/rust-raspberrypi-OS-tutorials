@@ -3,7 +3,7 @@
 
 # SPDX-License-Identifier: MIT OR Apache-2.0
 #
-# Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
+# Copyright (c) 2020-2023 Andre Richter <andre.o.richter@gmail.com>
 
 require 'rubygems'
 require 'bundler/setup'
@@ -94,11 +94,11 @@ class TutorialCrate
     private
 
     def boot_test?
-        Dir.exist?("#{@folder}/tests")
+        Dir.exist?("#{@folder}/tests") || Dir.exist?("#{@folder}/kernel/tests")
     end
 
     def unit_integration_tests?
-        !Dir.glob("#{@folder}/tests/00_*.rs").empty?
+        !Dir.glob("#{@folder}/kernel/tests/00_*.rs").empty?
     end
 end
 
@@ -108,7 +108,7 @@ class DevTool
         @user_has_supplied_crates = false
         @bsp = bsp_from_env || SUPPORTED_BSPS.first
 
-        cl = user_supplied_crate_list || Dir['*/Cargo.toml'].sort
+        cl = user_supplied_crate_list || Dir['*/Cargo.toml']
         @crates = cl.map { |c| TutorialCrate.new(c.delete_suffix('/Cargo.toml')) }
     end
 
@@ -233,7 +233,7 @@ class DevTool
     SUPPORTED_BSPS = %w[rpi3 rpi4].freeze
 
     def bsp_from_env
-        bsp = ENV['BSP']
+        bsp = ENV.fetch('BSP', nil)
 
         return bsp if SUPPORTED_BSPS.include?(bsp)
 
@@ -301,7 +301,15 @@ class DevTool
         # Only diff adjacent tutorials. This checks the numbers of the tutorial folders.
         return unless original[0..1].to_i + 1 == update[0..1].to_i
 
-        puts 'Diffing '.light_blue + original.ljust(padding) + " -> #{update}"
+        # Skip for tutorial 11. Due to the change to virtual manifest, the diff is rather
+        # unreadable.
+        if original[0..1].to_i == 11
+            puts 'Skipping '.light_yellow +
+                 "#{original}: Too noisy due to change to virtual manifest"
+            return
+        end
+
+        puts 'Diffing  '.light_blue + original.ljust(padding) + " -> #{update}"
         system("bash utils/diff_tut_folders.bash #{original} #{update}")
     end
 
@@ -321,9 +329,9 @@ class DevTool
     end
 end
 
-##--------------------------------------------------------------------------------------------------
+## -------------------------------------------------------------------------------------------------
 ## Execution starts here
-##--------------------------------------------------------------------------------------------------
+## -------------------------------------------------------------------------------------------------
 tool = DevTool.new
 cmd = ARGV[0]
 commands = tool.public_methods(false).sort
@@ -335,4 +343,5 @@ else
     puts
     puts 'Commands:'
     commands.each { |m| puts "  #{m}" }
+    exit(1)
 end

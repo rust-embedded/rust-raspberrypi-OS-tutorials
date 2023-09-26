@@ -1,31 +1,15 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
-// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
+// Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
 
 //! A panic handler that infinitely waits.
 
-use crate::{bsp, cpu};
-use core::{fmt, panic::PanicInfo};
+use crate::{cpu, println};
+use core::panic::PanicInfo;
 
 //--------------------------------------------------------------------------------------------------
 // Private Code
 //--------------------------------------------------------------------------------------------------
-
-fn _panic_print(args: fmt::Arguments) {
-    use fmt::Write;
-
-    unsafe { bsp::console::panic_console_out().write_fmt(args).unwrap() };
-}
-
-/// Prints with a newline - only use from the panic handler.
-///
-/// Carbon copy from <https://doc.rust-lang.org/src/std/macros.rs.html>
-#[macro_export]
-macro_rules! panic_println {
-    ($($arg:tt)*) => ({
-        _panic_print(format_args_nl!($($arg)*));
-    })
-}
 
 /// Stop immediately if called a second time.
 ///
@@ -58,8 +42,6 @@ fn panic_prevent_reenter() {
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    use crate::time::interface::TimeManager;
-
     // Protect against panic infinite loops if any of the following code panics itself.
     panic_prevent_reenter();
 
@@ -69,7 +51,7 @@ fn panic(info: &PanicInfo) -> ! {
         _ => ("???", 0, 0),
     };
 
-    panic_println!(
+    println!(
         "[  {:>3}.{:06}] Kernel panic!\n\n\
         Panic location:\n      File '{}', line {}, column {}\n\n\
         {}",

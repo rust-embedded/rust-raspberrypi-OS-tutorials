@@ -320,7 +320,7 @@ diff -uNr 07_timestamps/Cargo.toml 08_hw_debug_JTAG/Cargo.toml
 diff -uNr 07_timestamps/Makefile 08_hw_debug_JTAG/Makefile
 --- 07_timestamps/Makefile
 +++ 08_hw_debug_JTAG/Makefile
-@@ -31,6 +31,8 @@
+@@ -32,6 +32,8 @@
      OBJDUMP_BINARY    = aarch64-none-elf-objdump
      NM_BINARY         = aarch64-none-elf-nm
      READELF_BINARY    = aarch64-none-elf-readelf
@@ -329,7 +329,7 @@ diff -uNr 07_timestamps/Makefile 08_hw_debug_JTAG/Makefile
      LD_SCRIPT_PATH    = $(shell pwd)/src/bsp/raspberrypi
      RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
  else ifeq ($(BSP),rpi4)
-@@ -42,6 +44,8 @@
+@@ -43,6 +45,8 @@
      OBJDUMP_BINARY    = aarch64-none-elf-objdump
      NM_BINARY         = aarch64-none-elf-nm
      READELF_BINARY    = aarch64-none-elf-readelf
@@ -364,7 +364,7 @@ diff -uNr 07_timestamps/Makefile 08_hw_debug_JTAG/Makefile
  endif
 
 
-@@ -222,6 +233,35 @@
+@@ -215,6 +226,35 @@
 
 
 
@@ -400,5 +400,27 @@ diff -uNr 07_timestamps/Makefile 08_hw_debug_JTAG/Makefile
  ##--------------------------------------------------------------------------------------------------
  ## Testing targets
  ##--------------------------------------------------------------------------------------------------
+
+diff -uNr 07_timestamps/src/bsp/raspberrypi/driver.rs 08_hw_debug_JTAG/src/bsp/raspberrypi/driver.rs
+--- 07_timestamps/src/bsp/raspberrypi/driver.rs
++++ 08_hw_debug_JTAG/src/bsp/raspberrypi/driver.rs
+@@ -57,17 +57,6 @@
+ /// # Safety
+ ///
+ /// See child function calls.
+-///
+-/// # Note
+-///
+-/// Using atomics here relieves us from needing to use `unsafe` for the static variable.
+-///
+-/// On `AArch64`, which is the only implemented architecture at the time of writing this,
+-/// [`AtomicBool::load`] and [`AtomicBool::store`] are lowered to ordinary load and store
+-/// instructions. They are therefore safe to use even with MMU + caching deactivated.
+-///
+-/// [`AtomicBool::load`]: core::sync::atomic::AtomicBool::load
+-/// [`AtomicBool::store`]: core::sync::atomic::AtomicBool::store
+ pub unsafe fn init() -> Result<(), &'static str> {
+     static INIT_DONE: AtomicBool = AtomicBool::new(false);
+     if INIT_DONE.load(Ordering::Relaxed) {
 
 ```

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
-// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
+// Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
 
 //! GPIO Driver.
 
@@ -108,16 +108,13 @@ register_structs! {
 /// Abstraction for the associated MMIO registers.
 type Registers = MMIODerefWrapper<RegisterBlock>;
 
-//--------------------------------------------------------------------------------------------------
-// Public Definitions
-//--------------------------------------------------------------------------------------------------
-
-pub struct GPIOInner {
+struct GPIOInner {
     registers: Registers,
 }
 
-// Export the inner struct so that BSPs can use it for the panic handler.
-pub use GPIOInner as PanicGPIO;
+//--------------------------------------------------------------------------------------------------
+// Public Definitions
+//--------------------------------------------------------------------------------------------------
 
 /// Representation of the GPIO HW.
 pub struct GPIO {
@@ -125,7 +122,7 @@ pub struct GPIO {
 }
 
 //--------------------------------------------------------------------------------------------------
-// Public Code
+// Private Code
 //--------------------------------------------------------------------------------------------------
 
 impl GPIOInner {
@@ -143,7 +140,7 @@ impl GPIOInner {
     /// Disable pull-up/down on pins 14 and 15.
     #[cfg(feature = "bsp_rpi3")]
     fn disable_pud_14_15_bcm2837(&mut self) {
-        use crate::{time, time::interface::TimeManager};
+        use crate::time;
         use core::time::Duration;
 
         // The Linux 2837 GPIO driver waits 1 µs between the steps.
@@ -189,7 +186,13 @@ impl GPIOInner {
     }
 }
 
+//--------------------------------------------------------------------------------------------------
+// Public Code
+//--------------------------------------------------------------------------------------------------
+
 impl GPIO {
+    pub const COMPATIBLE: &'static str = "BCM GPIO";
+
     /// Create an instance.
     ///
     /// # Safety
@@ -214,6 +217,6 @@ use synchronization::interface::Mutex;
 
 impl driver::interface::DeviceDriver for GPIO {
     fn compatible(&self) -> &'static str {
-        "BCM GPIO"
+        Self::COMPATIBLE
     }
 }

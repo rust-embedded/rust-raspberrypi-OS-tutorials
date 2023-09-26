@@ -10,23 +10,23 @@
 # See https://github.com/rubocop-hq/rubocop/blob/master/manual/configuration.md
 
 Layout/IndentationWidth:
-  Width: 4
-  IgnoredPatterns: ['^\s*module']
+    Width: 4
+    AllowedPatterns: ['^\s*module']
 
 Layout/LineLength:
-  Max: 100
+    Max: 100
 
 Lint/UnusedMethodArgument:
-  AutoCorrect: False
+    AutoCorrect: False
 
 Metrics/AbcSize:
-  Max: 25
+    Max: 25
 
 Metrics/ClassLength:
-  Enabled: false
+    Enabled: false
 
 Metrics/MethodLength:
-  Max: 20
+    Max: 20
 
 AllCops:
-  NewCops: enable
+    NewCops: enable

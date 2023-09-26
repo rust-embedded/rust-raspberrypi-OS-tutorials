@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
-// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
+// Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
 
 //! Memory Management Unit Driver.
 //!
@@ -17,8 +17,8 @@ use crate::{
     bsp, memory,
     memory::mmu::{translation_table::KernelTranslationTable, TranslationGranule},
 };
+use aarch64_cpu::{asm::barrier, registers::*};
 use core::intrinsics::unlikely;
-use cortex_a::{asm::barrier, registers::*};
 use tock_registers::interfaces::{ReadWriteable, Readable, Writeable};
 
 //--------------------------------------------------------------------------------------------------

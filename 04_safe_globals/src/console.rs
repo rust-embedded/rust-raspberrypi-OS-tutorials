@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
-// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
+// Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
 
 //! System console.
+
+use crate::bsp;
 
 //--------------------------------------------------------------------------------------------------
 // Public Definitions
@@ -27,5 +29,16 @@ pub mod interface {
     }
 
     /// Trait alias for a full-fledged console.
-    pub trait All = Write + Statistics;
+    pub trait All: Write + Statistics {}
+}
+
+//--------------------------------------------------------------------------------------------------
+// Public Code
+//--------------------------------------------------------------------------------------------------
+
+/// Return a reference to the console.
+///
+/// This is the global console used by all printing macros.
+pub fn console() -> &'static dyn interface::All {
+    bsp::console::console()
 }

@@ -17,8 +17,8 @@ at the source code changes.
 
 The gist of it is that in `boot.s`, we are writing a piece of [position independent code] which
 automatically determines where the firmware has loaded the binary (`0x8_0000`), and where it was
-linked to (`0x200_0000`, see `link.ld`). The binary then copies itself from loaded to linked address
-(aka  "relocating" itself), and then jumps to the relocated version of `_start_rust()`.
+linked to (`0x200_0000`, see `kernel.ld`). The binary then copies itself from loaded to linked
+address (aka  "relocating" itself), and then jumps to the relocated version of `_start_rust()`.
 
 Since the chainloader has put itself "out of the way" now, it can now receive another kernel binary
 from the `UART` and copy it to the standard load address of the RPi firmware at `0x8_0000`. Finally,
@@ -27,8 +27,9 @@ from SD card all along.
 
 Please bear with me until I find the time to write it all down here elaborately. For the time being,
 please see this tutorial as an enabler for a convenience feature that allows booting the following
-tutorials in a quick manner. _For those keen to get a deeper understanding, it could make sense to skip forward to [Chapter 15](../15_virtual_mem_part3_precomputed_tables) and read the first half of the README,
-where `Load Address != Link Address` is discussed_.
+tutorials in a quick manner. _For those keen to get a deeper understanding, it could make sense to
+skip forward to [Chapter 15](../15_virtual_mem_part3_precomputed_tables) and read the first half of
+the README, where `Load Address != Link Address` is discussed_.
 
 [position independent code]: https://en.wikipedia.org/wiki/Position-independent_code
 
@@ -65,6 +66,7 @@ Minipush 1.0
 [MP] ⏳ Waiting for /dev/ttyUSB0
 [MP] ✅ Serial connected
 [MP] 🔌 Please power the target now
+
  __  __ _      _ _                 _
 |  \/  (_)_ _ (_) |   ___  __ _ __| |
 | |\/| | | ' \| | |__/ _ \/ _` / _` |
@@ -73,14 +75,14 @@ Minipush 1.0
            Raspberry Pi 3
 
 [ML] Requesting binary
-[MP] ⏩ Pushing 6 KiB ==========================================🦀 100% 0 KiB/s Time: 00:00:00
+[MP] ⏩ Pushing 7 KiB ==========================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
 [0] mingo version 0.5.0
 [1] Booting on: Raspberry Pi 3
 [2] Drivers loaded:
-      1. BCM GPIO
-      2. BCM PL011 UART
+      1. BCM PL011 UART
+      2. BCM GPIO
 [3] Chars written: 117
 [4] Echoing input now
 ```
@@ -138,7 +140,7 @@ Binary files 05_drivers_gpio_uart/demo_payload_rpi4.img and 06_uart_chainloader/
 diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
 --- 05_drivers_gpio_uart/Makefile
 +++ 06_uart_chainloader/Makefile
-@@ -23,27 +23,29 @@
+@@ -24,27 +24,29 @@
  QEMU_MISSING_STRING = "This board is not yet supported for QEMU."
 
  ifeq ($(BSP),rpi3)
@@ -235,7 +237,6 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
 +	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN) -d in_asm
 +
  endif
-
  ##------------------------------------------------------------------------------
 -## Connect to the target's serial
 +## Push the kernel to the real HW target
@@ -247,7 +248,7 @@ diff -uNr 05_drivers_gpio_uart/Makefile 06_uart_chainloader/Makefile
 
  ##------------------------------------------------------------------------------
  ## Run clippy
-@@ -239,7 +245,8 @@
+@@ -232,7 +238,8 @@
  ##------------------------------------------------------------------------------
  test_boot: $(KERNEL_BIN)
  	$(call color_header, "Boot test - $(BSP)")
@@ -276,10 +277,10 @@ diff -uNr 05_drivers_gpio_uart/src/_arch/aarch64/cpu/boot.s 06_uart_chainloader/
 +	movk	\register, #:abs_g0_nc:\symbol
 +.endm
 +
- .equ _core_id_mask, 0b11
-
  //--------------------------------------------------------------------------------------------------
-@@ -39,23 +50,35 @@
+ // Public Code
+ //--------------------------------------------------------------------------------------------------
+@@ -37,23 +48,35 @@
  	// If execution reaches here, it is the boot core.
 
  	// Initialize DRAM.
@@ -323,23 +324,10 @@ diff -uNr 05_drivers_gpio_uart/src/_arch/aarch64/cpu/boot.s 06_uart_chainloader/
  	// Infinitely wait for events (aka "park the core").
  .L_parking_loop:
 
-diff -uNr 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
---- 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
-+++ 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
-@@ -148,7 +148,7 @@
-         // Make an educated guess for a good delay value (Sequence described in the BCM2837
-         // peripherals PDF).
-         //
--        // - According to Wikipedia, the fastest Pi3 clocks around 1.4 GHz.
-+        // - According to Wikipedia, the fastest RPi4 clocks around 1.5 GHz.
-         // - The Linux 2837 GPIO driver waits 1 µs between the steps.
-         //
-         // So lets try to be on the safe side and default to 2000 cycles, which would equal 1 µs
-
 diff -uNr 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 --- 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
 +++ 06_uart_chainloader/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -278,7 +278,7 @@
+@@ -275,7 +275,7 @@
      }
 
      /// Retrieve a character.
@@ -348,7 +336,7 @@ diff -uNr 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 0
          // If RX FIFO is empty,
          if self.registers.FR.matches_all(FR::RXFE::SET) {
              // immediately return in non-blocking mode.
-@@ -293,12 +293,7 @@
+@@ -290,12 +290,7 @@
          }
 
          // Read one character.
@@ -362,7 +350,7 @@ diff -uNr 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 0
 
          // Update statistics.
          self.chars_read += 1;
-@@ -378,14 +373,14 @@
+@@ -381,14 +376,14 @@
  impl console::interface::Read for PL011Uart {
      fn read_char(&self) -> char {
          self.inner
@@ -380,11 +368,32 @@ diff -uNr 05_drivers_gpio_uart/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 0
          {}
      }
 
-diff -uNr 05_drivers_gpio_uart/src/bsp/raspberrypi/link.ld 06_uart_chainloader/src/bsp/raspberrypi/link.ld
---- 05_drivers_gpio_uart/src/bsp/raspberrypi/link.ld
-+++ 06_uart_chainloader/src/bsp/raspberrypi/link.ld
+diff -uNr 05_drivers_gpio_uart/src/bsp/raspberrypi/console.rs 06_uart_chainloader/src/bsp/raspberrypi/console.rs
+--- 05_drivers_gpio_uart/src/bsp/raspberrypi/console.rs
++++ 06_uart_chainloader/src/bsp/raspberrypi/console.rs
+@@ -1,16 +0,0 @@
+-// SPDX-License-Identifier: MIT OR Apache-2.0
+-//
+-// Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
+-
+-//! BSP console facilities.
+-
+-use crate::console;
+-
+-//--------------------------------------------------------------------------------------------------
+-// Public Code
+-//--------------------------------------------------------------------------------------------------
+-
+-/// Return a reference to the console.
+-pub fn console() -> &'static dyn console::interface::All {
+-    &super::driver::PL011_UART
+-}
+
+diff -uNr 05_drivers_gpio_uart/src/bsp/raspberrypi/kernel.ld 06_uart_chainloader/src/bsp/raspberrypi/kernel.ld
+--- 05_drivers_gpio_uart/src/bsp/raspberrypi/kernel.ld
++++ 06_uart_chainloader/src/bsp/raspberrypi/kernel.ld
 @@ -3,8 +3,6 @@
-  * Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
+  * Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
   */
 
 -__rpi_phys_dram_start_addr = 0;
@@ -410,7 +419,7 @@ diff -uNr 05_drivers_gpio_uart/src/bsp/raspberrypi/link.ld 06_uart_chainloader/s
      .text :
      {
          KEEP(*(.text._start))
-@@ -61,6 +61,10 @@
+@@ -60,6 +60,10 @@
      ***********************************************************************************************/
      .data : { *(.data*) } :segment_data
 
@@ -425,19 +434,14 @@ diff -uNr 05_drivers_gpio_uart/src/bsp/raspberrypi/link.ld 06_uart_chainloader/s
 diff -uNr 05_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs 06_uart_chainloader/src/bsp/raspberrypi/memory.rs
 --- 05_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs
 +++ 06_uart_chainloader/src/bsp/raspberrypi/memory.rs
-@@ -11,9 +11,10 @@
+@@ -11,6 +11,7 @@
  /// The board's physical memory map.
  #[rustfmt::skip]
  pub(super) mod map {
 +    pub const BOARD_DEFAULT_LOAD_ADDRESS: usize =        0x8_0000;
 
--    pub const GPIO_OFFSET:         usize = 0x0020_0000;
--    pub const UART_OFFSET:         usize = 0x0020_1000;
-+    pub const GPIO_OFFSET:                usize =        0x0020_0000;
-+    pub const UART_OFFSET:                usize =        0x0020_1000;
-
-     /// Physical devices.
-     #[cfg(feature = "bsp_rpi3")]
+     pub const GPIO_OFFSET:         usize = 0x0020_0000;
+     pub const UART_OFFSET:         usize = 0x0020_1000;
 @@ -35,3 +36,13 @@
          pub const PL011_UART_START: usize = START + UART_OFFSET;
      }
@@ -453,10 +457,41 @@ diff -uNr 05_drivers_gpio_uart/src/bsp/raspberrypi/memory.rs 06_uart_chainloader
 +    map::BOARD_DEFAULT_LOAD_ADDRESS as _
 +}
 
+diff -uNr 05_drivers_gpio_uart/src/driver.rs 06_uart_chainloader/src/driver.rs
+--- 05_drivers_gpio_uart/src/driver.rs
++++ 06_uart_chainloader/src/driver.rs
+@@ -4,10 +4,7 @@
+
+ //! Driver support.
+
+-use crate::{
+-    println,
+-    synchronization::{interface::Mutex, NullLock},
+-};
++use crate::synchronization::{interface::Mutex, NullLock};
+
+ //--------------------------------------------------------------------------------------------------
+ // Private Definitions
+@@ -154,14 +151,4 @@
+             }
+         });
+     }
+-
+-    /// Enumerate all registered device drivers.
+-    pub fn enumerate(&self) {
+-        let mut i: usize = 1;
+-        self.for_each_descriptor(|descriptor| {
+-            println!("      {}. {}", i, descriptor.device_driver.compatible());
+-
+-            i += 1;
+-        });
+-    }
+ }
+
 diff -uNr 05_drivers_gpio_uart/src/main.rs 06_uart_chainloader/src/main.rs
 --- 05_drivers_gpio_uart/src/main.rs
 +++ 06_uart_chainloader/src/main.rs
-@@ -140,38 +140,56 @@
+@@ -142,27 +142,55 @@
      kernel_main()
  }
 
@@ -469,9 +504,7 @@ diff -uNr 05_drivers_gpio_uart/src/main.rs 06_uart_chainloader/src/main.rs
 +
  /// The main function running after the early init.
  fn kernel_main() -> ! {
-     use bsp::console::console;
-     use console::interface::All;
--    use driver::interface::DriverManager;
+     use console::console;
 
 -    println!(
 -        "[0] {} version {}",
@@ -479,44 +512,35 @@ diff -uNr 05_drivers_gpio_uart/src/main.rs 06_uart_chainloader/src/main.rs
 -        env!("CARGO_PKG_VERSION")
 -    );
 -    println!("[1] Booting on: {}", bsp::board_name());
--
--    println!("[2] Drivers loaded:");
--    for (i, driver) in bsp::driver::driver_manager()
--        .all_device_drivers()
--        .iter()
--        .enumerate()
--    {
--        println!("      {}. {}", i + 1, driver.compatible());
 +    println!("{}", MINILOAD_LOGO);
 +    println!("{:^37}", bsp::board_name());
 +    println!();
 +    println!("[ML] Requesting binary");
 +    console().flush();
-+
+
+-    println!("[2] Drivers loaded:");
+-    driver::driver_manager().enumerate();
 +    // Discard any spurious received characters before starting with the loader protocol.
 +    console().clear_rx();
-+
+
+-    println!("[3] Chars written: {}", console().chars_written());
+-    println!("[4] Echoing input now");
 +    // Notify `Minipush` to send the binary.
 +    for _ in 0..3 {
 +        console().write_char(3 as char);
-     }
++    }
 
--    println!(
--        "[3] Chars written: {}",
--        bsp::console::console().chars_written()
--    );
--    println!("[4] Echoing input now");
+-    // Discard any spurious received characters before going into echo mode.
+-    console().clear_rx();
+-    loop {
+-        let c = console().read_char();
+-        console().write_char(c);
 +    // Read the binary's size.
 +    let mut size: u32 = u32::from(console().read_char() as u8);
 +    size |= u32::from(console().read_char() as u8) << 8;
 +    size |= u32::from(console().read_char() as u8) << 16;
 +    size |= u32::from(console().read_char() as u8) << 24;
-
--    // Discard any spurious received characters before going into echo mode.
--    console().clear_rx();
--    loop {
--        let c = bsp::console::console().read_char();
--        bsp::console::console().write_char(c);
++
 +    // Trust it's not too big.
 +    console().write_char('O');
 +    console().write_char('K');
@@ -555,7 +579,7 @@ diff -uNr 05_drivers_gpio_uart/tests/chainboot_test.rb 06_uart_chainloader/tests
 +
 +# SPDX-License-Identifier: MIT OR Apache-2.0
 +#
-+# Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
++# Copyright (c) 2020-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +require_relative '../../common/serial/minipush'
 +require_relative '../../common/tests/boot_test'

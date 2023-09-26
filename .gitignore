@@ -3,7 +3,8 @@
 **/kernel8.img
 
 node_modules
+.bundle
 .vendor
 
 Gemfile.lock
-package-lock.json
+package*.json

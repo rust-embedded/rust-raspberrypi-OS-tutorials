@@ -16,6 +16,7 @@
 - [Introduction](#introduction)
 - [Challenges](#challenges)
   * [Acknowledgements](#acknowledgements)
+- [Folder Restructuring](#folder-restructuring)
 - [Implementation](#implementation)
   * [Test Organization](#test-organization)
   * [Enabling `custom_test_frameworks` for Unit Tests](#enabling-custom_test_frameworks-for-unit-tests)
@@ -82,6 +83,24 @@ additional insights.
 
 [testing]: https://os.phil-opp.com/testing
 
+## Folder Restructuring
+
+For reasons explained later, in this tutorial, we need to add two support crates next to our main
+kernel crate. To keep everything organized in separate directories, we are switching to what `cargo`
+calls a [virtual manifest]. The kernel crate moves to `$ROOT/kernel`, and the support crates will go
+into `$ROOT/libraries/`. The `Cargo.toml` in the `$ROOT` folder desribes this layout:
+
+```toml
+[workspace]
+
+members = [
+        "libraries/*",
+        "kernel"
+]
+```
+
+[virtual manifest]: https://doc.rust-lang.org/cargo/reference/workspaces.html#virtual-manifest
+
 ## Implementation
 
 We introduce two new `Makefile` targets:
@@ -104,8 +123,8 @@ test: test_boot test_unit test_integration
 
 ### Test Organization
 
-Until now, our kernel was a so-called `binary crate`. As [explained in the official Rust book], this
-crate type disallows having `integration tests`. Quoting the book:
+Until now, our kernel crate was a so-called `binary crate`. As [explained in the official Rust
+book], this crate type disallows having `integration tests`. Quoting the book:
 
 [explained in the official Rust book]: https://doc.rust-lang.org/book/ch11-03-test-organization.html#integration-tests-for-binary-crates
 
@@ -126,10 +145,10 @@ of the kernel code. The `main.rs` file is stripped down to the minimum. It only 
 `use` statements.
 
 Since it is not possible to use `kernel` as the name for both the library and the binary part of the
-crate, new entries in `Cargo.toml` are needed to differentiate the names. What's more, `cargo test`
-would try to compile and run `unit tests` for both. In our case, it will be sufficient to have all
-the unit test code in `lib.rs`, so test generation for `main.rs` can be disabled in `Cargo.toml` as
-well through the `test` flag:
+crate, new entries in `$ROOT/kernel/Cargo.toml` are needed to differentiate the names. What's more,
+`cargo test` would try to compile and run `unit tests` for both. In our case, it will be sufficient
+to have all the unit test code in `lib.rs`, so test generation for `main.rs` can be disabled in
+`Cargo.toml` as well through the `test` flag:
 
 ```toml
 [lib]
@@ -193,10 +212,10 @@ pub fn test_runner(tests: &[&test_types::UnitTest]) {
 
 The function signature shows that `test_runner` takes one argument: A slice of
 `test_types::UnitTest` references. This type definition lives in an external crate stored at
-`$ROOT/test_types`. It is external because the type is also needed for a self-made [procedural
-macro] that we'll use to write unit tests, and procedural macros _have_ to live in their own crate.
-So to avoid a circular dependency between kernel and proc-macro, this split was needed. Anyways,
-here is the type definition:
+`$ROOT/libraries/test_types`. It is external because the type is also needed for a self-made
+[procedural macro] that we'll use to write unit tests, and procedural macros _have_ to live in their
+own crate. So to avoid a circular dependency between kernel and proc-macro, this split was needed.
+Anyways, here is the type definition:
 
 [procedural macro]: https://doc.rust-lang.org/reference/procedural-macros.html
 
@@ -248,7 +267,7 @@ implementation in `lib.rs`:
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
     exception::handling_init();
-    bsp::console::qemu_bring_up_console();
+    bsp::driver::qemu_bring_up_console();
 
     test_main();
 
@@ -256,7 +275,7 @@ unsafe fn kernel_init() -> ! {
 }
 ```
 
-Note the call to `bsp::console::qemu_bring_up_console()`. Since we are running all our tests inside
+Note the call to `bsp::driver::qemu_bring_up_console()`. Since we are running all our tests inside
 `QEMU`, we need to ensure that whatever peripheral implements the kernel's `console` interface is
 initialized, so that we can print from our tests. If you recall [tutorial 03], bringing up
 peripherals in `QEMU` might not need the full initialization as is needed on real hardware (setting
@@ -324,7 +343,7 @@ pub fn qemu_exit_success() -> ! {
 [Click here] in case you are interested in the implementation. Note that for the functions to work,
 the `-semihosting` flag must be added to the `QEMU` invocation.
 
-You might have also noted the `#[cfg(feature = "test_build")]`. In `Cargo.toml`, we ensure that
+You might have also noted the `#[cfg(feature = "test_build")]`. In the `Makefile`, we ensure that
 this feature is only enabled when `cargo test` runs. This way, it is ensured that testing-specific
 code is conditionally compiled only for testing.
 
@@ -396,6 +415,10 @@ The file `kernel_test_runner.sh` does not exist by default. We generate it on de
 define KERNEL_TEST_RUNNER
     #!/usr/bin/env bash
 
+    # The cargo test runner seems to change into the crate under test's directory. Therefore, ensure
+    # this script executes from the root.
+    cd $(shell pwd)
+
     TEST_ELF=$$(echo $$1 | sed -e 's/.*target/target/g')
     TEST_BINARY=$$(echo $$1.img | sed -e 's/.*target/target/g')
 
@@ -426,7 +449,7 @@ provided to it by `cargo`, and finally compiles a `docker` command to execute th
 reference, here it is fully resolved for an `RPi3 BSP`:
 
 ```bash
-docker run --rm -v /opt/rust-raspberrypi-OS-tutorials/12_integrated_testing:/work/tutorial -w /work/tutorial -v /opt/rust-raspberrypi-OS-tutorials/12_integrated_testing/../common:/work/common rustembedded/osdev-utils ruby ../common/tests/dispatch.rb qemu-system-aarch64 -M raspi3 -serial stdio -display none -semihosting -kernel $TEST_BINARY
+docker run -t --rm -v /opt/rust-raspberrypi-OS-tutorials/12_integrated_testing:/work/tutorial -w /work/tutorial -v /opt/rust-raspberrypi-OS-tutorials/12_integrated_testing/../common:/work/common rustembedded/osdev-utils:2021.12 ruby ../common/tests/dispatch.rb qemu-system-aarch64 -M raspi3 -serial stdio -display none -semihosting -kernel $TEST_BINARY
 ```
 
 This command is quite similar to the one used in the `make test_boot` target that we have since
@@ -441,17 +464,16 @@ executed successfully, which can be checked by inspecting `QEMU`'s exit code. So
 the provided qemu command it got from `ARGV`, and creates and runs an instance of `ExitCodeTest`:
 
 ```ruby
-require_relative 'boot_test'
-require_relative 'console_io_test'
-require_relative 'exit_code_test'
-
 qemu_cmd = ARGV.join(' ')
 binary = ARGV.last
 test_name = binary.gsub(%r{.*deps/}, '').split('-')[0]
 
+# Check if virtual manifest (tutorial 12 or later) or not
+path_prefix = File.exist?('kernel/Cargo.toml') ? 'kernel/' : ''
+
 case test_name
 when 'kernel8.img'
-    load 'tests/boot_test_string.rb' # provides 'EXPECTED_PRINT'
+    load "#{path_prefix}tests/boot_test_string.rb" # provides 'EXPECTED_PRINT'
     BootTest.new(qemu_cmd, EXPECTED_PRINT).run # Doesn't return
 
 when 'libkernel'
@@ -566,7 +588,7 @@ mod tests {
 ```
 
 Note that since proc macros need to live in their own crates, we need to create a new one at
-`$ROOT/test-macros` and save it there.
+`$ROOT/libraries/test-macros` and save it there.
 
 Aaaaaand that's how you write unit tests. We're finished with that part for good now :raised_hands:.
 
@@ -598,13 +620,13 @@ your test code into individual chunks. For example, take a look at `tests/01_tim
 #![test_runner(libkernel::test_runner)]
 
 use core::time::Duration;
-use libkernel::{bsp, cpu, exception, time, time::interface::TimeManager};
+use libkernel::{bsp, cpu, exception, time};
 use test_macros::kernel_test;
 
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
     exception::handling_init();
-    bsp::console::qemu_bring_up_console();
+    bsp::driver::qemu_bring_up_console();
 
     // Depending on CPU arch, some timer bring-up code could go here. Not needed for the RPi.
 
@@ -622,6 +644,7 @@ fn timer_is_counting() {
 /// Timer resolution must be sufficient.
 #[kernel_test]
 fn timer_resolution_is_sufficient() {
+    assert!(time::time_manager().resolution().as_nanos() > 0);
     assert!(time::time_manager().resolution().as_nanos() < 100)
 }
 ```
@@ -633,9 +656,9 @@ Note how the `test_runner` from `libkernel` is pulled in through
 
 For some tests, however, it is not needed to have the harness, because there is no need or
 possibility to partition the test into individual pieces. In this case, all the test code can live
-in `kernel_init()`, and harness generation can be turned off through `Cargo.toml`. This tutorial
-introduces two tests that don't need a harness. Here is how harness generation is turned off for
-them:
+in `kernel_init()`, and harness generation can be turned off through `$ROOT/kernel/Cargo.toml`. This
+tutorial introduces two tests that don't need a harness. Here is how harness generation is turned
+off for them:
 
 ```toml
 # List of tests without harness.
@@ -692,14 +715,14 @@ so the wanted outcome is a `panic!`. Here is the whole test (minus some inline c
 
 mod panic_exit_success;
 
-use libkernel::{bsp, cpu, exception, memory, println};
+use libkernel::{bsp, cpu, exception, info, memory, println};
 
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
     use memory::mmu::interface::MMU;
 
     exception::handling_init();
-    bsp::console::qemu_bring_up_console();
+    bsp::driver::qemu_bring_up_console();
 
     // This line will be printed as the test header.
     println!("Testing synchronous exception handling by causing a page fault");
@@ -740,7 +763,7 @@ Here is an excerpt from `00_console_sanity.rb` showing a subtest that does a han
 kernel over the console:
 
 ```ruby
-require_relative '../../common/tests/console_io_test'
+require 'console_io_test'
 
 # Verify sending and receiving works as expected.
 class TxRxHandshakeTest < SubtestBase
@@ -770,11 +793,10 @@ use libkernel::{bsp, console, cpu, exception, print};
 
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
-    use bsp::console::console;
-    use console::interface::*;
+    use console::console;
 
     exception::handling_init();
-    bsp::console::qemu_bring_up_console();
+    bsp::driver::qemu_bring_up_console();
 
     // Handshake
     assert_eq!(console().read_char(), 'A');
@@ -890,1289 +912,12 @@ Compiling integration test(s) - rpi3
 ```
 
 ## Diff to previous
-```diff
 
-diff -uNr 11_exceptions_part1_groundwork/.cargo/config.toml 12_integrated_testing/.cargo/config.toml
---- 11_exceptions_part1_groundwork/.cargo/config.toml
-+++ 12_integrated_testing/.cargo/config.toml
-@@ -0,0 +1,2 @@
-+[target.'cfg(target_os = "none")']
-+runner = "target/kernel_test_runner.sh"
+The diff in this tutorial is skipped, because due to the changes in top-level folder structure, it
+becomes unreadable. This might be fixed in the future. For now, consider using a diff tool like
+`meld` to diff between the previous and the `kernel` folder of this tutorial to see the lion's share
+of changes:
 
-diff -uNr 11_exceptions_part1_groundwork/Cargo.toml 12_integrated_testing/Cargo.toml
---- 11_exceptions_part1_groundwork/Cargo.toml
-+++ 12_integrated_testing/Cargo.toml
-@@ -1,6 +1,6 @@
- [package]
- name = "mingo"
--version = "0.11.0"
-+version = "0.12.0"
- authors = ["Andre Richter <andre.o.richter@gmail.com>"]
- edition = "2021"
-
-@@ -11,20 +11,57 @@
- default = []
- bsp_rpi3 = ["tock-registers"]
- bsp_rpi4 = ["tock-registers"]
--
--[[bin]]
--name = "kernel"
--path = "src/main.rs"
-+test_build = ["qemu-exit"]
-
- ##--------------------------------------------------------------------------------------------------
- ## Dependencies
- ##--------------------------------------------------------------------------------------------------
-
- [dependencies]
-+test-types = { path = "test-types" }
-
- # Optional dependencies
- tock-registers = { version = "0.7.x", default-features = false, features = ["register_types"], optional = true }
-+qemu-exit = { version = "3.x.x", optional = true }
-
- # Platform specific dependencies
- [target.'cfg(target_arch = "aarch64")'.dependencies]
- cortex-a = { version = "7.x.x" }
-+
-+##--------------------------------------------------------------------------------------------------
-+## Testing
-+##--------------------------------------------------------------------------------------------------
-+
-+[dev-dependencies]
-+test-macros = { path = "test-macros" }
-+
-+# The following line is a workaround, as suggested in [1], to enable a feature in test-builds only.
-+# This allows building the library part of the kernel with specialized code for testing.
-+#
-+#
-+# [1] https://github.com/rust-lang/cargo/issues/2911#issuecomment-749580481
-+mingo = { path = ".", features = ["test_build"] }
-+
-+# Unit tests are done in the library part of the kernel.
-+[lib]
-+name = "libkernel"
-+test = true
-+
-+# Disable unit tests for the kernel binary.
-+[[bin]]
-+name = "kernel"
-+path = "src/main.rs"
-+test = false
-+
-+# List of tests without harness.
-+[[test]]
-+name = "00_console_sanity"
-+harness = false
-+
-+[[test]]
-+name = "02_exception_sync_page_fault"
-+harness = false
-+
-+[[test]]
-+name = "03_exception_restore_sanity"
-+harness = false
-
-diff -uNr 11_exceptions_part1_groundwork/Makefile 12_integrated_testing/Makefile
---- 11_exceptions_part1_groundwork/Makefile
-+++ 12_integrated_testing/Makefile
-@@ -15,6 +15,13 @@
- # Default to a serial device name that is common in Linux.
- DEV_SERIAL ?= /dev/ttyUSB0
-
-+# Optional integration test name.
-+ifdef TEST
-+    TEST_ARG = --test $(TEST)
-+else
-+    TEST_ARG = --test '*'
-+endif
-+
-
-
- ##--------------------------------------------------------------------------------------------------
-@@ -28,6 +35,7 @@
-     QEMU_BINARY       = qemu-system-aarch64
-     QEMU_MACHINE_TYPE = raspi3
-     QEMU_RELEASE_ARGS = -serial stdio -display none
-+    QEMU_TEST_ARGS    = $(QEMU_RELEASE_ARGS) -semihosting
-     OBJDUMP_BINARY    = aarch64-none-elf-objdump
-     NM_BINARY         = aarch64-none-elf-nm
-     READELF_BINARY    = aarch64-none-elf-readelf
-@@ -41,6 +49,7 @@
-     QEMU_BINARY       = qemu-system-aarch64
-     QEMU_MACHINE_TYPE =
-     QEMU_RELEASE_ARGS = -serial stdio -display none
-+    QEMU_TEST_ARGS    = $(QEMU_RELEASE_ARGS) -semihosting
-     OBJDUMP_BINARY    = aarch64-none-elf-objdump
-     NM_BINARY         = aarch64-none-elf-nm
-     READELF_BINARY    = aarch64-none-elf-readelf
-@@ -89,6 +98,7 @@
- DOC_CMD     = cargo doc $(COMPILER_ARGS)
- CLIPPY_CMD  = cargo clippy $(COMPILER_ARGS)
- CHECK_CMD   = cargo check $(COMPILER_ARGS)
-+TEST_CMD    = cargo test $(COMPILER_ARGS)
- OBJCOPY_CMD = rust-objcopy \
-     --strip-all            \
-     -O binary
-@@ -265,11 +275,11 @@
- ##--------------------------------------------------------------------------------------------------
- ## Testing targets
- ##--------------------------------------------------------------------------------------------------
--.PHONY: test test_boot
-+.PHONY: test test_boot test_unit test_integration
-
- ifeq ($(QEMU_MACHINE_TYPE),) # QEMU is not supported for the board.
-
--test_boot test:
-+test_boot test_unit test_integration test:
- 	$(call color_header, "$(QEMU_MISSING_STRING)")
-
- else # QEMU is supported.
-@@ -281,6 +291,43 @@
- 	$(call color_header, "Boot test - $(BSP)")
- 	@$(DOCKER_TEST) $(EXEC_TEST_DISPATCH) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
-
--test: test_boot
-+##------------------------------------------------------------------------------
-+## Helpers for unit and integration test targets
-+##------------------------------------------------------------------------------
-+define KERNEL_TEST_RUNNER
-+    #!/usr/bin/env bash
-+
-+    TEST_ELF=$$(echo $$1 | sed -e 's/.*target/target/g')
-+    TEST_BINARY=$$(echo $$1.img | sed -e 's/.*target/target/g')
-+
-+    $(OBJCOPY_CMD) $$TEST_ELF $$TEST_BINARY
-+    $(DOCKER_TEST) $(EXEC_TEST_DISPATCH) $(EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
-+endef
-+
-+export KERNEL_TEST_RUNNER
-+
-+define test_prepare
-+    @mkdir -p target
-+    @echo "$$KERNEL_TEST_RUNNER" > target/kernel_test_runner.sh
-+    @chmod +x target/kernel_test_runner.sh
-+endef
-+
-+##------------------------------------------------------------------------------
-+## Run unit test(s)
-+##------------------------------------------------------------------------------
-+test_unit:
-+	$(call color_header, "Compiling unit test(s) - $(BSP)")
-+	$(call test_prepare)
-+	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(TEST_CMD) --lib
-+
-+##------------------------------------------------------------------------------
-+## Run integration test(s)
-+##------------------------------------------------------------------------------
-+test_integration:
-+	$(call color_header, "Compiling integration test(s) - $(BSP)")
-+	$(call test_prepare)
-+	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(TEST_CMD) $(TEST_ARG)
-+
-+test: test_boot test_unit test_integration
-
- endif
-
-diff -uNr 11_exceptions_part1_groundwork/src/_arch/aarch64/cpu.rs 12_integrated_testing/src/_arch/aarch64/cpu.rs
---- 11_exceptions_part1_groundwork/src/_arch/aarch64/cpu.rs
-+++ 12_integrated_testing/src/_arch/aarch64/cpu.rs
-@@ -26,3 +26,24 @@
-         asm::wfe()
-     }
- }
-+
-+//--------------------------------------------------------------------------------------------------
-+// Testing
-+//--------------------------------------------------------------------------------------------------
-+#[cfg(feature = "test_build")]
-+use qemu_exit::QEMUExit;
-+
-+#[cfg(feature = "test_build")]
-+const QEMU_EXIT_HANDLE: qemu_exit::AArch64 = qemu_exit::AArch64::new();
-+
-+/// Make the host QEMU binary execute `exit(1)`.
-+#[cfg(feature = "test_build")]
-+pub fn qemu_exit_failure() -> ! {
-+    QEMU_EXIT_HANDLE.exit_failure()
-+}
-+
-+/// Make the host QEMU binary execute `exit(0)`.
-+#[cfg(feature = "test_build")]
-+pub fn qemu_exit_success() -> ! {
-+    QEMU_EXIT_HANDLE.exit_success()
-+}
-
-diff -uNr 11_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs 12_integrated_testing/src/_arch/aarch64/exception.rs
---- 11_exceptions_part1_groundwork/src/_arch/aarch64/exception.rs
-+++ 12_integrated_testing/src/_arch/aarch64/exception.rs
-@@ -87,15 +87,14 @@
-
- #[no_mangle]
- unsafe extern "C" fn current_elx_synchronous(e: &mut ExceptionContext) {
--    if e.fault_address_valid() {
--        let far_el1 = FAR_EL1.get();
--
--        // This catches the demo case for this tutorial. If the fault address happens to be 8 GiB,
--        // advance the exception link register for one instruction, so that execution can continue.
--        if far_el1 == 8 * 1024 * 1024 * 1024 {
--            e.elr_el1 += 4;
--
--            return;
-+    #[cfg(feature = "test_build")]
-+    {
-+        const TEST_SVC_ID: u64 = 0x1337;
-+
-+        if let Some(ESR_EL1::EC::Value::SVC64) = e.esr_el1.exception_class() {
-+            if e.esr_el1.iss() == TEST_SVC_ID {
-+                return;
-+            }
-         }
-     }
-
-@@ -192,6 +191,12 @@
-     fn exception_class(&self) -> Option<ESR_EL1::EC::Value> {
-         self.0.read_as_enum(ESR_EL1::EC)
-     }
-+
-+    #[cfg(feature = "test_build")]
-+    #[inline(always)]
-+    fn iss(&self) -> u64 {
-+        self.0.read(ESR_EL1::ISS)
-+    }
- }
-
- /// Human readable ESR_EL1.
-
-diff -uNr 11_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu/translation_table.rs 12_integrated_testing/src/_arch/aarch64/memory/mmu/translation_table.rs
---- 11_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu/translation_table.rs
-+++ 12_integrated_testing/src/_arch/aarch64/memory/mmu/translation_table.rs
-@@ -290,3 +290,31 @@
-         self.lvl2.phys_start_addr_u64()
-     }
- }
-+
-+//--------------------------------------------------------------------------------------------------
-+// Testing
-+//--------------------------------------------------------------------------------------------------
-+
-+#[cfg(test)]
-+mod tests {
-+    use super::*;
-+    use test_macros::kernel_test;
-+
-+    /// Check if the size of `struct TableDescriptor` is as expected.
-+    #[kernel_test]
-+    fn size_of_tabledescriptor_equals_64_bit() {
-+        assert_eq!(
-+            core::mem::size_of::<TableDescriptor>(),
-+            core::mem::size_of::<u64>()
-+        );
-+    }
-+
-+    /// Check if the size of `struct PageDescriptor` is as expected.
-+    #[kernel_test]
-+    fn size_of_pagedescriptor_equals_64_bit() {
-+        assert_eq!(
-+            core::mem::size_of::<PageDescriptor>(),
-+            core::mem::size_of::<u64>()
-+        );
-+    }
-+}
-
-diff -uNr 11_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu.rs 12_integrated_testing/src/_arch/aarch64/memory/mmu.rs
---- 11_exceptions_part1_groundwork/src/_arch/aarch64/memory/mmu.rs
-+++ 12_integrated_testing/src/_arch/aarch64/memory/mmu.rs
-@@ -163,3 +163,33 @@
-         SCTLR_EL1.matches_all(SCTLR_EL1::M::Enable)
-     }
- }
-+
-+//--------------------------------------------------------------------------------------------------
-+// Testing
-+//--------------------------------------------------------------------------------------------------
-+
-+#[cfg(test)]
-+mod tests {
-+    use super::*;
-+    use core::{cell::UnsafeCell, ops::Range};
-+    use test_macros::kernel_test;
-+
-+    /// Check if KERNEL_TABLES is in .bss.
-+    #[kernel_test]
-+    fn kernel_tables_in_bss() {
-+        extern "Rust" {
-+            static __bss_start: UnsafeCell<u64>;
-+            static __bss_end_exclusive: UnsafeCell<u64>;
-+        }
-+
-+        let bss_range = unsafe {
-+            Range {
-+                start: __bss_start.get(),
-+                end: __bss_end_exclusive.get(),
-+            }
-+        };
-+        let kernel_tables_addr = unsafe { &KERNEL_TABLES as *const _ as usize as *mut u64 };
-+
-+        assert!(bss_range.contains(&kernel_tables_addr));
-+    }
-+}
-
-diff -uNr 11_exceptions_part1_groundwork/src/bsp/raspberrypi/console.rs 12_integrated_testing/src/bsp/raspberrypi/console.rs
---- 11_exceptions_part1_groundwork/src/bsp/raspberrypi/console.rs
-+++ 12_integrated_testing/src/bsp/raspberrypi/console.rs
-@@ -35,3 +35,14 @@
- pub fn console() -> &'static impl console::interface::All {
-     &super::PL011_UART
- }
-+
-+//--------------------------------------------------------------------------------------------------
-+// Testing
-+//--------------------------------------------------------------------------------------------------
-+
-+/// Minimal code needed to bring up the console in QEMU (for testing only). This is often less steps
-+/// than on real hardware due to QEMU's abstractions.
-+///
-+/// For the RPi, nothing needs to be done.
-+#[cfg(feature = "test_build")]
-+pub fn qemu_bring_up_console() {}
-
-diff -uNr 11_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs 12_integrated_testing/src/bsp/raspberrypi/memory/mmu.rs
---- 11_exceptions_part1_groundwork/src/bsp/raspberrypi/memory/mmu.rs
-+++ 12_integrated_testing/src/bsp/raspberrypi/memory/mmu.rs
-@@ -69,3 +69,46 @@
- pub fn virt_mem_layout() -> &'static KernelVirtualLayout<NUM_MEM_RANGES> {
-     &LAYOUT
- }
-+
-+//--------------------------------------------------------------------------------------------------
-+// Testing
-+//--------------------------------------------------------------------------------------------------
-+
-+#[cfg(test)]
-+mod tests {
-+    use super::*;
-+    use test_macros::kernel_test;
-+
-+    /// Check alignment of the kernel's virtual memory layout sections.
-+    #[kernel_test]
-+    fn virt_mem_layout_sections_are_64KiB_aligned() {
-+        const SIXTYFOUR_KIB: usize = 65536;
-+
-+        for i in LAYOUT.inner().iter() {
-+            let start: usize = *(i.virtual_range)().start();
-+            let end: usize = *(i.virtual_range)().end() + 1;
-+
-+            assert_eq!(start modulo SIXTYFOUR_KIB, 0);
-+            assert_eq!(end modulo SIXTYFOUR_KIB, 0);
-+            assert!(end >= start);
-+        }
-+    }
-+
-+    /// Ensure the kernel's virtual memory layout is free of overlaps.
-+    #[kernel_test]
-+    fn virt_mem_layout_has_no_overlaps() {
-+        let layout = virt_mem_layout().inner();
-+
-+        for (i, first) in layout.iter().enumerate() {
-+            for second in layout.iter().skip(i + 1) {
-+                let first_range = first.virtual_range;
-+                let second_range = second.virtual_range;
-+
-+                assert!(!first_range().contains(second_range().start()));
-+                assert!(!first_range().contains(second_range().end()));
-+                assert!(!second_range().contains(first_range().start()));
-+                assert!(!second_range().contains(first_range().end()));
-+            }
-+        }
-+    }
-+}
-
-diff -uNr 11_exceptions_part1_groundwork/src/cpu.rs 12_integrated_testing/src/cpu.rs
---- 11_exceptions_part1_groundwork/src/cpu.rs
-+++ 12_integrated_testing/src/cpu.rs
-@@ -14,3 +14,6 @@
- // Architectural Public Reexports
- //--------------------------------------------------------------------------------------------------
- pub use arch_cpu::{nop, wait_forever};
-+
-+#[cfg(feature = "test_build")]
-+pub use arch_cpu::{qemu_exit_failure, qemu_exit_success};
-
-diff -uNr 11_exceptions_part1_groundwork/src/exception.rs 12_integrated_testing/src/exception.rs
---- 11_exceptions_part1_groundwork/src/exception.rs
-+++ 12_integrated_testing/src/exception.rs
-@@ -28,3 +28,21 @@
-     Hypervisor,
-     Unknown,
- }
-+
-+//--------------------------------------------------------------------------------------------------
-+// Testing
-+//--------------------------------------------------------------------------------------------------
-+
-+#[cfg(test)]
-+mod tests {
-+    use super::*;
-+    use test_macros::kernel_test;
-+
-+    /// Libkernel unit tests must execute in kernel mode.
-+    #[kernel_test]
-+    fn test_runner_executes_in_kernel_mode() {
-+        let (level, _) = current_privilege_level();
-+
-+        assert!(level == PrivilegeLevel::Kernel)
-+    }
-+}
-
-diff -uNr 11_exceptions_part1_groundwork/src/lib.rs 12_integrated_testing/src/lib.rs
---- 11_exceptions_part1_groundwork/src/lib.rs
-+++ 12_integrated_testing/src/lib.rs
-@@ -0,0 +1,183 @@
-+// SPDX-License-Identifier: MIT OR Apache-2.0
-+//
-+// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
-+
-+// Rust embedded logo for `make doc`.
-+#![doc(html_logo_url = "https://git.io/JeGIp")]
-+
-+//! The `kernel` library.
-+//!
-+//! Used to compose the final kernel binary.
-+//!
-+//! # Code organization and architecture
-+//!
-+//! The code is divided into different *modules*, each representing a typical **subsystem** of the
-+//! `kernel`. Top-level module files of subsystems reside directly in the `src` folder. For example,
-+//! `src/memory.rs` contains code that is concerned with all things memory management.
-+//!
-+//! ## Visibility of processor architecture code
-+//!
-+//! Some of the `kernel`'s subsystems depend on low-level code that is specific to the target
-+//! processor architecture. For each supported processor architecture, there exists a subfolder in
-+//! `src/_arch`, for example, `src/_arch/aarch64`.
-+//!
-+//! The architecture folders mirror the subsystem modules laid out in `src`. For example,
-+//! architectural code that belongs to the `kernel`'s MMU subsystem (`src/memory/mmu.rs`) would go
-+//! into `src/_arch/aarch64/memory/mmu.rs`. The latter file is loaded as a module in
-+//! `src/memory/mmu.rs` using the `path attribute`. Usually, the chosen module name is the generic
-+//! module's name prefixed with `arch_`.
-+//!
-+//! For example, this is the top of `src/memory/mmu.rs`:
-+//!
-+//! ```
-+//! #[cfg(target_arch = "aarch64")]
-+//! #[path = "../_arch/aarch64/memory/mmu.rs"]
-+//! mod arch_mmu;
-+//! ```
-+//!
-+//! Often times, items from the `arch_ module` will be publicly reexported by the parent module.
-+//! This way, each architecture specific module can provide its implementation of an item, while the
-+//! caller must not be concerned which architecture has been conditionally compiled.
-+//!
-+//! ## BSP code
-+//!
-+//! `BSP` stands for Board Support Package. `BSP` code is organized under `src/bsp.rs` and contains
-+//! target board specific definitions and functions. These are things such as the board's memory map
-+//! or instances of drivers for devices that are featured on the respective board.
-+//!
-+//! Just like processor architecture code, the `BSP` code's module structure tries to mirror the
-+//! `kernel`'s subsystem modules, but there is no reexporting this time. That means whatever is
-+//! provided must be called starting from the `bsp` namespace, e.g. `bsp::driver::driver_manager()`.
-+//!
-+//! ## Kernel interfaces
-+//!
-+//! Both `arch` and `bsp` contain code that is conditionally compiled depending on the actual target
-+//! and board for which the kernel is compiled. For example, the `interrupt controller` hardware of
-+//! the `Raspberry Pi 3` and the `Raspberry Pi 4` is different, but we want the rest of the `kernel`
-+//! code to play nicely with any of the two without much hassle.
-+//!
-+//! In order to provide a clean abstraction between `arch`, `bsp` and `generic kernel code`,
-+//! `interface` traits are provided *whenever possible* and *where it makes sense*. They are defined
-+//! in the respective subsystem module and help to enforce the idiom of *program to an interface,
-+//! not an implementation*. For example, there will be a common IRQ handling interface which the two
-+//! different interrupt controller `drivers` of both Raspberrys will implement, and only export the
-+//! interface to the rest of the `kernel`.
-+//!
-+//! ```
-+//!         +-------------------+
-+//!         | Interface (Trait) |
-+//!         |                   |
-+//!         +--+-------------+--+
-+//!            ^             ^
-+//!            |             |
-+//!            |             |
-+//! +----------+--+       +--+----------+
-+//! | kernel code |       |  bsp code   |
-+//! |             |       |  arch code  |
-+//! +-------------+       +-------------+
-+//! ```
-+//!
-+//! # Summary
-+//!
-+//! For a logical `kernel` subsystem, corresponding code can be distributed over several physical
-+//! locations. Here is an example for the **memory** subsystem:
-+//!
-+//! - `src/memory.rs` and `src/memory/**/*`
-+//!   - Common code that is agnostic of target processor architecture and `BSP` characteristics.
-+//!     - Example: A function to zero a chunk of memory.
-+//!   - Interfaces for the memory subsystem that are implemented by `arch` or `BSP` code.
-+//!     - Example: An `MMU` interface that defines `MMU` function prototypes.
-+//! - `src/bsp/__board_name__/memory.rs` and `src/bsp/__board_name__/memory/**/*`
-+//!   - `BSP` specific code.
-+//!   - Example: The board's memory map (physical addresses of DRAM and MMIO devices).
-+//! - `src/_arch/__arch_name__/memory.rs` and `src/_arch/__arch_name__/memory/**/*`
-+//!   - Processor architecture specific code.
-+//!   - Example: Implementation of the `MMU` interface for the `__arch_name__` processor
-+//!     architecture.
-+//!
-+//! From a namespace perspective, **memory** subsystem code lives in:
-+//!
-+//! - `crate::memory::*`
-+//! - `crate::bsp::memory::*`
-+//!
-+//! # Boot flow
-+//!
-+//! 1. The kernel's entry point is the function `cpu::boot::arch_boot::_start()`.
-+//!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.s`.
-+//! 2. Once finished with architectural setup, the arch code calls `kernel_init()`.
-+
-+#![allow(clippy::upper_case_acronyms)]
-+#![allow(incomplete_features)]
-+#![feature(core_intrinsics)]
-+#![feature(format_args_nl)]
-+#![feature(linkage)]
-+#![feature(panic_info_message)]
-+#![feature(trait_alias)]
-+#![no_std]
-+// Testing
-+#![cfg_attr(test, no_main)]
-+#![feature(custom_test_frameworks)]
-+#![reexport_test_harness_main = "test_main"]
-+#![test_runner(crate::test_runner)]
-+
-+mod panic_wait;
-+mod synchronization;
-+
-+pub mod bsp;
-+pub mod console;
-+pub mod cpu;
-+pub mod driver;
-+pub mod exception;
-+pub mod memory;
-+pub mod print;
-+pub mod time;
-+
-+//--------------------------------------------------------------------------------------------------
-+// Public Code
-+//--------------------------------------------------------------------------------------------------
-+
-+/// Version string.
-+pub fn version() -> &'static str {
-+    concat!(
-+        env!("CARGO_PKG_NAME"),
-+        " version ",
-+        env!("CARGO_PKG_VERSION")
-+    )
-+}
-+
-+#[cfg(not(test))]
-+extern "Rust" {
-+    fn kernel_init() -> !;
-+}
-+
-+//--------------------------------------------------------------------------------------------------
-+// Testing
-+//--------------------------------------------------------------------------------------------------
-+
-+/// The default runner for unit tests.
-+pub fn test_runner(tests: &[&test_types::UnitTest]) {
-+    // This line will be printed as the test header.
-+    println!("Running {} tests", tests.len());
-+
-+    for (i, test) in tests.iter().enumerate() {
-+        print!("{:>3}. {:.<58}", i + 1, test.name);
-+
-+        // Run the actual test.
-+        (test.test_func)();
-+
-+        // Failed tests call panic!(). Execution reaches here only if the test has passed.
-+        println!("[ok]")
-+    }
-+}
-+
-+/// The `kernel_init()` for unit tests.
-+#[cfg(test)]
-+#[no_mangle]
-+unsafe fn kernel_init() -> ! {
-+    exception::handling_init();
-+    bsp::console::qemu_bring_up_console();
-+
-+    test_main();
-+
-+    cpu::qemu_exit_success()
-+}
-
-diff -uNr 11_exceptions_part1_groundwork/src/main.rs 12_integrated_testing/src/main.rs
---- 11_exceptions_part1_groundwork/src/main.rs
-+++ 12_integrated_testing/src/main.rs
-@@ -6,123 +6,12 @@
- #![doc(html_logo_url = "https://git.io/JeGIp")]
-
- //! The `kernel` binary.
--//!
--//! # Code organization and architecture
--//!
--//! The code is divided into different *modules*, each representing a typical **subsystem** of the
--//! `kernel`. Top-level module files of subsystems reside directly in the `src` folder. For example,
--//! `src/memory.rs` contains code that is concerned with all things memory management.
--//!
--//! ## Visibility of processor architecture code
--//!
--//! Some of the `kernel`'s subsystems depend on low-level code that is specific to the target
--//! processor architecture. For each supported processor architecture, there exists a subfolder in
--//! `src/_arch`, for example, `src/_arch/aarch64`.
--//!
--//! The architecture folders mirror the subsystem modules laid out in `src`. For example,
--//! architectural code that belongs to the `kernel`'s MMU subsystem (`src/memory/mmu.rs`) would go
--//! into `src/_arch/aarch64/memory/mmu.rs`. The latter file is loaded as a module in
--//! `src/memory/mmu.rs` using the `path attribute`. Usually, the chosen module name is the generic
--//! module's name prefixed with `arch_`.
--//!
--//! For example, this is the top of `src/memory/mmu.rs`:
--//!
--//! ```
--//! #[cfg(target_arch = "aarch64")]
--//! #[path = "../_arch/aarch64/memory/mmu.rs"]
--//! mod arch_mmu;
--//! ```
--//!
--//! Often times, items from the `arch_ module` will be publicly reexported by the parent module.
--//! This way, each architecture specific module can provide its implementation of an item, while the
--//! caller must not be concerned which architecture has been conditionally compiled.
--//!
--//! ## BSP code
--//!
--//! `BSP` stands for Board Support Package. `BSP` code is organized under `src/bsp.rs` and contains
--//! target board specific definitions and functions. These are things such as the board's memory map
--//! or instances of drivers for devices that are featured on the respective board.
--//!
--//! Just like processor architecture code, the `BSP` code's module structure tries to mirror the
--//! `kernel`'s subsystem modules, but there is no reexporting this time. That means whatever is
--//! provided must be called starting from the `bsp` namespace, e.g. `bsp::driver::driver_manager()`.
--//!
--//! ## Kernel interfaces
--//!
--//! Both `arch` and `bsp` contain code that is conditionally compiled depending on the actual target
--//! and board for which the kernel is compiled. For example, the `interrupt controller` hardware of
--//! the `Raspberry Pi 3` and the `Raspberry Pi 4` is different, but we want the rest of the `kernel`
--//! code to play nicely with any of the two without much hassle.
--//!
--//! In order to provide a clean abstraction between `arch`, `bsp` and `generic kernel code`,
--//! `interface` traits are provided *whenever possible* and *where it makes sense*. They are defined
--//! in the respective subsystem module and help to enforce the idiom of *program to an interface,
--//! not an implementation*. For example, there will be a common IRQ handling interface which the two
--//! different interrupt controller `drivers` of both Raspberrys will implement, and only export the
--//! interface to the rest of the `kernel`.
--//!
--//! ```
--//!         +-------------------+
--//!         | Interface (Trait) |
--//!         |                   |
--//!         +--+-------------+--+
--//!            ^             ^
--//!            |             |
--//!            |             |
--//! +----------+--+       +--+----------+
--//! | kernel code |       |  bsp code   |
--//! |             |       |  arch code  |
--//! +-------------+       +-------------+
--//! ```
--//!
--//! # Summary
--//!
--//! For a logical `kernel` subsystem, corresponding code can be distributed over several physical
--//! locations. Here is an example for the **memory** subsystem:
--//!
--//! - `src/memory.rs` and `src/memory/**/*`
--//!   - Common code that is agnostic of target processor architecture and `BSP` characteristics.
--//!     - Example: A function to zero a chunk of memory.
--//!   - Interfaces for the memory subsystem that are implemented by `arch` or `BSP` code.
--//!     - Example: An `MMU` interface that defines `MMU` function prototypes.
--//! - `src/bsp/__board_name__/memory.rs` and `src/bsp/__board_name__/memory/**/*`
--//!   - `BSP` specific code.
--//!   - Example: The board's memory map (physical addresses of DRAM and MMIO devices).
--//! - `src/_arch/__arch_name__/memory.rs` and `src/_arch/__arch_name__/memory/**/*`
--//!   - Processor architecture specific code.
--//!   - Example: Implementation of the `MMU` interface for the `__arch_name__` processor
--//!     architecture.
--//!
--//! From a namespace perspective, **memory** subsystem code lives in:
--//!
--//! - `crate::memory::*`
--//! - `crate::bsp::memory::*`
--//!
--//! # Boot flow
--//!
--//! 1. The kernel's entry point is the function `cpu::boot::arch_boot::_start()`.
--//!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.s`.
--//! 2. Once finished with architectural setup, the arch code calls `kernel_init()`.
--
--#![allow(clippy::upper_case_acronyms)]
--#![allow(incomplete_features)]
--#![feature(core_intrinsics)]
-+
- #![feature(format_args_nl)]
--#![feature(panic_info_message)]
--#![feature(trait_alias)]
- #![no_main]
- #![no_std]
-
--mod bsp;
--mod console;
--mod cpu;
--mod driver;
--mod exception;
--mod memory;
--mod panic_wait;
--mod print;
--mod synchronization;
--mod time;
-+use libkernel::{bsp, console, driver, exception, info, memory, time};
-
- /// Early init code.
- ///
-@@ -133,6 +22,7 @@
- ///     - MMU + Data caching must be activated at the earliest. Without it, any atomic operations,
- ///       e.g. the yet-to-be-introduced spinlocks in the device drivers (which currently employ
- ///       NullLocks instead of spinlocks), will fail to work (properly) on the RPi SoCs.
-+#[no_mangle]
- unsafe fn kernel_init() -> ! {
-     use driver::interface::DriverManager;
-     use memory::mmu::interface::MMU;
-@@ -159,15 +49,9 @@
- fn kernel_main() -> ! {
-     use bsp::console::console;
-     use console::interface::All;
--    use core::time::Duration;
-     use driver::interface::DriverManager;
--    use time::interface::TimeManager;
-
--    info!(
--        "{} version {}",
--        env!("CARGO_PKG_NAME"),
--        env!("CARGO_PKG_VERSION")
--    );
-+    info!("{}", libkernel::version());
-     info!("Booting on: {}", bsp::board_name());
-
-     info!("MMU online. Special regions:");
-@@ -193,31 +77,6 @@
-         info!("      {}. {}", i + 1, driver.compatible());
-     }
-
--    info!("Timer test, spinning for 1 second");
--    time::time_manager().spin_for(Duration::from_secs(1));
--
--    // Cause an exception by accessing a virtual address for which no translation was set up. This
--    // code accesses the address 8 GiB, which is outside the mapped address space.
--    //
--    // For demo purposes, the exception handler will catch the faulting 8 GiB address and allow
--    // execution to continue.
--    info!("");
--    info!("Trying to read from address 8 GiB...");
--    let mut big_addr: u64 = 8 * 1024 * 1024 * 1024;
--    unsafe { core::ptr::read_volatile(big_addr as *mut u64) };
--
--    info!("************************************************");
--    info!("Whoa! We recovered from a synchronous exception!");
--    info!("************************************************");
--    info!("");
--    info!("Let's try again");
--
--    // Now use address 9 GiB. The exception handler won't forgive us this time.
--    info!("Trying to read from address 9 GiB...");
--    big_addr = 9 * 1024 * 1024 * 1024;
--    unsafe { core::ptr::read_volatile(big_addr as *mut u64) };
--
--    // Will never reach here in this tutorial.
-     info!("Echoing input now");
-
-     // Discard any spurious received characters before going into echo mode.
-
-diff -uNr 11_exceptions_part1_groundwork/src/memory/mmu.rs 12_integrated_testing/src/memory/mmu.rs
---- 11_exceptions_part1_groundwork/src/memory/mmu.rs
-+++ 12_integrated_testing/src/memory/mmu.rs
-@@ -66,7 +66,6 @@
-
- /// Architecture agnostic translation types.
- #[allow(missing_docs)]
--#[allow(dead_code)]
- #[derive(Copy, Clone)]
- pub enum Translation {
-     Identity,
-@@ -261,4 +260,9 @@
-             info!("{}", i);
-         }
-     }
-+
-+    #[cfg(test)]
-+    pub fn inner(&self) -> &[TranslationDescriptor; NUM_SPECIAL_RANGES] {
-+        &self.inner
-+    }
- }
-
-diff -uNr 11_exceptions_part1_groundwork/src/panic_wait.rs 12_integrated_testing/src/panic_wait.rs
---- 11_exceptions_part1_groundwork/src/panic_wait.rs
-+++ 12_integrated_testing/src/panic_wait.rs
-@@ -17,6 +17,23 @@
-     unsafe { bsp::console::panic_console_out().write_fmt(args).unwrap() };
- }
-
-+/// The point of exit for `libkernel`.
-+///
-+/// It is linked weakly, so that the integration tests can overload its standard behavior.
-+#[linkage = "weak"]
-+#[no_mangle]
-+fn _panic_exit() -> ! {
-+    #[cfg(not(feature = "test_build"))]
-+    {
-+        cpu::wait_forever()
-+    }
-+
-+    #[cfg(feature = "test_build")]
-+    {
-+        cpu::qemu_exit_failure()
-+    }
-+}
-+
- /// Prints with a newline - only use from the panic handler.
- ///
- /// Carbon copy from <https://doc.rust-lang.org/src/std/macros.rs.html>
-@@ -53,7 +70,7 @@
-         return;
-     }
-
--    cpu::wait_forever()
-+    _panic_exit()
- }
-
- #[panic_handler]
-@@ -81,5 +98,5 @@
-         info.message().unwrap_or(&format_args!("")),
-     );
-
--    cpu::wait_forever()
-+    _panic_exit()
- }
-
-diff -uNr 11_exceptions_part1_groundwork/test-macros/Cargo.toml 12_integrated_testing/test-macros/Cargo.toml
---- 11_exceptions_part1_groundwork/test-macros/Cargo.toml
-+++ 12_integrated_testing/test-macros/Cargo.toml
-@@ -0,0 +1,14 @@
-+[package]
-+name = "test-macros"
-+version = "0.1.0"
-+authors = ["Andre Richter <andre.o.richter@gmail.com>"]
-+edition = "2021"
-+
-+[lib]
-+proc-macro = true
-+
-+[dependencies]
-+proc-macro2 = "1.x"
-+quote = "1.x"
-+syn = { version = "1.x", features = ["full"] }
-+test-types = { path = "../test-types" }
-
-diff -uNr 11_exceptions_part1_groundwork/test-macros/src/lib.rs 12_integrated_testing/test-macros/src/lib.rs
---- 11_exceptions_part1_groundwork/test-macros/src/lib.rs
-+++ 12_integrated_testing/test-macros/src/lib.rs
-@@ -0,0 +1,29 @@
-+// SPDX-License-Identifier: MIT OR Apache-2.0
-+//
-+// Copyright (c) 2019-2022 Andre Richter <andre.o.richter@gmail.com>
-+
-+use proc_macro::TokenStream;
-+use proc_macro2::Span;
-+use quote::quote;
-+use syn::{parse_macro_input, Ident, ItemFn};
-+
-+#[proc_macro_attribute]
-+pub fn kernel_test(_attr: TokenStream, input: TokenStream) -> TokenStream {
-+    let f = parse_macro_input!(input as ItemFn);
-+
-+    let test_name = &format!("{}", f.sig.ident.to_string());
-+    let test_ident = Ident::new(
-+        &format!("{}_TEST_CONTAINER", f.sig.ident.to_string().to_uppercase()),
-+        Span::call_site(),
-+    );
-+    let test_code_block = f.block;
-+
-+    quote!(
-+        #[test_case]
-+        const #test_ident: test_types::UnitTest = test_types::UnitTest {
-+            name: #test_name,
-+            test_func: || #test_code_block,
-+        };
-+    )
-+    .into()
-+}
-
-diff -uNr 11_exceptions_part1_groundwork/tests/00_console_sanity.rb 12_integrated_testing/tests/00_console_sanity.rb
---- 11_exceptions_part1_groundwork/tests/00_console_sanity.rb
-+++ 12_integrated_testing/tests/00_console_sanity.rb
-@@ -0,0 +1,48 @@
-+# frozen_string_literal: true
-+
-+# SPDX-License-Identifier: MIT OR Apache-2.0
-+#
-+# Copyright (c) 2019-2022 Andre Richter <andre.o.richter@gmail.com>
-+
-+require_relative '../../common/tests/console_io_test'
-+
-+# Verify sending and receiving works as expected.
-+class TxRxHandshakeTest < SubtestBase
-+    def name
-+        'Transmit and Receive handshake'
-+    end
-+
-+    def run(qemu_out, qemu_in)
-+        qemu_in.write_nonblock('ABC')
-+        expect_or_raise(qemu_out, 'OK1234')
-+    end
-+end
-+
-+# Check for correct TX statistics implementation. Depends on test 1 being run first.
-+class TxStatisticsTest < SubtestBase
-+    def name
-+        'Transmit statistics'
-+    end
-+
-+    def run(qemu_out, _qemu_in)
-+        expect_or_raise(qemu_out, '6')
-+    end
-+end
-+
-+# Check for correct RX statistics implementation. Depends on test 1 being run first.
-+class RxStatisticsTest < SubtestBase
-+    def name
-+        'Receive statistics'
-+    end
-+
-+    def run(qemu_out, _qemu_in)
-+        expect_or_raise(qemu_out, '3')
-+    end
-+end
-+
-+##--------------------------------------------------------------------------------------------------
-+## Test registration
-+##--------------------------------------------------------------------------------------------------
-+def subtest_collection
-+    [TxRxHandshakeTest.new, TxStatisticsTest.new, RxStatisticsTest.new]
-+end
-
-diff -uNr 11_exceptions_part1_groundwork/tests/00_console_sanity.rs 12_integrated_testing/tests/00_console_sanity.rs
---- 11_exceptions_part1_groundwork/tests/00_console_sanity.rs
-+++ 12_integrated_testing/tests/00_console_sanity.rs
-@@ -0,0 +1,38 @@
-+// SPDX-License-Identifier: MIT OR Apache-2.0
-+//
-+// Copyright (c) 2019-2022 Andre Richter <andre.o.richter@gmail.com>
-+
-+//! Console sanity tests - RX, TX and statistics.
-+
-+#![feature(format_args_nl)]
-+#![no_main]
-+#![no_std]
-+
-+/// Console tests should time out on the I/O harness in case of panic.
-+mod panic_wait_forever;
-+
-+use libkernel::{bsp, console, cpu, exception, print};
-+
-+#[no_mangle]
-+unsafe fn kernel_init() -> ! {
-+    use bsp::console::console;
-+    use console::interface::*;
-+
-+    exception::handling_init();
-+    bsp::console::qemu_bring_up_console();
-+
-+    // Handshake
-+    assert_eq!(console().read_char(), 'A');
-+    assert_eq!(console().read_char(), 'B');
-+    assert_eq!(console().read_char(), 'C');
-+    print!("OK1234");
-+
-+    // 6
-+    print!("{}", console().chars_written());
-+
-+    // 3
-+    print!("{}", console().chars_read());
-+
-+    // The QEMU process running this test will be closed by the I/O test harness.
-+    cpu::wait_forever();
-+}
-
-diff -uNr 11_exceptions_part1_groundwork/tests/01_timer_sanity.rs 12_integrated_testing/tests/01_timer_sanity.rs
---- 11_exceptions_part1_groundwork/tests/01_timer_sanity.rs
-+++ 12_integrated_testing/tests/01_timer_sanity.rs
-@@ -0,0 +1,49 @@
-+// SPDX-License-Identifier: MIT OR Apache-2.0
-+//
-+// Copyright (c) 2019-2022 Andre Richter <andre.o.richter@gmail.com>
-+
-+//! Timer sanity tests.
-+
-+#![feature(custom_test_frameworks)]
-+#![no_main]
-+#![no_std]
-+#![reexport_test_harness_main = "test_main"]
-+#![test_runner(libkernel::test_runner)]
-+
-+use core::time::Duration;
-+use libkernel::{bsp, cpu, exception, time, time::interface::TimeManager};
-+use test_macros::kernel_test;
-+
-+#[no_mangle]
-+unsafe fn kernel_init() -> ! {
-+    exception::handling_init();
-+    bsp::console::qemu_bring_up_console();
-+
-+    // Depending on CPU arch, some timer bring-up code could go here. Not needed for the RPi.
-+
-+    test_main();
-+
-+    cpu::qemu_exit_success()
-+}
-+
-+/// Simple check that the timer is running.
-+#[kernel_test]
-+fn timer_is_counting() {
-+    assert!(time::time_manager().uptime().as_nanos() > 0)
-+}
-+
-+/// Timer resolution must be sufficient.
-+#[kernel_test]
-+fn timer_resolution_is_sufficient() {
-+    assert!(time::time_manager().resolution().as_nanos() < 100)
-+}
-+
-+/// Sanity check spin_for() implementation.
-+#[kernel_test]
-+fn spin_accuracy_check_1_second() {
-+    let t1 = time::time_manager().uptime();
-+    time::time_manager().spin_for(Duration::from_secs(1));
-+    let t2 = time::time_manager().uptime();
-+
-+    assert_eq!((t2 - t1).as_secs(), 1)
-+}
-
-diff -uNr 11_exceptions_part1_groundwork/tests/02_exception_sync_page_fault.rs 12_integrated_testing/tests/02_exception_sync_page_fault.rs
---- 11_exceptions_part1_groundwork/tests/02_exception_sync_page_fault.rs
-+++ 12_integrated_testing/tests/02_exception_sync_page_fault.rs
-@@ -0,0 +1,43 @@
-+// SPDX-License-Identifier: MIT OR Apache-2.0
-+//
-+// Copyright (c) 2019-2022 Andre Richter <andre.o.richter@gmail.com>
-+
-+//! Page faults must result in synchronous exceptions.
-+
-+#![feature(format_args_nl)]
-+#![no_main]
-+#![no_std]
-+
-+/// Overwrites libkernel's `panic_wait::_panic_exit()` so that it returns a "success" code.
-+///
-+/// In this test, reaching the panic is a success, because it is called from the synchronous
-+/// exception handler, which is what this test wants to achieve.
-+///
-+/// It also means that this integration test can not use any other code that calls panic!() directly
-+/// or indirectly.
-+mod panic_exit_success;
-+
-+use libkernel::{bsp, cpu, exception, info, memory, println};
-+
-+#[no_mangle]
-+unsafe fn kernel_init() -> ! {
-+    use memory::mmu::interface::MMU;
-+
-+    exception::handling_init();
-+    bsp::console::qemu_bring_up_console();
-+
-+    // This line will be printed as the test header.
-+    println!("Testing synchronous exception handling by causing a page fault");
-+
-+    if let Err(string) = memory::mmu::mmu().enable_mmu_and_caching() {
-+        info!("MMU: {}", string);
-+        cpu::qemu_exit_failure()
-+    }
-+
-+    info!("Writing beyond mapped area to address 9 GiB...");
-+    let big_addr: u64 = 9 * 1024 * 1024 * 1024;
-+    core::ptr::read_volatile(big_addr as *mut u64);
-+
-+    // If execution reaches here, the memory access above did not cause a page fault exception.
-+    cpu::qemu_exit_failure()
-+}
-
-diff -uNr 11_exceptions_part1_groundwork/tests/03_exception_restore_sanity.rb 12_integrated_testing/tests/03_exception_restore_sanity.rb
---- 11_exceptions_part1_groundwork/tests/03_exception_restore_sanity.rb
-+++ 12_integrated_testing/tests/03_exception_restore_sanity.rb
-@@ -0,0 +1,25 @@
-+# frozen_string_literal: true
-+
-+# SPDX-License-Identifier: MIT OR Apache-2.0
-+#
-+# Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
-+
-+require_relative '../../common/tests/console_io_test'
-+
-+# Verify that exception restore works.
-+class ExceptionRestoreTest < SubtestBase
-+    def name
-+        'Exception restore'
-+    end
-+
-+    def run(qemu_out, _qemu_in)
-+        expect_or_raise(qemu_out, 'Back from system call!')
-+    end
-+end
-+
-+##--------------------------------------------------------------------------------------------------
-+## Test registration
-+##--------------------------------------------------------------------------------------------------
-+def subtest_collection
-+    [ExceptionRestoreTest.new]
-+end
-
-diff -uNr 11_exceptions_part1_groundwork/tests/03_exception_restore_sanity.rs 12_integrated_testing/tests/03_exception_restore_sanity.rs
---- 11_exceptions_part1_groundwork/tests/03_exception_restore_sanity.rs
-+++ 12_integrated_testing/tests/03_exception_restore_sanity.rs
-@@ -0,0 +1,55 @@
-+// SPDX-License-Identifier: MIT OR Apache-2.0
-+//
-+// Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
-+
-+//! A simple sanity test to see if exception restore code works.
-+
-+#![feature(format_args_nl)]
-+#![no_main]
-+#![no_std]
-+
-+/// Console tests should time out on the I/O harness in case of panic.
-+mod panic_wait_forever;
-+
-+use core::arch::asm;
-+use libkernel::{bsp, cpu, exception, info, memory, println};
-+
-+#[inline(never)]
-+fn nested_system_call() {
-+    #[cfg(target_arch = "aarch64")]
-+    unsafe {
-+        asm!("svc #0x1337", options(nomem, nostack, preserves_flags));
-+    }
-+
-+    #[cfg(not(target_arch = "aarch64"))]
-+    {
-+        info!("Not supported yet");
-+        cpu::wait_forever();
-+    }
-+}
-+
-+#[no_mangle]
-+unsafe fn kernel_init() -> ! {
-+    use memory::mmu::interface::MMU;
-+
-+    exception::handling_init();
-+    bsp::console::qemu_bring_up_console();
-+
-+    // This line will be printed as the test header.
-+    println!("Testing exception restore");
-+
-+    if let Err(string) = memory::mmu::mmu().enable_mmu_and_caching() {
-+        info!("MMU: {}", string);
-+        cpu::qemu_exit_failure()
-+    }
-+
-+    info!("Making a dummy system call");
-+
-+    // Calling this inside a function indirectly tests if the link register is restored properly.
-+    nested_system_call();
-+
-+    info!("Back from system call!");
-+
-+    // The QEMU process running this test will be closed by the I/O test harness.
-+    cpu::wait_forever();
-+}
-
-diff -uNr 11_exceptions_part1_groundwork/tests/boot_test_string.rb 12_integrated_testing/tests/boot_test_string.rb
---- 11_exceptions_part1_groundwork/tests/boot_test_string.rb
-+++ 12_integrated_testing/tests/boot_test_string.rb
-@@ -1,3 +1,3 @@
- # frozen_string_literal: true
-
--EXPECTED_PRINT = 'lr : 0x'
-+EXPECTED_PRINT = 'Echoing input now'
-
-diff -uNr 11_exceptions_part1_groundwork/tests/panic_exit_success/mod.rs 12_integrated_testing/tests/panic_exit_success/mod.rs
---- 11_exceptions_part1_groundwork/tests/panic_exit_success/mod.rs
-+++ 12_integrated_testing/tests/panic_exit_success/mod.rs
-@@ -0,0 +1,9 @@
-+// SPDX-License-Identifier: MIT OR Apache-2.0
-+//
-+// Copyright (c) 2019-2022 Andre Richter <andre.o.richter@gmail.com>
-+
-+/// Overwrites libkernel's `panic_wait::_panic_exit()` with the QEMU-exit version.
-+#[no_mangle]
-+fn _panic_exit() -> ! {
-+    libkernel::cpu::qemu_exit_success()
-+}
-
-diff -uNr 11_exceptions_part1_groundwork/tests/panic_wait_forever/mod.rs 12_integrated_testing/tests/panic_wait_forever/mod.rs
---- 11_exceptions_part1_groundwork/tests/panic_wait_forever/mod.rs
-+++ 12_integrated_testing/tests/panic_wait_forever/mod.rs
-@@ -0,0 +1,9 @@
-+// SPDX-License-Identifier: MIT OR Apache-2.0
-+//
-+// Copyright (c) 2022 Andre Richter <andre.o.richter@gmail.com>
-+
-+/// Overwrites libkernel's `panic_wait::_panic_exit()` with wait_forever.
-+#[no_mangle]
-+fn _panic_exit() -> ! {
-+    libkernel::cpu::wait_forever()
-+}
-
-diff -uNr 11_exceptions_part1_groundwork/test-types/Cargo.toml 12_integrated_testing/test-types/Cargo.toml
---- 11_exceptions_part1_groundwork/test-types/Cargo.toml
-+++ 12_integrated_testing/test-types/Cargo.toml
-@@ -0,0 +1,5 @@
-+[package]
-+name = "test-types"
-+version = "0.1.0"
-+authors = ["Andre Richter <andre.o.richter@gmail.com>"]
-+edition = "2021"
-
-diff -uNr 11_exceptions_part1_groundwork/test-types/src/lib.rs 12_integrated_testing/test-types/src/lib.rs
---- 11_exceptions_part1_groundwork/test-types/src/lib.rs
-+++ 12_integrated_testing/test-types/src/lib.rs
-@@ -0,0 +1,16 @@
-+// SPDX-License-Identifier: MIT OR Apache-2.0
-+//
-+// Copyright (c) 2019-2022 Andre Richter <andre.o.richter@gmail.com>
-+
-+//! Types for the `custom_test_frameworks` implementation.
-+
-+#![no_std]
-+
-+/// Unit test container.
-+pub struct UnitTest {
-+    /// Name of the test.
-+    pub name: &'static str,
-+
-+    /// Function pointer to the test.
-+    pub test_func: fn(),
-+}
-
+```console
+meld 11_exceptions_part1_groundwork 12_integrated_testing/kernel
 ```

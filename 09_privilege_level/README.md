@@ -34,7 +34,7 @@ architectures, please have a look at the following links:
 At this point, I strongly recommend that you glimpse over `Chapter 3` of the [Programmer’s Guide for
 ARMv8-A] before you continue. It gives a concise overview about the topic.
 
-[Programmer’s Guide forARMv8-A]: http://infocenter.arm.com/help/topic/com.arm.doc.den0024a/DEN0024A_v8_architecture_PG.pdf
+[Programmer’s Guide for ARMv8-A]: http://infocenter.arm.com/help/topic/com.arm.doc.den0024a/DEN0024A_v8_architecture_PG.pdf
 
 ## Scope of this tutorial
 
@@ -50,8 +50,8 @@ core should it not be in `EL2`.
 ```
 // Only proceed if the core executes in EL2. Park it otherwise.
 mrs	x0, CurrentEL
-cmp	x0, _EL2
-b.ne	1f
+cmp	x0, {CONST_CURRENTEL_EL2}
+b.ne	.L_parking_loop
 ```
 
 Afterwards, we continue with preparing the `EL2` -> `EL1` transition by calling
@@ -75,7 +75,7 @@ We are already using them since [tutorial 07](../07_timestamps/), so of course w
 Therefore we set the respective flags in the [Counter-timer Hypervisor Control register] and
 additionally set the virtual offset to zero so that we get the real physical value everytime:
 
-[Counter-timer Hypervisor Control register]:  https://docs.rs/cortex-a/5.1.2/src/cortex_a/regs/cnthctl_el2.rs.html
+[Counter-timer Hypervisor Control register]:  https://docs.rs/aarch64-cpu/9.0.0/src/aarch64_cpu/registers/cnthctl_el2.rs.html
 
 ```rust
 // Enable timer counter registers for EL1.
@@ -88,7 +88,7 @@ CNTVOFF_EL2.set(0);
 Next, we configure the [Hypervisor Configuration Register] such that `EL1` runs in `AArch64` mode,
 and not in `AArch32`, which would also be possible.
 
-[Hypervisor Configuration Register]: https://docs.rs/cortex-a/5.1.2/src/cortex_a/regs/hcr_el2.rs.html
+[Hypervisor Configuration Register]: https://docs.rs/aarch64-cpu/9.0.0/src/aarch64_cpu/registers/hcr_el2.rs.html
 
 ```rust
 // Set EL1 execution state to AArch64.
@@ -100,7 +100,7 @@ HCR_EL2.write(HCR_EL2::RW::EL1IsAarch64);
 There is actually only one way to transition from a higher EL to a lower EL, which is by way of
 executing the [ERET] instruction.
 
-[ERET]: https://docs.rs/cortex-a/5.1.2/src/cortex_a/asm.rs.html#87-96
+[ERET]: https://docs.rs/aarch64-cpu/9.0.0/src/aarch64_cpu/asm.rs.html#92-101
 
 This instruction will copy the contents of the [Saved Program Status Register - EL2] to `Current
 Program Status Register - EL1` and jump to the instruction address that is stored in the [Exception
@@ -109,8 +109,8 @@ Link Register - EL2].
 This is basically the reverse of what is happening when an exception is taken. You'll learn about
 that in an upcoming tutorial.
 
-[Saved Program Status Register - EL2]: https://docs.rs/cortex-a/5.1.2/src/cortex_a/regs/spsr_el2.rs.html
-[Exception Link Register - EL2]: https://docs.rs/cortex-a/5.1.2/src/cortex_a/regs/elr_el2.rs.html
+[Saved Program Status Register - EL2]: https://docs.rs/aarch64-cpu/9.0.0/src/aarch64_cpu/registers/spsr_el2.rs.html
+[Exception Link Register - EL2]: https://docs.rs/aarch64-cpu/9.0.0/src/aarch64_cpu/registers/elr_el2.rs.html
 
 ```rust
 // Set up a simulated exception return.
@@ -166,6 +166,7 @@ Minipush 1.0
 [MP] ⏳ Waiting for /dev/ttyUSB0
 [MP] ✅ Serial connected
 [MP] 🔌 Please power the target now
+
  __  __ _      _ _                 _
 |  \/  (_)_ _ (_) |   ___  __ _ __| |
 | |\/| | | ' \| | |__/ _ \/ _` / _` |
@@ -177,20 +178,20 @@ Minipush 1.0
 [MP] ⏩ Pushing 14 KiB =========================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
-[    0.165757] mingo version 0.9.0
-[    0.165957] Booting on: Raspberry Pi 3
-[    0.166412] Current privilege level: EL1
-[    0.166888] Exception handling state:
-[    0.167333]       Debug:  Masked
-[    0.167723]       SError: Masked
-[    0.168112]       IRQ:    Masked
-[    0.168502]       FIQ:    Masked
-[    0.168893] Architectural timer resolution: 52 ns
-[    0.169467] Drivers loaded:
-[    0.169803]       1. BCM GPIO
-[    0.170160]       2. BCM PL011 UART
-[    0.170583] Timer test, spinning for 1 second
-[    1.171115] Echoing input now
+[    0.162546] mingo version 0.9.0
+[    0.162745] Booting on: Raspberry Pi 3
+[    0.163201] Current privilege level: EL1
+[    0.163677] Exception handling state:
+[    0.164122]       Debug:  Masked
+[    0.164511]       SError: Masked
+[    0.164901]       IRQ:    Masked
+[    0.165291]       FIQ:    Masked
+[    0.165681] Architectural timer resolution: 52 ns
+[    0.166255] Drivers loaded:
+[    0.166592]       1. BCM PL011 UART
+[    0.167014]       2. BCM GPIO
+[    0.167371] Timer test, spinning for 1 second
+[    1.167904] Echoing input now
 ```
 
 ## Diff to previous
@@ -211,19 +212,22 @@ diff -uNr 08_hw_debug_JTAG/Cargo.toml 09_privilege_level/Cargo.toml
 diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.rs 09_privilege_level/src/_arch/aarch64/cpu/boot.rs
 --- 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.rs
 +++ 09_privilege_level/src/_arch/aarch64/cpu/boot.rs
-@@ -11,8 +11,53 @@
+@@ -11,22 +11,73 @@
  //!
  //! crate::cpu::boot::arch_boot
 
-+use core::arch::global_asm;
-+use cortex_a::{asm, registers::*};
++use aarch64_cpu::{asm, registers::*};
+ use core::arch::global_asm;
 +use tock_registers::interfaces::Writeable;
-+
+
  // Assembly counterpart to this file.
--core::arch::global_asm!(include_str!("boot.s"));
-+global_asm!(include_str!("boot.s"));
-+
-+//--------------------------------------------------------------------------------------------------
+ global_asm!(
+     include_str!("boot.s"),
++    CONST_CURRENTEL_EL2 = const 0x8,
+     CONST_CORE_ID_MASK = const 0b11
+ );
+
+ //--------------------------------------------------------------------------------------------------
 +// Private Code
 +//--------------------------------------------------------------------------------------------------
 +
@@ -263,10 +267,11 @@ diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.rs 09_privilege_level/src/
 +    // are no plans to ever return to EL2, just re-use the same stack.
 +    SP_EL1.set(phys_boot_core_stack_end_exclusive_addr);
 +}
-
- //--------------------------------------------------------------------------------------------------
++
++//--------------------------------------------------------------------------------------------------
  // Public Code
-@@ -21,7 +66,14 @@
+ //--------------------------------------------------------------------------------------------------
+
  /// The Rust entry of the `kernel` binary.
  ///
  /// The function is called from the assembly `_start` function.
@@ -287,27 +292,28 @@ diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.rs 09_privilege_level/src/
 diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.s 09_privilege_level/src/_arch/aarch64/cpu/boot.s
 --- 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.s
 +++ 09_privilege_level/src/_arch/aarch64/cpu/boot.s
-@@ -18,6 +18,7 @@
- 	add	\register, \register, #:lo12:\symbol
- .endm
-
-+.equ _EL2, 0x8
- .equ _core_id_mask, 0b11
-
- //--------------------------------------------------------------------------------------------------
-@@ -29,6 +30,11 @@
+@@ -27,11 +27,16 @@
  // fn _start()
  //------------------------------------------------------------------------------
  _start:
 +	// Only proceed if the core executes in EL2. Park it otherwise.
 +	mrs	x0, CurrentEL
-+	cmp	x0, _EL2
++	cmp	x0, {CONST_CURRENTEL_EL2}
 +	b.ne	.L_parking_loop
 +
  	// Only proceed on the boot core. Park it otherwise.
- 	mrs	x1, MPIDR_EL1
- 	and	x1, x1, _core_id_mask
-@@ -50,11 +56,11 @@
+-	mrs	x0, MPIDR_EL1
+-	and	x0, x0, {CONST_CORE_ID_MASK}
+-	ldr	x1, BOOT_CORE_ID      // provided by bsp/__board_name__/cpu.rs
+-	cmp	x0, x1
++	mrs	x1, MPIDR_EL1
++	and	x1, x1, {CONST_CORE_ID_MASK}
++	ldr	x2, BOOT_CORE_ID      // provided by bsp/__board_name__/cpu.rs
++	cmp	x1, x2
+ 	b.ne	.L_parking_loop
+
+ 	// If execution reaches here, it is the boot core.
+@@ -48,7 +53,7 @@
 
  	// Prepare the jump to Rust code.
  .L_prepare_rust:
@@ -315,6 +321,10 @@ diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/cpu/boot.s 09_privilege_level/src/_
 +	// Set the stack pointer. This ensures that any code in EL2 that needs the stack will work.
  	ADR_REL	x0, __boot_core_stack_end_exclusive
  	mov	sp, x0
+
+@@ -60,7 +65,7 @@
+ 	b.eq	.L_parking_loop
+ 	str	w2, [x1]
 
 -	// Jump to Rust code.
 +	// Jump to Rust code. x0 holds the function argument provided to _start_rust().
@@ -328,7 +338,7 @@ diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/exception/asynchronous.rs 09_privil
 @@ -0,0 +1,82 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Architectural asynchronous exception handling.
 +//!
@@ -339,7 +349,7 @@ diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/exception/asynchronous.rs 09_privil
 +//!
 +//! crate::exception::asynchronous::arch_asynchronous
 +
-+use cortex_a::registers::*;
++use aarch64_cpu::registers::*;
 +use tock_registers::interfaces::Readable;
 +
 +//--------------------------------------------------------------------------------------------------
@@ -415,7 +425,7 @@ diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/exception.rs 09_privilege_level/src
 @@ -0,0 +1,31 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Architectural synchronous and asynchronous exception handling.
 +//!
@@ -426,7 +436,7 @@ diff -uNr 08_hw_debug_JTAG/src/_arch/aarch64/exception.rs 09_privilege_level/src
 +//!
 +//! crate::exception::arch_exception
 +
-+use cortex_a::registers::*;
++use aarch64_cpu::registers::*;
 +use tock_registers::interfaces::Readable;
 +
 +//--------------------------------------------------------------------------------------------------
@@ -451,7 +461,7 @@ diff -uNr 08_hw_debug_JTAG/src/exception/asynchronous.rs 09_privilege_level/src/
 @@ -0,0 +1,14 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Asynchronous exception handling.
 +
@@ -470,7 +480,7 @@ diff -uNr 08_hw_debug_JTAG/src/exception.rs 09_privilege_level/src/exception.rs
 @@ -0,0 +1,30 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Synchronous and asynchronous exception handling.
 +
@@ -491,7 +501,7 @@ diff -uNr 08_hw_debug_JTAG/src/exception.rs 09_privilege_level/src/exception.rs
 +
 +/// Kernel privilege levels.
 +#[allow(missing_docs)]
-+#[derive(PartialEq)]
++#[derive(Eq, PartialEq)]
 +pub enum PrivilegeLevel {
 +    User,
 +    Kernel,
@@ -502,7 +512,7 @@ diff -uNr 08_hw_debug_JTAG/src/exception.rs 09_privilege_level/src/exception.rs
 diff -uNr 08_hw_debug_JTAG/src/main.rs 09_privilege_level/src/main.rs
 --- 08_hw_debug_JTAG/src/main.rs
 +++ 09_privilege_level/src/main.rs
-@@ -115,6 +115,7 @@
+@@ -121,6 +121,7 @@
  mod console;
  mod cpu;
  mod driver;
@@ -510,16 +520,15 @@ diff -uNr 08_hw_debug_JTAG/src/main.rs 09_privilege_level/src/main.rs
  mod panic_wait;
  mod print;
  mod synchronization;
-@@ -143,6 +144,8 @@
+@@ -148,6 +149,7 @@
 
  /// The main function running after the early init.
  fn kernel_main() -> ! {
-+    use bsp::console::console;
-+    use console::interface::All;
++    use console::console;
      use core::time::Duration;
-     use driver::interface::DriverManager;
-     use time::interface::TimeManager;
-@@ -154,6 +157,12 @@
+
+     info!(
+@@ -157,6 +159,12 @@
      );
      info!("Booting on: {}", bsp::board_name());
 
@@ -532,9 +541,9 @@ diff -uNr 08_hw_debug_JTAG/src/main.rs 09_privilege_level/src/main.rs
      info!(
          "Architectural timer resolution: {} ns",
          time::time_manager().resolution().as_nanos()
-@@ -168,11 +177,15 @@
-         info!("      {}. {}", i + 1, driver.compatible());
-     }
+@@ -165,11 +173,15 @@
+     info!("Drivers loaded:");
+     driver::driver_manager().enumerate();
 
 -    // Test a failing timer case.
 -    time::time_manager().spin_for(Duration::from_nanos(1));
@@ -548,8 +557,8 @@ diff -uNr 08_hw_debug_JTAG/src/main.rs 09_privilege_level/src/main.rs
      loop {
 -        info!("Spinning for 1 second");
 -        time::time_manager().spin_for(Duration::from_secs(1));
-+        let c = bsp::console::console().read_char();
-+        bsp::console::console().write_char(c);
++        let c = console().read_char();
++        console().write_char(c);
      }
  }
 

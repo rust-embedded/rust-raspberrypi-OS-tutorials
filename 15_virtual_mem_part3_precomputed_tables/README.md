@@ -118,7 +118,7 @@ Here are the compilation steps and the corresponding `objdump` for `AArch64`:
 
 ```console
 $ clang --target=aarch64-none-elf -Iinclude -Wall -c start.c -o start.o
-$ ld.lld start.o -T link.ld -o example.elf
+$ ld.lld start.o -T kernel.ld -o example.elf
 ```
 
 ```c-objdump
@@ -326,7 +326,7 @@ space:
 
 ```console
 $ clang --target=aarch64-none-elf -Iinclude -Wall -fpic -c start.c -o start.o
-$ ld.lld start.o -T link.ld -o example.elf
+$ ld.lld start.o -T kernel.ld -o example.elf
 ```
 
 ```c-objdump
@@ -473,7 +473,7 @@ the precompute use-case. The additional `#[no_mangle]` is added because we will 
 symbol from the `translation table tool`, and this is easier with unmangled names.
 
 In the `BSP` code, there is also a new file called `kernel_virt_addr_space_size.ld`, which contains
-the kernel's virtual address space size. This file gets included in both, the `link.ld` linker
+the kernel's virtual address space size. This file gets included in both, the `kernel.ld` linker
 script and `mmu.rs`. We need this value both as a symbol in the kernel's ELF (for the `translation
 table tool` to parse it later) and as a constant in the `Rust` code. This inclusion approach is just
 a convenience hack that turned out working well.
@@ -540,15 +540,15 @@ already, the only missing piece that's left is the offline computation of the tr
 
 ### The Translation Table Tool
 
-The tool for translation table computation is located in the folder `translation_table_tool` in the
-root directory. For ease of use, it is written in `Ruby` 💎. The code is organized into `BSP` and
-`arch` parts just like the kernel's `Rust` code, and also has a class for processing the kernel
-`ELF` file:
+The tool for translation table computation is located in the folder
+`$ROOT/tools/translation_table_tool`. For ease of use, it is written in `Ruby` 💎. The code is
+organized into `BSP` and `arch` parts just like the kernel's `Rust` code, and also has a class for
+processing the kernel `ELF` file:
 
 ```console
-$ tree translation_table_tool
+$ tree tools/translation_table_tool
 
-translation_table_tool
+tools/translation_table_tool
 ├── arch.rb
 ├── bsp.rb
 ├── generic.rb
@@ -568,7 +568,7 @@ In the `Makefile`, the tool is invoked after compiling and linking the kernel, a
 to the kernel's `ELF` file:
 
 ```Makefile
-TT_TOOL_PATH = translation_table_tool
+TT_TOOL_PATH = tools/translation_table_tool
 
 KERNEL_ELF_RAW      = target/$(TARGET)/release/kernel
 # [...]
@@ -637,7 +637,7 @@ def kernel_map_binary
     mapping_descriptors.each do |i|
         print 'Generating'.rjust(12).green.bold
         print ' '
-        puts i.to_s
+        puts i
 
         TRANSLATION_TABLES.map_at(i.virt_region, i.phys_region, i.attributes)
     end
@@ -775,30 +775,30 @@ Minipush 1.0
            Raspberry Pi 3
 
 [ML] Requesting binary
-[MP] ⏩ Pushing 259 KiB ======================================🦀 100% 129 KiB/s Time: 00:00:02
+[MP] ⏩ Pushing 257 KiB ======================================🦀 100% 128 KiB/s Time: 00:00:02
 [ML] Loaded! Executing the payload now
 
-[    2.891133] mingo version 0.15.0
-[    2.891341] Booting on: Raspberry Pi 3
-[    2.891796] MMU online:
-[    2.892088]       -------------------------------------------------------------------------------------------------------------------------------------------
-[    2.893833]                         Virtual                                   Physical               Size       Attr                    Entity
-[    2.895577]       -------------------------------------------------------------------------------------------------------------------------------------------
-[    2.897322]       0x0000_0000_0000_0000..0x0000_0000_0007_ffff --> 0x00_0000_0000..0x00_0007_ffff | 512 KiB | C   RW XN | Kernel boot-core stack
-[    2.898925]       0x0000_0000_0008_0000..0x0000_0000_0008_ffff --> 0x00_0008_0000..0x00_0008_ffff |  64 KiB | C   RO X  | Kernel code and RO data
-[    2.900538]       0x0000_0000_0009_0000..0x0000_0000_000c_ffff --> 0x00_0009_0000..0x00_000c_ffff | 256 KiB | C   RW XN | Kernel data and bss
-[    2.902109]       0x0000_0000_000d_0000..0x0000_0000_000d_ffff --> 0x00_3f20_0000..0x00_3f20_ffff |  64 KiB | Dev RW XN | BCM GPIO
-[    2.903561]                                                                                                             | BCM PL011 UART
-[    2.905078]       0x0000_0000_000e_0000..0x0000_0000_000e_ffff --> 0x00_3f00_0000..0x00_3f00_ffff |  64 KiB | Dev RW XN | BCM Peripheral Interrupt Controller
-[    2.906822]       -------------------------------------------------------------------------------------------------------------------------------------------
+[    2.866917] mingo version 0.15.0
+[    2.867125] Booting on: Raspberry Pi 3
+[    2.867580] MMU online:
+[    2.867872]       -------------------------------------------------------------------------------------------------------------------------------------------
+[    2.869616]                         Virtual                                   Physical               Size       Attr                    Entity
+[    2.871360]       -------------------------------------------------------------------------------------------------------------------------------------------
+[    2.873105]       0x0000_0000_0000_0000..0x0000_0000_0007_ffff --> 0x00_0000_0000..0x00_0007_ffff | 512 KiB | C   RW XN | Kernel boot-core stack
+[    2.874709]       0x0000_0000_0008_0000..0x0000_0000_0008_ffff --> 0x00_0008_0000..0x00_0008_ffff |  64 KiB | C   RO X  | Kernel code and RO data
+[    2.876322]       0x0000_0000_0009_0000..0x0000_0000_000c_ffff --> 0x00_0009_0000..0x00_000c_ffff | 256 KiB | C   RW XN | Kernel data and bss
+[    2.877893]       0x0000_0000_000d_0000..0x0000_0000_000d_ffff --> 0x00_3f20_0000..0x00_3f20_ffff |  64 KiB | Dev RW XN | BCM PL011 UART
+[    2.879410]                                                                                                             | BCM GPIO
+[    2.880861]       0x0000_0000_000e_0000..0x0000_0000_000e_ffff --> 0x00_3f00_0000..0x00_3f00_ffff |  64 KiB | Dev RW XN | BCM Interrupt Controller
+[    2.882487]       -------------------------------------------------------------------------------------------------------------------------------------------
 ```
 
 ## Diff to previous
 ```diff
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/Cargo.toml 15_virtual_mem_part3_precomputed_tables/Cargo.toml
---- 14_virtual_mem_part2_mmio_remap/Cargo.toml
-+++ 15_virtual_mem_part3_precomputed_tables/Cargo.toml
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/Cargo.toml 15_virtual_mem_part3_precomputed_tables/kernel/Cargo.toml
+--- 14_virtual_mem_part2_mmio_remap/kernel/Cargo.toml
++++ 15_virtual_mem_part3_precomputed_tables/kernel/Cargo.toml
 @@ -1,6 +1,6 @@
  [package]
  name = "mingo"
@@ -808,88 +808,18 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/Cargo.toml 15_virtual_mem_part3_precom
  edition = "2021"
 
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/Makefile 15_virtual_mem_part3_precomputed_tables/Makefile
---- 14_virtual_mem_part2_mmio_remap/Makefile
-+++ 15_virtual_mem_part3_precomputed_tables/Makefile
-@@ -69,12 +69,19 @@
- ##--------------------------------------------------------------------------------------------------
- KERNEL_LINKER_SCRIPT = link.ld
-
-+TT_TOOL_PATH = translation_table_tool
-+
- LAST_BUILD_CONFIG = target/$(BSP).build_config
-
--KERNEL_ELF      = target/$(TARGET)/release/kernel
-+KERNEL_ELF_RAW      = target/$(TARGET)/release/kernel
- # This parses cargo's dep-info file.
- # https://doc.rust-lang.org/cargo/guide/build-cache.html#dep-info-files
--KERNEL_ELF_DEPS = $(filter-out modulo: ,$(file < $(KERNEL_ELF_RAW).d)) $(LAST_BUILD_CONFIG)
-+KERNEL_ELF_RAW_DEPS = $(filter-out modulo: ,$(file < $(KERNEL_ELF_RAW).d)) $(LAST_BUILD_CONFIG)
-+
-+KERNEL_ELF_TTABLES      = target/$(TARGET)/release/kernel+ttables
-+KERNEL_ELF_TTABLES_DEPS = $(KERNEL_ELF_RAW) $(wildcard $(TT_TOOL_PATH)/*)
-+
-+KERNEL_ELF = $(KERNEL_ELF_TTABLES)
-
-
-
-@@ -104,6 +111,7 @@
-     -O binary
-
- EXEC_QEMU          = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
-+EXEC_TT_TOOL       = ruby $(TT_TOOL_PATH)/main.rb
- EXEC_TEST_DISPATCH = ruby ../common/tests/dispatch.rb
- EXEC_MINIPUSH      = ruby ../common/serial/minipush.rb
-
-@@ -154,16 +162,24 @@
- ##------------------------------------------------------------------------------
- ## Compile the kernel ELF
- ##------------------------------------------------------------------------------
--$(KERNEL_ELF): $(KERNEL_ELF_DEPS)
-+$(KERNEL_ELF_RAW): $(KERNEL_ELF_RAW_DEPS)
- 	$(call color_header, "Compiling kernel ELF - $(BSP)")
- 	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(RUSTC_CMD)
-
- ##------------------------------------------------------------------------------
-+## Precompute the kernel translation tables and patch them into the kernel ELF
-+##------------------------------------------------------------------------------
-+$(KERNEL_ELF_TTABLES): $(KERNEL_ELF_TTABLES_DEPS)
-+	$(call color_header, "Precomputing kernel translation tables and patching kernel ELF")
-+	@cp $(KERNEL_ELF_RAW) $(KERNEL_ELF_TTABLES)
-+	@$(DOCKER_TOOLS) $(EXEC_TT_TOOL) $(BSP) $(KERNEL_ELF_TTABLES)
-+
-+##------------------------------------------------------------------------------
- ## Generate the stripped kernel binary
- ##------------------------------------------------------------------------------
--$(KERNEL_BIN): $(KERNEL_ELF)
-+$(KERNEL_BIN): $(KERNEL_ELF_TTABLES)
- 	$(call color_header, "Generating stripped binary")
--	@$(OBJCOPY_CMD) $(KERNEL_ELF) $(KERNEL_BIN)
-+	@$(OBJCOPY_CMD) $(KERNEL_ELF_TTABLES) $(KERNEL_BIN)
- 	$(call color_progress_prefix, "Name")
- 	@echo $(KERNEL_BIN)
- 	$(call color_progress_prefix, "Size")
-@@ -300,6 +316,7 @@
-     TEST_ELF=$$(echo $$1 | sed -e 's/.*target/target/g')
-     TEST_BINARY=$$(echo $$1.img | sed -e 's/.*target/target/g')
-
-+    $(DOCKER_TOOLS) $(EXEC_TT_TOOL) $(BSP) $$TEST_ELF > /dev/null
-     $(OBJCOPY_CMD) $$TEST_ELF $$TEST_BINARY
-     $(DOCKER_TEST) $(EXEC_TEST_DISPATCH) $(EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
- endef
-
-diff -uNr 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/cpu/boot.rs 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.rs
---- 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/cpu/boot.rs
-+++ 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.rs
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/_arch/aarch64/cpu/boot.rs 15_virtual_mem_part3_precomputed_tables/kernel/src/_arch/aarch64/cpu/boot.rs
+--- 14_virtual_mem_part2_mmio_remap/kernel/src/_arch/aarch64/cpu/boot.rs
++++ 15_virtual_mem_part3_precomputed_tables/kernel/src/_arch/aarch64/cpu/boot.rs
 @@ -11,6 +11,7 @@
  //!
  //! crate::cpu::boot::arch_boot
 
 +use crate::{memory, memory::Address};
+ use aarch64_cpu::{asm, registers::*};
  use core::arch::global_asm;
- use cortex_a::{asm, registers::*};
  use tock_registers::interfaces::Writeable;
-@@ -71,9 +72,16 @@
+@@ -75,9 +76,16 @@
  ///
  /// - Exception return from EL2 must must continue execution in EL1 with `kernel_init()`.
  #[no_mangle]
@@ -908,10 +838,10 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/cpu/boot.rs 15_virtu
      asm::eret()
  }
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/cpu/boot.s 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.s
---- 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/cpu/boot.s
-+++ 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/cpu/boot.s
-@@ -56,11 +56,14 @@
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/_arch/aarch64/cpu/boot.s 15_virtual_mem_part3_precomputed_tables/kernel/src/_arch/aarch64/cpu/boot.s
+--- 14_virtual_mem_part2_mmio_remap/kernel/src/_arch/aarch64/cpu/boot.s
++++ 15_virtual_mem_part3_precomputed_tables/kernel/src/_arch/aarch64/cpu/boot.s
+@@ -53,19 +53,22 @@
 
  	// Prepare the jump to Rust code.
  .L_prepare_rust:
@@ -924,15 +854,27 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/cpu/boot.s 15_virtua
 +	ADR_REL	x1, __boot_core_stack_end_exclusive
 +	mov	sp, x1
 
+ 	// Read the CPU's timer counter frequency and store it in ARCH_TIMER_COUNTER_FREQUENCY.
+ 	// Abort if the frequency read back as 0.
+-	ADR_REL	x1, ARCH_TIMER_COUNTER_FREQUENCY // provided by aarch64/time.rs
+-	mrs	x2, CNTFRQ_EL0
+-	cmp	x2, xzr
++	ADR_REL	x2, ARCH_TIMER_COUNTER_FREQUENCY // provided by aarch64/time.rs
++	mrs	x3, CNTFRQ_EL0
++	cmp	x3, xzr
+ 	b.eq	.L_parking_loop
+-	str	w2, [x1]
++	str	w3, [x2]
+
 -	// Jump to Rust code. x0 holds the function argument provided to _start_rust().
 +	// Jump to Rust code. x0 and x1 hold the function arguments provided to _start_rust().
  	b	_start_rust
 
  	// Infinitely wait for events (aka "park the core").
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/memory/mmu/translation_table.rs 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu/translation_table.rs
---- 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/memory/mmu/translation_table.rs
-+++ 15_virtual_mem_part3_precomputed_tables/src/_arch/aarch64/memory/mmu/translation_table.rs
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/_arch/aarch64/memory/mmu/translation_table.rs 15_virtual_mem_part3_precomputed_tables/kernel/src/_arch/aarch64/memory/mmu/translation_table.rs
+--- 14_virtual_mem_part2_mmio_remap/kernel/src/_arch/aarch64/memory/mmu/translation_table.rs
++++ 15_virtual_mem_part3_precomputed_tables/kernel/src/_arch/aarch64/memory/mmu/translation_table.rs
 @@ -125,7 +125,7 @@
  }
 
@@ -1135,72 +1077,11 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/_arch/aarch64/memory/mmu/translati
 
  //--------------------------------------------------------------------------------------------------
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/console.rs 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/console.rs
---- 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/console.rs
-+++ 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/console.rs
-@@ -22,6 +22,7 @@
- /// # Safety
- ///
- /// - Use only for printing during a panic.
-+#[cfg(not(feature = "test_build"))]
- pub unsafe fn panic_console_out() -> impl fmt::Write {
-     use driver::interface::DeviceDriver;
-
-@@ -45,6 +46,23 @@
-     panic_uart
- }
-
-+/// Reduced version for test builds.
-+#[cfg(feature = "test_build")]
-+pub unsafe fn panic_console_out() -> impl fmt::Write {
-+    use driver::interface::DeviceDriver;
-+
-+    let mut panic_uart =
-+        device_driver::PanicUart::new(memory::map::mmio::PL011_UART_START.as_usize());
-+
-+    let maybe_uart_mmio_start_addr = super::PL011_UART.virt_mmio_start_addr();
-+
-+    panic_uart
-+        .init(maybe_uart_mmio_start_addr)
-+        .unwrap_or_else(|_| cpu::qemu_exit_failure());
-+
-+    panic_uart
-+}
-+
- /// Return a reference to the console.
- pub fn console() -> &'static impl console::interface::All {
-     &super::PL011_UART
-@@ -56,7 +74,15 @@
-
- /// Minimal code needed to bring up the console in QEMU (for testing only). This is often less steps
- /// than on real hardware due to QEMU's abstractions.
--///
--/// For the RPi, nothing needs to be done.
- #[cfg(feature = "test_build")]
--pub fn qemu_bring_up_console() {}
-+pub fn qemu_bring_up_console() {
-+    use driver::interface::DeviceDriver;
-+
-+    // Calling the UART's init ensures that the BSP's instance of the UART does remap the MMIO
-+    // addresses.
-+    unsafe {
-+        super::PL011_UART
-+            .init()
-+            .unwrap_or_else(|_| cpu::qemu_exit_failure());
-+    }
-+}
-
-diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/kernel_virt_addr_space_size.ld 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/kernel_virt_addr_space_size.ld
---- 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/kernel_virt_addr_space_size.ld
-+++ 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/kernel_virt_addr_space_size.ld
-@@ -0,0 +1 @@
-+__kernel_virt_addr_space_size = 1024 * 1024 * 1024
-
-diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/link.ld 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/link.ld
---- 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/link.ld
-+++ 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/link.ld
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/kernel.ld 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/kernel.ld
+--- 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/kernel.ld
++++ 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/kernel.ld
 @@ -3,6 +3,8 @@
-  * Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
+  * Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
   */
 
 +INCLUDE kernel_virt_addr_space_size.ld;
@@ -1208,10 +1089,25 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/link.ld 15_virtual
  PAGE_SIZE = 64K;
  PAGE_MASK = PAGE_SIZE - 1;
 
+@@ -89,7 +91,7 @@
+     . += 8 * 1024 * 1024;
+     __mmio_remap_end_exclusive = .;
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/memory/mmu.rs
---- 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs
-+++ 15_virtual_mem_part3_precomputed_tables/src/bsp/raspberrypi/memory/mmu.rs
+-    ASSERT((. & PAGE_MASK) == 0, "MMIO remap reservation is not page aligned")
++    ASSERT((. & PAGE_MASK) == 0, "End of boot core stack is not page aligned")
+
+     /***********************************************************************************************
+     * Misc
+
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/kernel_virt_addr_space_size.ld 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/kernel_virt_addr_space_size.ld
+--- 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/kernel_virt_addr_space_size.ld
++++ 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/kernel_virt_addr_space_size.ld
+@@ -0,0 +1 @@
++__kernel_virt_addr_space_size = 1024 * 1024 * 1024
+
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/memory/mmu.rs 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/memory/mmu.rs
+--- 14_virtual_mem_part2_mmio_remap/kernel/src/bsp/raspberrypi/memory/mmu.rs
++++ 15_virtual_mem_part3_precomputed_tables/kernel/src/bsp/raspberrypi/memory/mmu.rs
 @@ -7,8 +7,8 @@
  use crate::{
      memory::{
@@ -1437,10 +1333,33 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/bsp/raspberrypi/memory/mmu.rs 15_v
 +    );
  }
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/src/main.rs 15_virtual_mem_part3_precomputed_tables/src/main.rs
---- 14_virtual_mem_part2_mmio_remap/src/main.rs
-+++ 15_virtual_mem_part3_precomputed_tables/src/main.rs
-@@ -15,31 +15,23 @@
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/lib.rs 15_virtual_mem_part3_precomputed_tables/kernel/src/lib.rs
+--- 14_virtual_mem_part2_mmio_remap/kernel/src/lib.rs
++++ 15_virtual_mem_part3_precomputed_tables/kernel/src/lib.rs
+@@ -187,17 +187,7 @@
+ #[no_mangle]
+ unsafe fn kernel_init() -> ! {
+     exception::handling_init();
+-
+-    let phys_kernel_tables_base_addr = match memory::mmu::kernel_map_binary() {
+-        Err(string) => panic!("Error mapping kernel binary: {}", string),
+-        Ok(addr) => addr,
+-    };
+-
+-    if let Err(e) = memory::mmu::enable_mmu_and_caching(phys_kernel_tables_base_addr) {
+-        panic!("Enabling MMU failed: {}", e);
+-    }
+-
+-    memory::mmu::post_enable_init();
++    memory::init();
+     bsp::driver::qemu_bring_up_console();
+
+     test_main();
+
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/main.rs 15_virtual_mem_part3_precomputed_tables/kernel/src/main.rs
+--- 14_virtual_mem_part2_mmio_remap/kernel/src/main.rs
++++ 15_virtual_mem_part3_precomputed_tables/kernel/src/main.rs
+@@ -17,27 +17,16 @@
 
  /// Early init code.
  ///
@@ -1456,8 +1375,6 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/main.rs 15_virtual_mem_part3_preco
 +/// - Printing will not work until the respective driver's MMIO is remapped.
  #[no_mangle]
  unsafe fn kernel_init() -> ! {
-     use driver::interface::DriverManager;
-
      exception::handling_init();
 -
 -    let phys_kernel_tables_base_addr = match memory::mmu::kernel_map_binary() {
@@ -1468,30 +1385,25 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/main.rs 15_virtual_mem_part3_preco
 -    if let Err(e) = memory::mmu::enable_mmu_and_caching(phys_kernel_tables_base_addr) {
 -        panic!("Enabling MMU failed: {}", e);
 -    }
--    // Printing will silently fail from here on, because the driver's MMIO is not remapped yet.
 -
-     memory::mmu::post_enable_init();
+-    memory::mmu::post_enable_init();
++    memory::init();
 
-+    // Add the mapping records for the precomputed entries first, so that they appear on the top of
-+    // the list.
+     // Initialize the BSP driver subsystem.
+     if let Err(x) = bsp::driver::init() {
+@@ -47,6 +36,8 @@
+     // Initialize all device drivers.
+     driver::driver_manager().init_drivers_and_irqs();
+
 +    bsp::memory::mmu::kernel_add_mapping_records_for_precomputed();
 +
-     // Bring up the drivers needed for printing first.
-     for i in bsp::driver::driver_manager()
-         .early_print_device_drivers()
-@@ -49,7 +41,7 @@
-         i.init().unwrap_or_else(|_| cpu::wait_forever());
-     }
-     bsp::driver::driver_manager().post_early_print_device_driver_init();
--    // Printing available again from here on.
-+    // Printing available from here on.
+     // Unmask interrupts on the boot CPU core.
+     exception::asynchronous::local_irq_unmask();
 
-     // Now bring up the remaining drivers.
-     for i in bsp::driver::driver_manager()
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/src/memory/mmu/translation_table.rs 15_virtual_mem_part3_precomputed_tables/src/memory/mmu/translation_table.rs
---- 14_virtual_mem_part2_mmio_remap/src/memory/mmu/translation_table.rs
-+++ 15_virtual_mem_part3_precomputed_tables/src/memory/mmu/translation_table.rs
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu/translation_table.rs 15_virtual_mem_part3_precomputed_tables/kernel/src/memory/mmu/translation_table.rs
+--- 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu/translation_table.rs
++++ 15_virtual_mem_part3_precomputed_tables/kernel/src/memory/mmu/translation_table.rs
 @@ -23,6 +23,8 @@
 
  /// Translation table interfaces.
@@ -1552,7 +1464,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/memory/mmu/translation_table.rs 15
 +        let mut tables = MinSizeTranslationTable::new_for_runtime();
 
 -        tables.init();
-+        assert!(tables.init().is_ok());
++        assert_eq!(tables.init(), Ok(()));
 
          let virt_start_page_addr: PageAddress<Virtual> = PageAddress::from(0);
          let virt_end_exclusive_page_addr: PageAddress<Virtual> =
@@ -1579,9 +1491,9 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/memory/mmu/translation_table.rs 15
      }
  }
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/src/memory/mmu.rs 15_virtual_mem_part3_precomputed_tables/src/memory/mmu.rs
---- 14_virtual_mem_part2_mmio_remap/src/memory/mmu.rs
-+++ 15_virtual_mem_part3_precomputed_tables/src/memory/mmu.rs
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu.rs 15_virtual_mem_part3_precomputed_tables/kernel/src/memory/mmu.rs
+--- 14_virtual_mem_part2_mmio_remap/kernel/src/memory/mmu.rs
++++ 15_virtual_mem_part3_precomputed_tables/kernel/src/memory/mmu.rs
 @@ -16,7 +16,8 @@
  use crate::{
      bsp,
@@ -1592,7 +1504,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/memory/mmu.rs 15_virtual_mem_part3
  };
  use core::{fmt, num::NonZeroUsize};
 
-@@ -73,7 +74,7 @@
+@@ -73,17 +74,9 @@
  // Private Code
  //--------------------------------------------------------------------------------------------------
  use interface::MMU;
@@ -1600,8 +1512,18 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/memory/mmu.rs 15_virtual_mem_part3
 +use synchronization::interface::ReadWriteEx;
  use translation_table::interface::TranslationTable;
 
- /// Query the BSP for the reserved virtual addresses for MMIO remapping and initialize the kernel's
-@@ -101,13 +102,21 @@
+-/// Query the BSP for the reserved virtual addresses for MMIO remapping and initialize the kernel's
+-/// MMIO VA allocator with it.
+-fn kernel_init_mmio_va_allocator() {
+-    let region = bsp::memory::mmu::virt_mmio_remap_region();
+-
+-    page_alloc::kernel_mmio_va_allocator().lock(|allocator| allocator.init(region));
+-}
+-
+ /// Map a region in the kernel's translation tables.
+ ///
+ /// No input checks done, input is passed through to the architectural implementation.
+@@ -101,13 +94,21 @@
      bsp::memory::mmu::kernel_translation_tables()
          .write(|tables| tables.map_at(virt_region, phys_region, attr))?;
 
@@ -1626,7 +1548,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/memory/mmu.rs 15_virtual_mem_part3
  //--------------------------------------------------------------------------------------------------
  // Public Code
  //--------------------------------------------------------------------------------------------------
-@@ -155,27 +164,16 @@
+@@ -155,27 +156,24 @@
      }
  }
 
@@ -1639,6 +1561,14 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/memory/mmu.rs 15_virtual_mem_part3
 -/// - See `kernel_map_at_unchecked()`.
 -/// - Does not prevent aliasing. Currently, the callers must be trusted.
 -pub unsafe fn kernel_map_at(
++/// Query the BSP for the reserved virtual addresses for MMIO remapping and initialize the kernel's
++/// MMIO VA allocator with it.
++pub fn kernel_init_mmio_va_allocator() {
++    let region = bsp::memory::mmu::virt_mmio_remap_region();
++
++    page_alloc::kernel_mmio_va_allocator().lock(|allocator| allocator.init(region));
++}
++
 +/// Add an entry to the mapping info record.
 +pub fn kernel_add_mapping_record(
      name: &'static str,
@@ -1659,15 +1589,15 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/memory/mmu.rs 15_virtual_mem_part3
  }
 
  /// MMIO remapping in the kernel translation tables.
-@@ -224,21 +222,24 @@
+@@ -224,21 +222,29 @@
      Ok(virt_addr + offset_into_start_page)
  }
 
 -/// Map the kernel's binary. Returns the translation table's base address.
+-///
+-/// # Safety
 +/// Try to translate a kernel virtual page address to a physical page address.
  ///
--/// # Safety
--///
 -/// - See [`bsp::memory::mmu::kernel_map_binary()`].
 -pub unsafe fn kernel_map_binary() -> Result<Address<Physical>, &'static str> {
 -    let phys_kernel_tables_base_addr =
@@ -1675,8 +1605,6 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/memory/mmu.rs 15_virtual_mem_part3
 -            tables.init();
 -            tables.phys_base_address()
 -        });
--
--    bsp::memory::mmu::kernel_map_binary()?;
 +/// Will only succeed if there exists a valid mapping for the input page.
 +pub fn try_kernel_virt_page_addr_to_phys_page_addr(
 +    virt_page_addr: PageAddress<Virtual>,
@@ -1685,7 +1613,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/memory/mmu.rs 15_virtual_mem_part3
 +        .read(|tables| tables.try_virt_page_addr_to_phys_page_addr(virt_page_addr))
 +}
 
--    Ok(phys_kernel_tables_base_addr)
+-    bsp::memory::mmu::kernel_map_binary()?;
 +/// Try to get the attributes of a kernel page.
 +///
 +/// Will only succeed if there exists a valid mapping for the input page.
@@ -1694,10 +1622,16 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/memory/mmu.rs 15_virtual_mem_part3
 +) -> Result<AttributeFields, &'static str> {
 +    bsp::memory::mmu::kernel_translation_tables()
 +        .read(|tables| tables.try_page_attributes(virt_page_addr))
++}
+
+-    Ok(phys_kernel_tables_base_addr)
++/// Human-readable print of all recorded kernel mappings.
++pub fn kernel_print_mappings() {
++    mapping_record::kernel_print()
  }
 
  /// Enable the MMU and data + instruction caching.
-@@ -246,6 +247,7 @@
+@@ -246,56 +252,9 @@
  /// # Safety
  ///
  /// - Crucial function during kernel init. Changes the the complete memory view of the processor.
@@ -1705,10 +1639,18 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/memory/mmu.rs 15_virtual_mem_part3
  pub unsafe fn enable_mmu_and_caching(
      phys_tables_base_addr: Address<Physical>,
  ) -> Result<(), MMUEnableError> {
-@@ -261,41 +263,3 @@
- pub fn kernel_print_mappings() {
-     mapping_record::kernel_print()
+     arch_mmu::mmu().enable_mmu_and_caching(phys_tables_base_addr)
  }
+-
+-/// Finish initialization of the MMU subsystem.
+-pub fn post_enable_init() {
+-    kernel_init_mmio_va_allocator();
+-}
+-
+-/// Human-readable print of all recorded kernel mappings.
+-pub fn kernel_print_mappings() {
+-    mapping_record::kernel_print()
+-}
 -
 -//--------------------------------------------------------------------------------------------------
 -// Testing
@@ -1729,7 +1671,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/memory/mmu.rs 15_virtual_mem_part3
 -        let phys_region = MemoryRegion::new(phys_start_page_addr, phys_end_exclusive_page_addr);
 -
 -        let num_pages = NonZeroUsize::new(phys_region.num_pages()).unwrap();
--        let virt_region = alloc::kernel_mmio_va_allocator()
+-        let virt_region = page_alloc::kernel_mmio_va_allocator()
 -            .lock(|allocator| allocator.alloc(num_pages))
 -            .unwrap();
 -
@@ -1748,60 +1690,81 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/src/memory/mmu.rs 15_virtual_mem_part3
 -    }
 -}
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/tests/00_console_sanity.rs 15_virtual_mem_part3_precomputed_tables/tests/00_console_sanity.rs
---- 14_virtual_mem_part2_mmio_remap/tests/00_console_sanity.rs
-+++ 15_virtual_mem_part3_precomputed_tables/tests/00_console_sanity.rs
-@@ -11,7 +11,7 @@
- /// Console tests should time out on the I/O harness in case of panic.
- mod panic_wait_forever;
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/src/memory.rs 15_virtual_mem_part3_precomputed_tables/kernel/src/memory.rs
+--- 14_virtual_mem_part2_mmio_remap/kernel/src/memory.rs
++++ 15_virtual_mem_part3_precomputed_tables/kernel/src/memory.rs
+@@ -136,6 +136,11 @@
+     }
+ }
 
--use libkernel::{bsp, console, cpu, exception, print};
-+use libkernel::{bsp, console, cpu, exception, memory, print};
++/// Initialize the memory subsystem.
++pub fn init() {
++    mmu::kernel_init_mmio_va_allocator();
++}
++
+ //--------------------------------------------------------------------------------------------------
+ // Testing
+ //--------------------------------------------------------------------------------------------------
 
- #[no_mangle]
- unsafe fn kernel_init() -> ! {
-@@ -19,6 +19,7 @@
-     use console::interface::*;
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/00_console_sanity.rs 15_virtual_mem_part3_precomputed_tables/kernel/tests/00_console_sanity.rs
+--- 14_virtual_mem_part2_mmio_remap/kernel/tests/00_console_sanity.rs
++++ 15_virtual_mem_part3_precomputed_tables/kernel/tests/00_console_sanity.rs
+@@ -18,17 +18,7 @@
+     use console::console;
 
      exception::handling_init();
-+    memory::mmu::post_enable_init();
-     bsp::console::qemu_bring_up_console();
+-
+-    let phys_kernel_tables_base_addr = match memory::mmu::kernel_map_binary() {
+-        Err(string) => panic!("Error mapping kernel binary: {}", string),
+-        Ok(addr) => addr,
+-    };
+-
+-    if let Err(e) = memory::mmu::enable_mmu_and_caching(phys_kernel_tables_base_addr) {
+-        panic!("Enabling MMU failed: {}", e);
+-    }
+-
+-    memory::mmu::post_enable_init();
++    memory::init();
+     bsp::driver::qemu_bring_up_console();
 
      // Handshake
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/tests/01_timer_sanity.rs 15_virtual_mem_part3_precomputed_tables/tests/01_timer_sanity.rs
---- 14_virtual_mem_part2_mmio_remap/tests/01_timer_sanity.rs
-+++ 15_virtual_mem_part3_precomputed_tables/tests/01_timer_sanity.rs
-@@ -11,12 +11,13 @@
- #![test_runner(libkernel::test_runner)]
-
- use core::time::Duration;
--use libkernel::{bsp, cpu, exception, time, time::interface::TimeManager};
-+use libkernel::{bsp, cpu, exception, memory, time, time::interface::TimeManager};
- use test_macros::kernel_test;
-
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/01_timer_sanity.rs 15_virtual_mem_part3_precomputed_tables/kernel/tests/01_timer_sanity.rs
+--- 14_virtual_mem_part2_mmio_remap/kernel/tests/01_timer_sanity.rs
++++ 15_virtual_mem_part3_precomputed_tables/kernel/tests/01_timer_sanity.rs
+@@ -17,17 +17,7 @@
  #[no_mangle]
  unsafe fn kernel_init() -> ! {
      exception::handling_init();
-+    memory::mmu::post_enable_init();
-     bsp::console::qemu_bring_up_console();
+-
+-    let phys_kernel_tables_base_addr = match memory::mmu::kernel_map_binary() {
+-        Err(string) => panic!("Error mapping kernel binary: {}", string),
+-        Ok(addr) => addr,
+-    };
+-
+-    if let Err(e) = memory::mmu::enable_mmu_and_caching(phys_kernel_tables_base_addr) {
+-        panic!("Enabling MMU failed: {}", e);
+-    }
+-
+-    memory::mmu::post_enable_init();
++    memory::init();
+     bsp::driver::qemu_bring_up_console();
 
      // Depending on CPU arch, some timer bring-up code could go here. Not needed for the RPi.
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/tests/02_exception_sync_page_fault.rs 15_virtual_mem_part3_precomputed_tables/tests/02_exception_sync_page_fault.rs
---- 14_virtual_mem_part2_mmio_remap/tests/02_exception_sync_page_fault.rs
-+++ 15_virtual_mem_part3_precomputed_tables/tests/02_exception_sync_page_fault.rs
-@@ -21,40 +21,12 @@
-
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/02_exception_sync_page_fault.rs 15_virtual_mem_part3_precomputed_tables/kernel/tests/02_exception_sync_page_fault.rs
+--- 14_virtual_mem_part2_mmio_remap/kernel/tests/02_exception_sync_page_fault.rs
++++ 15_virtual_mem_part3_precomputed_tables/kernel/tests/02_exception_sync_page_fault.rs
+@@ -22,26 +22,12 @@
  #[no_mangle]
  unsafe fn kernel_init() -> ! {
--    use libkernel::driver::interface::DriverManager;
--
      exception::handling_init();
--
--    // This line will be printed as the test header.
--    println!("Testing synchronous exception handling by causing a page fault");
--
++    memory::init();
++    bsp::driver::qemu_bring_up_console();
+
+     // This line will be printed as the test header.
+     println!("Testing synchronous exception handling by causing a page fault");
+
 -    let phys_kernel_tables_base_addr = match memory::mmu::kernel_map_binary() {
 -        Err(string) => {
 -            info!("Error mapping kernel binary: {}", string);
@@ -1814,41 +1777,27 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/tests/02_exception_sync_page_fault.rs 
 -        info!("Enabling MMU failed: {}", e);
 -        cpu::qemu_exit_failure()
 -    }
--    // Printing will silently fail from here on, because the driver's MMIO is not remapped yet.
 -
-     memory::mmu::post_enable_init();
-     bsp::console::qemu_bring_up_console();
-
--    // Bring up the drivers needed for printing first.
--    for i in bsp::driver::driver_manager()
--        .early_print_device_drivers()
--        .iter()
--    {
--        // Any encountered errors cannot be printed yet, obviously, so just safely park the CPU.
--        i.init().unwrap_or_else(|_| cpu::qemu_exit_failure());
--    }
--    bsp::driver::driver_manager().post_early_print_device_driver_init();
--    // Printing available again from here on.
-+    // This line will be printed as the test header.
-+    println!("Testing synchronous exception handling by causing a page fault");
-
+-    memory::mmu::post_enable_init();
+-    bsp::driver::qemu_bring_up_console();
+-
      info!("Writing beyond mapped area to address 9 GiB...");
      let big_addr: u64 = 9 * 1024 * 1024 * 1024;
+     core::ptr::read_volatile(big_addr as *mut u64);
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/tests/03_exception_restore_sanity.rs 15_virtual_mem_part3_precomputed_tables/tests/03_exception_restore_sanity.rs
---- 14_virtual_mem_part2_mmio_remap/tests/03_exception_restore_sanity.rs
-+++ 15_virtual_mem_part3_precomputed_tables/tests/03_exception_restore_sanity.rs
-@@ -30,40 +30,12 @@
-
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/03_exception_restore_sanity.rs 15_virtual_mem_part3_precomputed_tables/kernel/tests/03_exception_restore_sanity.rs
+--- 14_virtual_mem_part2_mmio_remap/kernel/tests/03_exception_restore_sanity.rs
++++ 15_virtual_mem_part3_precomputed_tables/kernel/tests/03_exception_restore_sanity.rs
+@@ -31,26 +31,12 @@
  #[no_mangle]
  unsafe fn kernel_init() -> ! {
--    use libkernel::driver::interface::DriverManager;
--
      exception::handling_init();
--
--    // This line will be printed as the test header.
--    println!("Testing exception restore");
--
++    memory::init();
++    bsp::driver::qemu_bring_up_console();
+
+     // This line will be printed as the test header.
+     println!("Testing exception restore");
+
 -    let phys_kernel_tables_base_addr = match memory::mmu::kernel_map_binary() {
 -        Err(string) => {
 -            info!("Error mapping kernel binary: {}", string);
@@ -1861,54 +1810,121 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/tests/03_exception_restore_sanity.rs 1
 -        info!("Enabling MMU failed: {}", e);
 -        cpu::qemu_exit_failure()
 -    }
--    // Printing will silently fail from here on, because the driver's MMIO is not remapped yet.
 -
-     memory::mmu::post_enable_init();
-     bsp::console::qemu_bring_up_console();
-
--    // Bring up the drivers needed for printing first.
--    for i in bsp::driver::driver_manager()
--        .early_print_device_drivers()
--        .iter()
--    {
--        // Any encountered errors cannot be printed yet, obviously, so just safely park the CPU.
--        i.init().unwrap_or_else(|_| cpu::qemu_exit_failure());
--    }
--    bsp::driver::driver_manager().post_early_print_device_driver_init();
--    // Printing available again from here on.
-+    // This line will be printed as the test header.
-+    println!("Testing exception restore");
-
+-    memory::mmu::post_enable_init();
+-    bsp::driver::qemu_bring_up_console();
+-
      info!("Making a dummy system call");
 
+     // Calling this inside a function indirectly tests if the link register is restored properly.
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/tests/04_exception_irq_sanity.rs 15_virtual_mem_part3_precomputed_tables/tests/04_exception_irq_sanity.rs
---- 14_virtual_mem_part2_mmio_remap/tests/04_exception_irq_sanity.rs
-+++ 15_virtual_mem_part3_precomputed_tables/tests/04_exception_irq_sanity.rs
-@@ -10,11 +10,12 @@
- #![reexport_test_harness_main = "test_main"]
- #![test_runner(libkernel::test_runner)]
-
--use libkernel::{bsp, cpu, exception};
-+use libkernel::{bsp, cpu, exception, memory};
- use test_macros::kernel_test;
+diff -uNr 14_virtual_mem_part2_mmio_remap/kernel/tests/04_exception_irq_sanity.rs 15_virtual_mem_part3_precomputed_tables/kernel/tests/04_exception_irq_sanity.rs
+--- 14_virtual_mem_part2_mmio_remap/kernel/tests/04_exception_irq_sanity.rs
++++ 15_virtual_mem_part3_precomputed_tables/kernel/tests/04_exception_irq_sanity.rs
+@@ -15,20 +15,10 @@
 
  #[no_mangle]
  unsafe fn kernel_init() -> ! {
-+    memory::mmu::post_enable_init();
-     bsp::console::qemu_bring_up_console();
+-    exception::handling_init();
+-
+-    let phys_kernel_tables_base_addr = match memory::mmu::kernel_map_binary() {
+-        Err(string) => panic!("Error mapping kernel binary: {}", string),
+-        Ok(addr) => addr,
+-    };
+-
+-    if let Err(e) = memory::mmu::enable_mmu_and_caching(phys_kernel_tables_base_addr) {
+-        panic!("Enabling MMU failed: {}", e);
+-    }
+-
+-    memory::mmu::post_enable_init();
++    memory::init();
+     bsp::driver::qemu_bring_up_console();
 
-     exception::handling_init();
++    exception::handling_init();
+     exception::asynchronous::local_irq_unmask();
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/arch.rb 15_virtual_mem_part3_precomputed_tables/translation_table_tool/arch.rb
---- 14_virtual_mem_part2_mmio_remap/translation_table_tool/arch.rb
-+++ 15_virtual_mem_part3_precomputed_tables/translation_table_tool/arch.rb
+     test_main();
+
+diff -uNr 14_virtual_mem_part2_mmio_remap/Makefile 15_virtual_mem_part3_precomputed_tables/Makefile
+--- 14_virtual_mem_part2_mmio_remap/Makefile
++++ 15_virtual_mem_part3_precomputed_tables/Makefile
+@@ -72,10 +72,20 @@
+ KERNEL_LINKER_SCRIPT = kernel.ld
+ LAST_BUILD_CONFIG    = target/$(BSP).build_config
+
+-KERNEL_ELF      = target/$(TARGET)/release/kernel
++KERNEL_ELF_RAW      = target/$(TARGET)/release/kernel
+ # This parses cargo's dep-info file.
+ # https://doc.rust-lang.org/cargo/guide/build-cache.html#dep-info-files
+-KERNEL_ELF_DEPS = $(filter-out modulo: ,$(file < $(KERNEL_ELF).d)) $(KERNEL_MANIFEST) $(LAST_BUILD_CONFIG)
++KERNEL_ELF_RAW_DEPS = $(filter-out modulo: ,$(file < $(KERNEL_ELF_RAW).d)) $(KERNEL_MANIFEST) $(LAST_BUILD_CONFIG)
++
++##------------------------------------------------------------------------------
++## Translation tables
++##------------------------------------------------------------------------------
++TT_TOOL_PATH = tools/translation_table_tool
++
++KERNEL_ELF_TTABLES      = target/$(TARGET)/release/kernel+ttables
++KERNEL_ELF_TTABLES_DEPS = $(KERNEL_ELF_RAW) $(wildcard $(TT_TOOL_PATH)/*)
++
++KERNEL_ELF = $(KERNEL_ELF_TTABLES)
+
+
+
+@@ -104,6 +114,7 @@
+     -O binary
+
+ EXEC_QEMU          = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
++EXEC_TT_TOOL       = ruby $(TT_TOOL_PATH)/main.rb
+ EXEC_TEST_DISPATCH = ruby ../common/tests/dispatch.rb
+ EXEC_MINIPUSH      = ruby ../common/serial/minipush.rb
+
+@@ -154,16 +165,24 @@
+ ##------------------------------------------------------------------------------
+ ## Compile the kernel ELF
+ ##------------------------------------------------------------------------------
+-$(KERNEL_ELF): $(KERNEL_ELF_DEPS)
++$(KERNEL_ELF_RAW): $(KERNEL_ELF_RAW_DEPS)
+ 	$(call color_header, "Compiling kernel ELF - $(BSP)")
+ 	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(RUSTC_CMD)
+
+ ##------------------------------------------------------------------------------
++## Precompute the kernel translation tables and patch them into the kernel ELF
++##------------------------------------------------------------------------------
++$(KERNEL_ELF_TTABLES): $(KERNEL_ELF_TTABLES_DEPS)
++	$(call color_header, "Precomputing kernel translation tables and patching kernel ELF")
++	@cp $(KERNEL_ELF_RAW) $(KERNEL_ELF_TTABLES)
++	@$(DOCKER_TOOLS) $(EXEC_TT_TOOL) $(BSP) $(KERNEL_ELF_TTABLES)
++
++##------------------------------------------------------------------------------
+ ## Generate the stripped kernel binary
+ ##------------------------------------------------------------------------------
+-$(KERNEL_BIN): $(KERNEL_ELF)
++$(KERNEL_BIN): $(KERNEL_ELF_TTABLES)
+ 	$(call color_header, "Generating stripped binary")
+-	@$(OBJCOPY_CMD) $(KERNEL_ELF) $(KERNEL_BIN)
++	@$(OBJCOPY_CMD) $(KERNEL_ELF_TTABLES) $(KERNEL_BIN)
+ 	$(call color_progress_prefix, "Name")
+ 	@echo $(KERNEL_BIN)
+ 	$(call color_progress_prefix, "Size")
+@@ -301,6 +320,7 @@
+     TEST_ELF=$$(echo $$1 | sed -e 's/.*target/target/g')
+     TEST_BINARY=$$(echo $$1.img | sed -e 's/.*target/target/g')
+
++    $(DOCKER_TOOLS) $(EXEC_TT_TOOL) $(BSP) $$TEST_ELF > /dev/null
+     $(OBJCOPY_CMD) $$TEST_ELF $$TEST_BINARY
+     $(DOCKER_TEST) $(EXEC_TEST_DISPATCH) $(EXEC_QEMU) $(QEMU_TEST_ARGS) -kernel $$TEST_BINARY
+ endef
+
+diff -uNr 14_virtual_mem_part2_mmio_remap/tools/translation_table_tool/arch.rb 15_virtual_mem_part3_precomputed_tables/tools/translation_table_tool/arch.rb
+--- 14_virtual_mem_part2_mmio_remap/tools/translation_table_tool/arch.rb
++++ 15_virtual_mem_part3_precomputed_tables/tools/translation_table_tool/arch.rb
 @@ -0,0 +1,312 @@
 +# frozen_string_literal: true
 +
 +# SPDX-License-Identifier: MIT OR Apache-2.0
 +#
-+# Copyright (c) 2021-2022 Andre Richter <andre.o.richter@gmail.com>
++# Copyright (c) 2021-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +# Bitfield manipulation.
 +class BitField
@@ -2217,21 +2233,21 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/arch.rb 15_virt
 +end
 +end
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/bsp.rb 15_virtual_mem_part3_precomputed_tables/translation_table_tool/bsp.rb
---- 14_virtual_mem_part2_mmio_remap/translation_table_tool/bsp.rb
-+++ 15_virtual_mem_part3_precomputed_tables/translation_table_tool/bsp.rb
+diff -uNr 14_virtual_mem_part2_mmio_remap/tools/translation_table_tool/bsp.rb 15_virtual_mem_part3_precomputed_tables/tools/translation_table_tool/bsp.rb
+--- 14_virtual_mem_part2_mmio_remap/tools/translation_table_tool/bsp.rb
++++ 15_virtual_mem_part3_precomputed_tables/tools/translation_table_tool/bsp.rb
 @@ -0,0 +1,49 @@
 +# frozen_string_literal: true
 +
 +# SPDX-License-Identifier: MIT OR Apache-2.0
 +#
-+# Copyright (c) 2021-2022 Andre Richter <andre.o.richter@gmail.com>
++# Copyright (c) 2021-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +# Raspberry Pi 3 + 4
 +class RaspberryPi
 +    attr_reader :kernel_granule, :kernel_virt_addr_space_size
 +
-+    MEMORY_SRC = File.read('src/bsp/raspberrypi/memory.rs').split("\n")
++    MEMORY_SRC = File.read('kernel/src/bsp/raspberrypi/memory.rs').split("\n")
 +
 +    def initialize
 +        @kernel_granule = Granule64KiB
@@ -2271,15 +2287,15 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/bsp.rb 15_virtu
 +    end
 +end
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/generic.rb 15_virtual_mem_part3_precomputed_tables/translation_table_tool/generic.rb
---- 14_virtual_mem_part2_mmio_remap/translation_table_tool/generic.rb
-+++ 15_virtual_mem_part3_precomputed_tables/translation_table_tool/generic.rb
+diff -uNr 14_virtual_mem_part2_mmio_remap/tools/translation_table_tool/generic.rb 15_virtual_mem_part3_precomputed_tables/tools/translation_table_tool/generic.rb
+--- 14_virtual_mem_part2_mmio_remap/tools/translation_table_tool/generic.rb
++++ 15_virtual_mem_part3_precomputed_tables/tools/translation_table_tool/generic.rb
 @@ -0,0 +1,179 @@
 +# frozen_string_literal: true
 +
 +# SPDX-License-Identifier: MIT OR Apache-2.0
 +#
-+# Copyright (c) 2021-2022 Andre Richter <andre.o.richter@gmail.com>
++# Copyright (c) 2021-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +module Granule64KiB
 +    SIZE = 64 * 1024
@@ -2428,7 +2444,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/generic.rb 15_v
 +    mapping_descriptors.each do |i|
 +        print 'Generating'.rjust(12).green.bold
 +        print ' '
-+        puts i.to_s
++        puts i
 +
 +        TRANSLATION_TABLES.map_at(i.virt_region, i.phys_region, i.attributes)
 +    end
@@ -2455,15 +2471,15 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/generic.rb 15_v
 +                  BSP.phys_kernel_tables_base_addr_offset_in_file)
 +end
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/kernel_elf.rb 15_virtual_mem_part3_precomputed_tables/translation_table_tool/kernel_elf.rb
---- 14_virtual_mem_part2_mmio_remap/translation_table_tool/kernel_elf.rb
-+++ 15_virtual_mem_part3_precomputed_tables/translation_table_tool/kernel_elf.rb
+diff -uNr 14_virtual_mem_part2_mmio_remap/tools/translation_table_tool/kernel_elf.rb 15_virtual_mem_part3_precomputed_tables/tools/translation_table_tool/kernel_elf.rb
+--- 14_virtual_mem_part2_mmio_remap/tools/translation_table_tool/kernel_elf.rb
++++ 15_virtual_mem_part3_precomputed_tables/tools/translation_table_tool/kernel_elf.rb
 @@ -0,0 +1,96 @@
 +# frozen_string_literal: true
 +
 +# SPDX-License-Identifier: MIT OR Apache-2.0
 +#
-+# Copyright (c) 2021-2022 Andre Richter <andre.o.richter@gmail.com>
++# Copyright (c) 2021-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +# KernelELF
 +class KernelELF
@@ -2556,16 +2572,16 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/kernel_elf.rb 1
 +    end
 +end
 
-diff -uNr 14_virtual_mem_part2_mmio_remap/translation_table_tool/main.rb 15_virtual_mem_part3_precomputed_tables/translation_table_tool/main.rb
---- 14_virtual_mem_part2_mmio_remap/translation_table_tool/main.rb
-+++ 15_virtual_mem_part3_precomputed_tables/translation_table_tool/main.rb
+diff -uNr 14_virtual_mem_part2_mmio_remap/tools/translation_table_tool/main.rb 15_virtual_mem_part3_precomputed_tables/tools/translation_table_tool/main.rb
+--- 14_virtual_mem_part2_mmio_remap/tools/translation_table_tool/main.rb
++++ 15_virtual_mem_part3_precomputed_tables/tools/translation_table_tool/main.rb
 @@ -0,0 +1,46 @@
 +#!/usr/bin/env ruby
 +# frozen_string_literal: true
 +
 +# SPDX-License-Identifier: MIT OR Apache-2.0
 +#
-+# Copyright (c) 2021-2022 Andre Richter <andre.o.richter@gmail.com>
++# Copyright (c) 2021-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +require 'rubygems'
 +require 'bundler/setup'

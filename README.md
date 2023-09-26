@@ -61,7 +61,7 @@ The tutorials are primarily targeted at **Linux**-based distributions. Most stuf
 
 ### 🚀 The tl;dr Version
 
-1. [Install Docker Desktop][install_docker].
+1. [Install Docker Engine][install_docker].
 1. (**Linux only**) Ensure your user account is in the [docker group].
 1. Prepare the `Rust` toolchain. Most of it will be handled on first use through the
    [rust-toolchain](rust-toolchain) file. What's left for us to do is:
@@ -81,10 +81,16 @@ The tutorials are primarily targeted at **Linux**-based distributions. Most stuf
 1. In case you use `Visual Studio Code`, I strongly recommend installing the [Rust Analyzer extension].
 1. (**macOS only**) Install a few `Ruby` gems.
 
+  This was last tested by the author with Ruby version `3.0.2` on `macOS Monterey`. If you are using
+  `rbenv`, the respective `.ruby-version` file is already in place. If you never heard of `rbenv`,
+  try using [this little guide](https://stackoverflow.com/a/68118750).
+
    Run this in the repository root folder:
 
    ```bash
-   bundle install --path .vendor/bundle --without development
+   bundle config set --local path '.vendor/bundle'
+   bundle config set --local without 'development'
+   bundle install
    ```
 
 [docker group]: https://docs.docker.com/engine/install/linux-postinstall/
@@ -113,7 +119,7 @@ accompanying container that has all the needed tools or dependencies pre-install
 pulled in automagically once it is needed. If you want to know more about Docker and peek at the
 provided container, please refer to the repository's [docker](docker) folder.
 
-[install_docker]: https://docs.docker.com/get-docker/
+[install_docker]: https://docs.docker.com/engine/install/#server
 
 ## 📟 USB Serial Output
 

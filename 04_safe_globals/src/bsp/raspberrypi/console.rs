@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
-// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
+// Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
 
 //! BSP console facilities.
 
@@ -90,7 +90,7 @@ impl QEMUOutput {
 }
 
 /// Return a reference to the console.
-pub fn console() -> &'static impl console::interface::All {
+pub fn console() -> &'static dyn console::interface::All {
     &QEMU_OUTPUT
 }
 
@@ -103,7 +103,7 @@ use synchronization::interface::Mutex;
 /// serialize access.
 impl console::interface::Write for QEMUOutput {
     fn write_fmt(&self, args: core::fmt::Arguments) -> fmt::Result {
-        // Fully qualified syntax for the call to `core::fmt::Write::write:fmt()` to increase
+        // Fully qualified syntax for the call to `core::fmt::Write::write_fmt()` to increase
         // readability.
         self.inner.lock(|inner| fmt::Write::write_fmt(inner, args))
     }
@@ -114,3 +114,5 @@ impl console::interface::Statistics for QEMUOutput {
         self.inner.lock(|inner| inner.chars_written)
     }
 }
+
+impl console::interface::All for QEMUOutput {}

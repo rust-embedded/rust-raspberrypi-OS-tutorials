@@ -2,13 +2,12 @@
 
 # SPDX-License-Identifier: MIT OR Apache-2.0
 #
-# Copyright (c) 2019-2022 Andre Richter <andre.o.richter@gmail.com>
+# Copyright (c) 2019-2023 Andre Richter <andre.o.richter@gmail.com>
 
 # Test base class.
 class Test
     INDENT = '         '
 
-    # rubocop:disable Style/RedundantInitialize
     def initialize
         # Template instance variables.
         # @test_name
@@ -16,7 +15,6 @@ class Test
         # @test_output
         # @test_error
     end
-    # rubocop:enable Style/RedundantInitialize
 
     private
 

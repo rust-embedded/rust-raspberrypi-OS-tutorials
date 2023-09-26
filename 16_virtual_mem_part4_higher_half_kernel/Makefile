@@ -1,9 +1,10 @@
 ## SPDX-License-Identifier: MIT OR Apache-2.0
 ##
-## Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
+## Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
 
-include ../common/format.mk
 include ../common/docker.mk
+include ../common/format.mk
+include ../common/operating_system.mk
 
 ##--------------------------------------------------------------------------------------------------
 ## Optional, user-provided configuration values
@@ -41,7 +42,7 @@ ifeq ($(BSP),rpi3)
     READELF_BINARY    = aarch64-none-elf-readelf
     OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi3.cfg
     JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi3.img
-    LD_SCRIPT_PATH    = $(shell pwd)/src/bsp/raspberrypi
+    LD_SCRIPT_PATH    = $(shell pwd)/kernel/src/bsp/raspberrypi
     RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
 else ifeq ($(BSP),rpi4)
     TARGET            = aarch64-unknown-none-softfloat
@@ -55,7 +56,7 @@ else ifeq ($(BSP),rpi4)
     READELF_BINARY    = aarch64-none-elf-readelf
     OPENOCD_ARG       = -f /openocd/tcl/interface/ftdi/olimex-arm-usb-tiny-h.cfg -f /openocd/rpi4.cfg
     JTAG_BOOT_IMAGE   = ../X1_JTAG_boot/jtag_boot_rpi4.img
-    LD_SCRIPT_PATH    = $(shell pwd)/src/bsp/raspberrypi
+    LD_SCRIPT_PATH    = $(shell pwd)/kernel/src/bsp/raspberrypi
     RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
 endif
 
@@ -67,16 +68,19 @@ export LD_SCRIPT_PATH
 ##--------------------------------------------------------------------------------------------------
 ## Targets and Prerequisites
 ##--------------------------------------------------------------------------------------------------
-KERNEL_LINKER_SCRIPT = link.ld
-
-TT_TOOL_PATH = translation_table_tool
-
-LAST_BUILD_CONFIG = target/$(BSP).build_config
+KERNEL_MANIFEST      = kernel/Cargo.toml
+KERNEL_LINKER_SCRIPT = kernel.ld
+LAST_BUILD_CONFIG    = target/$(BSP).build_config
 
 KERNEL_ELF_RAW      = target/$(TARGET)/release/kernel
 # This parses cargo's dep-info file.
 # https://doc.rust-lang.org/cargo/guide/build-cache.html#dep-info-files
-KERNEL_ELF_RAW_DEPS = $(filter-out %: ,$(file < $(KERNEL_ELF_RAW).d)) $(LAST_BUILD_CONFIG)
+KERNEL_ELF_RAW_DEPS = $(filter-out %: ,$(file < $(KERNEL_ELF_RAW).d)) $(KERNEL_MANIFEST) $(LAST_BUILD_CONFIG)
+
+##------------------------------------------------------------------------------
+## Translation tables
+##------------------------------------------------------------------------------
+TT_TOOL_PATH = tools/translation_table_tool
 
 KERNEL_ELF_TTABLES      = target/$(TARGET)/release/kernel+ttables
 KERNEL_ELF_TTABLES_DEPS = $(KERNEL_ELF_RAW) $(wildcard $(TT_TOOL_PATH)/*)
@@ -101,11 +105,10 @@ COMPILER_ARGS = --target=$(TARGET) \
     $(FEATURES)                    \
     --release
 
-RUSTC_CMD   = cargo rustc $(COMPILER_ARGS)
+RUSTC_CMD   = cargo rustc $(COMPILER_ARGS) --manifest-path $(KERNEL_MANIFEST)
 DOC_CMD     = cargo doc $(COMPILER_ARGS)
 CLIPPY_CMD  = cargo clippy $(COMPILER_ARGS)
-CHECK_CMD   = cargo check $(COMPILER_ARGS)
-TEST_CMD    = cargo test $(COMPILER_ARGS)
+TEST_CMD    = cargo test $(COMPILER_ARGS) --manifest-path $(KERNEL_MANIFEST)
 OBJCOPY_CMD = rust-objcopy \
     --strip-all            \
     -O binary
@@ -183,7 +186,7 @@ $(KERNEL_BIN): $(KERNEL_ELF_TTABLES)
 	$(call color_progress_prefix, "Name")
 	@echo $(KERNEL_BIN)
 	$(call color_progress_prefix, "Size")
-	@printf '%s KiB\n' `du -k $(KERNEL_BIN) | cut -f1`
+	$(call disk_usage_KiB, $(KERNEL_BIN))
 
 ##------------------------------------------------------------------------------
 ## Generate the documentation
@@ -219,6 +222,8 @@ chainboot: $(KERNEL_BIN)
 ##------------------------------------------------------------------------------
 clippy:
 	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD)
+	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(CLIPPY_CMD) --features test_build --tests \
+                --manifest-path $(KERNEL_MANIFEST)
 
 ##------------------------------------------------------------------------------
 ## Clean
@@ -241,7 +246,6 @@ objdump: $(KERNEL_ELF)
 	@$(DOCKER_TOOLS) $(OBJDUMP_BINARY) --disassemble --demangle \
                 --section .text   \
                 --section .rodata \
-                --section .got    \
                 $(KERNEL_ELF) | rustfilt
 
 ##------------------------------------------------------------------------------
@@ -250,12 +254,6 @@ objdump: $(KERNEL_ELF)
 nm: $(KERNEL_ELF)
 	$(call color_header, "Launching nm")
 	@$(DOCKER_TOOLS) $(NM_BINARY) --demangle --print-size $(KERNEL_ELF) | sort | rustfilt
-
-##------------------------------------------------------------------------------
-## Helper target for rust-analyzer
-##------------------------------------------------------------------------------
-check:
-	@RUSTFLAGS="$(RUSTFLAGS)" $(CHECK_CMD) --message-format=json
 
 
 
@@ -293,6 +291,8 @@ gdb gdb-opt0: $(KERNEL_ELF)
 ##--------------------------------------------------------------------------------------------------
 .PHONY: test test_boot test_unit test_integration
 
+test_unit test_integration: FEATURES += --features test_build
+
 ifeq ($(QEMU_MACHINE_TYPE),) # QEMU is not supported for the board.
 
 test_boot test_unit test_integration test:
@@ -311,7 +311,11 @@ test_boot: $(KERNEL_BIN)
 ## Helpers for unit and integration test targets
 ##------------------------------------------------------------------------------
 define KERNEL_TEST_RUNNER
-    #!/usr/bin/env bash
+#!/usr/bin/env bash
+
+    # The cargo test runner seems to change into the crate under test's directory. Therefore, ensure
+    # this script executes from the root.
+    cd $(shell pwd)
 
     TEST_ELF=$$(echo $$1 | sed -e 's/.*target/target/g')
     TEST_BINARY=$$(echo $$1.img | sed -e 's/.*target/target/g')

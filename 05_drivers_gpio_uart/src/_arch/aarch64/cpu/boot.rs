@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
-// Copyright (c) 2021-2022 Andre Richter <andre.o.richter@gmail.com>
+// Copyright (c) 2021-2023 Andre Richter <andre.o.richter@gmail.com>
 
 //! Architectural boot code.
 //!
@@ -11,8 +11,13 @@
 //!
 //! crate::cpu::boot::arch_boot
 
+use core::arch::global_asm;
+
 // Assembly counterpart to this file.
-core::arch::global_asm!(include_str!("boot.s"));
+global_asm!(
+    include_str!("boot.s"),
+    CONST_CORE_ID_MASK = const 0b11
+);
 
 //--------------------------------------------------------------------------------------------------
 // Public Code

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
-// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
+// Copyright (c) 2020-2023 Andre Richter <andre.o.richter@gmail.com>
 
 //! Memory Management Unit.
 //!
@@ -20,6 +20,7 @@ mod arch_mmu;
 
 mod translation_table;
 
+use crate::common;
 use core::{fmt, ops::RangeInclusive};
 
 //--------------------------------------------------------------------------------------------------
@@ -179,19 +180,7 @@ impl fmt::Display for TranslationDescriptor {
         let end = *(self.virtual_range)().end();
         let size = end - start + 1;
 
-        // log2(1024).
-        const KIB_RSHIFT: u32 = 10;
-
-        // log2(1024 * 1024).
-        const MIB_RSHIFT: u32 = 20;
-
-        let (size, unit) = if (size >> MIB_RSHIFT) > 0 {
-            (size >> MIB_RSHIFT, "MiB")
-        } else if (size >> KIB_RSHIFT) > 0 {
-            (size >> KIB_RSHIFT, "KiB")
-        } else {
-            (size, "Byte")
-        };
+        let (size, unit) = common::size_human_readable_ceil(size);
 
         let attr = match self.attribute_fields.mem_attributes {
             MemAttributes::CacheableDRAM => "C",

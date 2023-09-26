@@ -148,7 +148,7 @@ diff -uNr 03_hacky_hello_world/src/bsp/raspberrypi/console.rs 04_safe_globals/sr
          }
 
          Ok(())
-@@ -41,7 +80,37 @@
+@@ -41,7 +80,39 @@
  // Public Code
  //--------------------------------------------------------------------------------------------------
 
@@ -164,9 +164,9 @@ diff -uNr 03_hacky_hello_world/src/bsp/raspberrypi/console.rs 04_safe_globals/sr
  /// Return a reference to the console.
 -pub fn console() -> impl console::interface::Write {
 -    QEMUOutput {}
-+pub fn console() -> &'static impl console::interface::All {
++pub fn console() -> &'static dyn console::interface::All {
 +    &QEMU_OUTPUT
-+}
+ }
 +
 +//------------------------------------------------------------------------------
 +// OS Interface Code
@@ -177,7 +177,7 @@ diff -uNr 03_hacky_hello_world/src/bsp/raspberrypi/console.rs 04_safe_globals/sr
 +/// serialize access.
 +impl console::interface::Write for QEMUOutput {
 +    fn write_fmt(&self, args: core::fmt::Arguments) -> fmt::Result {
-+        // Fully qualified syntax for the call to `core::fmt::Write::write:fmt()` to increase
++        // Fully qualified syntax for the call to `core::fmt::Write::write_fmt()` to increase
 +        // readability.
 +        self.inner.lock(|inner| fmt::Write::write_fmt(inner, args))
 +    }
@@ -187,12 +187,14 @@ diff -uNr 03_hacky_hello_world/src/bsp/raspberrypi/console.rs 04_safe_globals/sr
 +    fn chars_written(&self) -> usize {
 +        self.inner.lock(|inner| inner.chars_written)
 +    }
- }
++}
++
++impl console::interface::All for QEMUOutput {}
 
 diff -uNr 03_hacky_hello_world/src/console.rs 04_safe_globals/src/console.rs
 --- 03_hacky_hello_world/src/console.rs
 +++ 04_safe_globals/src/console.rs
-@@ -10,10 +10,22 @@
+@@ -12,12 +12,24 @@
 
  /// Console interfaces.
  pub mod interface {
@@ -218,21 +220,31 @@ diff -uNr 03_hacky_hello_world/src/console.rs 04_safe_globals/src/console.rs
 +    }
 +
 +    /// Trait alias for a full-fledged console.
-+    pub trait All = Write + Statistics;
++    pub trait All: Write + Statistics {}
+ }
+
+ //--------------------------------------------------------------------------------------------------
+@@ -27,6 +39,6 @@
+ /// Return a reference to the console.
+ ///
+ /// This is the global console used by all printing macros.
+-pub fn console() -> impl interface::Write {
++pub fn console() -> &'static dyn interface::All {
+     bsp::console::console()
  }
 
 diff -uNr 03_hacky_hello_world/src/main.rs 04_safe_globals/src/main.rs
 --- 03_hacky_hello_world/src/main.rs
 +++ 04_safe_globals/src/main.rs
-@@ -106,6 +106,7 @@
-
+@@ -109,6 +109,7 @@
+ #![feature(asm_const)]
  #![feature(format_args_nl)]
  #![feature(panic_info_message)]
 +#![feature(trait_alias)]
  #![no_main]
  #![no_std]
 
-@@ -114,6 +115,7 @@
+@@ -117,6 +118,7 @@
  mod cpu;
  mod panic_wait;
  mod print;
@@ -240,24 +252,34 @@ diff -uNr 03_hacky_hello_world/src/main.rs 04_safe_globals/src/main.rs
 
  /// Early init code.
  ///
-@@ -121,7 +123,15 @@
+@@ -124,7 +126,12 @@
  ///
  /// - Only a single core must be active and running this function.
  unsafe fn kernel_init() -> ! {
 -    println!("Hello from Rust!");
-+    use console::interface::Statistics;
++    use console::console;
 
 -    panic!("Stopping here.")
 +    println!("[0] Hello from Rust!");
 +
-+    println!(
-+        "[1] Chars written: {}",
-+        bsp::console::console().chars_written()
-+    );
++    println!("[1] Chars written: {}", console().chars_written());
 +
 +    println!("[2] Stopping here.");
 +    cpu::wait_forever()
  }
+
+diff -uNr 03_hacky_hello_world/src/print.rs 04_safe_globals/src/print.rs
+--- 03_hacky_hello_world/src/print.rs
++++ 04_safe_globals/src/print.rs
+@@ -13,8 +13,6 @@
+
+ #[doc(hidden)]
+ pub fn _print(args: fmt::Arguments) {
+-    use console::interface::Write;
+-
+     console::console().write_fmt(args).unwrap();
+ }
+
 
 diff -uNr 03_hacky_hello_world/src/synchronization.rs 04_safe_globals/src/synchronization.rs
 --- 03_hacky_hello_world/src/synchronization.rs
@@ -265,7 +287,7 @@ diff -uNr 03_hacky_hello_world/src/synchronization.rs 04_safe_globals/src/synchr
 @@ -0,0 +1,77 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Synchronization primitives.
 +//!
@@ -291,7 +313,7 @@ diff -uNr 03_hacky_hello_world/src/synchronization.rs 04_safe_globals/src/synchr
 +        type Data;
 +
 +        /// Locks the mutex and grants the closure temporary mutable access to the wrapped data.
-+        fn lock<R>(&self, f: impl FnOnce(&mut Self::Data) -> R) -> R;
++        fn lock<'a, R>(&'a self, f: impl FnOnce(&'a mut Self::Data) -> R) -> R;
 +    }
 +}
 +
@@ -332,7 +354,7 @@ diff -uNr 03_hacky_hello_world/src/synchronization.rs 04_safe_globals/src/synchr
 +impl<T> interface::Mutex for NullLock<T> {
 +    type Data = T;
 +
-+    fn lock<R>(&self, f: impl FnOnce(&mut Self::Data) -> R) -> R {
++    fn lock<'a, R>(&'a self, f: impl FnOnce(&'a mut Self::Data) -> R) -> R {
 +        // In a real lock, there would be code encapsulating this line that ensures that this
 +        // mutable reference will ever only be given out once at a time.
 +        let data = unsafe { &mut *self.data.get() };

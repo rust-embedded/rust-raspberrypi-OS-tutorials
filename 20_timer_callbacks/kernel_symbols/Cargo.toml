@@ -1,0 +1,15 @@
+[package]
+name = "kernel_symbols"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = []
+generated_symbols_available = []
+
+##--------------------------------------------------------------------------------------------------
+## Dependencies
+##--------------------------------------------------------------------------------------------------
+
+[dependencies]
+debug-symbol-types = { path = "../libraries/debug-symbol-types" }

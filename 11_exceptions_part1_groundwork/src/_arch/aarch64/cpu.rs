@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
-// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
+// Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
 
 //! Architectural processor code.
 //!
@@ -11,7 +11,7 @@
 //!
 //! crate::cpu::arch_cpu
 
-use cortex_a::asm;
+use aarch64_cpu::asm;
 
 //--------------------------------------------------------------------------------------------------
 // Public Code

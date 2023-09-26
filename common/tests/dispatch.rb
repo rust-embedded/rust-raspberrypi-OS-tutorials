@@ -3,26 +3,32 @@
 
 # SPDX-License-Identifier: MIT OR Apache-2.0
 #
-# Copyright (c) 2019-2022 Andre Richter <andre.o.richter@gmail.com>
+# Copyright (c) 2019-2023 Andre Richter <andre.o.richter@gmail.com>
 
-require_relative 'boot_test'
-require_relative 'console_io_test'
-require_relative 'exit_code_test'
+file_dir = File.dirname(__FILE__)
+$LOAD_PATH.unshift(file_dir) unless $LOAD_PATH.include?(file_dir)
+
+require 'boot_test'
+require 'console_io_test'
+require 'exit_code_test'
 
 qemu_cmd = ARGV.join(' ')
 binary = ARGV.last
 test_name = binary.gsub(%r{.*deps/}, '').split('-')[0]
 
+# Check if virtual manifest (tutorial 12 or later) or not
+path_prefix = File.exist?('kernel/Cargo.toml') ? 'kernel/' : ''
+
 case test_name
 when 'kernel8.img'
-    load 'tests/boot_test_string.rb' # provides 'EXPECTED_PRINT'
+    load "#{path_prefix}tests/boot_test_string.rb" # provides 'EXPECTED_PRINT'
     BootTest.new(qemu_cmd, EXPECTED_PRINT).run # Doesn't return
 
 when 'libkernel'
     ExitCodeTest.new(qemu_cmd, 'Kernel library unit tests').run # Doesn't return
 
 else
-    console_test_file = "tests/#{test_name}.rb"
+    console_test_file = "#{path_prefix}tests/#{test_name}.rb"
     test_name.concat('.rs')
     test = if File.exist?(console_test_file)
                load console_test_file # provides 'subtest_collection'

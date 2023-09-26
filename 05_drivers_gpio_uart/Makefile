@@ -1,9 +1,10 @@
 ## SPDX-License-Identifier: MIT OR Apache-2.0
 ##
-## Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
+## Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
 
-include ../common/format.mk
 include ../common/docker.mk
+include ../common/format.mk
+include ../common/operating_system.mk
 
 ##--------------------------------------------------------------------------------------------------
 ## Optional, user-provided configuration values
@@ -54,14 +55,14 @@ export LD_SCRIPT_PATH
 ##--------------------------------------------------------------------------------------------------
 ## Targets and Prerequisites
 ##--------------------------------------------------------------------------------------------------
-KERNEL_LINKER_SCRIPT = link.ld
-
-LAST_BUILD_CONFIG = target/$(BSP).build_config
+KERNEL_MANIFEST      = Cargo.toml
+KERNEL_LINKER_SCRIPT = kernel.ld
+LAST_BUILD_CONFIG    = target/$(BSP).build_config
 
 KERNEL_ELF      = target/$(TARGET)/release/kernel
 # This parses cargo's dep-info file.
 # https://doc.rust-lang.org/cargo/guide/build-cache.html#dep-info-files
-KERNEL_ELF_DEPS = $(filter-out %: ,$(file < $(KERNEL_ELF_RAW).d)) $(LAST_BUILD_CONFIG)
+KERNEL_ELF_DEPS = $(filter-out %: ,$(file < $(KERNEL_ELF).d)) $(KERNEL_MANIFEST) $(LAST_BUILD_CONFIG)
 
 
 
@@ -84,7 +85,6 @@ COMPILER_ARGS = --target=$(TARGET) \
 RUSTC_CMD   = cargo rustc $(COMPILER_ARGS)
 DOC_CMD     = cargo doc $(COMPILER_ARGS)
 CLIPPY_CMD  = cargo clippy $(COMPILER_ARGS)
-CHECK_CMD   = cargo check $(COMPILER_ARGS)
 OBJCOPY_CMD = rust-objcopy \
     --strip-all            \
     -O binary
@@ -146,11 +146,11 @@ $(KERNEL_BIN): $(KERNEL_ELF)
 	$(call color_progress_prefix, "Name")
 	@echo $(KERNEL_BIN)
 	$(call color_progress_prefix, "Size")
-	@printf '%s KiB\n' `du -k $(KERNEL_BIN) | cut -f1`
+	$(call disk_usage_KiB, $(KERNEL_BIN))
 
 ##------------------------------------------------------------------------------
 ## Generate the documentation
-##------------------------------------------------------------------------------
+##-----------------------------------------------------------------------------
 doc:
 	$(call color_header, "Generating docs")
 	@$(DOC_CMD) --document-private-items --open
@@ -204,7 +204,6 @@ objdump: $(KERNEL_ELF)
 	@$(DOCKER_TOOLS) $(OBJDUMP_BINARY) --disassemble --demangle \
                 --section .text   \
                 --section .rodata \
-                --section .got    \
                 $(KERNEL_ELF) | rustfilt
 
 ##------------------------------------------------------------------------------
@@ -213,12 +212,6 @@ objdump: $(KERNEL_ELF)
 nm: $(KERNEL_ELF)
 	$(call color_header, "Launching nm")
 	@$(DOCKER_TOOLS) $(NM_BINARY) --demangle --print-size $(KERNEL_ELF) | sort | rustfilt
-
-##------------------------------------------------------------------------------
-## Helper target for rust-analyzer
-##------------------------------------------------------------------------------
-check:
-	@RUSTFLAGS="$(RUSTFLAGS)" $(CHECK_CMD) --message-format=json
 
 
 

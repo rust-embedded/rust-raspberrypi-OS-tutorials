@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
-// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
+// Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
 
 // Rust embedded logo for `make doc`.
-#![doc(html_logo_url = "https://git.io/JeGIp")]
+#![doc(
+    html_logo_url = "https://raw.githubusercontent.com/rust-embedded/wg/master/assets/logo/ewg-logo-blue-white-on-transparent.png"
+)]
 
 //! The `kernel` binary.
 //!
@@ -105,6 +107,7 @@
 //! 2. Once finished with architectural setup, the arch code calls `kernel_init()`.
 
 #![allow(clippy::upper_case_acronyms)]
+#![feature(asm_const)]
 #![feature(format_args_nl)]
 #![feature(panic_info_message)]
 #![feature(trait_alias)]
@@ -126,14 +129,13 @@ mod synchronization;
 /// - Only a single core must be active and running this function.
 /// - The init calls in this function must appear in the correct order.
 unsafe fn kernel_init() -> ! {
-    use driver::interface::DriverManager;
-
-    for i in bsp::driver::driver_manager().all_device_drivers().iter() {
-        if let Err(x) = i.init() {
-            panic!("Error loading driver: {}: {}", i.compatible(), x);
-        }
+    // Initialize the BSP driver subsystem.
+    if let Err(x) = bsp::driver::init() {
+        panic!("Error initializing BSP driver subsystem: {}", x);
     }
-    bsp::driver::driver_manager().post_device_driver_init();
+
+    // Initialize all device drivers.
+    driver::driver_manager().init_drivers();
     // println! is usable from here on.
 
     // Transition from unsafe to safe.
@@ -142,9 +144,7 @@ unsafe fn kernel_init() -> ! {
 
 /// The main function running after the early init.
 fn kernel_main() -> ! {
-    use bsp::console::console;
-    use console::interface::All;
-    use driver::interface::DriverManager;
+    use console::console;
 
     println!(
         "[0] {} version {}",
@@ -154,24 +154,15 @@ fn kernel_main() -> ! {
     println!("[1] Booting on: {}", bsp::board_name());
 
     println!("[2] Drivers loaded:");
-    for (i, driver) in bsp::driver::driver_manager()
-        .all_device_drivers()
-        .iter()
-        .enumerate()
-    {
-        println!("      {}. {}", i + 1, driver.compatible());
-    }
+    driver::driver_manager().enumerate();
 
-    println!(
-        "[3] Chars written: {}",
-        bsp::console::console().chars_written()
-    );
+    println!("[3] Chars written: {}", console().chars_written());
     println!("[4] Echoing input now");
 
     // Discard any spurious received characters before going into echo mode.
     console().clear_rx();
     loop {
-        let c = bsp::console::console().read_char();
-        bsp::console::console().write_char(c);
+        let c = console().read_char();
+        console().write_char(c);
     }
 }

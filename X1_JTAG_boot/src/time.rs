@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
-// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
+// Copyright (c) 2020-2023 Andre Richter <andre.o.richter@gmail.com>
 
 //! Timer primitives.
 
@@ -8,30 +8,46 @@
 #[path = "_arch/aarch64/time.rs"]
 mod arch_time;
 
-//--------------------------------------------------------------------------------------------------
-// Architectural Public Reexports
-//--------------------------------------------------------------------------------------------------
-pub use arch_time::time_manager;
+use core::time::Duration;
 
 //--------------------------------------------------------------------------------------------------
 // Public Definitions
 //--------------------------------------------------------------------------------------------------
 
-/// Timekeeping interfaces.
-pub mod interface {
-    use core::time::Duration;
+/// Provides time management functions.
+pub struct TimeManager;
 
-    /// Time management functions.
-    pub trait TimeManager {
-        /// The timer's resolution.
-        fn resolution(&self) -> Duration;
+//--------------------------------------------------------------------------------------------------
+// Global instances
+//--------------------------------------------------------------------------------------------------
 
-        /// The uptime since power-on of the device.
-        ///
-        /// This includes time consumed by firmware and bootloaders.
-        fn uptime(&self) -> Duration;
+static TIME_MANAGER: TimeManager = TimeManager::new();
 
-        /// Spin for a given duration.
-        fn spin_for(&self, duration: Duration);
+//--------------------------------------------------------------------------------------------------
+// Public Code
+//--------------------------------------------------------------------------------------------------
+
+/// Return a reference to the global TimeManager.
+pub fn time_manager() -> &'static TimeManager {
+    &TIME_MANAGER
+}
+
+impl TimeManager {
+    /// Create an instance.
+    pub const fn new() -> Self {
+        Self
+    }
+
+    /// The uptime since power-on of the device.
+    ///
+    /// This includes time consumed by firmware and bootloaders.
+    pub fn uptime(&self) -> Duration {
+        arch_time::uptime()
+    }
+
+    /// Spin for a given duration.
+    #[cfg(feature = "bsp_rpi3")]
+    pub fn spin_for(&self, duration: Duration) {
+        arch_time::spin_for(duration)
     }
 }

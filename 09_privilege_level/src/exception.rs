@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
-// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
+// Copyright (c) 2020-2023 Andre Richter <andre.o.richter@gmail.com>
 
 //! Synchronous and asynchronous exception handling.
 
@@ -21,7 +21,7 @@ pub use arch_exception::current_privilege_level;
 
 /// Kernel privilege levels.
 #[allow(missing_docs)]
-#[derive(PartialEq)]
+#[derive(Eq, PartialEq)]
 pub enum PrivilegeLevel {
     User,
     Kernel,

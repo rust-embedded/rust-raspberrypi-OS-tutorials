@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
-// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
+// Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
 
 //! BSP Memory Management.
 
@@ -13,8 +13,8 @@
 pub(super) mod map {
     pub const BOARD_DEFAULT_LOAD_ADDRESS: usize =        0x8_0000;
 
-    pub const GPIO_OFFSET:                usize =        0x0020_0000;
-    pub const UART_OFFSET:                usize =        0x0020_1000;
+    pub const GPIO_OFFSET:         usize = 0x0020_0000;
+    pub const UART_OFFSET:         usize = 0x0020_1000;
 
     /// Physical devices.
     #[cfg(feature = "bsp_rpi3")]

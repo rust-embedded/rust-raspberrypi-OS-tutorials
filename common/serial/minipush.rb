@@ -3,7 +3,7 @@
 
 # SPDX-License-Identifier: MIT OR Apache-2.0
 #
-# Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
+# Copyright (c) 2020-2023 Andre Richter <andre.o.richter@gmail.com>
 
 require_relative 'miniterm'
 require 'ruby-progressbar'
@@ -82,7 +82,7 @@ class MiniPush < MiniTerm
 
     # override
     def handle_reconnect(_error)
-        connetion_reset
+        connection_reset
 
         puts
         puts "[#{@name_short}] ⚡ " \
@@ -107,15 +107,15 @@ class MiniPush < MiniTerm
     rescue StandardError => e
         handle_unexpected(e)
     ensure
-        connetion_reset
+        connection_reset
         puts
         puts "[#{@name_short}] Bye 👋"
     end
 end
 
-##--------------------------------------------------------------------------------------------------
+## -------------------------------------------------------------------------------------------------
 ## Execution starts here
-##--------------------------------------------------------------------------------------------------
+## -------------------------------------------------------------------------------------------------
 if __FILE__ == $PROGRAM_NAME
     puts
     puts 'Minipush 1.0'.cyan

@@ -1,40 +1,40 @@
 name: Integration-Tests
 
 on:
-  push:
-    branches:
-      - master
-    paths-ignore:
-      - "utils/**"
-      - "doc/**"
-      - "docker/**"
-  pull_request:
-    branches:
-      - master
-    paths-ignore:
-      - "utils/**"
-      - "doc/**"
-      - "docker/**"
-  schedule:
-    - cron: "0 5 * * *"
+    push:
+        branches:
+            - master
+        paths-ignore:
+            - "utils/**"
+            - "doc/**"
+            - "docker/**"
+    pull_request:
+        branches:
+            - master
+        paths-ignore:
+            - "utils/**"
+            - "doc/**"
+            - "docker/**"
+    schedule:
+        - cron: "0 5 * * *"
 
 jobs:
-  build:
-    name: Run integration tests
-    runs-on: ubuntu-20.04
+    build:
+        name: Run integration tests
+        runs-on: ubuntu-22.04
 
-    steps:
-      - uses: actions/checkout@v2
-      - name: Set up Ruby 2.x
-        uses: ruby/setup-ruby@v1
-      - name: Set up Rust nightly
-        run: |
-          cargo install cargo-binutils
-      - name: Set up Ruby
-        run: |
-          gem install bundler
-          bundle config set without 'uart'
-          bundle install --retry 3
-      - name: Make all
-        run: |
-          bundle exec ruby utils/devtool.rb test_integration
+        steps:
+            - uses: actions/checkout@v3
+            - name: Set up Ruby
+              uses: ruby/setup-ruby@v1
+            - name: Set up Rust nightly
+              run: |
+                  cargo install cargo-binutils rustfilt
+            - name: Set up Ruby
+              run: |
+                  gem install bundler
+                  bundle config set without 'uart'
+                  bundle install --retry 3
+            - name: Run
+              run: |
+                  bundle exec ruby utils/devtool.rb test_integration

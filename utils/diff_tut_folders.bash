@@ -2,14 +2,13 @@
 
 # SPDX-License-Identifier: MIT OR Apache-2.0
 #
-# Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
+# Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
 
 DIFF=$(
     diff -uNr \
 	 -x README.md \
 	 -x README.CN.md \
 	 -x README.ES.md \
-	 -x kernel \
 	 -x kernel8.img \
 	 -x Cargo.lock \
 	 -x target \
@@ -17,7 +16,7 @@ DIFF=$(
 	| sed -r "s/[12][90][127][0-9]-[0-9][0-9]-[0-9][0-9] .*//g" \
 	| sed -r "s/[[:space:]]*$//g" \
 	| sed -r "s/%/modulo/g" \
-        | sed -r "s/diff -uNr -x README.md -x README.CN.md -x README.ES.md -x kernel -x kernel8.img -x Cargo.lock -x target/\ndiff -uNr/g"
+        | sed -r "s/diff -uNr -x README.md -x README.CN.md -x README.ES.md -x kernel8.img -x Cargo.lock -x target/\ndiff -uNr/g"
      )
 
 HEADER="## Diff to previous"

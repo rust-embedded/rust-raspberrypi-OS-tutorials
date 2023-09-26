@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
-// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
+// Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
 
 //! Printing.
 
-use crate::{bsp, console};
+use crate::console;
 use core::fmt;
 
 //--------------------------------------------------------------------------------------------------
@@ -13,9 +13,7 @@ use core::fmt;
 
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
-    use console::interface::Write;
-
-    bsp::console::console().write_fmt(args).unwrap();
+    console::console().write_fmt(args).unwrap();
 }
 
 /// Prints without a newline.
@@ -41,8 +39,6 @@ macro_rules! println {
 #[macro_export]
 macro_rules! info {
     ($string:expr) => ({
-        use $crate::time::interface::TimeManager;
-
         let timestamp = $crate::time::time_manager().uptime();
 
         $crate::print::_print(format_args_nl!(
@@ -52,8 +48,6 @@ macro_rules! info {
         ));
     });
     ($format_string:expr, $($arg:tt)*) => ({
-        use $crate::time::interface::TimeManager;
-
         let timestamp = $crate::time::time_manager().uptime();
 
         $crate::print::_print(format_args_nl!(
@@ -69,8 +63,6 @@ macro_rules! info {
 #[macro_export]
 macro_rules! warn {
     ($string:expr) => ({
-        use $crate::time::interface::TimeManager;
-
         let timestamp = $crate::time::time_manager().uptime();
 
         $crate::print::_print(format_args_nl!(
@@ -80,8 +72,6 @@ macro_rules! warn {
         ));
     });
     ($format_string:expr, $($arg:tt)*) => ({
-        use $crate::time::interface::TimeManager;
-
         let timestamp = $crate::time::time_manager().uptime();
 
         $crate::print::_print(format_args_nl!(

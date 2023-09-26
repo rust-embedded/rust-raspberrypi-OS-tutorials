@@ -29,7 +29,6 @@
     + [The GICv2 Driver (Pi 4)](#the-gicv2-driver-pi-4)
       - [GICC Details](#gicc-details)
       - [GICD Details](#gicd-details)
-- [UART hack](#uart-hack)
 - [Test it](#test-it)
 - [Diff to previous](#diff-to-previous)
 
@@ -111,17 +110,16 @@ The trait is defined as `exception::asynchronous::interface::IRQManager`:
 ```rust
 pub trait IRQManager {
     /// The IRQ number type depends on the implementation.
-    type IRQNumberType;
+    type IRQNumberType: Copy;
 
     /// Register a handler.
     fn register_handler(
         &self,
-        irq_number: Self::IRQNumberType,
-        descriptor: super::IRQDescriptor,
+        irq_handler_descriptor: super::IRQHandlerDescriptor<Self::IRQNumberType>,
     ) -> Result<(), &'static str>;
 
     /// Enable an interrupt in the controller.
-    fn enable(&self, irq_number: Self::IRQNumberType);
+    fn enable(&self, irq_number: &Self::IRQNumberType);
 
     /// Handle pending interrupts.
     ///
@@ -137,7 +135,7 @@ pub trait IRQManager {
     );
 
     /// Print list of registered handlers.
-    fn print_handler(&self);
+    fn print_handler(&self) {}
 }
 ```
 
@@ -176,22 +174,21 @@ sufficient to uniquely encode the IRQs, because their ranges overlap. In the dri
 controller, we therefore define the associated type as follows:
 
 ```rust
-pub type LocalIRQ =
-    exception::asynchronous::IRQNumber<{ InterruptController::MAX_LOCAL_IRQ_NUMBER }>;
-pub type PeripheralIRQ =
-    exception::asynchronous::IRQNumber<{ InterruptController::MAX_PERIPHERAL_IRQ_NUMBER }>;
+pub type LocalIRQ = BoundedUsize<{ InterruptController::MAX_LOCAL_IRQ_NUMBER }>;
+pub type PeripheralIRQ = BoundedUsize<{ InterruptController::MAX_PERIPHERAL_IRQ_NUMBER }>;
 
-/// Used for the associated type of trait  [`exception::asynchronous::interface::IRQManager`].
+/// Used for the associated type of trait [`exception::asynchronous::interface::IRQManager`].
 #[derive(Copy, Clone)]
+#[allow(missing_docs)]
 pub enum IRQNumber {
     Local(LocalIRQ),
     Peripheral(PeripheralIRQ),
 }
 ```
 
-The type `exception::asynchronous::IRQNumber` is a newtype around an `usize` that uses a [const
-generic] to ensure that the value of the encapsulated IRQ number is in the allowed range (e.g.
-`0..MAX_LOCAL_IRQ_NUMBER` for `LocalIRQ`, with `MAX_LOCAL_IRQ_NUMBER == 11`).
+The type `BoundedUsize` is a newtype around an `usize` that uses a [const generic] to ensure that
+the value of the encapsulated IRQ number is in the allowed range (e.g. `0..MAX_LOCAL_IRQ_NUMBER` for
+`LocalIRQ`, with `MAX_LOCAL_IRQ_NUMBER == 11`).
 
 [const generic]: https://github.com/rust-lang/rfcs/blob/master/text/2000-const-generics.md
 
@@ -207,7 +204,7 @@ identifier for the IRQs. We define the type as follows:
 
 ```rust
 /// Used for the associated type of trait [`exception::asynchronous::interface::IRQManager`].
-pub type IRQNumber = exception::asynchronous::IRQNumber<{ GICv2::MAX_IRQ_NUMBER }>;
+pub type IRQNumber = BoundedUsize<{ GICv2::MAX_IRQ_NUMBER }>;
 ```
 
 #### Registering IRQ Handlers
@@ -265,35 +262,41 @@ respective drivers themselves. Therefore, we added a new function to the standar
 trait in `driver::interface::DeviceDriver` that must be implemented if IRQ handling is supported:
 
 ```rust
-/// Called by the kernel to register and enable the device's IRQ handlers, if any.
+/// Called by the kernel to register and enable the device's IRQ handler.
 ///
 /// Rust's type system will prevent a call to this function unless the calling instance
 /// itself has static lifetime.
-fn register_and_enable_irq_handler(&'static self) -> Result<(), &'static str> {
-    Ok(())
+fn register_and_enable_irq_handler(
+    &'static self,
+    irq_number: &Self::IRQNumberType,
+) -> Result<(), &'static str> {
+    panic!(
+        "Attempt to enable IRQ {} for device {}, but driver does not support this",
+        irq_number,
+        self.compatible()
+    )
 }
 ```
 
 Here is the implementation for the `PL011Uart`:
 
 ```rust
-fn register_and_enable_irq_handler(&'static self) -> Result<(), &'static str> {
-    use bsp::exception::asynchronous::irq_manager;
-    use exception::asynchronous::{interface::IRQManager, IRQDescriptor};
+fn register_and_enable_irq_handler(
+    &'static self,
+    irq_number: &Self::IRQNumberType,
+) -> Result<(), &'static str> {
+    use exception::asynchronous::{irq_manager, IRQHandlerDescriptor};
 
-    let descriptor = IRQDescriptor {
-        name: "BCM PL011 UART",
-        handler: self,
-    };
+    let descriptor = IRQHandlerDescriptor::new(*irq_number, Self::COMPATIBLE, self);
 
-    irq_manager().register_handler(self.irq_number, descriptor)?;
-    irq_manager().enable(self.irq_number);
+    irq_manager().register_handler(descriptor)?;
+    irq_manager().enable(irq_number);
 
     Ok(())
 }
 ```
 
-The `bsp::exception::asynchronous::irq_manager()` function used here returns a reference to an
+The `exception::asynchronous::irq_manager()` function used here returns a reference to an
 implementor of the `IRQManager` trait. Since the implementation is supposed to be done by the
 platform's interrupt controller, this call will redirect to the `kernel`'s instance of either the
 driver for the `BCM` controller (`Raspberry Pi 3`) or the driver for the `GICv2` (`Pi 4`). We will
@@ -302,33 +305,57 @@ later. The gist here is that the calls on `irq_manager()` will make the platform
 controller aware that the `UART` driver (i) wants to handle its interrupt and (ii) which function it
 provides to do so.
 
-Also note how `irq_number` is a member of the `PL011Uart` struct and not hardcoded. The reason is
-that the `UART` driver code is agnostic about the **IRQ numbers** that are associated to it. This is
+Also note how `irq_number` is supplied as a function argument and not hardcoded. The reason is that
+the `UART` driver code is agnostic about the **IRQ numbers** that are associated to it. This is
 vendor-supplied information and as such typically part of the Board Support Package (`BSP`). It can
 vary from `BSP` to `BSP`, same like the board's memory map, which provides the `UART`'s MMIO
-register addresses. Therefore, we extend the instantiation of the `UART` driver accordingly, so that
-the `BSP` now additionally provides the IRQ number as an argument:
-
-```rust
-static PL011_UART: device_driver::PL011Uart = unsafe {
-    device_driver::PL011Uart::new(
-        memory::map::mmio::PL011_UART_BASE,
-        exception::asynchronous::irq_map::PL011_UART,
-    )
-};
-```
+register addresses.
 
 With all this in place, we can finally let drivers register and enable their IRQ handlers with the
-interrupt controller, and unmask IRQ reception on the boot CPU core during the kernel init phase in
-`main.rs`. After unmasking, IRQ handling is live:
+interrupt controller, and unmask IRQ reception on the boot CPU core during the kernel init phase.
+The global `driver_manager` takes care of this in the function `init_drivers_and_irqs()` (before
+this tutorial, the function's name was `init_drivers()`), where this happens as the third and last
+step of initializing all registered device drivers:
 
 ```rust
-// Let device drivers register and enable their handlers with the interrupt controller.
-for i in bsp::driver::driver_manager().all_device_drivers() {
-    if let Err(msg) = i.register_and_enable_irq_handler() {
-        warn!("Error registering IRQ handler: {}", msg);
-    }
+pub unsafe fn init_drivers_and_irqs(&self) {
+    self.for_each_descriptor(|descriptor| {
+        // 1. Initialize driver.
+        if let Err(x) = descriptor.device_driver.init() {
+            // omitted for brevity
+        }
+
+        // 2. Call corresponding post init callback.
+        if let Some(callback) = &descriptor.post_init_callback {
+            // omitted for brevity
+        }
+    });
+
+    // 3. After all post-init callbacks were done, the interrupt controller should be
+    //    registered and functional. So let drivers register with it now.
+    self.for_each_descriptor(|descriptor| {
+        if let Some(irq_number) = &descriptor.irq_number {
+            if let Err(x) = descriptor
+                .device_driver
+                .register_and_enable_irq_handler(irq_number)
+            {
+                panic!(
+                    "Error during driver interrupt handler registration: {}: {}",
+                    descriptor.device_driver.compatible(),
+                    x
+                );
+            }
+        }
+    });
 }
+```
+
+
+In `main.rs`, IRQs are unmasked right afterwards, after which point IRQ handling is live:
+
+```rust
+// Initialize all device drivers.
+driver::driver_manager().init_drivers_and_irqs();
 
 // Unmask interrupts on the boot CPU core.
 exception::asynchronous::local_irq_unmask();
@@ -369,11 +396,9 @@ the the implementation of the trait's handling function:
 
 ```rust
 #[no_mangle]
-unsafe extern "C" fn current_elx_irq(_e: &mut ExceptionContext) {
-    use exception::asynchronous::interface::IRQManager;
-
-    let token = &exception::asynchronous::IRQContext::new();
-    bsp::exception::asynchronous::irq_manager().handle_pending_irqs(token);
+extern "C" fn current_elx_irq(_e: &mut ExceptionContext) {
+    let token = unsafe { &exception::asynchronous::IRQContext::new() };
+    exception::asynchronous::irq_manager().handle_pending_irqs(token);
 }
 ```
 
@@ -425,13 +450,9 @@ core are masked before the `f(data)` is being executed, and restored afterwards:
 /// previous state before returning, so this is deemed safe.
 #[inline(always)]
 pub fn exec_with_irq_masked<T>(f: impl FnOnce() -> T) -> T {
-    let ret: T;
-
-    unsafe {
-        let saved = local_irq_mask_save();
-        ret = f();
-        local_irq_restore(saved);
-    }
+    let saved = local_irq_mask_save();
+    let ret = f();
+    local_irq_restore(saved);
 
     ret
 }
@@ -489,7 +510,7 @@ sequences might be needed.
 Since nothing complex is happening in the implementation, it is not covered in detail here. Please
 refer to [the source of the **peripheral** controller] to check it out.
 
-[the source of the **peripheral** controller]: src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
+[the source of the **peripheral** controller]: kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
 
 ##### The IRQ Handler Table
 
@@ -497,8 +518,8 @@ Calls to `register_handler()` result in the driver inserting the provided handle
 specific table (the handler reference is a member of `IRQDescriptor`):
 
 ```rust
-type HandlerTable =
-    [Option<exception::asynchronous::IRQDescriptor>; InterruptController::NUM_PERIPHERAL_IRQS];
+type HandlerTable = [Option<exception::asynchronous::IRQHandlerDescriptor<PeripheralIRQ>>;
+    PeripheralIRQ::MAX_INCLUSIVE + 1];
 ```
 
 One of the requirements for safe operation of the `kernel` is that those handlers are not
@@ -554,6 +575,10 @@ only call is happening before the transition from `kernel_init()` to `kernel_mai
 // Announce conclusion of the kernel_init() phase.
 state::state_manager().transition_to_single_core_main();
 ```
+
+P.S.: Since the use case for the `InitStateLock` also applies to a few other places in the kernel
+(for example, registering the system-wide console during early boot), `InitStateLock`s have been
+incorporated in those other places as well.
 
 #### The GICv2 Driver (Pi 4)
 
@@ -617,9 +642,9 @@ register_structs! {
         (0x004 => TYPER: ReadOnly<u32, TYPER::Register>),
         (0x008 => _reserved1),
         (0x104 => ISENABLER: [ReadWrite<u32>; 31]),
-        (0x108 => _reserved2),
+        (0x180 => _reserved2),
         (0x820 => ITARGETSR: [ReadWrite<u32, ITARGETSR::Register>; 248]),
-        (0x824 => @END),
+        (0xC00 => @END),
     }
 }
 
@@ -630,7 +655,7 @@ register_structs! {
         (0x100 => ISENABLER: ReadWrite<u32>),
         (0x104 => _reserved2),
         (0x800 => ITARGETSR: [ReadOnly<u32, ITARGETSR::Register>; 8]),
-        (0x804 => @END),
+        (0x820 => @END),
     }
 }
 ```
@@ -639,7 +664,7 @@ As with the implementation of the BCM interrupt controller driver, we won't cove
 parts in exhaustive detail. For that, please refer to [this folder] folder which contains all the
 sources.
 
-[this folder]: src/bsp/device_driver/arm
+[this folder]: kernel/src/bsp/device_driver/arm
 
 ## Test it
 
@@ -667,6 +692,7 @@ Minipush 1.0
 [MP] ⏳ Waiting for /dev/ttyUSB0
 [MP] ✅ Serial connected
 [MP] 🔌 Please power the target now
+
  __  __ _      _ _                 _
 |  \/  (_)_ _ (_) |   ___  __ _ __| |
 | |\/| | | ' \| | |__/ _ \/ _` / _` |
@@ -678,26 +704,26 @@ Minipush 1.0
 [MP] ⏩ Pushing 66 KiB =========================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
-[    1.010579] mingo version 0.13.0
-[    1.010787] Booting on: Raspberry Pi 3
-[    1.011242] MMU online. Special regions:
-[    1.011718]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
-[    1.012737]       0x3f000000 - 0x4000ffff |  16 MiB | Dev RW PXN | Device MMIO
-[    1.013625] Current privilege level: EL1
-[    1.014102] Exception handling state:
-[    1.014546]       Debug:  Masked
-[    1.014936]       SError: Masked
-[    1.015326]       IRQ:    Unmasked
-[    1.015738]       FIQ:    Masked
-[    1.016127] Architectural timer resolution: 52 ns
-[    1.016702] Drivers loaded:
-[    1.017038]       1. BCM GPIO
-[    1.017395]       2. BCM PL011 UART
-[    1.017817]       3. BCM Interrupt Controller
-[    1.018348] Registered IRQ handlers:
-[    1.018782]       Peripheral handler:
-[    1.019228]              57. BCM PL011 UART
-[    1.019735] Echoing input now
+[    0.822492] mingo version 0.13.0
+[    0.822700] Booting on: Raspberry Pi 3
+[    0.823155] MMU online. Special regions:
+[    0.823632]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
+[    0.824650]       0x3f000000 - 0x4000ffff |  17 MiB | Dev RW PXN | Device MMIO
+[    0.825539] Current privilege level: EL1
+[    0.826015] Exception handling state:
+[    0.826459]       Debug:  Masked
+[    0.826849]       SError: Masked
+[    0.827239]       IRQ:    Unmasked
+[    0.827651]       FIQ:    Masked
+[    0.828041] Architectural timer resolution: 52 ns
+[    0.828615] Drivers loaded:
+[    0.828951]       1. BCM PL011 UART
+[    0.829373]       2. BCM GPIO
+[    0.829731]       3. BCM Interrupt Controller
+[    0.830262] Registered IRQ handlers:
+[    0.830695]       Peripheral handler:
+[    0.831141]              57. BCM PL011 UART
+[    0.831649] Echoing input now
 ```
 
 Raspberry Pi 4:
@@ -710,6 +736,7 @@ Minipush 1.0
 [MP] ⏳ Waiting for /dev/ttyUSB0
 [MP] ✅ Serial connected
 [MP] 🔌 Please power the target now
+
  __  __ _      _ _                 _
 |  \/  (_)_ _ (_) |   ___  __ _ __| |
 | |\/| | | ' \| | |__/ _ \/ _` / _` |
@@ -721,34 +748,34 @@ Minipush 1.0
 [MP] ⏩ Pushing 73 KiB =========================================🦀 100% 0 KiB/s Time: 00:00:00
 [ML] Loaded! Executing the payload now
 
-[    1.030536] mingo version 0.13.0
-[    1.030569] Booting on: Raspberry Pi 4
-[    1.031024] MMU online. Special regions:
-[    1.031501]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
-[    1.032519]       0xfe000000 - 0xff84ffff |  24 MiB | Dev RW PXN | Device MMIO
-[    1.033408] Current privilege level: EL1
-[    1.033884] Exception handling state:
-[    1.034328]       Debug:  Masked
-[    1.034718]       SError: Masked
-[    1.035108]       IRQ:    Unmasked
-[    1.035520]       FIQ:    Masked
-[    1.035910] Architectural timer resolution: 18 ns
-[    1.036484] Drivers loaded:
-[    1.036820]       1. BCM GPIO
-[    1.037178]       2. BCM PL011 UART
-[    1.037600]       3. GICv2 (ARM Generic Interrupt Controller v2)
-[    1.038337] Registered IRQ handlers:
-[    1.038770]       Peripheral handler:
-[    1.039217]             153. BCM PL011 UART
-[    1.039725] Echoing input now
+[    0.886853] mingo version 0.13.0
+[    0.886886] Booting on: Raspberry Pi 4
+[    0.887341] MMU online. Special regions:
+[    0.887818]       0x00080000 - 0x0008ffff |  64 KiB | C   RO PX  | Kernel code and RO data
+[    0.888836]       0xfe000000 - 0xff84ffff |  25 MiB | Dev RW PXN | Device MMIO
+[    0.889725] Current privilege level: EL1
+[    0.890201] Exception handling state:
+[    0.890645]       Debug:  Masked
+[    0.891035]       SError: Masked
+[    0.891425]       IRQ:    Unmasked
+[    0.891837]       FIQ:    Masked
+[    0.892227] Architectural timer resolution: 18 ns
+[    0.892801] Drivers loaded:
+[    0.893137]       1. BCM PL011 UART
+[    0.893560]       2. BCM GPIO
+[    0.893917]       3. GICv2 (ARM Generic Interrupt Controller v2)
+[    0.894654] Registered IRQ handlers:
+[    0.895087]       Peripheral handler:
+[    0.895534]             153. BCM PL011 UART
+[    0.896042] Echoing input now
 ```
 
 ## Diff to previous
 ```diff
 
-diff -uNr 12_integrated_testing/Cargo.toml 13_exceptions_part2_peripheral_IRQs/Cargo.toml
---- 12_integrated_testing/Cargo.toml
-+++ 13_exceptions_part2_peripheral_IRQs/Cargo.toml
+diff -uNr 12_integrated_testing/kernel/Cargo.toml 13_exceptions_part2_peripheral_IRQs/kernel/Cargo.toml
+--- 12_integrated_testing/kernel/Cargo.toml
++++ 13_exceptions_part2_peripheral_IRQs/kernel/Cargo.toml
 @@ -1,6 +1,6 @@
  [package]
  name = "mingo"
@@ -758,13 +785,13 @@ diff -uNr 12_integrated_testing/Cargo.toml 13_exceptions_part2_peripheral_IRQs/C
  edition = "2021"
 
 
-diff -uNr 12_integrated_testing/src/_arch/aarch64/cpu/smp.rs 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/cpu/smp.rs
---- 12_integrated_testing/src/_arch/aarch64/cpu/smp.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/cpu/smp.rs
+diff -uNr 12_integrated_testing/kernel/src/_arch/aarch64/cpu/smp.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/_arch/aarch64/cpu/smp.rs
+--- 12_integrated_testing/kernel/src/_arch/aarch64/cpu/smp.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/_arch/aarch64/cpu/smp.rs
 @@ -0,0 +1,30 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Architectural symmetric multiprocessing.
 +//!
@@ -775,7 +802,7 @@ diff -uNr 12_integrated_testing/src/_arch/aarch64/cpu/smp.rs 13_exceptions_part2
 +//!
 +//! crate::cpu::smp::arch_smp
 +
-+use cortex_a::registers::*;
++use aarch64_cpu::registers::*;
 +use tock_registers::interfaces::Readable;
 +
 +//--------------------------------------------------------------------------------------------------
@@ -793,16 +820,15 @@ diff -uNr 12_integrated_testing/src/_arch/aarch64/cpu/smp.rs 13_exceptions_part2
 +    T::from((MPIDR_EL1.get() & CORE_MASK) as u8)
 +}
 
-diff -uNr 12_integrated_testing/src/_arch/aarch64/exception/asynchronous.rs 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/exception/asynchronous.rs
---- 12_integrated_testing/src/_arch/aarch64/exception/asynchronous.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/exception/asynchronous.rs
-@@ -11,13 +11,18 @@
- //!
+diff -uNr 12_integrated_testing/kernel/src/_arch/aarch64/exception/asynchronous.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/_arch/aarch64/exception/asynchronous.rs
+--- 12_integrated_testing/kernel/src/_arch/aarch64/exception/asynchronous.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/_arch/aarch64/exception/asynchronous.rs
+@@ -12,12 +12,17 @@
  //! crate::exception::asynchronous::arch_asynchronous
 
-+use core::arch::asm;
- use cortex_a::registers::*;
+ use aarch64_cpu::registers::*;
 -use tock_registers::interfaces::Readable;
++use core::arch::asm;
 +use tock_registers::interfaces::{Readable, Writeable};
 
  //--------------------------------------------------------------------------------------------------
@@ -816,7 +842,7 @@ diff -uNr 12_integrated_testing/src/_arch/aarch64/exception/asynchronous.rs 13_e
  trait DaifField {
      fn daif_field() -> tock_registers::fields::Field<u64, DAIF::Register>;
  }
-@@ -66,6 +71,71 @@
+@@ -66,6 +71,60 @@
  // Public Code
  //--------------------------------------------------------------------------------------------------
 
@@ -832,42 +858,32 @@ diff -uNr 12_integrated_testing/src/_arch/aarch64/exception/asynchronous.rs 13_e
 +///
 +/// "Writes to PSTATE.{PAN, D, A, I, F} occur in program order without the need for additional
 +/// synchronization."
-+///
-+/// # Safety
-+///
-+/// - Changes the HW state of the executing core.
 +#[inline(always)]
-+pub unsafe fn local_irq_unmask() {
-+    #[rustfmt::skip]
-+    asm!(
-+        "msr DAIFClr, {arg}",
-+        arg = const daif_bits::IRQ,
-+        options(nomem, nostack, preserves_flags)
-+    );
++pub fn local_irq_unmask() {
++    unsafe {
++        asm!(
++            "msr DAIFClr, {arg}",
++            arg = const daif_bits::IRQ,
++            options(nomem, nostack, preserves_flags)
++        );
++    }
 +}
 +
 +/// Mask IRQs on the executing core.
-+///
-+/// # Safety
-+///
-+/// - Changes the HW state of the executing core.
 +#[inline(always)]
-+pub unsafe fn local_irq_mask() {
-+    #[rustfmt::skip]
-+    asm!(
-+        "msr DAIFSet, {arg}",
-+        arg = const daif_bits::IRQ,
-+        options(nomem, nostack, preserves_flags)
-+    );
++pub fn local_irq_mask() {
++    unsafe {
++        asm!(
++            "msr DAIFSet, {arg}",
++            arg = const daif_bits::IRQ,
++            options(nomem, nostack, preserves_flags)
++        );
++    }
 +}
 +
 +/// Mask IRQs on the executing core and return the previously saved interrupt mask bits (DAIF).
-+///
-+/// # Safety
-+///
-+/// - Changes the HW state of the executing core.
 +#[inline(always)]
-+pub unsafe fn local_irq_mask_save() -> u64 {
++pub fn local_irq_mask_save() -> u64 {
 +    let saved = DAIF.get();
 +    local_irq_mask();
 +
@@ -876,12 +892,11 @@ diff -uNr 12_integrated_testing/src/_arch/aarch64/exception/asynchronous.rs 13_e
 +
 +/// Restore the interrupt mask bits (DAIF) using the callee's argument.
 +///
-+/// # Safety
++/// # Invariant
 +///
-+/// - Changes the HW state of the executing core.
 +/// - No sanity checks on the input.
 +#[inline(always)]
-+pub unsafe fn local_irq_restore(saved: u64) {
++pub fn local_irq_restore(saved: u64) {
 +    DAIF.set(saved);
 +}
 +
@@ -889,39 +904,37 @@ diff -uNr 12_integrated_testing/src/_arch/aarch64/exception/asynchronous.rs 13_e
  #[rustfmt::skip]
  pub fn print_state() {
 
-diff -uNr 12_integrated_testing/src/_arch/aarch64/exception.rs 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/exception.rs
---- 12_integrated_testing/src/_arch/aarch64/exception.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/_arch/aarch64/exception.rs
+diff -uNr 12_integrated_testing/kernel/src/_arch/aarch64/exception.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/_arch/aarch64/exception.rs
+--- 12_integrated_testing/kernel/src/_arch/aarch64/exception.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/_arch/aarch64/exception.rs
 @@ -11,6 +11,7 @@
  //!
  //! crate::exception::arch_exception
 
-+use crate::{bsp, exception};
++use crate::exception;
+ use aarch64_cpu::{asm::barrier, registers::*};
  use core::{arch::global_asm, cell::UnsafeCell, fmt};
- use cortex_a::{asm::barrier, registers::*};
  use tock_registers::{
-@@ -102,8 +103,11 @@
+@@ -102,8 +103,9 @@
  }
 
  #[no_mangle]
--unsafe extern "C" fn current_elx_irq(e: &mut ExceptionContext) {
+-extern "C" fn current_elx_irq(e: &mut ExceptionContext) {
 -    default_exception_handler(e);
-+unsafe extern "C" fn current_elx_irq(_e: &mut ExceptionContext) {
-+    use exception::asynchronous::interface::IRQManager;
-+
-+    let token = &exception::asynchronous::IRQContext::new();
-+    bsp::exception::asynchronous::irq_manager().handle_pending_irqs(token);
++extern "C" fn current_elx_irq(_e: &mut ExceptionContext) {
++    let token = unsafe { &exception::asynchronous::IRQContext::new() };
++    exception::asynchronous::irq_manager().handle_pending_irqs(token);
  }
 
  #[no_mangle]
 
-diff -uNr 12_integrated_testing/src/bsp/device_driver/arm/gicv2/gicc.rs 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gicc.rs
---- 12_integrated_testing/src/bsp/device_driver/arm/gicv2/gicc.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gicc.rs
+diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/arm/gicv2/gicc.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/arm/gicv2/gicc.rs
+--- 12_integrated_testing/kernel/src/bsp/device_driver/arm/gicv2/gicc.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/arm/gicv2/gicc.rs
 @@ -0,0 +1,141 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! GICC Driver - GIC CPU interface.
 +
@@ -1061,13 +1074,13 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/arm/gicv2/gicc.rs 13_excep
 +    }
 +}
 
-diff -uNr 12_integrated_testing/src/bsp/device_driver/arm/gicv2/gicd.rs 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gicd.rs
---- 12_integrated_testing/src/bsp/device_driver/arm/gicv2/gicd.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2/gicd.rs
+diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/arm/gicv2/gicd.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/arm/gicv2/gicd.rs
+--- 12_integrated_testing/kernel/src/bsp/device_driver/arm/gicv2/gicd.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/arm/gicv2/gicd.rs
 @@ -0,0 +1,199 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! GICD Driver - GIC Distributor.
 +//!
@@ -1117,9 +1130,9 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/arm/gicv2/gicd.rs 13_excep
 +        (0x004 => TYPER: ReadOnly<u32, TYPER::Register>),
 +        (0x008 => _reserved1),
 +        (0x104 => ISENABLER: [ReadWrite<u32>; 31]),
-+        (0x108 => _reserved2),
++        (0x180 => _reserved2),
 +        (0x820 => ITARGETSR: [ReadWrite<u32, ITARGETSR::Register>; 248]),
-+        (0x824 => @END),
++        (0xC00 => @END),
 +    }
 +}
 +
@@ -1130,7 +1143,7 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/arm/gicv2/gicd.rs 13_excep
 +        (0x100 => ISENABLER: ReadWrite<u32>),
 +        (0x104 => _reserved2),
 +        (0x800 => ITARGETSR: [ReadOnly<u32, ITARGETSR::Register>; 8]),
-+        (0x804 => @END),
++        (0x820 => @END),
 +    }
 +}
 +
@@ -1237,7 +1250,7 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/arm/gicv2/gicd.rs 13_excep
 +    }
 +
 +    /// Enable an interrupt.
-+    pub fn enable(&self, irq_num: super::IRQNumber) {
++    pub fn enable(&self, irq_num: &super::IRQNumber) {
 +        let irq_num = irq_num.get();
 +
 +        // Each bit in the u32 enable register corresponds to one IRQ number. Shift right by 5
@@ -1265,13 +1278,13 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/arm/gicv2/gicd.rs 13_excep
 +    }
 +}
 
-diff -uNr 12_integrated_testing/src/bsp/device_driver/arm/gicv2.rs 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2.rs
---- 12_integrated_testing/src/bsp/device_driver/arm/gicv2.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm/gicv2.rs
-@@ -0,0 +1,219 @@
+diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/arm/gicv2.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/arm/gicv2.rs
+--- 12_integrated_testing/kernel/src/bsp/device_driver/arm/gicv2.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/arm/gicv2.rs
+@@ -0,0 +1,226 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! GICv2 Driver - ARM Generic Interrupt Controller v2.
 +//!
@@ -1350,20 +1363,25 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/arm/gicv2.rs 13_exceptions
 +mod gicc;
 +mod gicd;
 +
-+use crate::{bsp, cpu, driver, exception, synchronization, synchronization::InitStateLock};
++use crate::{
++    bsp::{self, device_driver::common::BoundedUsize},
++    cpu, driver, exception, synchronization,
++    synchronization::InitStateLock,
++};
 +
 +//--------------------------------------------------------------------------------------------------
 +// Private Definitions
 +//--------------------------------------------------------------------------------------------------
 +
-+type HandlerTable = [Option<exception::asynchronous::IRQDescriptor>; GICv2::NUM_IRQS];
++type HandlerTable = [Option<exception::asynchronous::IRQHandlerDescriptor<IRQNumber>>;
++    IRQNumber::MAX_INCLUSIVE + 1];
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Definitions
 +//--------------------------------------------------------------------------------------------------
 +
 +/// Used for the associated type of trait [`exception::asynchronous::interface::IRQManager`].
-+pub type IRQNumber = exception::asynchronous::IRQNumber<{ GICv2::MAX_IRQ_NUMBER }>;
++pub type IRQNumber = BoundedUsize<{ GICv2::MAX_IRQ_NUMBER }>;
 +
 +/// Representation of the GIC.
 +pub struct GICv2 {
@@ -1383,7 +1401,8 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/arm/gicv2.rs 13_exceptions
 +
 +impl GICv2 {
 +    const MAX_IRQ_NUMBER: usize = 300; // Normally 1019, but keep it lower to save some space.
-+    const NUM_IRQS: usize = Self::MAX_IRQ_NUMBER + 1;
++
++    pub const COMPATIBLE: &'static str = "GICv2 (ARM Generic Interrupt Controller v2)";
 +
 +    /// Create an instance.
 +    ///
@@ -1394,7 +1413,7 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/arm/gicv2.rs 13_exceptions
 +        Self {
 +            gicd: gicd::GICD::new(gicd_mmio_start_addr),
 +            gicc: gicc::GICC::new(gicc_mmio_start_addr),
-+            handler_table: InitStateLock::new([None; Self::NUM_IRQS]),
++            handler_table: InitStateLock::new([None; IRQNumber::MAX_INCLUSIVE + 1]),
 +        }
 +    }
 +}
@@ -1405,8 +1424,10 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/arm/gicv2.rs 13_exceptions
 +use synchronization::interface::ReadWriteEx;
 +
 +impl driver::interface::DeviceDriver for GICv2 {
++    type IRQNumberType = IRQNumber;
++
 +    fn compatible(&self) -> &'static str {
-+        "GICv2 (ARM Generic Interrupt Controller v2)"
++        Self::COMPATIBLE
 +    }
 +
 +    unsafe fn init(&self) -> Result<(), &'static str> {
@@ -1426,23 +1447,22 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/arm/gicv2.rs 13_exceptions
 +
 +    fn register_handler(
 +        &self,
-+        irq_number: Self::IRQNumberType,
-+        descriptor: exception::asynchronous::IRQDescriptor,
++        irq_handler_descriptor: exception::asynchronous::IRQHandlerDescriptor<Self::IRQNumberType>,
 +    ) -> Result<(), &'static str> {
 +        self.handler_table.write(|table| {
-+            let irq_number = irq_number.get();
++            let irq_number = irq_handler_descriptor.number().get();
 +
 +            if table[irq_number].is_some() {
 +                return Err("IRQ handler already registered");
 +            }
 +
-+            table[irq_number] = Some(descriptor);
++            table[irq_number] = Some(irq_handler_descriptor);
 +
 +            Ok(())
 +        })
 +    }
 +
-+    fn enable(&self, irq_number: Self::IRQNumberType) {
++    fn enable(&self, irq_number: &Self::IRQNumberType) {
 +        self.gicd.enable(irq_number);
 +    }
 +
@@ -1465,7 +1485,7 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/arm/gicv2.rs 13_exceptions
 +                None => panic!("No handler registered for IRQ {}", irq_number),
 +                Some(descriptor) => {
 +                    // Call the IRQ handler. Panics on failure.
-+                    descriptor.handler.handle().expect("Error handling IRQ");
++                    descriptor.handler().handle().expect("Error handling IRQ");
 +                }
 +            }
 +        });
@@ -1482,20 +1502,20 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/arm/gicv2.rs 13_exceptions
 +        self.handler_table.read(|table| {
 +            for (i, opt) in table.iter().skip(32).enumerate() {
 +                if let Some(handler) = opt {
-+                    info!("            {: >3}. {}", i + 32, handler.name);
++                    info!("            {: >3}. {}", i + 32, handler.name());
 +                }
 +            }
 +        });
 +    }
 +}
 
-diff -uNr 12_integrated_testing/src/bsp/device_driver/arm.rs 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm.rs
---- 12_integrated_testing/src/bsp/device_driver/arm.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/arm.rs
+diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/arm.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/arm.rs
+--- 12_integrated_testing/kernel/src/bsp/device_driver/arm.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/arm.rs
 @@ -0,0 +1,9 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! ARM driver top level.
 +
@@ -1503,19 +1523,21 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/arm.rs 13_exceptions_part2
 +
 +pub use gicv2::*;
 
-diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
---- 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
-@@ -6,7 +6,7 @@
+diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
+--- 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs
+@@ -5,8 +5,8 @@
+ //! GPIO Driver.
 
  use crate::{
-     bsp::device_driver::common::MMIODerefWrapper, driver, synchronization,
+-    bsp::device_driver::common::MMIODerefWrapper, driver, synchronization,
 -    synchronization::NullLock,
-+    synchronization::IRQSafeNullLock,
++    bsp::device_driver::common::MMIODerefWrapper, driver, exception::asynchronous::IRQNumber,
++    synchronization, synchronization::IRQSafeNullLock,
  };
  use tock_registers::{
      interfaces::{ReadWriteable, Writeable},
-@@ -121,7 +121,7 @@
+@@ -118,7 +118,7 @@
 
  /// Representation of the GPIO HW.
  pub struct GPIO {
@@ -1524,7 +1546,7 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 13_exc
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -197,7 +197,7 @@
+@@ -200,7 +200,7 @@
      /// - The user must ensure to provide a correct MMIO start address.
      pub const unsafe fn new(mmio_start_addr: usize) -> Self {
          Self {
@@ -1533,18 +1555,31 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_gpio.rs 13_exc
          }
      }
 
+@@ -216,6 +216,8 @@
+ use synchronization::interface::Mutex;
 
-diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
---- 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
-@@ -0,0 +1,167 @@
+ impl driver::interface::DeviceDriver for GPIO {
++    type IRQNumberType = IRQNumber;
++
+     fn compatible(&self) -> &'static str {
+         Self::COMPATIBLE
+     }
+
+diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
+--- 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller/peripheral_ic.rs
+@@ -0,0 +1,170 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Peripheral Interrupt Controller Driver.
++//!
++//! # Resources
++//!
++//! - <https://github.com/raspberrypi/documentation/files/1888662/BCM2837-ARM-Peripherals.-.Revised.-.V2-1.pdf>
 +
-+use super::{InterruptController, PendingIRQs, PeripheralIRQ};
++use super::{PendingIRQs, PeripheralIRQ};
 +use crate::{
 +    bsp::device_driver::common::MMIODerefWrapper,
 +    exception, synchronization,
@@ -1566,7 +1601,7 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 +        (0x00 => _reserved1),
 +        (0x10 => ENABLE_1: WriteOnly<u32>),
 +        (0x14 => ENABLE_2: WriteOnly<u32>),
-+        (0x24 => @END),
++        (0x18 => @END),
 +    }
 +}
 +
@@ -1586,8 +1621,8 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 +/// Abstraction for the ReadOnly parts of the associated MMIO registers.
 +type ReadOnlyRegisters = MMIODerefWrapper<RORegisterBlock>;
 +
-+type HandlerTable =
-+    [Option<exception::asynchronous::IRQDescriptor>; InterruptController::NUM_PERIPHERAL_IRQS];
++type HandlerTable = [Option<exception::asynchronous::IRQHandlerDescriptor<PeripheralIRQ>>;
++    PeripheralIRQ::MAX_INCLUSIVE + 1];
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Definitions
@@ -1619,7 +1654,7 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 +        Self {
 +            wo_registers: IRQSafeNullLock::new(WriteOnlyRegisters::new(mmio_start_addr)),
 +            ro_registers: ReadOnlyRegisters::new(mmio_start_addr),
-+            handler_table: InitStateLock::new([None; InterruptController::NUM_PERIPHERAL_IRQS]),
++            handler_table: InitStateLock::new([None; PeripheralIRQ::MAX_INCLUSIVE + 1]),
 +        }
 +    }
 +
@@ -1642,23 +1677,22 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 +
 +    fn register_handler(
 +        &self,
-+        irq: Self::IRQNumberType,
-+        descriptor: exception::asynchronous::IRQDescriptor,
++        irq_handler_descriptor: exception::asynchronous::IRQHandlerDescriptor<Self::IRQNumberType>,
 +    ) -> Result<(), &'static str> {
 +        self.handler_table.write(|table| {
-+            let irq_number = irq.get();
++            let irq_number = irq_handler_descriptor.number().get();
 +
 +            if table[irq_number].is_some() {
 +                return Err("IRQ handler already registered");
 +            }
 +
-+            table[irq_number] = Some(descriptor);
++            table[irq_number] = Some(irq_handler_descriptor);
 +
 +            Ok(())
 +        })
 +    }
 +
-+    fn enable(&self, irq: Self::IRQNumberType) {
++    fn enable(&self, irq: &Self::IRQNumberType) {
 +        self.wo_registers.lock(|regs| {
 +            let enable_reg = if irq.get() <= 31 {
 +                &regs.ENABLE_1
@@ -1684,7 +1718,7 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 +                    None => panic!("No handler registered for IRQ {}", irq_number),
 +                    Some(descriptor) => {
 +                        // Call the IRQ handler. Panics on failure.
-+                        descriptor.handler.handle().expect("Error handling IRQ");
++                        descriptor.handler().handle().expect("Error handling IRQ");
 +                    }
 +                }
 +            }
@@ -1699,26 +1733,31 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 +        self.handler_table.read(|table| {
 +            for (i, opt) in table.iter().enumerate() {
 +                if let Some(handler) = opt {
-+                    info!("            {: >3}. {}", i, handler.name);
++                    info!("            {: >3}. {}", i, handler.name());
 +                }
 +            }
 +        });
 +    }
 +}
 
-diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs
---- 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs
-@@ -0,0 +1,131 @@
+diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs
+--- 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/bcm2xxx_interrupt_controller.rs
+@@ -0,0 +1,152 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Interrupt Controller Driver.
 +
 +mod peripheral_ic;
 +
-+use crate::{driver, exception};
++use crate::{
++    bsp::device_driver::common::BoundedUsize,
++    driver,
++    exception::{self, asynchronous::IRQHandlerDescriptor},
++};
++use core::fmt;
 +
 +//--------------------------------------------------------------------------------------------------
 +// Private Definitions
@@ -1733,13 +1772,12 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 +// Public Definitions
 +//--------------------------------------------------------------------------------------------------
 +
-+pub type LocalIRQ =
-+    exception::asynchronous::IRQNumber<{ InterruptController::MAX_LOCAL_IRQ_NUMBER }>;
-+pub type PeripheralIRQ =
-+    exception::asynchronous::IRQNumber<{ InterruptController::MAX_PERIPHERAL_IRQ_NUMBER }>;
++pub type LocalIRQ = BoundedUsize<{ InterruptController::MAX_LOCAL_IRQ_NUMBER }>;
++pub type PeripheralIRQ = BoundedUsize<{ InterruptController::MAX_PERIPHERAL_IRQ_NUMBER }>;
 +
 +/// Used for the associated type of trait [`exception::asynchronous::interface::IRQManager`].
 +#[derive(Copy, Clone)]
++#[allow(missing_docs)]
 +pub enum IRQNumber {
 +    Local(LocalIRQ),
 +    Peripheral(PeripheralIRQ),
@@ -1764,16 +1802,13 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 +    type Item = usize;
 +
 +    fn next(&mut self) -> Option<Self::Item> {
-+        use core::intrinsics::cttz;
-+
-+        let next = cttz(self.bitmask);
-+        if next == 64 {
++        if self.bitmask == 0 {
 +            return None;
 +        }
 +
-+        self.bitmask &= !(1 << next);
-+
-+        Some(next as usize)
++        let next = self.bitmask.trailing_zeros() as usize;
++        self.bitmask &= self.bitmask.wrapping_sub(1);
++        Some(next)
 +    }
 +}
 +
@@ -1781,17 +1816,28 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 +// Public Code
 +//--------------------------------------------------------------------------------------------------
 +
++impl fmt::Display for IRQNumber {
++    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
++        match self {
++            Self::Local(number) => write!(f, "Local({})", number),
++            Self::Peripheral(number) => write!(f, "Peripheral({})", number),
++        }
++    }
++}
++
 +impl InterruptController {
-+    const MAX_LOCAL_IRQ_NUMBER: usize = 11;
++    // Restrict to 3 for now. This makes future code for local_ic.rs more straight forward.
++    const MAX_LOCAL_IRQ_NUMBER: usize = 3;
 +    const MAX_PERIPHERAL_IRQ_NUMBER: usize = 63;
-+    const NUM_PERIPHERAL_IRQS: usize = Self::MAX_PERIPHERAL_IRQ_NUMBER + 1;
++
++    pub const COMPATIBLE: &'static str = "BCM Interrupt Controller";
 +
 +    /// Create an instance.
 +    ///
 +    /// # Safety
 +    ///
 +    /// - The user must ensure to provide a correct MMIO start address.
-+    pub const unsafe fn new(_local_mmio_start_addr: usize, periph_mmio_start_addr: usize) -> Self {
++    pub const unsafe fn new(periph_mmio_start_addr: usize) -> Self {
 +        Self {
 +            periph: peripheral_ic::PeripheralIC::new(periph_mmio_start_addr),
 +        }
@@ -1803,8 +1849,10 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 +//------------------------------------------------------------------------------
 +
 +impl driver::interface::DeviceDriver for InterruptController {
++    type IRQNumberType = IRQNumber;
++
 +    fn compatible(&self) -> &'static str {
-+        "BCM Interrupt Controller"
++        Self::COMPATIBLE
 +    }
 +}
 +
@@ -1813,16 +1861,23 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 +
 +    fn register_handler(
 +        &self,
-+        irq: Self::IRQNumberType,
-+        descriptor: exception::asynchronous::IRQDescriptor,
++        irq_handler_descriptor: exception::asynchronous::IRQHandlerDescriptor<Self::IRQNumberType>,
 +    ) -> Result<(), &'static str> {
-+        match irq {
++        match irq_handler_descriptor.number() {
 +            IRQNumber::Local(_) => unimplemented!("Local IRQ controller not implemented."),
-+            IRQNumber::Peripheral(pirq) => self.periph.register_handler(pirq, descriptor),
++            IRQNumber::Peripheral(pirq) => {
++                let periph_descriptor = IRQHandlerDescriptor::new(
++                    pirq,
++                    irq_handler_descriptor.name(),
++                    irq_handler_descriptor.handler(),
++                );
++
++                self.periph.register_handler(periph_descriptor)
++            }
 +        }
 +    }
 +
-+    fn enable(&self, irq: Self::IRQNumberType) {
++    fn enable(&self, irq: &Self::IRQNumberType) {
 +        match irq {
 +            IRQNumber::Local(_) => unimplemented!("Local IRQ controller not implemented."),
 +            IRQNumber::Peripheral(pirq) => self.periph.enable(pirq),
@@ -1842,21 +1897,24 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_interrupt_cont
 +    }
 +}
 
-diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
---- 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
-@@ -10,8 +10,8 @@
+diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
+--- 12_integrated_testing/kernel/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs
+@@ -10,8 +10,11 @@
  //! - <https://developer.arm.com/documentation/ddi0183/latest>
 
  use crate::{
 -    bsp::device_driver::common::MMIODerefWrapper, console, cpu, driver, synchronization,
 -    synchronization::NullLock,
-+    bsp, bsp::device_driver::common::MMIODerefWrapper, console, cpu, driver, exception,
-+    synchronization, synchronization::IRQSafeNullLock,
++    bsp::device_driver::common::MMIODerefWrapper,
++    console, cpu, driver,
++    exception::{self, asynchronous::IRQNumber},
++    synchronization,
++    synchronization::IRQSafeNullLock,
  };
  use core::fmt;
  use tock_registers::{
-@@ -134,6 +134,52 @@
+@@ -134,6 +137,52 @@
          ]
      ],
 
@@ -1909,7 +1967,7 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
      /// Interrupt Clear Register.
      ICR [
          /// Meta field for all pending interrupts.
-@@ -152,7 +198,10 @@
+@@ -152,7 +201,10 @@
          (0x28 => FBRD: WriteOnly<u32, FBRD::Register>),
          (0x2c => LCR_H: WriteOnly<u32, LCR_H::Register>),
          (0x30 => CR: WriteOnly<u32, CR::Register>),
@@ -1921,17 +1979,16 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
          (0x44 => ICR: WriteOnly<u32, ICR::Register>),
          (0x48 => @END),
      }
-@@ -182,7 +231,8 @@
+@@ -179,7 +231,7 @@
 
  /// Representation of the UART.
  pub struct PL011Uart {
 -    inner: NullLock<PL011UartInner>,
 +    inner: IRQSafeNullLock<PL011UartInner>,
-+    irq_number: bsp::device_driver::IRQNumber,
  }
 
  //--------------------------------------------------------------------------------------------------
-@@ -250,6 +300,14 @@
+@@ -247,6 +299,14 @@
              .LCR_H
              .write(LCR_H::WLEN::EightBit + LCR_H::FEN::FifosEnabled);
 
@@ -1946,48 +2003,49 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
          // Turn the UART on.
          self.registers
              .CR
-@@ -332,9 +390,13 @@
-     /// # Safety
-     ///
+@@ -337,7 +397,7 @@
      /// - The user must ensure to provide a correct MMIO start address.
--    pub const unsafe fn new(mmio_start_addr: usize) -> Self {
-+    pub const unsafe fn new(
-+        mmio_start_addr: usize,
-+        irq_number: bsp::device_driver::IRQNumber,
-+    ) -> Self {
+     pub const unsafe fn new(mmio_start_addr: usize) -> Self {
          Self {
 -            inner: NullLock::new(PL011UartInner::new(mmio_start_addr)),
 +            inner: IRQSafeNullLock::new(PL011UartInner::new(mmio_start_addr)),
-+            irq_number,
          }
      }
  }
-@@ -354,6 +416,21 @@
+@@ -348,6 +408,8 @@
+ use synchronization::interface::Mutex;
+
+ impl driver::interface::DeviceDriver for PL011Uart {
++    type IRQNumberType = IRQNumber;
++
+     fn compatible(&self) -> &'static str {
+         Self::COMPATIBLE
+     }
+@@ -357,6 +419,20 @@
 
          Ok(())
      }
 +
-+    fn register_and_enable_irq_handler(&'static self) -> Result<(), &'static str> {
-+        use bsp::exception::asynchronous::irq_manager;
-+        use exception::asynchronous::{interface::IRQManager, IRQDescriptor};
++    fn register_and_enable_irq_handler(
++        &'static self,
++        irq_number: &Self::IRQNumberType,
++    ) -> Result<(), &'static str> {
++        use exception::asynchronous::{irq_manager, IRQHandlerDescriptor};
 +
-+        let descriptor = IRQDescriptor {
-+            name: "BCM PL011 UART",
-+            handler: self,
-+        };
++        let descriptor = IRQHandlerDescriptor::new(*irq_number, Self::COMPATIBLE, self);
 +
-+        irq_manager().register_handler(self.irq_number, descriptor)?;
-+        irq_manager().enable(self.irq_number);
++        irq_manager().register_handler(descriptor)?;
++        irq_manager().enable(irq_number);
 +
 +        Ok(())
 +    }
  }
 
  impl console::interface::Write for PL011Uart {
-@@ -400,3 +477,24 @@
-         self.inner.lock(|inner| inner.chars_read)
-     }
+@@ -405,3 +481,24 @@
  }
+
+ impl console::interface::All for PL011Uart {}
 +
 +impl exception::asynchronous::interface::IRQHandler for PL011Uart {
 +    fn handle(&self) -> Result<(), &'static str> {
@@ -2010,9 +2068,9 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm/bcm2xxx_pl011_uart.rs 
 +    }
 +}
 
-diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm.rs 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm.rs
---- 12_integrated_testing/src/bsp/device_driver/bcm.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver/bcm.rs
+diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/bcm.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm.rs
+--- 12_integrated_testing/kernel/src/bsp/device_driver/bcm.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/bcm.rs
 @@ -5,7 +5,11 @@
  //! BCM driver top level.
 
@@ -2026,9 +2084,59 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver/bcm.rs 13_exceptions_part2
 +pub use bcm2xxx_interrupt_controller::*;
  pub use bcm2xxx_pl011_uart::*;
 
-diff -uNr 12_integrated_testing/src/bsp/device_driver.rs 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver.rs
---- 12_integrated_testing/src/bsp/device_driver.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/bsp/device_driver.rs
+diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver/common.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/common.rs
+--- 12_integrated_testing/kernel/src/bsp/device_driver/common.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver/common.rs
+@@ -4,7 +4,7 @@
+
+ //! Common device driver code.
+
+-use core::{marker::PhantomData, ops};
++use core::{fmt, marker::PhantomData, ops};
+
+ //--------------------------------------------------------------------------------------------------
+ // Public Definitions
+@@ -15,6 +15,10 @@
+     phantom: PhantomData<fn() -> T>,
+ }
+
++/// A wrapper type for usize with integrated range bound check.
++#[derive(Copy, Clone)]
++pub struct BoundedUsize<const MAX_INCLUSIVE: usize>(usize);
++
+ //--------------------------------------------------------------------------------------------------
+ // Public Code
+ //--------------------------------------------------------------------------------------------------
+@@ -36,3 +40,25 @@
+         unsafe { &*(self.start_addr as *const _) }
+     }
+ }
++
++impl<const MAX_INCLUSIVE: usize> BoundedUsize<{ MAX_INCLUSIVE }> {
++    pub const MAX_INCLUSIVE: usize = MAX_INCLUSIVE;
++
++    /// Creates a new instance if number <= MAX_INCLUSIVE.
++    pub const fn new(number: usize) -> Self {
++        assert!(number <= MAX_INCLUSIVE);
++
++        Self(number)
++    }
++
++    /// Return the wrapped number.
++    pub const fn get(self) -> usize {
++        self.0
++    }
++}
++
++impl<const MAX_INCLUSIVE: usize> fmt::Display for BoundedUsize<{ MAX_INCLUSIVE }> {
++    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
++        write!(f, "{}", self.0)
++    }
++}
+
+diff -uNr 12_integrated_testing/kernel/src/bsp/device_driver.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver.rs
+--- 12_integrated_testing/kernel/src/bsp/device_driver.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/device_driver.rs
 @@ -4,9 +4,13 @@
 
  //! Device driver.
@@ -2044,47 +2152,113 @@ diff -uNr 12_integrated_testing/src/bsp/device_driver.rs 13_exceptions_part2_per
  #[cfg(any(feature = "bsp_rpi3", feature = "bsp_rpi4"))]
  pub use bcm::*;
 
-diff -uNr 12_integrated_testing/src/bsp/raspberrypi/driver.rs 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/driver.rs
---- 12_integrated_testing/src/bsp/raspberrypi/driver.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/driver.rs
-@@ -12,7 +12,7 @@
+diff -uNr 12_integrated_testing/kernel/src/bsp/raspberrypi/driver.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/driver.rs
+--- 12_integrated_testing/kernel/src/bsp/raspberrypi/driver.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/driver.rs
+@@ -4,8 +4,12 @@
 
- /// Device Driver Manager type.
- struct BSPDriverManager {
--    device_drivers: [&'static (dyn DeviceDriver + Sync); 2],
-+    device_drivers: [&'static (dyn DeviceDriver + Sync); 3],
+ //! BSP driver support.
+
+-use super::memory::map::mmio;
+-use crate::{bsp::device_driver, console, driver as generic_driver};
++use super::{exception, memory::map::mmio};
++use crate::{
++    bsp::device_driver,
++    console, driver as generic_driver,
++    exception::{self as generic_exception},
++};
+ use core::sync::atomic::{AtomicBool, Ordering};
+
+ //--------------------------------------------------------------------------------------------------
+@@ -16,6 +20,14 @@
+     unsafe { device_driver::PL011Uart::new(mmio::PL011_UART_START) };
+ static GPIO: device_driver::GPIO = unsafe { device_driver::GPIO::new(mmio::GPIO_START) };
+
++#[cfg(feature = "bsp_rpi3")]
++static INTERRUPT_CONTROLLER: device_driver::InterruptController =
++    unsafe { device_driver::InterruptController::new(mmio::PERIPHERAL_IC_START) };
++
++#[cfg(feature = "bsp_rpi4")]
++static INTERRUPT_CONTROLLER: device_driver::GICv2 =
++    unsafe { device_driver::GICv2::new(mmio::GICD_START, mmio::GICC_START) };
++
+ //--------------------------------------------------------------------------------------------------
+ // Private Code
+ //--------------------------------------------------------------------------------------------------
+@@ -33,21 +45,43 @@
+     Ok(())
  }
 
- //--------------------------------------------------------------------------------------------------
-@@ -20,7 +20,11 @@
- //--------------------------------------------------------------------------------------------------
++/// This must be called only after successful init of the interrupt controller driver.
++fn post_init_interrupt_controller() -> Result<(), &'static str> {
++    generic_exception::asynchronous::register_irq_manager(&INTERRUPT_CONTROLLER);
++
++    Ok(())
++}
++
+ fn driver_uart() -> Result<(), &'static str> {
+-    let uart_descriptor =
+-        generic_driver::DeviceDriverDescriptor::new(&PL011_UART, Some(post_init_uart));
++    let uart_descriptor = generic_driver::DeviceDriverDescriptor::new(
++        &PL011_UART,
++        Some(post_init_uart),
++        Some(exception::asynchronous::irq_map::PL011_UART),
++    );
+     generic_driver::driver_manager().register_driver(uart_descriptor);
 
- static BSP_DRIVER_MANAGER: BSPDriverManager = BSPDriverManager {
--    device_drivers: [&super::GPIO, &super::PL011_UART],
-+    device_drivers: [
-+        &super::GPIO,
-+        &super::PL011_UART,
-+        &super::INTERRUPT_CONTROLLER,
-+    ],
- };
+     Ok(())
+ }
 
+ fn driver_gpio() -> Result<(), &'static str> {
+-    let gpio_descriptor = generic_driver::DeviceDriverDescriptor::new(&GPIO, Some(post_init_gpio));
++    let gpio_descriptor =
++        generic_driver::DeviceDriverDescriptor::new(&GPIO, Some(post_init_gpio), None);
+     generic_driver::driver_manager().register_driver(gpio_descriptor);
+
+     Ok(())
+ }
+
++fn driver_interrupt_controller() -> Result<(), &'static str> {
++    let interrupt_controller_descriptor = generic_driver::DeviceDriverDescriptor::new(
++        &INTERRUPT_CONTROLLER,
++        Some(post_init_interrupt_controller),
++        None,
++    );
++    generic_driver::driver_manager().register_driver(interrupt_controller_descriptor);
++
++    Ok(())
++}
++
  //--------------------------------------------------------------------------------------------------
+ // Public Code
+ //--------------------------------------------------------------------------------------------------
+@@ -65,6 +99,7 @@
 
-diff -uNr 12_integrated_testing/src/bsp/raspberrypi/exception/asynchronous.rs 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/exception/asynchronous.rs
---- 12_integrated_testing/src/bsp/raspberrypi/exception/asynchronous.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/exception/asynchronous.rs
-@@ -0,0 +1,36 @@
+     driver_uart()?;
+     driver_gpio()?;
++    driver_interrupt_controller()?;
+
+     INIT_DONE.store(true, Ordering::Relaxed);
+     Ok(())
+
+diff -uNr 12_integrated_testing/kernel/src/bsp/raspberrypi/exception/asynchronous.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/exception/asynchronous.rs
+--- 12_integrated_testing/kernel/src/bsp/raspberrypi/exception/asynchronous.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/exception/asynchronous.rs
+@@ -0,0 +1,28 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! BSP asynchronous exception handling.
 +
-+use crate::{bsp, exception};
++use crate::bsp;
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Definitions
 +//--------------------------------------------------------------------------------------------------
++
++/// Export for reuse in generic asynchronous.rs.
++pub use bsp::device_driver::IRQNumber;
 +
 +#[cfg(feature = "bsp_rpi3")]
 +pub(in crate::bsp) mod irq_map {
@@ -2099,34 +2273,23 @@ diff -uNr 12_integrated_testing/src/bsp/raspberrypi/exception/asynchronous.rs 13
 +
 +    pub const PL011_UART: IRQNumber = IRQNumber::new(153);
 +}
-+
-+//--------------------------------------------------------------------------------------------------
-+// Public Code
-+//--------------------------------------------------------------------------------------------------
-+
-+/// Return a reference to the IRQ manager.
-+pub fn irq_manager() -> &'static impl exception::asynchronous::interface::IRQManager<
-+    IRQNumberType = bsp::device_driver::IRQNumber,
-+> {
-+    &super::super::INTERRUPT_CONTROLLER
-+}
 
-diff -uNr 12_integrated_testing/src/bsp/raspberrypi/exception.rs 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/exception.rs
---- 12_integrated_testing/src/bsp/raspberrypi/exception.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/exception.rs
+diff -uNr 12_integrated_testing/kernel/src/bsp/raspberrypi/exception.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/exception.rs
+--- 12_integrated_testing/kernel/src/bsp/raspberrypi/exception.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/exception.rs
 @@ -0,0 +1,7 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! BSP synchronous and asynchronous exception handling.
 +
 +pub mod asynchronous;
 
-diff -uNr 12_integrated_testing/src/bsp/raspberrypi/memory.rs 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs
---- 12_integrated_testing/src/bsp/raspberrypi/memory.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi/memory.rs
-@@ -73,10 +73,12 @@
+diff -uNr 12_integrated_testing/kernel/src/bsp/raspberrypi/memory.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/memory.rs
+--- 12_integrated_testing/kernel/src/bsp/raspberrypi/memory.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi/memory.rs
+@@ -73,10 +73,11 @@
      pub mod mmio {
          use super::*;
 
@@ -2134,16 +2297,15 @@ diff -uNr 12_integrated_testing/src/bsp/raspberrypi/memory.rs 13_exceptions_part
 -        pub const GPIO_START:       usize = START + GPIO_OFFSET;
 -        pub const PL011_UART_START: usize = START + UART_OFFSET;
 -        pub const END_INCLUSIVE:    usize =         0x4000_FFFF;
-+        pub const START:                                 usize =         0x3F00_0000;
-+        pub const PERIPHERAL_INTERRUPT_CONTROLLER_START: usize = START + 0x0000_B200;
-+        pub const GPIO_START:                            usize = START + GPIO_OFFSET;
-+        pub const PL011_UART_START:                      usize = START + UART_OFFSET;
-+        pub const LOCAL_INTERRUPT_CONTROLLER_START:      usize =         0x4000_0000;
-+        pub const END_INCLUSIVE:                         usize =         0x4000_FFFF;
++        pub const START:               usize =         0x3F00_0000;
++        pub const PERIPHERAL_IC_START: usize = START + 0x0000_B200;
++        pub const GPIO_START:          usize = START + GPIO_OFFSET;
++        pub const PL011_UART_START:    usize = START + UART_OFFSET;
++        pub const END_INCLUSIVE:       usize =         0x4000_FFFF;
      }
 
      /// Physical devices.
-@@ -87,6 +89,8 @@
+@@ -87,6 +88,8 @@
          pub const START:            usize =         0xFE00_0000;
          pub const GPIO_START:       usize = START + GPIO_OFFSET;
          pub const PL011_UART_START: usize = START + UART_OFFSET;
@@ -2153,53 +2315,66 @@ diff -uNr 12_integrated_testing/src/bsp/raspberrypi/memory.rs 13_exceptions_part
      }
  }
 
-diff -uNr 12_integrated_testing/src/bsp/raspberrypi.rs 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi.rs
---- 12_integrated_testing/src/bsp/raspberrypi.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/bsp/raspberrypi.rs
-@@ -7,6 +7,7 @@
- pub mod console;
+diff -uNr 12_integrated_testing/kernel/src/bsp/raspberrypi.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi.rs
+--- 12_integrated_testing/kernel/src/bsp/raspberrypi.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/bsp/raspberrypi.rs
+@@ -6,6 +6,7 @@
+
  pub mod cpu;
  pub mod driver;
 +pub mod exception;
  pub mod memory;
 
  //--------------------------------------------------------------------------------------------------
-@@ -17,8 +18,25 @@
- static GPIO: device_driver::GPIO =
-     unsafe { device_driver::GPIO::new(memory::map::mmio::GPIO_START) };
 
--static PL011_UART: device_driver::PL011Uart =
--    unsafe { device_driver::PL011Uart::new(memory::map::mmio::PL011_UART_START) };
-+static PL011_UART: device_driver::PL011Uart = unsafe {
-+    device_driver::PL011Uart::new(
-+        memory::map::mmio::PL011_UART_START,
-+        exception::asynchronous::irq_map::PL011_UART,
-+    )
-+};
-+
-+#[cfg(feature = "bsp_rpi3")]
-+static INTERRUPT_CONTROLLER: device_driver::InterruptController = unsafe {
-+    device_driver::InterruptController::new(
-+        memory::map::mmio::LOCAL_INTERRUPT_CONTROLLER_START,
-+        memory::map::mmio::PERIPHERAL_INTERRUPT_CONTROLLER_START,
-+    )
-+};
-+
-+#[cfg(feature = "bsp_rpi4")]
-+static INTERRUPT_CONTROLLER: device_driver::GICv2 = unsafe {
-+    device_driver::GICv2::new(memory::map::mmio::GICD_START, memory::map::mmio::GICC_START)
-+};
+diff -uNr 12_integrated_testing/kernel/src/console.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/console.rs
+--- 12_integrated_testing/kernel/src/console.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/console.rs
+@@ -6,7 +6,7 @@
+
+ mod null_console;
+
+-use crate::synchronization::{self, NullLock};
++use crate::synchronization;
+
+ //--------------------------------------------------------------------------------------------------
+ // Public Definitions
+@@ -60,22 +60,22 @@
+ // Global instances
+ //--------------------------------------------------------------------------------------------------
+
+-static CUR_CONSOLE: NullLock<&'static (dyn interface::All + Sync)> =
+-    NullLock::new(&null_console::NULL_CONSOLE);
++static CUR_CONSOLE: InitStateLock<&'static (dyn interface::All + Sync)> =
++    InitStateLock::new(&null_console::NULL_CONSOLE);
 
  //--------------------------------------------------------------------------------------------------
  // Public Code
+ //--------------------------------------------------------------------------------------------------
+-use synchronization::interface::Mutex;
++use synchronization::{interface::ReadWriteEx, InitStateLock};
 
-diff -uNr 12_integrated_testing/src/cpu/smp.rs 13_exceptions_part2_peripheral_IRQs/src/cpu/smp.rs
---- 12_integrated_testing/src/cpu/smp.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/cpu/smp.rs
+ /// Register a new console.
+ pub fn register_console(new_console: &'static (dyn interface::All + Sync)) {
+-    CUR_CONSOLE.lock(|con| *con = new_console);
++    CUR_CONSOLE.write(|con| *con = new_console);
+ }
+
+ /// Return a reference to the currently registered console.
+ ///
+ /// This is the global console used by all printing macros.
+ pub fn console() -> &'static dyn interface::All {
+-    CUR_CONSOLE.lock(|con| *con)
++    CUR_CONSOLE.read(|con| *con)
+ }
+
+diff -uNr 12_integrated_testing/kernel/src/cpu/smp.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/cpu/smp.rs
+--- 12_integrated_testing/kernel/src/cpu/smp.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/cpu/smp.rs
 @@ -0,0 +1,14 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2018-2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! Symmetric multiprocessing.
 +
@@ -2212,9 +2387,9 @@ diff -uNr 12_integrated_testing/src/cpu/smp.rs 13_exceptions_part2_peripheral_IR
 +//--------------------------------------------------------------------------------------------------
 +pub use arch_smp::core_id;
 
-diff -uNr 12_integrated_testing/src/cpu.rs 13_exceptions_part2_peripheral_IRQs/src/cpu.rs
---- 12_integrated_testing/src/cpu.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/cpu.rs
+diff -uNr 12_integrated_testing/kernel/src/cpu.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/cpu.rs
+--- 12_integrated_testing/kernel/src/cpu.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/cpu.rs
 @@ -10,6 +10,8 @@
 
  mod boot;
@@ -2225,34 +2400,270 @@ diff -uNr 12_integrated_testing/src/cpu.rs 13_exceptions_part2_peripheral_IRQs/s
  // Architectural Public Reexports
  //--------------------------------------------------------------------------------------------------
 
-diff -uNr 12_integrated_testing/src/driver.rs 13_exceptions_part2_peripheral_IRQs/src/driver.rs
---- 12_integrated_testing/src/driver.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/driver.rs
-@@ -23,6 +23,14 @@
+diff -uNr 12_integrated_testing/kernel/src/driver.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/driver.rs
+--- 12_integrated_testing/kernel/src/driver.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/driver.rs
+@@ -5,9 +5,10 @@
+ //! Driver support.
+
+ use crate::{
+-    info,
+-    synchronization::{interface::Mutex, NullLock},
++    exception, info,
++    synchronization::{interface::ReadWriteEx, InitStateLock},
+ };
++use core::fmt;
+
+ //--------------------------------------------------------------------------------------------------
+ // Private Definitions
+@@ -15,9 +16,12 @@
+
+ const NUM_DRIVERS: usize = 5;
+
+-struct DriverManagerInner {
++struct DriverManagerInner<T>
++where
++    T: 'static,
++{
+     next_index: usize,
+-    descriptors: [Option<DeviceDriverDescriptor>; NUM_DRIVERS],
++    descriptors: [Option<DeviceDriverDescriptor<T>>; NUM_DRIVERS],
+ }
+
+ //--------------------------------------------------------------------------------------------------
+@@ -28,6 +32,9 @@
+ pub mod interface {
+     /// Device Driver functions.
+     pub trait DeviceDriver {
++        /// Different interrupt controllers might use different types for IRQ number.
++        type IRQNumberType: super::fmt::Display;
++
+         /// Return a compatibility string for identifying the driver.
+         fn compatible(&self) -> &'static str;
+
+@@ -39,6 +46,21 @@
          unsafe fn init(&self) -> Result<(), &'static str> {
              Ok(())
          }
 +
-+        /// Called by the kernel to register and enable the device's IRQ handlers, if any.
++        /// Called by the kernel to register and enable the device's IRQ handler.
 +        ///
 +        /// Rust's type system will prevent a call to this function unless the calling instance
 +        /// itself has static lifetime.
-+        fn register_and_enable_irq_handler(&'static self) -> Result<(), &'static str> {
-+            Ok(())
++        fn register_and_enable_irq_handler(
++            &'static self,
++            irq_number: &Self::IRQNumberType,
++        ) -> Result<(), &'static str> {
++            panic!(
++                "Attempt to enable IRQ {} for device {}, but driver does not support this",
++                irq_number,
++                self.compatible()
++            )
 +        }
      }
+ }
 
-     /// Device driver management functions.
+@@ -47,27 +69,37 @@
 
-diff -uNr 12_integrated_testing/src/exception/asynchronous.rs 13_exceptions_part2_peripheral_IRQs/src/exception/asynchronous.rs
---- 12_integrated_testing/src/exception/asynchronous.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/exception/asynchronous.rs
-@@ -8,7 +8,145 @@
+ /// A descriptor for device drivers.
+ #[derive(Copy, Clone)]
+-pub struct DeviceDriverDescriptor {
+-    device_driver: &'static (dyn interface::DeviceDriver + Sync),
++pub struct DeviceDriverDescriptor<T>
++where
++    T: 'static,
++{
++    device_driver: &'static (dyn interface::DeviceDriver<IRQNumberType = T> + Sync),
+     post_init_callback: Option<DeviceDriverPostInitCallback>,
++    irq_number: Option<T>,
+ }
+
+ /// Provides device driver management functions.
+-pub struct DriverManager {
+-    inner: NullLock<DriverManagerInner>,
++pub struct DriverManager<T>
++where
++    T: 'static,
++{
++    inner: InitStateLock<DriverManagerInner<T>>,
+ }
+
+ //--------------------------------------------------------------------------------------------------
+ // Global instances
+ //--------------------------------------------------------------------------------------------------
+
+-static DRIVER_MANAGER: DriverManager = DriverManager::new();
++static DRIVER_MANAGER: DriverManager<exception::asynchronous::IRQNumber> = DriverManager::new();
+
+ //--------------------------------------------------------------------------------------------------
+ // Private Code
+ //--------------------------------------------------------------------------------------------------
+
+-impl DriverManagerInner {
++impl<T> DriverManagerInner<T>
++where
++    T: 'static + Copy,
++{
+     /// Create an instance.
+     pub const fn new() -> Self {
+         Self {
+@@ -81,43 +113,48 @@
+ // Public Code
+ //--------------------------------------------------------------------------------------------------
+
+-impl DeviceDriverDescriptor {
++impl<T> DeviceDriverDescriptor<T> {
+     /// Create an instance.
+     pub fn new(
+-        device_driver: &'static (dyn interface::DeviceDriver + Sync),
++        device_driver: &'static (dyn interface::DeviceDriver<IRQNumberType = T> + Sync),
+         post_init_callback: Option<DeviceDriverPostInitCallback>,
++        irq_number: Option<T>,
+     ) -> Self {
+         Self {
+             device_driver,
+             post_init_callback,
++            irq_number,
+         }
+     }
+ }
+
+ /// Return a reference to the global DriverManager.
+-pub fn driver_manager() -> &'static DriverManager {
++pub fn driver_manager() -> &'static DriverManager<exception::asynchronous::IRQNumber> {
+     &DRIVER_MANAGER
+ }
+
+-impl DriverManager {
++impl<T> DriverManager<T>
++where
++    T: fmt::Display + Copy,
++{
+     /// Create an instance.
+     pub const fn new() -> Self {
+         Self {
+-            inner: NullLock::new(DriverManagerInner::new()),
++            inner: InitStateLock::new(DriverManagerInner::new()),
+         }
+     }
+
+     /// Register a device driver with the kernel.
+-    pub fn register_driver(&self, descriptor: DeviceDriverDescriptor) {
+-        self.inner.lock(|inner| {
++    pub fn register_driver(&self, descriptor: DeviceDriverDescriptor<T>) {
++        self.inner.write(|inner| {
+             inner.descriptors[inner.next_index] = Some(descriptor);
+             inner.next_index += 1;
+         })
+     }
+
+     /// Helper for iterating over registered drivers.
+-    fn for_each_descriptor<'a>(&'a self, f: impl FnMut(&'a DeviceDriverDescriptor)) {
+-        self.inner.lock(|inner| {
++    fn for_each_descriptor<'a>(&'a self, f: impl FnMut(&'a DeviceDriverDescriptor<T>)) {
++        self.inner.read(|inner| {
+             inner
+                 .descriptors
+                 .iter()
+@@ -126,12 +163,12 @@
+         })
+     }
+
+-    /// Fully initialize all drivers.
++    /// Fully initialize all drivers and their interrupts handlers.
+     ///
+     /// # Safety
+     ///
+     /// - During init, drivers might do stuff with system-wide impact.
+-    pub unsafe fn init_drivers(&self) {
++    pub unsafe fn init_drivers_and_irqs(&self) {
+         self.for_each_descriptor(|descriptor| {
+             // 1. Initialize driver.
+             if let Err(x) = descriptor.device_driver.init() {
+@@ -150,6 +187,23 @@
+                         descriptor.device_driver.compatible(),
+                         x
+                     );
++                }
++            }
++        });
++
++        // 3. After all post-init callbacks were done, the interrupt controller should be
++        //    registered and functional. So let drivers register with it now.
++        self.for_each_descriptor(|descriptor| {
++            if let Some(irq_number) = &descriptor.irq_number {
++                if let Err(x) = descriptor
++                    .device_driver
++                    .register_and_enable_irq_handler(irq_number)
++                {
++                    panic!(
++                        "Error during driver interrupt handler registration: {}: {}",
++                        descriptor.device_driver.compatible(),
++                        x
++                    );
+                 }
+             }
+         });
+
+diff -uNr 12_integrated_testing/kernel/src/exception/asynchronous/null_irq_manager.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/exception/asynchronous/null_irq_manager.rs
+--- 12_integrated_testing/kernel/src/exception/asynchronous/null_irq_manager.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/exception/asynchronous/null_irq_manager.rs
+@@ -0,0 +1,42 @@
++// SPDX-License-Identifier: MIT OR Apache-2.0
++//
++// Copyright (c) 2022-2023 Andre Richter <andre.o.richter@gmail.com>
++
++//! Null IRQ Manager.
++
++use super::{interface, IRQContext, IRQHandlerDescriptor};
++
++//--------------------------------------------------------------------------------------------------
++// Public Definitions
++//--------------------------------------------------------------------------------------------------
++
++pub struct NullIRQManager;
++
++//--------------------------------------------------------------------------------------------------
++// Global instances
++//--------------------------------------------------------------------------------------------------
++
++pub static NULL_IRQ_MANAGER: NullIRQManager = NullIRQManager {};
++
++//--------------------------------------------------------------------------------------------------
++// Public Code
++//--------------------------------------------------------------------------------------------------
++
++impl interface::IRQManager for NullIRQManager {
++    type IRQNumberType = super::IRQNumber;
++
++    fn register_handler(
++        &self,
++        _descriptor: IRQHandlerDescriptor<Self::IRQNumberType>,
++    ) -> Result<(), &'static str> {
++        panic!("No IRQ Manager registered yet");
++    }
++
++    fn enable(&self, _irq_number: &Self::IRQNumberType) {
++        panic!("No IRQ Manager registered yet");
++    }
++
++    fn handle_pending_irqs<'irq_context>(&'irq_context self, _ic: &IRQContext<'irq_context>) {
++        panic!("No IRQ Manager registered yet");
++    }
++}
+
+diff -uNr 12_integrated_testing/kernel/src/exception/asynchronous.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/exception/asynchronous.rs
+--- 12_integrated_testing/kernel/src/exception/asynchronous.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/exception/asynchronous.rs
+@@ -7,8 +7,184 @@
+ #[cfg(target_arch = "aarch64")]
  #[path = "../_arch/aarch64/exception/asynchronous.rs"]
  mod arch_asynchronous;
-
-+use core::{fmt, marker::PhantomData};
++mod null_irq_manager;
 +
++use crate::{bsp, synchronization};
++use core::marker::PhantomData;
+
  //--------------------------------------------------------------------------------------------------
  // Architectural Public Reexports
  //--------------------------------------------------------------------------------------------------
@@ -2266,14 +2677,23 @@ diff -uNr 12_integrated_testing/src/exception/asynchronous.rs 13_exceptions_part
 +// Public Definitions
 +//--------------------------------------------------------------------------------------------------
 +
++/// Interrupt number as defined by the BSP.
++pub type IRQNumber = bsp::exception::asynchronous::IRQNumber;
++
 +/// Interrupt descriptor.
 +#[derive(Copy, Clone)]
-+pub struct IRQDescriptor {
++pub struct IRQHandlerDescriptor<T>
++where
++    T: Copy,
++{
++    /// The IRQ number.
++    number: T,
++
 +    /// Descriptive name.
-+    pub name: &'static str,
++    name: &'static str,
 +
 +    /// Reference to handler trait object.
-+    pub handler: &'static (dyn interface::IRQHandler + Sync),
++    handler: &'static (dyn interface::IRQHandler + Sync),
 +}
 +
 +/// IRQContext token.
@@ -2303,17 +2723,16 @@ diff -uNr 12_integrated_testing/src/exception/asynchronous.rs 13_exceptions_part
 +    /// platform's interrupt controller.
 +    pub trait IRQManager {
 +        /// The IRQ number type depends on the implementation.
-+        type IRQNumberType;
++        type IRQNumberType: Copy;
 +
 +        /// Register a handler.
 +        fn register_handler(
 +            &self,
-+            irq_number: Self::IRQNumberType,
-+            descriptor: super::IRQDescriptor,
++            irq_handler_descriptor: super::IRQHandlerDescriptor<Self::IRQNumberType>,
 +        ) -> Result<(), &'static str>;
 +
 +        /// Enable an interrupt in the controller.
-+        fn enable(&self, irq_number: Self::IRQNumberType);
++        fn enable(&self, irq_number: &Self::IRQNumberType);
 +
 +        /// Handle pending interrupts.
 +        ///
@@ -2329,17 +2748,55 @@ diff -uNr 12_integrated_testing/src/exception/asynchronous.rs 13_exceptions_part
 +        );
 +
 +        /// Print list of registered handlers.
-+        fn print_handler(&self);
++        fn print_handler(&self) {}
 +    }
 +}
 +
-+/// A wrapper type for IRQ numbers with integrated range sanity check.
-+#[derive(Copy, Clone)]
-+pub struct IRQNumber<const MAX_INCLUSIVE: usize>(usize);
++//--------------------------------------------------------------------------------------------------
++// Global instances
++//--------------------------------------------------------------------------------------------------
++
++static CUR_IRQ_MANAGER: InitStateLock<
++    &'static (dyn interface::IRQManager<IRQNumberType = IRQNumber> + Sync),
++> = InitStateLock::new(&null_irq_manager::NULL_IRQ_MANAGER);
 +
 +//--------------------------------------------------------------------------------------------------
 +// Public Code
 +//--------------------------------------------------------------------------------------------------
++use synchronization::{interface::ReadWriteEx, InitStateLock};
++
++impl<T> IRQHandlerDescriptor<T>
++where
++    T: Copy,
++{
++    /// Create an instance.
++    pub const fn new(
++        number: T,
++        name: &'static str,
++        handler: &'static (dyn interface::IRQHandler + Sync),
++    ) -> Self {
++        Self {
++            number,
++            name,
++            handler,
++        }
++    }
++
++    /// Return the number.
++    pub const fn number(&self) -> T {
++        self.number
++    }
++
++    /// Return the name.
++    pub const fn name(&self) -> &'static str {
++        self.name
++    }
++
++    /// Return the handler.
++    pub const fn handler(&self) -> &'static (dyn interface::IRQHandler + Sync) {
++        self.handler
++    }
++}
 +
 +impl<'irq_context> IRQContext<'irq_context> {
 +    /// Creates an IRQContext token.
@@ -2358,55 +2815,37 @@ diff -uNr 12_integrated_testing/src/exception/asynchronous.rs 13_exceptions_part
 +    }
 +}
 +
-+impl<const MAX_INCLUSIVE: usize> IRQNumber<{ MAX_INCLUSIVE }> {
-+    /// Creates a new instance if number <= MAX_INCLUSIVE.
-+    pub const fn new(number: usize) -> Self {
-+        assert!(number <= MAX_INCLUSIVE);
-+
-+        Self(number)
-+    }
-+
-+    /// Return the wrapped number.
-+    pub const fn get(self) -> usize {
-+        self.0
-+    }
-+}
-+
-+impl<const MAX_INCLUSIVE: usize> fmt::Display for IRQNumber<{ MAX_INCLUSIVE }> {
-+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-+        write!(f, "{}", self.0)
-+    }
-+}
-+
 +/// Executes the provided closure while IRQs are masked on the executing core.
 +///
 +/// While the function temporarily changes the HW state of the executing core, it restores it to the
 +/// previous state before returning, so this is deemed safe.
 +#[inline(always)]
 +pub fn exec_with_irq_masked<T>(f: impl FnOnce() -> T) -> T {
-+    let ret: T;
-+
-+    unsafe {
-+        let saved = local_irq_mask_save();
-+        ret = f();
-+        local_irq_restore(saved);
-+    }
++    let saved = local_irq_mask_save();
++    let ret = f();
++    local_irq_restore(saved);
 +
 +    ret
 +}
++
++/// Register a new IRQ manager.
++pub fn register_irq_manager(
++    new_manager: &'static (dyn interface::IRQManager<IRQNumberType = IRQNumber> + Sync),
++) {
++    CUR_IRQ_MANAGER.write(|manager| *manager = new_manager);
++}
++
++/// Return a reference to the currently registered IRQ manager.
++///
++/// This is the IRQ manager used by the architectural interrupt handling code.
++pub fn irq_manager() -> &'static dyn interface::IRQManager<IRQNumberType = IRQNumber> {
++    CUR_IRQ_MANAGER.read(|manager| *manager)
++}
 
-diff -uNr 12_integrated_testing/src/lib.rs 13_exceptions_part2_peripheral_IRQs/src/lib.rs
---- 12_integrated_testing/src/lib.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/lib.rs
-@@ -108,6 +108,7 @@
-
- #![allow(clippy::upper_case_acronyms)]
- #![allow(incomplete_features)]
-+#![feature(asm_const)]
- #![feature(core_intrinsics)]
- #![feature(format_args_nl)]
- #![feature(linkage)]
-@@ -130,6 +131,7 @@
+diff -uNr 12_integrated_testing/kernel/src/lib.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/lib.rs
+--- 12_integrated_testing/kernel/src/lib.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/lib.rs
+@@ -138,6 +138,7 @@
  pub mod exception;
  pub mod memory;
  pub mod print;
@@ -2415,19 +2854,19 @@ diff -uNr 12_integrated_testing/src/lib.rs 13_exceptions_part2_peripheral_IRQs/s
 
  //--------------------------------------------------------------------------------------------------
 
-diff -uNr 12_integrated_testing/src/main.rs 13_exceptions_part2_peripheral_IRQs/src/main.rs
---- 12_integrated_testing/src/main.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/main.rs
-@@ -11,7 +11,7 @@
+diff -uNr 12_integrated_testing/kernel/src/main.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/main.rs
+--- 12_integrated_testing/kernel/src/main.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/main.rs
+@@ -13,7 +13,7 @@
  #![no_main]
  #![no_std]
 
 -use libkernel::{bsp, console, driver, exception, info, memory, time};
-+use libkernel::{bsp, cpu, driver, exception, info, memory, state, time, warn};
++use libkernel::{bsp, cpu, driver, exception, info, memory, state, time};
 
  /// Early init code.
  ///
-@@ -21,7 +21,7 @@
+@@ -23,7 +23,7 @@
  /// - The init calls in this function must appear in the correct order:
  ///     - MMU + Data caching must be activated at the earliest. Without it, any atomic operations,
  ///       e.g. the yet-to-be-introduced spinlocks in the device drivers (which currently employ
@@ -2435,84 +2874,79 @@ diff -uNr 12_integrated_testing/src/main.rs 13_exceptions_part2_peripheral_IRQs/
 +///       IRQSafeNullLocks instead of spinlocks), will fail to work (properly) on the RPi SoCs.
  #[no_mangle]
  unsafe fn kernel_init() -> ! {
-     use driver::interface::DriverManager;
-@@ -41,15 +41,27 @@
-     bsp::driver::driver_manager().post_device_driver_init();
-     // println! is usable from here on.
+     use memory::mmu::interface::MMU;
+@@ -40,8 +40,13 @@
+     }
 
-+    // Let device drivers register and enable their handlers with the interrupt controller.
-+    for i in bsp::driver::driver_manager().all_device_drivers() {
-+        if let Err(msg) = i.register_and_enable_irq_handler() {
-+            warn!("Error registering IRQ handler: {}", msg);
-+        }
-+    }
+     // Initialize all device drivers.
+-    driver::driver_manager().init_drivers();
+-    // println! is usable from here on.
++    driver::driver_manager().init_drivers_and_irqs();
 +
 +    // Unmask interrupts on the boot CPU core.
 +    exception::asynchronous::local_irq_unmask();
 +
 +    // Announce conclusion of the kernel_init() phase.
 +    state::state_manager().transition_to_single_core_main();
-+
+
      // Transition from unsafe to safe.
      kernel_main()
- }
+@@ -49,8 +54,6 @@
 
  /// The main function running after the early init.
  fn kernel_main() -> ! {
--    use bsp::console::console;
--    use console::interface::All;
-     use driver::interface::DriverManager;
-+    use exception::asynchronous::interface::IRQManager;
-
+-    use console::console;
+-
      info!("{}", libkernel::version());
      info!("Booting on: {}", bsp::board_name());
-@@ -77,12 +89,9 @@
-         info!("      {}. {}", i + 1, driver.compatible());
-     }
+
+@@ -71,12 +74,9 @@
+     info!("Drivers loaded:");
+     driver::driver_manager().enumerate();
 
 -    info!("Echoing input now");
 +    info!("Registered IRQ handlers:");
-+    bsp::exception::asynchronous::irq_manager().print_handler();
++    exception::asynchronous::irq_manager().print_handler();
 
 -    // Discard any spurious received characters before going into echo mode.
 -    console().clear_rx();
 -    loop {
--        let c = bsp::console::console().read_char();
--        bsp::console::console().write_char(c);
+-        let c = console().read_char();
+-        console().write_char(c);
 -    }
 +    info!("Echoing input now");
 +    cpu::wait_forever();
  }
 
-diff -uNr 12_integrated_testing/src/panic_wait.rs 13_exceptions_part2_peripheral_IRQs/src/panic_wait.rs
---- 12_integrated_testing/src/panic_wait.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/panic_wait.rs
+diff -uNr 12_integrated_testing/kernel/src/panic_wait.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/panic_wait.rs
+--- 12_integrated_testing/kernel/src/panic_wait.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/panic_wait.rs
 @@ -4,7 +4,7 @@
 
  //! A panic handler that infinitely waits.
 
--use crate::{bsp, cpu};
-+use crate::{bsp, cpu, exception};
- use core::{fmt, panic::PanicInfo};
+-use crate::{cpu, println};
++use crate::{cpu, exception, println};
+ use core::panic::PanicInfo;
 
  //--------------------------------------------------------------------------------------------------
-@@ -77,6 +77,8 @@
- fn panic(info: &PanicInfo) -> ! {
-     use crate::time::interface::TimeManager;
+@@ -59,6 +59,8 @@
 
-+    unsafe { exception::asynchronous::local_irq_mask() };
+ #[panic_handler]
+ fn panic(info: &PanicInfo) -> ! {
++    exception::asynchronous::local_irq_mask();
 +
      // Protect against panic infinite loops if any of the following code panics itself.
      panic_prevent_reenter();
 
 
-diff -uNr 12_integrated_testing/src/state.rs 13_exceptions_part2_peripheral_IRQs/src/state.rs
---- 12_integrated_testing/src/state.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/state.rs
+diff -uNr 12_integrated_testing/kernel/src/state.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/state.rs
+--- 12_integrated_testing/kernel/src/state.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/state.rs
 @@ -0,0 +1,92 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! State information about the kernel itself.
 +
@@ -2603,12 +3037,12 @@ diff -uNr 12_integrated_testing/src/state.rs 13_exceptions_part2_peripheral_IRQs
 +    }
 +}
 
-diff -uNr 12_integrated_testing/src/synchronization.rs 13_exceptions_part2_peripheral_IRQs/src/synchronization.rs
---- 12_integrated_testing/src/synchronization.rs
-+++ 13_exceptions_part2_peripheral_IRQs/src/synchronization.rs
+diff -uNr 12_integrated_testing/kernel/src/synchronization.rs 13_exceptions_part2_peripheral_IRQs/kernel/src/synchronization.rs
+--- 12_integrated_testing/kernel/src/synchronization.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/src/synchronization.rs
 @@ -28,6 +28,21 @@
          /// Locks the mutex and grants the closure temporary mutable access to the wrapped data.
-         fn lock<R>(&self, f: impl FnOnce(&mut Self::Data) -> R) -> R;
+         fn lock<'a, R>(&'a self, f: impl FnOnce(&'a mut Self::Data) -> R) -> R;
      }
 +
 +    /// A reader-writer exclusion type.
@@ -2620,10 +3054,10 @@ diff -uNr 12_integrated_testing/src/synchronization.rs 13_exceptions_part2_perip
 +        type Data;
 +
 +        /// Grants temporary mutable access to the encapsulated data.
-+        fn write<R>(&self, f: impl FnOnce(&mut Self::Data) -> R) -> R;
++        fn write<'a, R>(&'a self, f: impl FnOnce(&'a mut Self::Data) -> R) -> R;
 +
 +        /// Grants temporary immutable access to the encapsulated data.
-+        fn read<R>(&self, f: impl FnOnce(&Self::Data) -> R) -> R;
++        fn read<'a, R>(&'a self, f: impl FnOnce(&'a Self::Data) -> R) -> R;
 +    }
  }
 
@@ -2685,7 +3119,7 @@ diff -uNr 12_integrated_testing/src/synchronization.rs 13_exceptions_part2_perip
 +impl<T> interface::Mutex for IRQSafeNullLock<T> {
      type Data = T;
 
-     fn lock<R>(&self, f: impl FnOnce(&mut Self::Data) -> R) -> R {
+     fn lock<'a, R>(&'a self, f: impl FnOnce(&'a mut Self::Data) -> R) -> R {
 @@ -72,6 +110,50 @@
          // mutable reference will ever only be given out once at a time.
          let data = unsafe { &mut *self.data.get() };
@@ -2698,7 +3132,7 @@ diff -uNr 12_integrated_testing/src/synchronization.rs 13_exceptions_part2_perip
 +impl<T> interface::ReadWriteEx for InitStateLock<T> {
 +    type Data = T;
 +
-+    fn write<R>(&self, f: impl FnOnce(&mut Self::Data) -> R) -> R {
++    fn write<'a, R>(&'a self, f: impl FnOnce(&'a mut Self::Data) -> R) -> R {
 +        assert!(
 +            state::state_manager().is_init(),
 +            "InitStateLock::write called after kernel init phase"
@@ -2713,7 +3147,7 @@ diff -uNr 12_integrated_testing/src/synchronization.rs 13_exceptions_part2_perip
          f(data)
      }
 +
-+    fn read<R>(&self, f: impl FnOnce(&Self::Data) -> R) -> R {
++    fn read<'a, R>(&'a self, f: impl FnOnce(&'a Self::Data) -> R) -> R {
 +        let data = unsafe { &*self.data.get() };
 +
 +        f(data)
@@ -2738,13 +3172,13 @@ diff -uNr 12_integrated_testing/src/synchronization.rs 13_exceptions_part2_perip
 +    }
  }
 
-diff -uNr 12_integrated_testing/tests/04_exception_irq_sanity.rs 13_exceptions_part2_peripheral_IRQs/tests/04_exception_irq_sanity.rs
---- 12_integrated_testing/tests/04_exception_irq_sanity.rs
-+++ 13_exceptions_part2_peripheral_IRQs/tests/04_exception_irq_sanity.rs
+diff -uNr 12_integrated_testing/kernel/tests/04_exception_irq_sanity.rs 13_exceptions_part2_peripheral_IRQs/kernel/tests/04_exception_irq_sanity.rs
+--- 12_integrated_testing/kernel/tests/04_exception_irq_sanity.rs
++++ 13_exceptions_part2_peripheral_IRQs/kernel/tests/04_exception_irq_sanity.rs
 @@ -0,0 +1,66 @@
 +// SPDX-License-Identifier: MIT OR Apache-2.0
 +//
-+// Copyright (c) 2020-2022 Andre Richter <andre.o.richter@gmail.com>
++// Copyright (c) 2020-2023 Andre Richter <andre.o.richter@gmail.com>
 +
 +//! IRQ handling sanity tests.
 +
@@ -2759,7 +3193,7 @@ diff -uNr 12_integrated_testing/tests/04_exception_irq_sanity.rs 13_exceptions_p
 +
 +#[no_mangle]
 +unsafe fn kernel_init() -> ! {
-+    bsp::console::qemu_bring_up_console();
++    bsp::driver::qemu_bring_up_console();
 +
 +    exception::handling_init();
 +    exception::asynchronous::local_irq_unmask();
@@ -2775,21 +3209,21 @@ diff -uNr 12_integrated_testing/tests/04_exception_irq_sanity.rs 13_exceptions_p
 +    // Precondition: IRQs are unmasked.
 +    assert!(exception::asynchronous::is_local_irq_masked());
 +
-+    unsafe { exception::asynchronous::local_irq_mask() };
++    exception::asynchronous::local_irq_mask();
 +    assert!(!exception::asynchronous::is_local_irq_masked());
 +
 +    // Restore earlier state.
-+    unsafe { exception::asynchronous::local_irq_unmask() };
++    exception::asynchronous::local_irq_unmask();
 +}
 +
 +/// Check that IRQ unmasking works.
 +#[kernel_test]
 +fn local_irq_unmask_works() {
 +    // Precondition: IRQs are masked.
-+    unsafe { exception::asynchronous::local_irq_mask() };
++    exception::asynchronous::local_irq_mask();
 +    assert!(!exception::asynchronous::is_local_irq_masked());
 +
-+    unsafe { exception::asynchronous::local_irq_unmask() };
++    exception::asynchronous::local_irq_unmask();
 +    assert!(exception::asynchronous::is_local_irq_masked());
 +}
 +
@@ -2799,13 +3233,13 @@ diff -uNr 12_integrated_testing/tests/04_exception_irq_sanity.rs 13_exceptions_p
 +    // Precondition: IRQs are unmasked.
 +    assert!(exception::asynchronous::is_local_irq_masked());
 +
-+    let first = unsafe { exception::asynchronous::local_irq_mask_save() };
++    let first = exception::asynchronous::local_irq_mask_save();
 +    assert!(!exception::asynchronous::is_local_irq_masked());
 +
-+    let second = unsafe { exception::asynchronous::local_irq_mask_save() };
++    let second = exception::asynchronous::local_irq_mask_save();
 +    assert_ne!(first, second);
 +
-+    unsafe { exception::asynchronous::local_irq_restore(first) };
++    exception::asynchronous::local_irq_restore(first);
 +    assert!(exception::asynchronous::is_local_irq_masked());
 +}
 
