@@ -3,22 +3,22 @@
 ## tl;dr
 
 * Se añade un pseudo-bloqueo.
-* Esta es la primera vez que se muestra primitivas de sincronización del sistema operativo y habilita el acceso seguro a una estructura de datos global.
+* Esta es la primera vez que se muestran primitivas de sincronización del sistema operativo y se habilita el acceso seguro a una estructura de datos global.
   * Primitivas de sincronización: Mecanismos de software proporcionados por la plataforma (p. ej. sistema operativo) a sus usuarios con el propósito de dar soporte a los hilos o procesos de sincronización.
 
 ## Variables globales mutables en Rust
 
-Cuando usamos la macro globalmente usabale `print!` en el [tutorial 03](../03_hacky_hello_world/README.ES.md), hicimos un poco de trampa. Llamando a la función `write_fmt()` de `core::fmt`, que toma una variable `&mut self`, esto solo funcionaba porque con cada llamada, se creaba una nueva instancia de `QEMUOutput`.
+Cuando usamos la macro globalmente usabale `print!` en el [tutorial 03](../03_hacky_hello_world/README.ES.md), hicimos un poco de trampa. Llamar a la función `write_fmt()` de `core::fmt`, que toma una variable `&mut self`, solo funcionaba porque con cada llamada, se creaba una nueva instancia de `QEMUOutput`.
 
 Si quisiéramos conservar algun estado, p. ej. estadísiticas acerca del número de carácteres que se han escrito, necesitamos crear una sola instancia global de `QEMUOutput` (en Rust, usando la palabra clave `static`).
 
-Una `static QEMU_OUTPUT`, sin embargo, esto no nos permitiría llamar funciones que tomen `&mut self`. Para eso necesitaremos una `static mut`; pero llamar funciones que cambian de estado en una `static mut` es inseguro. El razonamiento del compilador de Rust para esta situación es que ya no puede evitar que múltiples núcleos/hilos cambien los datos al mismo tiempo (es una variable global, así que todos la pueden referenciar desde cualquier lugar. El inspector de préstamos o *borrow checker* no nos puede ayudar en esta situación).
+Sin embargo, una `static QEMU_OUTPUT`, sin embargo, esto no nos permitiría llamar funciones que tomen `&mut self`. Para eso necesitaremos una `static mut`; pero llamar funciones que cambian de estado en una `static mut` es inseguro. El razonamiento del compilador de Rust para esta situación es que ya no puede evitar que múltiples núcleos/hilos cambien los datos al mismo tiempo (es una variable global, así que todos la pueden referenciar desde cualquier lugar. El inspector de préstamos o *borrow checker* no nos puede ayudar en esta situación).
 
-La solución a este problema es hacerle un wrap a la variable global y convertirla en una primitiva de sincronización. En nuestro caso, una variante de una primitiva *MUTual EXclusion*. Se agrega `Mutex` como un rasgo (*trait*) en `synchronization.rs`, y es implementado por el `NullLock` en el mismo archivo. Para hacer que el código se acerque al propósito de la enseñanza, esto hace que dejemos afuera la lógica real dedicada a una arquitectura específica para la protección contra el acceso simultáneo, ya que no lo necesitamos mientras el kernel (núcleo) solo se ejecuta en un solo núcleo con las interrupciones desactivadas.
+La solución a este problema es envolver a la variable global en una primitiva de sincronización. En nuestro caso, una variante de una primitiva *MUTual EXclusion*. Se agrega `Mutex` como un rasgo (*trait*) en `synchronization.rs`, y es implementado por el `NullLock` en el mismo archivo. Para hacer que el código sea más entendible, dejaremos la lógica real dedicada a una arquitectura específica para la protección contra el acceso simultáneo, ya que no la necesitamos mientras el kernel (núcleo) solo se ejecute en un solo núcleo con las interrupciones desactivadas.
 
 El `NullLock` se enfoca en mostrar el concepto principal de Rust de la [mutabilidad interior](https://doc.rust-lang.org/std/cell/index.html). Asegúrate de leerlo. También recomiendo este artículo acerca del [modelo mental preciso para las referencias de tipos en Rust.](https://docs.rs/dtolnay/0.0.6/dtolnay/macro._02__reference_types.html)
 
-Si necesitas comparar el `NullLock` a una implementación real de mutex, puedes revisar las implementaciones en el [*spin crate*](https://github.com/mvdnes/spin-rs) o el [*parking lot crate*](https://github.com/Amanieu/parking_lot).
+Si necesitas comparar el `NullLock` con una implementación real de un *mutex*, puedes revisar las implementaciones en el [*crate spin*](https://github.com/mvdnes/spin-rs) o el [*crate parking lot*](https://github.com/Amanieu/parking_lot).
 
 ## Pruébalo
 
@@ -34,7 +34,6 @@ $ make qemu
 ## Diferencias con el archivo anterior
 
 ```diff
-
 diff -uNr 03_hacky_hello_world/Cargo.toml 04_safe_globals/Cargo.toml
 --- 03_hacky_hello_world/Cargo.toml
 +++ 04_safe_globals/Cargo.toml
@@ -320,5 +319,4 @@ diff -uNr 03_hacky_hello_world/src/synchronization.rs 04_safe_globals/src/synchr
 +        f(data)
 +    }
 +}
-
 ```
