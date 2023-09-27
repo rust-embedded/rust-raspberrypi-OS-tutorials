@@ -51,13 +51,14 @@ fn panic(info: &PanicInfo) -> ! {
     };
 
     println!(
-        "Kernel panic!\n\n\
-        Panic location:\n      File '{}', line {}, column {}\n\n\
-        {}",
+        "Kernel panic!\n\
+         {space}Panic message:\n{space}{space}{}\n\
+         {space}Panic location:\n{space}{space}File '{}', line {}, column {}",
+        info.message().unwrap_or(&format_args!("")),
         location,
         line,
         column,
-        info.message().unwrap_or(&format_args!("")),
+        space = "    ",
     );
 
     cpu::wait_forever()

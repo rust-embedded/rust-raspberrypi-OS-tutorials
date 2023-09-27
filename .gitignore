@@ -1,6 +1,7 @@
 **/target/*
 **/.gdb_history
 **/kernel8.img
+**/.idea
 
 node_modules
 .bundle
