@@ -64,7 +64,7 @@ Muchas de las cosas vistas aquí también funcionan en **macOS**, pero esto solo
 
 2. (**Solo para Linux**) Asegúrate de que la cuenta de tu usuario está en el [grupo `docker`][docker group].
 
-3. Prepara la `Rust` toolchain. La mayor parte se hará automáticamente durante el primer uso del archivo [rust-toolchain](rust-toolchain). 
+3. Prepara la `Rust` toolchain. La mayor parte se hará automáticamente durante el primer uso del archivo [rust-toolchain.toml](rust-toolchain.toml). 
    Todo lo que nos queda hacer a nosotros es: 
    
    i. Si ya tienes una versión de Rust instalada:

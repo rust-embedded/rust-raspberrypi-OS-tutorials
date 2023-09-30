@@ -64,7 +64,7 @@ The tutorials are primarily targeted at **Linux**-based distributions. Most stuf
 1. [Install Docker Engine][install_docker].
 1. (**Linux only**) Ensure your user account is in the [docker group].
 1. Prepare the `Rust` toolchain. Most of it will be handled on first use through the
-   [rust-toolchain](rust-toolchain) file. What's left for us to do is:
+   [rust-toolchain.toml](rust-toolchain.toml) file. What's left for us to do is:
    1. If you already have a version of Rust installed:
       ```bash
       cargo install cargo-binutils rustfilt
