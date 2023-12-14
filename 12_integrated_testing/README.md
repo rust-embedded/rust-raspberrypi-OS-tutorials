@@ -449,7 +449,7 @@ provided to it by `cargo`, and finally compiles a `docker` command to execute th
 reference, here it is fully resolved for an `RPi3 BSP`:
 
 ```bash
-docker run -t --rm -v /opt/rust-raspberrypi-OS-tutorials/12_integrated_testing:/work/tutorial -w /work/tutorial -v /opt/rust-raspberrypi-OS-tutorials/12_integrated_testing/../common:/work/common rustembedded/osdev-utils:2021.12 ruby ../common/tests/dispatch.rb qemu-system-aarch64 -M raspi3 -serial stdio -display none -semihosting -kernel $TEST_BINARY
+docker run -t --rm -v /opt/rust-raspberrypi-OS-tutorials/12_integrated_testing:/work/tutorial -w /work/tutorial -v /opt/rust-raspberrypi-OS-tutorials/12_integrated_testing/../common:/work/common u007d/osdev-utils-rpi4:2023.09 ruby ../common/tests/dispatch.rb qemu-system-aarch64 -M raspi3 -serial stdio -display none -semihosting -kernel $TEST_BINARY
 ```
 
 This command is quite similar to the one used in the `make test_boot` target that we have since
