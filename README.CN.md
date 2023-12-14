@@ -48,8 +48,8 @@ _带上我最诚挚的问候,<br>Andre ([@andre-richter])_
 ### 🚀 tl;dr 版本
 
 1. [安装 Docker][install_docker]。
-2. 确保你的用户在 [docker group] 中。
-3. 安装正确的`Rust`工具链:
+2. **(仅限Linux)** 确保您的用户帐户在 [docker group] 中。
+3. 准备Rust工具链。其中大部分将在首次使用时通过[rust-toolchain.toml](rust-toolchain.toml)文件进行处理。我们要做的是：
    1. 如果你已经安装了一个版本的Rust:
       ```bash
       cargo install cargo-binutils rustfilt
@@ -63,12 +63,17 @@ _带上我最诚挚的问候,<br>Andre ([@andre-richter])_
       cargo install cargo-binutils rustfilt
       ```
 
-1. 如果你使用 `Visual Studio Code`，我强烈推荐你安装[Rust Analyzer 扩展]。
-1. 如果你使用的**不是**Linux，那么你还需要安装一些`Ruby` gems。
+4. 如果你使用 `Visual Studio Code`，我强烈推荐你安装[Rust Analyzer 扩展]。
+5. **(仅限macOS)** 安装一些`Ruby` gems。
+
+这是作者最后一次在`macOS Monterey`上用`Ruby 3.0.2`版本进行测试。如果您正在使用`rbenv`，那么相应的`.ruby-version`文件已经就位。
+如果你从未听说过`rbenv`，请尝试使用[这个指南](https://stackoverflow.com/a/68118750)。
+
+在存储库根文件夹中运行此操作：
 
 ```bash
-sudo gem install bundler
-bundle config set path '.vendor/bundle'
+bundle config set --local path '.vendor/bundle'
+bundle config set --local without 'development'
 bundle install
 ```
 
@@ -78,9 +83,10 @@ bundle install
 
 ## 🧰 长期版本: 消除工具链烦恼
 
-这个系列的教程会着重关注用户体验的友好性。因此，我尽量消除嵌入式开发中的最大痛点：工具链的问题。
+这个系列的教程会着重关注用户体验的友好性。因此，我尽量消除嵌入式开发中的最大痛点：`Toolchain hassle`。
 
 Rust内置的交叉编译支持在这方面帮了我们大忙。我们只需要使用`rustup`安装目标工具链就可以在`x86`宿主机上交叉编译支持树莓派的目标文件。然而，除了Rust编译器，我们还需要更多的工具。例如：
+Rust本身在这方面已经起到了很大的作用，因为它内置了对交叉编译的支持。从`x86`宿主机到树莓派的`AArch64`架构的交叉编译所需的一切都将由`rustup`自动安装。然而，除了Rust编译器，我们还将使用更多的工具。例如：
 
 - 用于在我们的宿主系统上模拟我们内核运行环境的`QEMU`。
 - 一个叫`Minipush`的自制工具，可以通过`UART`将内核加载到树莓派上。
@@ -96,13 +102,17 @@ Rust内置的交叉编译支持在这方面帮了我们大忙。我们只需要�
 
 由于教程中开发的内核是在真实的硬件上运行的，因此强烈建议您使用 USB 串行调试线来进行试验。连接调试线后，树莓派需要通过额外电源供电。
 
-- 淘宝搜索"USB 转串口"
-- 如下图连接 GPIO 串口的 14/15 号引脚
-- [第六章](06_drivers_gpio_uart) 是这个设备第一次需要使用的地方。找到如何准备 SD 卡来引导你自制的内核的说明。
-- [第七章](07_uart_chainloader)开始，在树莓派上启动内核变得非常舒适。在这章，会开发出一个叫`chainloader`的文件。
-  这将是您暂时需要在 SD 卡上手动复制的最后一个文件。这将使您能够在通过 UART 按需引导期间加载教程内核。
+- 您可以在[\[1\]] [\[2\]]中或者[淘宝]上找到USB转串口线，但许多其他线材也可以工作。理想情况下，您的线材应基于`CP2102`芯片。
+- 您将其连接到`GND`和GPIO引脚`14/15`，如下所示。
+- [教程5](05_drivers_gpio_uart/README.CN.md)是这个设备第一次需要使用的地方。查看它了解如何准备SD卡以从中启动自制内核的说明。
+- 从[教程6](06_uart_chainloader/README.CN.md)开始，在树莓派上启动内核变得非常舒适。在本教程中开发了一个所谓的`chainloader`，。
+  这将是您暂时需要在SD卡上手动复制的最后一个文件。这将使您能够在通过`UART`按需引导期间加载教程内核。
 
 ![UART wiring diagram](doc/wiring.png)
+
+[\[1\]]: https://www.amazon.de/dp/B0757FQ5CX/ref=cm_sw_r_tw_dp_U_x_ozGRDbVTJAG4Q
+[\[2\]]: https://www.adafruit.com/product/954
+[淘宝]: https://www.taobao.com/
 
 ## 🙌 致谢
 
