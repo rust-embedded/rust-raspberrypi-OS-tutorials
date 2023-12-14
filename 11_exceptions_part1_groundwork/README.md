@@ -55,7 +55,7 @@ In `AArch64`, it is differentiated between four types of exceptions. These are:
 
 ## Exception entry
 
-I recommend to read pages 1874-1876 of the [ARMv8 Architecture Reference Manual][ARMv8_Manual] to
+I recommend to read pages D1-5355 of the [ARMv8 Architecture Reference Manual][ARMv8_Manual Ja] to
 understand the mechanisms of taking an exception.
 
 Here's an excerpt of important features for this tutorial:
@@ -65,8 +65,8 @@ Here's an excerpt of important features for this tutorial:
 - The preferred return address is saved in the `ELR_ELx` register.
   - "Preferred" here means that `ELR_ELx` may hold the instruction address of the instructions that
     caused the exception (`synchronous case`) or the first instruction that did not complete due to
-    an `asynchronous` exception. Details in Chapter D1.10.1 of the [ARMv8 Architecture Reference
-    Manual][ARMv8_Manual].
+    an `asynchronous` exception. Details in pages D1-5357 of the [ARMv8 Architecture Reference
+    Manual][ARMv8_Manual Ja].
 - All kinds of exceptions are turned off upon taking an exception, so that by default, exception
   handlers can not get interrupted themselves.
 - Taking an exception will select the dedicated stack pointer of the target `EL`.
@@ -81,10 +81,10 @@ Here's an excerpt of important features for this tutorial:
 introduced already, and additionally, it is taken into account _where_ the exception was taken from
 and what the circumstances were.
 
-Here is a copy of the decision table as shown in Chapter D1.10.2 of the [ARMv8 Architecture
-Reference Manual][ARMv8_Manual]:
+Here is a copy of the decision table as shown in pages D1-5358 of the [ARMv8 Architecture
+Reference Manual][ARMv8_Manual Ja]:
 
-[ARMv8_Manual]: https://developer.arm.com/docs/ddi0487/latest/arm-architecture-reference-manual-armv8-for-armv8-a-architecture-profile
+[ARMv8_Manual Ja]: https://developer.arm.com/documentation/ddi0487/ja/
 
 <table>
     <thead>
