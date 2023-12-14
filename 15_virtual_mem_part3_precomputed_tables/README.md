@@ -2006,7 +2006,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/tools/translation_table_tool/arch.rb 1
 +    attr_bitfield(:valid, Valid::OFFSET, Valid::NUMBITS)
 +
 +    def next_level_table_addr=(addr)
-+        addr = addr >> Granule64KiB::SHIFT
++        addr >>= Granule64KiB::SHIFT
 +
 +        self.__next_level_table_addr = addr
 +    end
@@ -2092,7 +2092,7 @@ diff -uNr 14_virtual_mem_part2_mmio_remap/tools/translation_table_tool/arch.rb 1
 +    attr_bitfield(:valid, Valid::OFFSET, Valid::NUMBITS)
 +
 +    def output_addr=(addr)
-+        addr = addr >> Granule64KiB::SHIFT
++        addr >>= Granule64KiB::SHIFT
 +
 +        self.__output_addr = addr
 +    end

@@ -84,7 +84,7 @@ class Stage1TableDescriptor < BitField
     attr_bitfield(:valid, Valid::OFFSET, Valid::NUMBITS)
 
     def next_level_table_addr=(addr)
-        addr = addr >> Granule64KiB::SHIFT
+        addr >>= Granule64KiB::SHIFT
 
         self.__next_level_table_addr = addr
     end
@@ -170,7 +170,7 @@ class Stage1PageDescriptor < BitField
     attr_bitfield(:valid, Valid::OFFSET, Valid::NUMBITS)
 
     def output_addr=(addr)
-        addr = addr >> Granule64KiB::SHIFT
+        addr >>= Granule64KiB::SHIFT
 
         self.__output_addr = addr
     end
