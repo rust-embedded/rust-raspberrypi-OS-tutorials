@@ -67,7 +67,7 @@ The tutorials are primarily targeted at **Linux**-based distributions. Most stuf
    [rust-toolchain.toml](rust-toolchain.toml) file. What's left for us to do is:
    1. If you already have a version of Rust installed:
       ```bash
-      cargo install cargo-binutils rustfilt
+      cargo install cargo-binutils rustfmt
       ```
 
    1. If you need to install Rust from scratch:
